@@ -1,0 +1,81 @@
+name: 🐛 Bug Report
+description: Report an issue you are experiencing with P2 Flash FS
+labels:
+  - bug
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        #### Read this first
+        - Provide as many details as possible.
+
+  - type: checkboxes
+    attributes:
+      label: and have you...
+      description: Have you accomplished the following before submitting this issue?
+      options:
+        - label: I updated to the latest version available
+          required: true
+        - label: My code conforms to calling sequences shown in demo code
+          required: true
+
+  - type: input
+    id: affectedRelease
+    validations:
+      required: true
+    attributes:
+      label: Version of P2 Flash FS
+      description: Please specify which version of P2 Flash FS you are using, and if this is a regression, what is the last known version that worked?
+      placeholder: |
+        Failing in v1.2.1, last worked in v1.2.0
+
+  - type: dropdown
+    id: regression
+    validations:
+      required: true
+    attributes:
+      label: Is this a regression?
+      multiple: false
+      options:
+        - Yes. This used to work, but now it doesn't.
+        - No or unsure. This never worked, or I haven't tried before.
+
+  - type: textarea
+    id: P2Environment
+    validations:
+      required: true
+    attributes:
+      label: P2 Hardware, Compiler used
+      description: |
+        Provide details about your P2 development environment. What P2 boards are you using? What compiler? Does it happen when using alternate compilers?
+      placeholder: |
+        P2 Board: Edge 32MB
+        P2 Compiler: Propeller Tool v2.9.3
+      value: |
+        P2 Board:
+        P2 Compiler:
+
+  - type: textarea
+    id: problem
+    validations:
+      required: true
+    attributes:
+      label: Description of problem
+      description: |
+        Explain what the issue is, and how things should look/behave. If possible provide a screenshot with a description.
+      placeholder: |
+        Please describe the issue you are experiencing.
+
+  - type: textarea
+    id: additionalInfo
+    validations:
+      required: false
+    attributes:
+      label: Additional information
+      description: |
+        Is there anything else that you think might help us identify the problem?
+
+  - type: markdown
+    attributes:
+      value: "Thank you for taking the time to report this issue! By doing so you are helping us make P2 Flash FS better."
