@@ -9,8 +9,8 @@ The future home of our Flash FS a filesystem for the FLASH chip on the P2 Edge M
 
 On this Page:
 
-- [Flash Filesystem Features]() - key features of this filesystem / design goals
-- [Contributing]() - you can contribute to this project
+- [Flash Filesystem Features](#flash-filesystem-features) - key features of this filesystem / design goals
+- [Contributing](#how-to-contribute) - you can contribute to this project
 
 Additional pages:
 
