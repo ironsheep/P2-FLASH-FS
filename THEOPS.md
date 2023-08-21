@@ -36,7 +36,7 @@ Key Constants in the file describe:
 
 **Block IDs** - block IDs are logical IDs assigned to a block when it is first written, they are not physical block pointers. This allows a block to exist anywhere within the filesystem space without being aware of it's location.  A clock can be relocated (written to a new location and removed from the prior location and the Block's ID will not change.)
 
-**Block Pointers** - Block pointers contain block ID values. Blocks are assigned Block IDs when created. When a block wants to point to another block the pointer ID of the target block (The pointed to block) is the value assigned to the block pointer.
+**Block Pointers** - Block pointers contain block ID values. Blocks are assigned Block IDs when created. When a block wants to point to another block the ID of the target block (The pointed to block) is the value assigned to the block pointer.
 
 **Block Placement** - to aid in wear leveling all 4k block locations are randomly chosen
 
