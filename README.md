@@ -9,11 +9,18 @@ The future home of our Flash FS a filesystem for the FLASH chip on the P2 Edge M
 
 On this Page:
 
-- ...
+- [Flash Filesystem Features]() - key features of this filesystem / design goals
+- [Contributing]() - you can contribute to this project
 
 Additional pages:
 
-- ...
+- [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
+- [FS Theory of Operations](THEOPS.md) - a deteailed descript of how this filesystem works
+
+## Flash Filesystem Features
+
+- Wear-leveling write mechanism
+- Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
 
 ## How to Contribute
 
