@@ -10,23 +10,37 @@ THis page presents the theory behind our Flash FS a filesystem for the FLASH chi
 
 On this Page:
 
-- ...
+- [Flash Filesystem Features](#flash-filesystem-features) - key features of this filesystem / design goals
+- Initial build - Constants
+- Concepts
+- File System Block types/format
+- Tracking Data
+- The Mount Process [M]
+- Locating a next block to allocate to a file [L]
+- The File Open Process [O]
+- The File Close Process [C]
+- The File Write Process [W]
 
 Additional pages:
 
 - [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
 - [Top README](https://github.com/ironsheep/P2-FLASH-FS) - back to the top page of this project
 
+## Flash Filesystem Features
 
-## Initial build
+- Wear-leveling write mechanism
+- Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
+- Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
+
+## Initial build - Constants
 
 Key Constants in the file describe:
 
 - **SPI_[CS|CK|DI|DO]** - The signal lines used for the SPI flash chip
-- **FIRST_BLOCK** - The starting block to be used within the Flash chip.  By default the value is chosen to allow for the first 512KB to be resorced the boot loaded code for the P2.
-- **LAST_BLOCK** - The address of the last block to be allocated to the filesystem. This effectivly tells us the amount of space whihc is allocated to this filesystem
-- **MAX_FILES_OPEN** - a 4k buffer is allocated to each file we could have open at the same time as another. This defaults to 2 so we can at least copy one file to another.
-- **BLOCK_SIZE** - fixed at 4KB, this is the smallest eraseable amount of space within the SPI FLASH chip we use.
+- **FIRST_BLOCK** - The starting block to be used within the Flash chip.  By default the value is chosen to allow for the first 512KB to be resorced the boot loaded code for the P2. (Default: $080)
+- **LAST_BLOCK** - The address of the last block to be allocated to the filesystem. This effectivly tells us the amount of space which is allocated to this filesystem (Default: $FFF)
+- **MAX_FILES_OPEN** - a 4k buffer is allocated to each file we could have open at the same time as another. This is set to 2 so we can at least copy one file to another. (Default: 2)
+- **BLOCK_SIZE** - fixed at 4KB, this is the smallest eraseable amount of space within the SPI FLASH chip we use. (Default $1000)
 
 *Most users will not need to adjust these values!*
 
@@ -125,7 +139,7 @@ Upon Mount the entire flash space is scanned for well-formed blocks and work is 
 
 ## License
 
-Copyright © 2022 Iron Sheep Productions, LLC. All rights reserved.
+Copyright © 2023 Iron Sheep Productions, LLC. All rights reserved.
 
 Licensed under the MIT License.
 

@@ -21,6 +21,7 @@ Additional pages:
 
 - Wear-leveling write mechanism
 - Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
+- Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
 
 ## How to Contribute
 
@@ -57,7 +58,7 @@ Thank you also to members of the [forum thread - "On-Board Flash File System"](h
 
 ## License
 
-Copyright © 2022 Iron Sheep Productions, LLC. All rights reserved.
+Copyright © 2023 Iron Sheep Productions, LLC. All rights reserved.
 
 Licensed under the MIT License.
 
