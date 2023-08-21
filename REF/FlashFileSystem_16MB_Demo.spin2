@@ -1,0 +1,77 @@
+CON	_CLKFREQ	= 320_000_000
+
+OBJ     Flash : "FlashFileSystem_16MB"
+
+
+PUB gox()
+
+  debug("Abort", sdec(\go()))
+
+PUB go()
+
+'  Flash.Format()		'Comment out this line to not erase all files
+  Flash.Mount()
+
+  ShowStats()			'Do a bunch of file stuff while reporting status, along the way
+  ShowFiles()
+
+  WriteFile(@"file1", @file1)
+  WriteFile(@"file2", @file2)
+  WriteFile(@"file3", @file3)
+
+  ShowStats()
+  ShowFiles()
+
+  if Flash.Exists(@"file3") and not Flash.Exists(@"Apples")
+    Flash.Rename(@"file3",@"Apples")
+
+  Flash.Delete(@"file1")
+
+  ShowStats()
+  ShowFiles()
+
+
+PRI ShowStats() | BlocksUsed, BlocksFree, Files
+
+  BlocksUsed, BlocksFree, Files := Flash.Stats()
+  debug(udec(BlocksUsed, BlocksFree, Files))
+
+
+PRI ShowFiles() | ID, Bytes, Handle, Ptr, x, byte Filename[60], byte Buff[30]
+  repeat
+    Flash.Directory(@ID, @Filename, @Bytes)			'get next file
+    if Filename[0]						'is there a filename?
+      ReadFile(@Filename, @Buff)				'read file
+      debug(zstr(@Filename), udec(Bytes, ID), zstr(@Buff))	'show filename, bytes, ID, and file contents
+    else
+      quit							'no more files, quit
+
+
+PRI ReadFile(pFilename, pBuff) | Handle, x
+
+  Handle := Flash.OpenRead(pFilename)				'open file for reading
+
+  repeat Flash.SizeOf(pFilename)
+    byte[pBuff++] := Flash.ByteRead(Handle)			'read bytes
+
+  Flash.Close(Handle)						'close file
+
+
+PRI WriteFile(pFilename, pBuff) | Handle
+
+  debug("Writing: ", zstr_(pFilename))
+
+  Handle := Flash.OpenWrite(pFilename)				'open file for writing
+
+  repeat							'write bytes until 0 written
+    Flash.ByteWrite(Handle, byte[pBuff])
+  while byte[pBuff++]
+
+  Flash.Close(Handle)						'close file
+
+
+DAT
+
+file1   byte    "The car goes.",0
+file2   byte    "His cat meows.",0
+file3   byte    "My boat floats.",0
