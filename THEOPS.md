@@ -18,6 +18,36 @@ Additional pages:
 - [Top README](https://github.com/ironsheep/P2-FLASH-FS) - back to the top page of this project
 
 
+## Initial build
+
+Key Constants in the file describe:
+
+- **SPI_[CS|CK|DI|DO]** - The signal lines used for the SPI flash chip
+- **FIRST_BLOCK** - The starting block to be used within the Flash chip.  By default the value is chosen to allow for the first 512KB to be resorced the boot loaded code for the P2.
+- **LAST_BLOCK** - The address of the last block to be allocated to the filesystem. This effectivly tells us the amount of space whihc is allocated to this filesystem
+- **MAX_FILES_OPEN** - a 4k buffer is allocated to each file we could have open at the same time as another. This defaults to 2 so we can at least copy one file to another.
+- **BLOCK_SIZE** - fixed at 4KB, this is the smallest eraseable amount of space within the SPI FLASH chip we use.
+
+*Most users will not need to adjust these values!*
+
+**NOTE**: *The SPI signal lines are shared with the uSD socket on P2 Edge Modules that have a uSD socket.*
+
+## Concepts
+
+Block IDs - blocks have IDs that are sequentially allocated and reused when associated blocks are freed.
+
+Block Placement - to aid in wear leveling all 4k block locations are randomly chosen
+
+
+
+## Tracking Data
+
+## The Mount Process (m)
+
+Upon Mount the entire flash space is scanned for well-formed blocks and work is completed if found incomplete. Lastly any badly formed blocks/block chains are freed. In this last case an error code is returned from mount
+
+### (m1) Initial scan
+### (m2) Completing work which didn't complete due to power fail
 
 ---
 
