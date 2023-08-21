@@ -1,32 +1,34 @@
-# P2-FLASH-FS
-The future home of our Flash FS a filesystem for the FLASH chip on the P2 Edge Module.
+# P2-FLASH-FS / REF
+Versioned releases from Chip which we roll into the formal verison.
 
 ![Project Maintenance][maintenance-shield]
 
 [![License][license-shield]](LICENSE)
 
-## Table of Contents
 
-On this Page:
+## Versions from Chip
+This is a recap of the version history.
 
-- ...
+| Version | Date | Purpose |
+| --- | --- | --- |
+|  v1.0 | 2023-08-14 | Initial release.	 |
+| v1.1 |  2023-08-18 | Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI_CS now resets high.	|
 
-Additional pages:
+## The latest Files from Chip
 
-- ...
+This is the latest files from the [Forum Thread](https://forums.parallax.com/discussion/175470/on-board-flash-file-system/p2)
 
-## How to Contribute
+| File | Purpose |
+| --- | --- |
+| FlashFileSystem_16MB.spin2 | Chip's latest found in the forums |
+| FlashFileSystem_16MB_Demo.spin2 | A demo using Chip's driver |
 
-This is a project supporting our P2 Development Community. Please feel free to contribute to this project. You can contribute in the following ways:
-
-- File **Feature Requests** or **Issues** (describing things you are seeing while using our code) at the [Project Issue Tracking Page](https://github.com/ironsheep/P2-FLASH-FS/issues)
-- Fork this repo and then add your code to it. Finally, create a Pull Request to contribute your code back to this repository for inclusion with the projects code. See [CONTRIBUTING](CONTRIBUTING.md)
 
 ---
 
 > If you like my work and/or this has helped you in some way then feel free to help me out for a couple of :coffee:'s or :pizza: slices!
 >
-> [![coffee](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ironsheep) &nbsp;&nbsp; -OR- &nbsp;&nbsp; [![Patreon](./DOCs/Images/patreon.png)](https://www.patreon.com/IronSheep?fan_landing=true)[Patreon.com/IronSheep](https://www.patreon.com/IronSheep?fan_landing=true)
+> [![coffee](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ironsheep) &nbsp;&nbsp; -OR- &nbsp;&nbsp; [![Patreon](../DOCs/Images/patreon.png)](https://www.patreon.com/IronSheep?fan_landing=true)[Patreon.com/IronSheep](https://www.patreon.com/IronSheep?fan_landing=true)
 
 ---
 
