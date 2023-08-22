@@ -136,13 +136,13 @@ A file made up of these blocks can exist in one of three shapes:
 
 | Constituency | Max size | Notes
 | --- | --- | --- |
-| Head/Last block | 0 - 4028 bytes | 1 block file
-| Head/More block -> Body/Last block | 0 - 8116 bytes | 2 block file
-| Head/More block -> (1 or more) Body/More block -> Body/Last block | 0 - 16,221,124 bytes | up to a 3968-block file
+| Head/Last block | 0 - 4,028 bytes | 1 block file
+| Head/More block -> Body/Last block | 0 - 8,116 bytes | 2 block file
+| Head/More block -> (1 or more) Body/More block -> Body/Last block | 0 - 16,221,124 bytes | up to a 3,968-block file
 
-**NOTE1**: the largest file would be a 1 x **Head/More block** (4028 bytes) -> 3966 x **Body/More block**s (4088 bytes ea.) -> 1x **Body/Last block** (4088 bytes) which yeilds a max length of 16,221,124 bytes.
+**NOTE1**: the largest file would be a 1 x **Head/More block** (4,028 bytes) -> 3,966 x **Body/More block**s (4,088 bytes ea.) -> 1x **Body/Last block** (4,088 bytes) which yeilds a max length of 16,221,124 bytes.
 
-**NOTE2**: Given this block-type composition of our files, our flash chip using this system can contain a **maximum** of 3968 **files** of 1-4028 bytes each.
+**NOTE2**: Given this block-type composition of our files, our flash chip using this system can contain a **maximum** of 3,968 **files** of 1-4,028 bytes each.
 
 
 #### Writing to a File
