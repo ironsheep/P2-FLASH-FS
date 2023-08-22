@@ -162,22 +162,27 @@ The less frequent case is when we append to a file that contains less than 4028 
 
 - **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File" (above.)
 
-## Tracking Data
+## Tracking Data (State of Filesystem)
 
-#### ID to Block translation
+When the filesystem is first mounted the following tables are filled in:
 
-```spin2
- 	  word IDToBlocks   [IdToBlocks_SIZE]   'ID-to-block translation table
-      long IDToBlock                        '(field pointer)
-     
-in code:
-       ' init
-       IDToBlock  := ^@IDToBlocks.[11..0]  'set field pointers
+### ID to Block translation
 
-       ' reference
-       
+### ID Valid Flags
 
-```
+### Block States
+
+## Tracking Data (Open Files)
+
+For each open file (handle) we maintain the following information:
+
+- Handle status
+- Handle HeadID
+- Handle HeadBlock
+- Handle HeadCycle
+- Handle BlockPtr
+- Handle Block Buffer
+- Handle Filename
 
 
 ## The Mount Process [M]
