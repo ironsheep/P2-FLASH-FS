@@ -31,6 +31,7 @@ Additional pages:
 - Wear-leveling write mechanism
 - Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
 - Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
+- Block idenitification is independent of physical location
 
 ## Initial build - Constants
 
@@ -48,13 +49,59 @@ Key Constants in the file describe:
 
 ## Concepts
 
+**Allocated Block** - A block formatted as one of our block types, it contains a lifeCycle value meaning Active, a block ID, and contains a valid 32-bit CRC of the block.
+
+**Free Block** - A block that is still erased, or a block that contains a lifeCycle value of **Cancelled** or **Inactive**. (Erased blocks appear to have a lifeCycle value of **Inactive**.
+
 **Block IDs** - block IDs are logical IDs assigned to a block when it is first written, they are not physical block addresses or the like. This allows a block to exist anywhere within the filesystem space without being aware of its location or other blocks knowing its location.  A block can be relocated (written to a new location and removed from the prior location) and the Block's ID will not change.  Other blocks referencing a block know the referenced block only by its block ID.
 
-**Block Pointers** - Block pointers contain block ID values. Blocks are assigned Block IDs when created. When a block wants to point to another block the ID of the target block (The pointed to block) is the value assigned to the block pointer.
-
+**Block Pointer** - A Block pointer contains a block ID value. Blocks are assigned Block IDs when created. When a block wants to point to another block the ID of the target block (The pointed to block) is the value assigned to the block pointer.
+f
 **Block Placement** - to aid in wear leveling all 4k block locations are randomly chosen
 
+**Flash Erase** - the Flash chip supports erasing a block at a time. A block is 4096 bytes. An erase of a block returns all bits of the block to 1 ($FF in all bytes of the block)
+
+**Flash Write** - a flash write only changes 1 bits to 0's. If a bit is 0 it can not be changed until the block containing it is erased at which the time bit becomes 1 once again.
+
 ## File System Block types/format
+
+The first long (4-bytes) of each block (addr $000-$003) identifies the block Id, the structure of the remaining bytes in the block, the location of the block within a chain of blocks that comprise a single file, as well as the state of the block.
+
+ 
+The bits of this first long in the block are interpreted as follows:
+
+| Bit location | xx | xx |
+| --- | --- | --- |
+| 31..20 | EndPtr -or- NextId | 12-bit field: EndPtr is address of next free byte in block<br>NextID is Block ID of next block in chain 
+| 19..8 | ThisID | the Block ID [0-3975] assigned to this block
+| 7..5 | LifeCycle | life-cycle state of this block
+| 4..2 | Unused | these bits reserved
+| 1..0 | Block Type | bit 1x = head/body, bit x1 = last/more <br>which yields: 00 = head/last, 01 = head/more, 10 = body/last, 11 = body/more
+
+The LifeCycle  3-bit field describes the state of the block as inactive, canceled, or active. Active LifeCycle values follow rules which are based upon the fact that 1-bits can only transition to 0 on a flash device.  These rules are:
+
+- Active block follow the single-zero ring counter state sequence: 011..101..110..repeat
+- The block with the greater state is the valid block between two blocks with identical IDs
+ (Which allows for make-before-break block replacement that can be recovered after unexpected power loss)
+- To cancel a block we write a 2nd zero to the life-cycle bits of that block, this returns the block back to an unused state.
+ 
+ This is an overview of the possible values of the three bits:
+ 
+| bit value | meaning | how to recognize
+| --- | --- | --- |
+| 111 | inactive | no zeroes
+| 011/101/110 | **active** | one zero
+| 001/010/100/000 | canceled | two or three zeroes
+
+This is how we determine age of two block with identical Block IDs but the life-cycle bits are different. When we find these we want to finish the transaction by cancelling the older of the two blocks having these matching IDs.
+
+| two life-cycle values compared | age relationship
+| --- | --- |
+| 011 3 > 110 6 | new > old
+| 101 5 > 011 3 | new > old
+| 110 6 > 101 5 | new > old
+
+
 Blocks written to our flash filesystem are of the following formats:
 
 | byte offset (hex) | purpose | notes |
@@ -78,8 +125,20 @@ Blocks written to our flash filesystem are of the following formats:
 | 004..FFB | byte data[4088] | data
 | FFC..FFF | long crc32	 | crc32 of 000..FFB
 
+#### A File is comprised of blocks
 
-### File life-cycle notes
+A file made up of these blocks can exist in one of three shapes:
+
+| Constituency | Max size | Notes
+| --- | --- | --- |
+| Head/Last block | 0 - 4028 bytes | 1 block file
+| Head/More block -> Body/Last block | 0 - 8116 bytes | 2 block file
+| Head/More block -> (1 or more) Body/More block -> Body/Last block | 0 - 16,221,124 bytes | up to a 3968-block file
+
+**NOTE1**: the largest file would be a 1 x **Head/More block** (4028 bytes) -> 3966 x **Body/More block**s (4088 bytes ea.) -> 1x **Body/Last block** (4088 bytes) which yeilds a max length of 16,221,124 bytes.
+
+**NOTE2**: Given this block-type composition of our files, our flash chip using this system can contain a **maximum** of 3968 **files** of 1-4028 bytes each.
+
 
 #### Writing to a File
 
@@ -96,10 +155,24 @@ When appending there are really two cases with the more normal case being the fi
 
 The less frequent case is when we append to a file that contains less than 4028 bytes:
 
-- **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File".
+- **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File" (above.)
 
 ## Tracking Data
 
+#### ID to Block translation
+
+```spin2
+ 	  word IDToBlocks   [IdToBlocks_SIZE]   'ID-to-block translation table
+      long IDToBlock                        '(field pointer)
+     
+in code:
+       ' init
+       IDToBlock  := ^@IDToBlocks.[11..0]  'set field pointers
+
+       ' reference
+       
+
+```
 
 
 ## The Mount Process [M]
