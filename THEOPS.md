@@ -85,8 +85,7 @@ The LifeCycle  3-bit field describes the state of the block as inactive, cancele
  (Which allows for make-before-break block replacement that can be recovered after unexpected power loss)
 - To cancel a block we write a 2nd zero to the life-cycle bits of that block, this returns the block back to an unused state.
 
- 
- This is an overview of the possible values of the three bits:
+This is an overview of the possible values of the three bits:
  
 | bit value | meaning | how to recognize
 | --- | --- | --- |
@@ -147,9 +146,9 @@ A file made up of these blocks can exist in one of three shapes:
 
 #### Writing to a File
 
-- A filestarts out as a **Head/Last block** and remains so while it is <= 4028 bytes.
-- When file gets to 4029 bytes, the 4028+1 byte is written to a **Body/Last block** and the **Head/Last block** is rewritten as a **Head/More block**
-- When the file then gets to 4028+4088+1 (the 8117th byte) is written to a new **Body/Last block** and the current **Body/Last block** is rewritten as a **Body/More block**.
+- A filestarts out as a **Head/Last block** and remains so while it is <= 4,028 bytes.
+- When file gets to 4,029 bytes, the 4,028+1 byte is written to a **Body/Last block** and the **Head/Last block** is rewritten as a **Head/More block**
+- When the file then gets to 4,028+4,088+1 (the 8,117th byte) is written to a new **Body/Last block** and the current **Body/Last block** is rewritten as a **Body/More block**.
 - ... and so on ...
 
 #### Appending to an existing File
@@ -158,7 +157,7 @@ When appending there are really two cases with the more normal case being the fi
 
 - **Case #1**: In the case of appending to a longer file (a file which is 2 or more blocks) then the append consists of wirting to the **Body/Last block** until we attmpt to write the byte just past then end of theis block. At this time we allocate a new **Body/Last block** to contain this new byte and rewrite the prior **Body/Last block** as a **Body/More block**.
 
-The less frequent case is when we append to a file that contains less than 4028 bytes:
+The less frequent case is when we append to a file that contains less than 4,028 bytes:
 
 - **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File" (above.)
 
