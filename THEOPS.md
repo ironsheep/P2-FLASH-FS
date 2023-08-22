@@ -63,7 +63,7 @@ f
 
 **Flash Write** - a flash write only changes 1 bits to 0's. If a bit is 0 it can not be changed until the block containing it is erased at which the time bit becomes 1 once again.
 
-## File System Block types/format
+## File System Block Types and Formats of these Blocks
 
 The first long (4-bytes) of each block (addr $000-$003) identifies the block Id, the structure of the remaining bytes in the block, the location of the block within a chain of blocks that comprise a single file, as well as the state of the block.
 
@@ -78,12 +78,13 @@ The bits of this first long in the block are interpreted as follows:
 | 4..2 | Unused | these bits reserved
 | 1..0 | Block Type | bit 1x = head/body, bit x1 = last/more <br>which yields: 00 = head/last, 01 = head/more, 10 = body/last, 11 = body/more
 
-The LifeCycle  3-bit field describes the state of the block as inactive, canceled, or active. Active LifeCycle values follow rules which are based upon the fact that 1-bits can only transition to 0 on a flash device.  These rules are:
+The LifeCycle  3-bit field describes the state of the block as inactive, canceled, or active. Active and Canceled LifeCycle values follow rules which are based upon the fact that 1-bits can only transition to 0 on a flash device.  These rules are:
 
-- Active block follow the single-zero ring counter state sequence: 011..101..110..repeat
+- Active block values follow the single-zero ring counter state sequence: 011..101..110..repeat
 - The block with the greater state is the valid block between two blocks with identical IDs
  (Which allows for make-before-break block replacement that can be recovered after unexpected power loss)
 - To cancel a block we write a 2nd zero to the life-cycle bits of that block, this returns the block back to an unused state.
+
  
  This is an overview of the possible values of the three bits:
  
@@ -93,13 +94,17 @@ The LifeCycle  3-bit field describes the state of the block as inactive, cancele
 | 011/101/110 | **active** | one zero
 | 001/010/100/000 | canceled | two or three zeroes
 
-This is how we determine age of two block with identical Block IDs but the life-cycle bits are different. When we find these we want to finish the transaction by cancelling the older of the two blocks having these matching IDs.
+**NOTE1**: A life cycle field transitions from Inactive/formatted (no zero bits) to Active (1 zero bit) to canceled (2 or more 0 bits).
+
+**NOTE2**: When blocks are duplicated with the intent of the newer replacing the older then the active life cycle value transitions from 3 (011) -> 5 (101) -> 6 (110) -> 3 (011) -> ... forever.
+
+This is how we determine age of two blocks with identical Block IDs but the life-cycle bits are different. When we find these we want to finish the transaction by cancelling the older of the two blocks having these matching IDs.
 
 | two life-cycle values compared | age relationship
 | --- | --- |
-| 011 3 > 110 6 | new > old
-| 101 5 > 011 3 | new > old
-| 110 6 > 101 5 | new > old
+| 011 3 -> 110 6 | new > old (we wrapped from 6 back to 3)
+| 101 5 -> 011 3 | new > old
+| 110 6 -> 101 5 | new > old
 
 
 Blocks written to our flash filesystem are of the following formats:
