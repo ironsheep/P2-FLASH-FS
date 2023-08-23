@@ -53,10 +53,12 @@ Key Constants in the file describe:
 
 **Free Block** - A block that is still erased, or a block that contains a lifeCycle value of **Cancelled** or **Inactive**. (Erased blocks appear to have a lifeCycle value of **Inactive**.
 
+**Block Address** - a zero-based address of a block within our filesystem (Default: 0 - 3,967 [$000 - $F7F]).  To this block address we add the offset to the filesystem from the start of the flash chip (Default: $080) to get the physical addreess of the 4kB block within the flash Chip.
+
 **Block IDs** - block IDs are logical IDs assigned to a block when it is first written, they are not physical block addresses or the like. This allows a block to exist anywhere within the filesystem space without being aware of its location or other blocks knowing its location.  A block can be relocated (written to a new location and removed from the prior location) and the Block's ID will not change.  Other blocks referencing a block know the referenced block only by its block ID.
 
 **Block Pointer** - A Block pointer contains a block ID value. Blocks are assigned Block IDs when created. When a block wants to point to another block the ID of the target block (The pointed to block) is the value assigned to the block pointer.
-f
+
 **Block Placement** - to aid in wear leveling all 4k block locations are randomly chosen
 
 **Flash Erase** - the Flash chip supports erasing a block at a time. A block is 4096 bytes. An erase of a block returns all bits of the block to 1 ($FF in all bytes of the block)
@@ -163,13 +165,59 @@ The less frequent case is when we append to a file that contains less than 4,028
 
 ## Tracking Data (State of Filesystem)
 
-When the filesystem is first mounted the following tables are filled in:
+When the filesystem is first mounted the following tables are populated by mount when scanning all the blocks in the space allocated to the filesystem. The tables are:
 
-### ID to Block translation
+### Table IDtoBlocks: ID to Block translation
 
-### ID Valid Flags
+**Physically** this table is a contiguous allocation of WORDs. Its size is calculated so that it can contain a 12-bit variable for each block allocated to the filesystem which is then rounded up to nearest WORD boundary.
 
-### Block States
+```spin2
+CON     IdToBlocks_SIZE     = (BLOCKS * 12 + 15) / 16
+DAT     IDToBlocks  WORD    0[IdToBlocks_SIZE]   ' ID-to-block translation table
+```
+
+**Logically** this table is treated as a contiguous array of 12-bit variables indexed by blockID.
+Each 12-bit variable contains the 12-bit block-address to be associated with the index value for that location.  We accomplish this logical behavior by creating a "field pointer" indicating that it points to a 12-bit value within the contiguous allocation of WORDs:
+
+```spin2
+    IDToBlock  := ^@IDToBlocks.[11..0]
+```
+
+**Access**: To get a blockAddress from this table, we use:
+
+```spin2
+	blockAddress := field[IDToBlock][blockID] 
+```
+
+This is the way we treat this table as a contiguous allocation of 12-bit variables!
+
+### Table IDValids: ID Valid Flags
+
+This table is initialized to zeros and filling in when mount() is called.
+
+**Physically** this table is a contiguous allocation of BYTEs which consists of 1 byte for every 8 valid block IDs, 1 bit per block ID. Its size is calculated so that it can contain a 1-bit variable for each block allocated to the filesystem which is then rounded up to nearest BYTE boundary.
+
+```spin2
+CON     Flags_SIZE		   = (BLOCKS * 1 + 7) / 8
+DAT     IDValids  BYTE    0[Flags_SIZE]    'ID-valid flags
+```
+
+**Logically** this table is treated as a contiguous array of 1-bit variables indexed by blockID.
+Each 1-bit variable contains a [0,1] where 1 means the blockID is in use.  We accomplish this logical behavior by creating a "field pointer" indicating that it points to a 1-bit value within the contiguous allocation of BYTESs:
+
+```spin2
+    IDValid    := ^@IDValids.[0]
+```
+
+**Access**: To determine if a blockID is valid using this table, we use:
+
+```spin2
+	if field[IDValid][blockID]    ' is blockID valid?
+```
+
+This is the way we treat this table as a contiguous allocation of 1-bit variables!
+
+### Table: Block States
 
 ## Tracking Data (Open Files)
 
