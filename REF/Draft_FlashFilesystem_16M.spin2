@@ -1,0 +1,974 @@
+'********************************************************************************************************
+'*                                                                                                      *
+'*      P2 Flash File System                                                                            *
+'*                                                                                                      *
+'*      - on-board W25Q128 flash chip becomes 16MB SSD (minus 512KB for boot area)                      *
+'*      - automatic wear leveling is achieved via full-range random block picking and moving            *
+'*      - if power fails during file rewriting or renaming, the old file or name is recovered           *
+'*                                                                                                      *
+'********************************************************************************************************
+'*  v1.0  2023-08-14  Initial release.                                                                  *
+'*  v1.1  2023-08-18  Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI_CS now rests high.  *
+'*  v2.0  2023-08-23  draft renovated file with new internal documentation.                             *
+'********************************************************************************************************
+
+CON     ' default flash pin parameters
+    SPI_CS              = 61                    'flash chip select              [output]
+    SPI_CK              = 60                    'flash clock                    [output]
+    SPI_DI              = 59                    'flash data in                  [output]
+    SPI_DO              = 58                    'flash data out                 [input]
+
+CON ' default file system parameters
+    FIRST_BLOCK         = $080                  'block $080 is after the initial 512KB boot space
+    LAST_BLOCK          = $FFF                  'block $FFF is the end of the 16MB flash
+    MAX_FILES_OPEN      = 2                     'MAX_FILES_OPEN * 4KB allocated in VARs, two files allows for copying
+
+CON ' internal constants
+    BLOCK_SIZE          = $1000                 'blocks are 4KB, since flash erasure granularity is 4KB
+    BLOCK_SIZE_EXP      = encod BLOCK_SIZE
+
+    BLOCKS              = LAST_BLOCK - FIRST_BLOCK + 1
+
+    FILENAME_SIZE       = $040 - $004           'filenames are up to 59 characters, plus a zero terminator
+
+    IdToBlocks_SIZE     = (BLOCKS * 12 + 15) / 16
+    Flags_SIZE          = (BLOCKS * 1 + 7) / 8
+    States_SIZE         = (BLOCKS * 2 + 7) / 8
+
+    'Block states
+    sFREE               = %00                   'sFREE indicates block is unused
+    sTEMP               = %01                   'sTEMP used during mount and to later to signal immovable work-in-progress blocks
+    sHEAD               = %10                   'sHEAD is the first block of a file, contains the filename
+    sBODY               = %11                   'sBODY is a post-first block of a file
+
+    'Handle states
+    sREAD               = %001                  'file is being read (only)
+    sWRITE              = %010                  'file is being written 1st time (creating a new file)
+    sREWRITE            = %100                  'file is being rewritten/appended to (writing over an existing file)
+
+    sREADWRITE          = sREAD | sWRITE | sREWRITE   'file is being read and/or written
+    sWRITEONLY          = sWRITE | sREWRITE           'file is being written only
+
+    ' Error return codes
+    #-1[-1], eInvalidHandle, eNoHandle, eFileNotFound, eDriveFull, eFileWriting, eFileReading, eFileOpen, eFileExists, eAtEndOfFile, eBadBlocksRemoved
+
+
+DAT ' driver state tracking tables
+
+' physically: 3/4 of a word (12 bits) for every valid block ID, 12 bits per ID
+' logically: a "BLOCKS"-sized array of 12-bit variables, 1 for ea. block ID - indexed by block ID
+' contains blockAddress in ea. 12 bit field
+IDToBlocks    WORD      0[IdToBlocks_SIZE]                                      'ID-to-block translation table
+IDToBlock     LONG      0                                                       '(field pointer to 12-bit variables)
+
+' physically: 1 byte for every 8 valid block IDs, 1 bit per block ID
+' logically: a "BLOCKS"-sized array of single bit variables, 1 for ea. block ID - indexed by block ID
+' contains [0,1] in ea. 1 bit field, where 1 means ID is valid
+IDValids      BYTE      0[Flags_SIZE]                                           'ID-valid flags
+IDValid       LONG      0                                                       '(field pointer to 1-bit variables)
+
+' physically: 1 byte for every 4 valid block IDs, 2 bits per block ID
+' logically: a "BLOCKS"-sized array of 2-bit variables, 1 for ea. block ID - indexed by block ID
+' contains a Block-State value in ea. 2 bit field [sFREE, sTEMP, sHEAD, sBODY]
+BlockStates   BYTE      0[States_SIZE]                                          'block states
+BlockState    LONG      0                                                       '(field pointer to 2-bit variables)
+
+tmpBlockBuffer BYTE     0[BLOCK_SIZE]                                           'buffer used for copying blocks
+
+' handle-related variables and buffers
+'   handle is index into each of the arrays below
+
+hStatus       BYTE    0[MAX_FILES_OPEN]                                         'handle: status [sREAD, sWRITE, sREWRITE]
+hHeadID       WORD    0[MAX_FILES_OPEN]                                         'handle: head blockID
+hHeadBlock    WORD    0[MAX_FILES_OPEN]                                         'handle: head blockAddress
+hHeadCycle    BYTE    0[MAX_FILES_OPEN]                                         'handle: head block lifecycle
+hBlockPtr     WORD    0[MAX_FILES_OPEN]                                         'handle: pointer to next byte in block
+hBlockBuff    BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                            'handle: 4KB buffer for file data
+hFilename     BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                         'handle: 59+1 byte buffer for filename
+
+
+CON ' --- Public Methods ---
+
+PUB Format() : status | blockAddress, cycleBits
+
+'' Format file system and (re)mount it
+''
+'' @returns status - ebadBlocksRemoved if bad blocks were found and fixed (SHOULD NOT HAPPEN ON FORMAT), otherwise 0 for success
+
+' Local Variables:
+' @local blockAddress - the block offset within the file system
+' @local cycleBits - lifeCycle bit-pattern to place into block
+
+  repeat blockAddress from 0 to BLOCKS - 1                                      'cancel all active blocks
+    ReadBlock(blockAddress, @cycleBits, $000, $000)
+    if lookdown(cycleBits.[7..5] : %011, %101, %110)
+      CancelBlock(blockAddress)
+
+  return Mount()                                                                '(re)mount flash
+
+
+PUB Mount() : status | blockAddress, cycleBits, signature
+
+'' Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
+''
+'' @returns status - eBadBlocksRemoved if BAD blocks were found adn fixed, otherwise 0 for success
+
+' Local Variables:
+' @local blockAddress - the block offset within the file system
+' @local cycleBits - lifeCycle bit-pattern to place into block
+' @local signature - block state bits of block being checked
+
+  bytefill(@hStatus, 0, MAX_FILES_OPEN)                                         'clear handles
+  bytefill(@IDValids, 0, Flags_SIZE)                                            'clear ID flags
+  bytefill(@BlockStates, 0, States_SIZE)                                        'clear block states to sFREE
+
+  IDToBlock  := ^@IDToBlocks.[11..0]                                            'set field pointers
+  IDValid    := ^@IDValids.[0]
+  BlockState := ^@BlockStates.[1..0]
+
+  repeat blockAddress from 0 to BLOCKS - 1                                      'check each block and fix any duplicate IDs
+    CheckBlockAndFixAnyDuplicateID(blockAddress)                                '(recovers from incomplete block switchover due to power loss)
+
+  repeat blockAddress from 0 to BLOCKS - 1                                      'trace head blocks and cancel any broken files
+    if field[BlockState][blockAddress] == sTEMP                                 'is this a valid block?
+      ReadBlock(blockAddress, @cycleBits, $000, $000)                           'yes, read first byte of block
+      ifnot cycleBits.[1]                                                       'is this also a head block?
+        ifnot TraceFileAndSetFlags(blockAddress, true)                          'yes, trace file, set block states to sHEAD/sBODY
+          TraceFileAndSetFlags(blockAddress, false)                             'if error, retrace file, return block states to sTEMP
+
+  repeat blockAddress from 0 to BLOCKS - 1                                      'cancel sTEMP blocks that didn't become sHEAD/sBODY blocks
+    if field[BlockState][blockAddress] == sTEMP                                 'is this an sTEMP block?
+      ReadBlock(blockAddress, @signature, $000, $003)                           'if so, read first long of block to get ID
+      field[IDValid][signature.[19..8]]~                                        '..cancel ID flag
+      field[BlockState][blockAddress] := sFREE                                  '..return block state to sFREE
+      CancelBlock(blockAddress)                                                 '..cancel block to inhibit future CRC checks
+      status := eBadBlocksRemoved
+
+
+PUB OpenRead(pFilename) : handle | i, signature
+
+'' Open a file for reading, returns handle
+
+  ifnot signature := GetFileHeadSignature(pFilename)                            'if file doesn't exist, abort
+    return eFileNotFound
+
+  if isFileOpen(pFilename, sWRITEONLY)  'if file is being written, abort
+    return eFileWriting
+
+  handle := NewHandle()                                                         'get new handle, aborts if no handle available
+  hStatus[handle] := sREAD                                                      'set handle status to READ
+  ReadBlock(field[IDToBlock][signature.[19..8]], BuffPtr(handle), $000, $FFF)   'read head block into buffer
+  hBlockPtr[handle] := $040                                                     'point to first data byte in head block
+  SetFilenameForHandle(handle, pFilename)                                       'set handle filename
+
+
+PUB ByteRead(handle) : byteValue | ptr , signature
+
+'' Read and return next byte [0-255] from file opened for reading (or eAtEndOfFile if no more data)
+''
+'' @param handle - the handle to the file from which to read a byte
+'' @returns byteValue - einvalidHandle if the handle is not valid, eFileWriting if the file is not open for rading, eAtEndOfFile if no more data, otherwise the next byte [0-255] from the file
+
+' Local Variables:
+' @local ptr - the address of the 4KB buffer for the file associated with this handle
+' @local signature -
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
+  case hStatus[handle]                                                          'check our handle...
+        sREAD, sREWRITE:                                                        'is open for READ/REWRITE?
+        other:
+           return eFileWriting                                                  'no, can't read from a file that is open for write-only
+
+  ptr := BuffPtr(handle)                                                        'get buffer pointer
+  signature := LONG[ptr]                                                        'get first long
+
+  ifnot signature.[0]                                                           'if last block and no more data, return -1
+    if hBlockPtr[handle] == LONG[ptr].[31..20]
+      return eAtEndOfFile
+  else
+    if hBlockPtr[handle] == $FFC                                                'else, if no more data then read next body block
+      ReadBlock(field[IDToBlock][signature.[31..20]], ptr, $000, $FFF)
+      hBlockPtr[handle] := $004                                                 'point to start of data in body block
+
+  return BYTE[ptr][hBlockPtr[handle]++]                                         'return data byte and increment pointer
+
+
+PUB OpenWrite(pFilename) : handle | signature, ptr
+
+'' Open a file for (re)writing
+''
+'' @param pFilename - pointer to a zstring containing the filename
+'' @returns handle - efileWriting if file is being written, eFileOpen if file is open, or 0 if successful
+
+' Local Variables:
+' @local signature - the block state bits of the block being checked
+' @local ptr - the address of the 4KB buffer for the file associated with this handle
+
+  if isFileOpen(pFilename, sREADWRITE)          'if file already open, abort
+    return eFileOpen
+
+  handle := NewHandle()                                                         'get new handle, aborts if no handle available
+
+  if signature := GetFileHeadSignature(pFilename)                               'does file already exist?
+    hStatus[handle] := sREWRITE                                                 'yes, REWRITING
+    hHeadID[handle] := signature.[19..8]                                        'yes, get block ID from head block
+    hHeadCycle[handle] := NextActiveCycle(signature.[7..5])                     'yes, get next lifecycle from head block
+  else
+    hStatus[handle] := sWRITE                                                   'no, WRITING
+    hHeadID[handle] := NextAvailableBlockID()                                   'no, get new ID
+    hHeadCycle[handle] := %011                                                  'no, set new lifecycle
+
+  ptr := BuffPtr(handle)                                                        'get buffer pointer
+
+  bytefill(ptr, $FF, BLOCK_SIZE)                                                'erase block buffer
+  LONG[ptr].[1..0] := %00                                                       'set head/last
+  LONG[ptr].[19..8] := hHeadID[handle]                                          'set ID
+  strcopy(ptr + $004, pFilename, FILENAME_SIZE - 1)                             'set filename
+
+  hBlockPtr[handle] := $040                                                     'point to start of data in head block
+
+  SetFilenameForHandle(handle, pFilename)                                       'set handle filename
+
+
+PUB ByteWrite(handle, byteValue) : status | ptr, nextBlockID
+
+'' Write a byte to a file that is open for write or rewrite
+''
+'' @param handle - handle to a file that is open for write or rewrite
+'' @param byteValue - value to write to the file
+'' @returns status - either eInvalidHandle or eFileReading if the handle is not valid or the file is open for reading, otherwise 0 for success
+
+' Local Variables:
+' @local ptr - the address of the 4KB buffer for the file associated with this handle
+' @local nextBlockID -
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
+  case hStatus[handle]                                                  'check our handle...
+        sWRITE, sREWRITE:                                               'is open for WRITE/REWRITE?
+        other:
+           return eFileReading                                          'no, can't write to a file that is open for reading
+
+  ptr := BuffPtr(handle)                                                'get buffer pointer
+
+  if hBlockPtr[handle] == $FFC                                          'current block full?
+        ' if block is already full, then write it as a 'more' block, and get a new block as tail and link this block to the new tail
+        nextBlockID := NextAvailableBlockID()                           'get next ID to link to
+        if nextBlockID < 0                                              'is an error: no more blocks available?
+           return nextBlockID                                           '  return the error code instead of a SUCCESS status
+
+        LONG[ptr].[0]~~                                                 'change block type from 'last' to 'more'
+        LONG[ptr].[31..20] := nextBlockID                               'make current block point to next block
+
+        WriteBlock(handle)                                              'write current block
+
+        bytefill(ptr, $FF, BLOCK_SIZE)                                  'make block buffer look erased (fill w/$ff's)
+        LONG[ptr].[1..0] := %10                                         'set block type to body/last
+        LONG[ptr].[19..8] := nextBlockID                                'set block ID
+
+        hBlockPtr[handle] := $004                                       'point to start of data in new block
+
+  BYTE[ptr][hBlockPtr[handle]++] := byteValue                           'write byte into block buffer, post-increment pointer
+
+
+PUB Close(handle) : status
+
+'' Close an open file, completes file (re)write, frees handle
+''
+'' @param handle - a file handle to an open file
+'' @returns status - either eInvalidHandle if the handle is not valid, otherwise 0 for success
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
+  case hStatus[handle]~                                                         'get handle and post-clear
+    sREAD:                                                                      'READ?
+      {okay, nothing to do}
+    sWRITE, sREWRITE:                                                           'WRITE/REWRITE?
+
+      LONG[BuffPtr(handle)].[31..20] := hBlockPtr[handle]                       'cap last block and write it
+      WriteBlock(handle)
+
+      ActivateBlock(hHeadBlock[handle], hHeadCycle[handle])                     'activate head block, replaces file if rewrite
+
+      if hStatus[handle] == sREWRITE                                            'if file rewrite, delete old file to clean up
+        DeleteChainAtBlockID(hHeadID[handle])
+        field[IDValid][hHeadID[handle]]~~                                       'set IDValid again, since it was cleared during file deletion
+
+      field[IDToBlock][hHeadID[handle]] := hHeadBlock[handle]                   'set IDToBlock
+      field[BlockState][hHeadBlock[handle]] := sHEAD                            'change head block status from sTEMP to sHEAD
+    other:
+      return eInvalidHandle
+
+
+PUB Delete(pFilename) : status | signature
+
+'' Delete a file
+''
+'' @param pFilename - pointer to zstring containing the filename
+'' @returns status - eFileNotFound if file doesn't exist, eFileOpen if file is open, or 0 if successful
+
+' Local Variables:
+' @local signature - block state bits of block being removed
+
+  ifnot signature := GetFileHeadSignature(pFilename)                                                    'if file doesn't exist, abort
+        return eFileNotFound
+
+  if isFileOpen(pFilename, sREADWRITE)                          'if file open, abort
+        return eFileOpen
+
+  DeleteChainAtBlockID(signature.[19..8])
+
+
+PUB Rename(pOldFilename, pNewFilename) : status | signature, newBlockAddress, oldBlockAddress, nextCycleBits
+
+'' Rename a file
+''
+'' @param pOldFilename - pointer to zstring containing old filename
+'' @param pNewFilename - pointer to zstring containing new filename
+'' @returns status - eFileNotFound if old file doesn't exist, eFileOpen if old file is open, eFileExists if new file exists -or- 0 if successful
+
+' Local Variables:
+' @local signature - block state bits of block being renamed
+' @local newBlockAddress - the block offset within the file system for the new block
+' @local oldBlockAddress - the block offset within the file system for the old block
+' @local nextCycleBits - active lifecycle bits for new block indicating block is newer than block containing the old filename
+
+  ifnot signature := GetFileHeadSignature(pOldFilename)                         'if old file doesn't exist, abort
+        return eFileNotFound
+
+  if isFileOpen(pOldFilename, sREADWRITE)                                       'if old file is open, abort
+        return eFileOpen
+
+  if GetFileHeadSignature(pNewFilename)                                         'if new file exists, abort
+        return eFileExists
+
+  if isFileOpen(pNewFilename, sREADWRITE)                                       'if new file is open, abort
+        return eFileExists
+
+  newBlockAddress := AddressOfNextBlock()                                       'get a new block to use for renaming (may move head block)
+  oldBlockAddress := field[IDToBlock][signature.[19..8]]                        'get head block of file to rename (AddressOfNextBlock may have changed lookup)
+
+  ReadBlock(oldBlockAddress, @tmpBlockBuffer, $000, $FFF)                       'read head block of file to rename
+  bytefill(@tmpBlockBuffer + $004, 0, FILENAME_SIZE)                            'clear filename space to prevent old trailing chrs
+  strcopy(@tmpBlockBuffer + $004, pNewFilename, FILENAME_SIZE - 1)              'copy new filename into filename space
+  nextCycleBits := NextActiveCycle(tmpBlockBuffer.[7..5])                       'get next lifecycle
+  ProgramBlock(newBlockAddress, @tmpBlockBuffer, nextCycleBits)                 'program first block of renamed file
+  ActivateBlock(newBlockAddress, nextCycleBits)                                 'activate new block
+  CancelBlock(oldBlockAddress)                                                  'cancel old block
+
+  field[IDToBlock][signature.[19..8]] := newBlockAddress                        'update IDToBlock
+  field[BlockState][newBlockAddress] := sHEAD                                   'make new block HEAD
+  field[BlockState][oldBlockAddress] := sFREE                                   'make old block FREE
+
+
+PUB Exists(pFilename) : status
+
+'' Check if a file exists
+''
+'' @param pFilename - pointer to zstring containing the filename
+'' @returns status - return T/F where T means the file exists
+
+  return GetFileHeadSignature(pFilename) <> 0                                   'return true/false
+
+
+PUB SizeOf(pFilename) : byteCount | signature
+
+'' Get size of file in bytes
+''
+'' @param pFilename - pointer to zstring containing the filename
+'' @returns byteCount - either the size of the file in bytes or eFileNotFound if the file doesn't exist
+
+' Local Variables:
+' @local signature - block state bits of block being checked
+
+  if signature := GetFileHeadSignature(pFilename)                               'does file exist?
+        return CountFileBytes(field[IDToBlock][signature.[19..8]])              'yes, get file size
+  else
+     return eFileNotFound
+
+PUB Directory(pBlockID, pFilename, pSize) | blockID, blockAddress, signature
+
+'' Get next file's filename and size in bytes via current blockID
+''
+'' @param pBlockID - the next block ID to check for a file head. (Initialize to 0, will be auto-advanced by each call to this method)
+'' @param pFilename - the filename of the file found (or a zero length string if no more files)
+'' @param pSize - the number of bytes in the file found (or 0 when no more files)
+
+' Local Variables:
+' @local blockID - the id of the block being checked
+' @local blockAddress - the offset within the file system of the block being checked
+' @local signature - temporary storage for the block state bits of the block being checked
+
+  BYTE[pFilename][0] := 0                                                       'reset filename
+
+  repeat while LONG[pBlockID] < BLOCKS                                          'scan any remaining blockID's for file heads
+        blockID := LONG[pBlockID]++                                             'get current blockID and post-increment it
+        if field[IDValid][blockID]                                              'block ID valid?
+          blockAddress := field[IDToBlock][blockID]                             'yes, get block from block ID
+          if field[BlockState][blockAddress] == sHEAD                           'is this a HEAD block?
+                ReadBlock(blockAddress, pFilename, $004, $03F)                  'yes, read filename
+                LONG[pSize] := CountFileBytes(blockAddress)                     'get file size
+                return
+
+
+PUB Stats() : usedBlocks, freeBlocks, fileCount | blockAddress
+
+'' Get fielsystem stats: used/free block counts and file count
+''
+'' @returns usedBlocks - the number of blocks in use
+'' @returns freeBlocks - the number of free blocks
+'' @returns fileCount - the number of files recorded in filesystem
+
+' Local Variables:
+' @local blockAddress - the block offset within the file system
+
+  usedBlocks := 0
+  freeBlocks := 0
+  fileCount := 0
+
+  repeat blockAddress from 0 to BLOCKS - 1
+    case field[BlockState][blockAddress]
+      sFREE: freeBlocks++
+      sTEMP: usedBlocks++
+      sHEAD: usedBlocks++
+              fileCount++
+      sBODY: usedBlocks++
+
+CON ' --- PRIVATE (Utility) Methods ---
+
+PRI CheckBlockAndFixAnyDuplicateID(thisBlockAddress) | otherBlockAddress, thisCycleBits, otherCycleBits, thisBlockID
+
+' If there is more than one block with this blocks ID, cancel the older block
+'
+' @param thisBlockAddress - the block offset within the file system for "this" block
+
+' Local Variables:
+' @local otherBlockAddress -the block offset within the file system for the "other" block
+' @local thisCycleBits - the lifecycle bits of "this" block
+' @local otherCycleBits - the lifecycle bits of the "other" block
+' @local thisBlockID - the blockID of "this" block
+
+  ReadBlock(thisBlockAddress, @thisCycleBits, $000, $000)                       'read first byte of block
+
+  ifnot lookdown(thisCycleBits.[7..5]: %011, %101, %110)                        'is block canceled or inactive?
+    return                                                                      '..if so, block status remains sFREE, done
+
+  ReadBlock(thisBlockAddress, @tmpBlockBuffer, $000, $FFF)                      'read entire block
+
+  if LONG[@tmpBlockBuffer + $FFC] <> BlockCRC(@tmpBlockBuffer)                  'is CRC bad?
+    CancelBlock(thisBlockAddress)                                               '..if so, cancel block to inhibit future CRC checks
+    return                                                                      '..block status remains sFREE, done
+
+  thisBlockID := tmpBlockBuffer.LONG.[19..8]                                    'this block is good, get its ID
+
+  ifnot field[IDValid][thisBlockID]~~                                           'set ID flag and if it wasn't already set..
+    field[IDToBlock][thisBlockID] := thisBlockAddress                           '..set IDToBlock to this block
+    field[BlockState][thisBlockAddress] := sTEMP                                '..set sTEMP status for this block
+    return                                                                      '..done
+
+  otherBlockAddress := field[IDToBlock][thisBlockID]                            'ID flag was already set, get other block with same ID
+
+  ReadBlock(otherBlockAddress, @otherCycleBits, $000, $000)                     'read first byte of other block
+
+  if lookdown(thisCycleBits.[7..5] << 3 | otherCycleBits.[7..5]: %011_110, %101_011, %110_101)  'if this block is newer..
+    field[IDToBlock][thisBlockID] := thisBlockAddress                           '..set IDToBlock to this block
+    field[BlockState][thisBlockAddress] := sTEMP                                '..set sTEMP status for this block
+    field[BlockState][otherBlockAddress] := sFREE                               '..set sFREE status for other block
+    CancelBlock(otherBlockAddress)                                              '..cancel other block
+  else
+    CancelBlock(thisBlockAddress)                                               'else, cancel this block, block status remains sFREE
+
+
+PRI TraceFileAndSetFlags(blockAddress, isSet) : valid | signature, blockID
+
+' Trace file chain marking (or clearing) block states until end of file is reached (or an error in block sequence is found)
+'
+' @param blockAddress - the block offset within the file system for the block to trace
+' @param isSet - true to set block states to sHEAD/sBODY, false to set block states to sTEMP
+' @returns valid - true if file is valid, false if file is invalid
+
+' Local Variables:
+' @local signature - block state bits of block being checked
+' @local blockID - the blockID of the block being checked
+
+  ReadBlock(blockAddress, @signature, $000, $003)                               'read first long of initial block
+  field[BlockState][blockAddress] := isSet ? sHEAD : sTEMP                      'set first block state to sHEAD or sTEMP
+
+  repeat BLOCKS                                                                 'limit repeat to BLOCKS in order to return false on endless loop
+    ifnot signature.[0]                                                         'if last block, file is complete, return true
+      return true
+    blockID := signature.[31..20]                                               'get "next" ID from this full block
+    ifnot field[IDValid][blockID]                                               'if ID invalid, error!, return false
+      return
+    blockAddress := field[IDToBlock][blockID]                                   'get address of block having this ID
+    ReadBlock(blockAddress, @signature, $000, $003)                             'read first long of "next" block
+    ifnot signature.[1]                                                         'if "next" is head block, error!, return false
+      return
+    field[BlockState][blockAddress] := isSet ? sBODY : sTEMP                    'set block state to sBODY or sTEMP
+
+
+PRI NewHandle() : handle | potentialHandle
+
+' Calculate and return next available handle
+'
+' @returns handle - eNoHandle if no handle is available, otherwise the next available handle
+
+' Local Variables:
+' @local potentialHandle - temporary handle to check for availability
+
+  handle := eNoHandle                                                           'if no handle is available... return this
+  repeat potentialHandle from 0 to MAX_FILES_OPEN - 1                           'find first free handle
+    ifnot hStatus[potentialHandle]                                              'if handle not in use
+      handle := potentialHandle                                                 '..select as handle to use
+      quit                                                                      '..exit loop, we have our answer
+
+
+PRI isFileOpen(pFilename, openModeBits): status | handle
+
+' Return true if named file is open
+'
+' @param pFilename - pointer to zstring containing the filename
+' @param openModeBits - some combiantion of sREAD, sWRITE, sREWRITE
+' @returns status - T/F where T means the file is open
+
+' Local Variables:
+' @local handle - tmporary handle to check for availability
+
+  repeat handle from 0 to MAX_FILES_OPEN - 1                                    'for each handle is already open?
+    if hStatus[handle] & openModeBits
+      if strcomp(@hFilename + handle * FILENAME_SIZE, pFilename)
+        return true
+
+
+PRI WriteBlock(handle) | ptr, blockID, blockAddress
+
+' Commit the handle's block buffer to file system
+'
+' @param handle - handle to a file that is open for write or rewrite
+
+' Local Variables:
+' @local ptr -  the address of the 4KB buffer for the file associated with this handle
+' @local blockID -
+' @local blockAddress -
+
+  ptr := BuffPtr(handle)                                                        'get buffer pointer
+  blockID := LONG[ptr].[19..8]                                                  'get the block ID
+  blockAddress := AddressOfNextBlock()                                          'get the new block to write, sets block state to sTEMP
+
+  if blockID == hHeadID[handle]                                                 'if this is the head block
+        ProgramBlock(blockAddress, ptr, hHeadCycle[handle])                     '..program block with head cycle
+        hHeadBlock[handle] := blockAddress                                      '..remember the block so that it can be activated on close
+  else                                                                          'else, this is a body block
+        ProgramBlock(blockAddress, ptr, %011)                                   '..program block with new cycle
+        ActivateBlock(blockAddress, %011)                                       '..activate block
+        field[IDToBlock][blockID] := blockAddress                               '..set IDToBlock
+        field[BlockState][blockAddress] := sBODY                                '..change block state from sTEMP to sBODY
+
+
+PRI AddressOfNextBlock() : blockAddress | blockFreeCount, freeBlockAddress, freeIndex, nextCycleBits
+' Return the address of the next block to which we should write
+'
+' @returns blockAddress - eDriveFull if no free block is available, otherwise the address of the next block to use
+
+' Local Variables:
+' @local blockFreeCount - the count of free blocks
+' @local freeBlockAddress - the offset within the file system of the free block
+' @local freeIndex - a counter of free blocks
+' @local nextCycleBits - the next lifecycle bits to use for the new block
+
+  ifnot blockFreeCount := BlocksFree()                                          'if no free block exists, abort
+        abort eDriveFull
+
+  repeat                                                                        'randomly pick an sFREE/sHEAD/sBODY (not an sTEMP) block
+        blockAddress := abs getrnd() // BLOCKS                                  '(random block selection results in +-5% wear leveling)
+  until field[BlockState][blockAddress] <> sTEMP
+
+  ifnot field[BlockState][blockAddress]                                         'if the block is sFREE, change its state to sTEMP and exit
+        field[BlockState][blockAddress] := sTEMP
+        return
+
+  ' now we are using head or body so we have to move it!
+  freeIndex := abs getrnd() // blockFreeCount                                   'randomly pick an sFREE block to move the sHEAD/sBODY block to
+  repeat freeBlockAddress from 0 to BLOCKS - 1
+        ifnot field[BlockState][freeBlockAddress]                               'if the block is sFREE
+          ifnot freeIndex--
+                quit
+
+  ReadBlock(blockAddress, @tmpBlockBuffer, $000, $FFF)                          'read the sHEAD/sBODY block
+  nextCycleBits := NextActiveCycle(tmpBlockBuffer.[7..5])                       'advance its lifecycle
+  ProgramBlock(freeBlockAddress, @tmpBlockBuffer, nextCycleBits)                'program the sFREE block with the sHEAD/sBODY data
+  ActivateBlock(freeBlockAddress, nextCycleBits)                                'activate the sFREE block, now superior to the original block
+  CancelBlock(blockAddress)                                                     'cancel the original block to complete the move
+
+  field[IDToBlock][tmpBlockBuffer.LONG.[19..8]] := freeBlockAddress             'update IDToBlock table
+  field[BlockState][freeBlockAddress] := field[BlockState][blockAddress]\sTEMP  'update blocks' states, new block is sTEMP
+
+
+PRI GetFileHeadSignature(pFilename) : foundSignature | blockAddress, BYTE header[$40]
+' Look up file by name and return the block state bits of the files' head block (or 0 if file not found)
+'
+' @param pFilename - the zstring containing the filename to look up
+' @returns foundSignature - the block state bits of the head block (or 0 if file not found)
+
+' Local Variables:
+' @local blockAddress - the block offset within the file system
+' @local BYTE header[$40] - a temp buffer the block's filename is copied into
+
+  repeat blockAddress from 0 to BLOCKS - 1                                      'scan head blocks for filename
+        if field[BlockState][blockAddress] == sHEAD                             'is this a head block?
+          ReadBlock(blockAddress, @header, $000, $03F)                          'yes, read first 64 bytes of block
+          if strcomp(pFilename, @header[$004])                                  'does the filename match?
+                foundSignature := LONG[@header]                                 'yes, return first long of header (always non-zero or logically TRUE)
+                quit                                                            ' end the repeat, we have our answer
+
+
+PRI CountFileBytes(blockAddress) : byteCount | signature
+' Return the number of bytes written to file
+'
+' @param blockAddress - the offset within the file system of the first block of the file
+' @returns byteCount - the number of bytes written to file
+
+' Local Variables:
+' @local signature - the block state bits of the block being counted
+
+  repeat                                                                        'trace blocks to count file bytes
+    ReadBlock(blockAddress, @signature, $000, $003)                             'read the first long of the head/body block
+    case signature.[1..0]
+      %00:                                                                      'head/last
+        byteCount := signature.[31..20] - $040
+        return
+      %01:                                                                      'head/more
+        byteCount := $FFC - $040
+      %10:                                                                      'body/last
+        byteCount += signature.[31..20] - $004
+        return
+      %11:                                                                      'body/more
+        byteCount += $FFC - $004
+    blockAddress := field[IDToBlock][signature.[31..20]]                        'get next block to count
+
+
+PRI DeleteChainAtBlockID(blockID) | signature, blockAddress
+' Delete blocks from file-chain starting at blockID
+'   (this may be the entire file or last block of the file, etc.)
+'
+' @param blockID - block ID within a file chaing from which to start deleting
+
+' Local Variables:
+' @local signature - block state bits of block being removed
+' @local blockAddress - the block offset within the file system of block being removed
+
+  repeat                                                                        'trace file and cancel IDs, block states, and blocks
+        field[IDValid][blockID]~                                                'clear ID flag
+        blockAddress := field[IDToBlock][blockID]                               'translate ID to block
+        field[BlockState][blockAddress] := sFREE                                'set block state to sFREE
+        CancelBlock(blockAddress)                                               'cancel block
+        ReadBlock(blockAddress, @signature, $000, $003)                         'read first long of block
+        blockID := signature.[31..20]                                           'get ID of next block
+  while signature.[0]                                                           'if not last block, loop
+
+
+PRI NextAvailableBlockID() : blockID | possibleBlockID
+' Get a next available block ID
+'
+' @returns blockID - the next ID that is not in use (or eDriveFull if no blockID's are available)
+
+' Local Variables:
+' @local possibleBlockID - prospective blockID to check for availability
+
+  blockID := eDriveFull                         ' preset error
+  repeat possibleBlockID from 0 to BLOCKS - 1                           'pick the first free ID
+        ifnot field[IDValid][possibleBlockID]~~                         'set IDValid, was IDValid previously clear?
+          blockID := possibleBlockID                                    'if IDValid was clear, return new ID
+          quit
+
+PRI BlocksFree() : count | blockAddress
+' Return the count of available blocks
+'
+' @returns count - the number of filesystem blocks that are not in use
+
+' Local Variables:
+' @local blockAddress - the block offset within the file system
+
+  repeat blockAddress from 0 to BLOCKS - 1                              'count free blocks
+        ifnot field[BlockState][blockAddress]
+          count++
+
+
+PRI NextActiveCycle(CycleIn) : CycleOut
+' Calculate and return the next active lifecycle pattern in (3 -> 5 -> 6 -> 3 -> 5 -> 6 -> 3... pattern)
+'
+' @param CycleIn - current lifecycle pattern
+' @returns CycleOut - next lifecycle pattern in sequence
+
+  CycleOut := (CycleIn * %001_001) >> 1 & %111          'get next lifecycle pattern
+
+
+PRI BuffPtr(handle) : ptr
+' Return a pointer to the block buffer for this handle
+'
+' @param handle - the handle to the file
+' @returns ptr -  the address of the 4KB buffer for the file associated with this handle
+
+  return @hBlockBuff + handle << BLOCK_SIZE_EXP
+
+
+PRI SetFilenameForHandle(handle, pFilename)
+' Write filename into block buffer for this handle
+'
+' @param handle - the handle to the file
+' @param pFilename - pointer to zstring containing the filename
+
+  strcopy(@hFilename + handle * FILENAME_SIZE, pFilename, FILENAME_SIZE - 1)
+
+
+PRI BlockCRC(ptr) : CRC
+' Calculate and return the CRC for this pointed to block
+'
+' @param ptr - the address of the 4KB buffer for the file associated with this handle
+' @returns CRC - the calculated CRC for the block
+
+  return getcrc(ptr, $AD0424F3 rev 31, BLOCK_SIZE - 4)  'compute CRC of a buffered block
+
+
+CON ' --- Flash Operations ---
+
+PRI ReadBlock(blockAddress, buffAddress, firstByte, lastByte)
+' Return byte(s) read from physical block into memory at buffAddress
+'
+' @param blockAddress - the block offset within the file system
+' @param buffAddress - memory location in which to place the data
+' @param firstByte - address of first byte to read
+' @param lastByte - address of last byte to read
+
+  FlashCommand($03 | (FIRST_BLOCK + blockAddress) << 20 | firstByte << 8, 4)    'read 4KB block
+  FlashReceive(buffAddress, lastByte - firstByte + 1)                                   'receive block data
+
+
+PRI ProgramBlock(blockAddress, buffAddress, cycleBits) | pageIndex
+' Write block in memory at buffAddress to physical block
+'
+' @param blockAddress - the block offset within the file system
+' @param buffAddress - memory location from which to get the data
+' @param cycleBits - lifeCycle bit-pattern to place into block
+
+' Local Variables:
+' @local pageIndex - index [0-15] of 256-Byte page within 4KB block
+
+  FlashCommand($06, 1)                                                                  'enable write
+  FlashCommand($20 | (FIRST_BLOCK + blockAddress) << 20, 4)     'erase 4KB block
+
+  BYTE[buffAddress].[7..5] := cycleBits                                         'install lifecycle for CRC computation
+  LONG[buffAddress + $FFC] := BlockCRC(buffAddress)     'compute and install CRC
+  BYTE[buffAddress].[7..5]~~                                                    'block will be inactive until activated
+
+  FlashWait()                                                                                   'wait for erasure to complete (~45ms)
+
+  repeat pageIndex from 0 to 15                                                                                                 'program 16 pages within 4KB block
+        FlashCommand($06, 1)                                                                                            'enable write
+        FlashCommand($02 | (FIRST_BLOCK + blockAddress) << 20 | pageIndex << 16, 4)             'program
+        FlashSend(buffAddress + pageIndex << 8, 256)                                                            'send 256 bytes
+        FlashWait()                                                                                                             'wait for programming to complete (~400us)
+
+
+PRI ActivateBlock(blockAddress, cycleBits)
+' Write new activation pattern into block
+'
+' @param blockAddress - the block offset within the file system
+' @param cycleBits - lifeCycle bit-pattern to place into block
+
+  ProgramBit(blockAddress, cycleBits << 5 | %00011111)                  'clear one cycle bit to activate block
+
+
+PRI CancelBlock(blockAddress)
+' Clear the block's cycle bits to cancel it
+'
+' @param blockAddress - the block offset within the file system
+
+  ProgramBit(blockAddress, %00011111)                                                   'clear all cycle bits to cancel block
+
+
+PRI ProgramBit(blockAddress, bitPattern)
+' Write new bitPattern into 1st byte of block
+'
+' @param blockAddress - the block offset within the file system
+' @param bitPattern - the value to be placed in first byte of block
+
+  FlashCommand($06, 1)                                                                  'enable write
+  FlashCommand($02 | (FIRST_blockAddress + blockAddress) << 20, 4)      'program
+  FlashSend(@bitPattern, 1)                                                     'send byte with bit pattern
+  FlashWait()                                                                                   'wait for programming to complete
+
+
+PRI FlashWait() | statusBits
+' Wait for FLASH Chip to become ready
+'
+
+' Local Variables:
+' @local statusBits - status register bits read from FLASH Chip
+
+  repeat
+        FlashCommand($05, 1)                                                            'read status register
+        FlashReceive(@statusBits, 1)
+  while statusBits.[0]                                                                          'loop until BUSY bit clear
+
+
+PRI FlashCommand(command, byteCount)
+' Send flash command to FLASH Chip via SPI
+'
+' @param command - the command for the chip to execute
+' @param byteCount - number of bytes to send
+
+                org
+
+                fltl    #SPI_DO                                 '2!     DO input
+
+                fltl    #SPI_CK                                 '2!     reset CK smart pin
+                wrpin   #%01_00101_0,#SPI_CK    '2              set CK for transition output, starts out low
+                wxpin   #4,#SPI_CK                              '2              set timebase to 4 clocks per transition
+
+                drvh    #SPI_CS                                 '2!     CS high
+                waitx   #14                                     '2+14   CS deselect is 50ns at 350 MHz (50 / 2.777ns = 18)
+                drvl    #SPI_CS                                 '2!     CS low
+
+                movbyts command,#%%1230                 'reverse order of post-command address bytes for sending
+
+                end
+
+  FlashSend(@command, byteCount)                'send command
+
+
+PRI FlashSend(buffAddress, byteCount) | byteToSend
+' Write bytes to the FLASH Chip via SPI
+'
+' @param buffAddress - memory location from which to get the data
+' @param byteCount - number of bytes to send
+
+' Local Variables:
+' @local byteToSend - the byte value being sent over SPI
+
+                org
+
+                rdfast  #0,buffAddress                  'start fast read
+
+.byte   rfbyte  byteToSend                              '2              read byte
+
+                rep     @.r,#1                                  '2              protect from interrupts
+                fltl    #SPI_CK                                 '2!     reset smart pin CK
+                drvl    #SPI_CK                                 '2!     start smart pin CK, starts base period
+                shl     byteToSend,#24 + 1      wc      '2              get D7
+                drvc    #SPI_DI                                 '2!     output D7
+                wypin   #16,#SPI_CK                     '2*     begin 16 clock transitions
+                rep     @.r,#7                                  '2              repeat to output D6..D0
+                shl     byteToSend,#1           wc      '2              get data bit
+                drvc    #SPI_DI                                 '2!     output data bit
+                waitx   #2                                              '2+2    delay makes 8 clocks/bit
+.r
+                djnz    byteCount,#.byte                '4|2    loop if another byte to send
+
+                drvl    #SPI_DI                                 '2!     DI low
+
+                end
+
+
+PRI FlashReceive(buffAddress, byteCount) | byteReceived
+' Read bytes from the FLASH Chip via SPI
+'
+' @param buffAddress - memory location into which to put the data
+' @param byteCount - number of bytes to receive
+
+' Local Variables:
+' @local byteReceived - gather bits received into a byte
+
+                org
+
+                wrfast  #0,buffAddress                  'start fast write
+
+.byte   rep     @.r,#1                                  '2              protect from interrupts
+                fltl    #SPI_CK                                 '2!     reset smart pin CK
+                drvl    #SPI_CK                                 '2!     start smart pin CK, starts base period
+                wypin   #16,#SPI_CK                     '2*     begin 16 clock transitions
+                waitx   #3                                              '2+3    align TESTP's to before clock fall (DC..350MHz+)
+                rep     @.r,#8                                  '2              repeat to input D7..D0
+                waitx   #2                                              '2+2    delay makes 8 clocks/bit
+                testp   #SPI_DO                 wc              '2              input data bit
+                rcl     byteReceived,#1                 '2              save data bit
+.r
+                wfbyte  byteReceived                    '2              write byte
+                djnz    byteCount,#.byte                '4|2    loop if another byte to receive
+
+                drvh    #SPI_CS                                 '2!     CS high, terminates command
+                wypin   #1,#SPI_CK                              '2*     CK high, leave SD card CS high
+
+                end
+
+CON ' operation Notes
+{
+
+head/last block
+------------------------------------------------------------------------------------------------
+000..003                LONG {EndPtr[11:0], ThisID[11:0], %vvv11100}    'vvv = lifecycle, 00 = head/last
+004..03F                BYTE filename[127+1]                                                    'filename
+040..FFB                BYTE data[4028]                                                                 'data
+FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
+
+
+head/more block
+------------------------------------------------------------------------------------------------
+000..003                LONG {NextID[11:0], ThisID[11:0], %vvv11101}    'vvv = lifecycle, 01 = head/more
+004..03F                BYTE filename[60]                                                               'filename
+040..FFB                BYTE data[4028]                                                                 'data
+FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
+
+
+body/last block
+------------------------------------------------------------------------------------------------
+000..003                LONG {EndPtr[11:0], ThisID[11:0], %vvv11110}    'vvv = lifecycle, 10 = body/last
+004..FFB                BYTE data[4088]                                                                 'data
+FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
+
+
+body/more block
+------------------------------------------------------------------------------------------------
+000..003                LONG {NextID[11:0], ThisID[11:0], %vvv11111}    'vvv = lifecycle, 11 = body/more
+004..FFB                BYTE data[4088]                                                                 'data
+FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
+
+
+------------------------------------------
+SPECIAL NEW BLOCKs for circular buffer use
+------------------------------------------
+head/more block w/EndPtr
+------------------------------------------------------------------------------------------------
+000..003                LONG {NextID[11:0], ThisID[11:0], %vvv11101}    'vvv = lifecycle, 101 = head/more w/EndPtr
+004..007                LONG EndPtr[11:0], rest unused                                  'End pointer in block that doesn't have one
+008..FFB                BYTE data[4024]                                                                 'data
+FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
+
+body/more block w/EndPtr
+------------------------------------------------------------------------------------------------
+000..003                LONG {NextID[11:0], ThisID[11:0], %vvv11111}    'vvv = lifecycle, 111 = body/more w/EndPtr
+004..007                LONG EndPtr[11:0], rest unused                                  'End pointer in block that doesn't have one
+008..FFB                BYTE data[4084]                                                                 'data
+FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
+
+------------------------------------------
+
+
+vvv lifecycle rules
+- single-zero ring counter state sequence is 011..101..110..repeat
+- the block with the greater state is the valid block between two blocks with identical IDs
+- this allows for make-before-break block replacement that can be recovered after unexpected power loss
+-------------------------------------------------------------------------------------------------------
+111                                     inactive                no zeroes
+011/101/110                     active                  one zero
+001/010/100/000                 canceled                two or three zeroes
+
+011 > 110                               new > old
+101 > 011                               new > old
+110 > 101                               new > old
+
+}

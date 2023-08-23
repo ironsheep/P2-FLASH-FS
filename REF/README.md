@@ -23,6 +23,12 @@ This is the latest files from the [Forum Thread](https://forums.parallax.com/dis
 | FlashFileSystem_16MB.spin2 | Chip's latest found in the forums |
 | FlashFileSystem_16MB_Demo.spin2 | A demo using Chip's driver |
 
+## Files for Review by Stephen
+
+| File | Purpose |
+| --- | --- |
+| [Draft\_FlashFilesystem_16M.spin2](Draft_FlashFilesystem_16M.spin2) | A draft of the filesystem code reworked for publication |
+| [Draft\_FlashFilesystem_16M.txt](Draft_FlashFilesystem_16M.txt) | The Object Interface document generated from the new draft |
 
 ---
 
