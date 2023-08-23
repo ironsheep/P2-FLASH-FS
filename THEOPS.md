@@ -32,7 +32,7 @@ Additional pages:
 - Wear-leveling write mechanism
 - Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
 - Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
-- Block idenitification is independent of physical location
+- Block identification is independent of a blocks physical location
 
 ## Initial build - Constants
 
@@ -54,13 +54,13 @@ Key Constants in the file describe:
 
 **Free Block** - A block that is still erased, or a block that contains a lifeCycle value of **Cancelled** or **Inactive**. (Erased blocks appear to have a lifeCycle value of **Inactive**.
 
-**Block Address** - a zero-based address of a block within our filesystem (Default: 0 - 3,967 [$000 - $F7F]).  To this block address we add the offset to the filesystem from the start of the flash chip (Default: $080) to get the physical addreess of the 4kB block within the flash Chip.
+**Block Address** - a zero-based address of a block within our filesystem (Default: 0 - 3,967 [$000 - $F7F]).  We add to this block address the offset to the filesystem from the start of the flash chip (Default: $080) to get the physical address of the 4kB block within the flash Chip.
 
 **Block IDs** - block IDs are logical IDs assigned to a block when it is first written, they are not physical block addresses or the like. This allows a block to exist anywhere within the filesystem space without being aware of its location or other blocks knowing its location.  A block can be relocated (written to a new location and removed from the prior location) and the Block's ID will not change.  Other blocks referencing a block know the referenced block only by its block ID.
 
 **Block Pointer** - A Block pointer contains a block ID value. Blocks are assigned Block IDs when created. When a block wants to point to another block the ID of the target block (The pointed to block) is the value assigned to the block pointer.
 
-**Block Placement** - to aid in wear leveling all 4k block locations are randomly chosen
+**Block Placement** - to aid in wear leveling, all 4k block locations are randomly chosen
 
 **Flash Erase** - the Flash chip supports erasing a block at a time. A block is 4096 bytes. An erase of a block returns all bits of the block to 1 ($FF in all bytes of the block)
 
@@ -166,15 +166,18 @@ The less frequent case is when we append to a file that contains less than 4,028
 
 ## Tracking Data (State of Filesystem)
 
-When the filesystem is first mounted the following tables are populated by mount when scanning all the blocks in the space allocated to the filesystem. The tables are:
+When the filesystem is first mounted the following 3 tables are zeroed and then populated by mount() as it scanns all the blocks in the space allocated to the filesystem. The tables are:
 
 ### Table IDtoBlocks: ID to Block translation
+
+This table is initialized to zeros and filled-in when mount() is called. This table is indexed by blockID and returns a blockAddress (The block containing that ID is found at filesystem location blockAddress.)
 
 **Physically** this table is a contiguous allocation of WORDs. Its size is calculated so that it can contain a 12-bit variable for each block allocated to the filesystem which is then rounded up to nearest WORD boundary.
 
 ```spin2
 CON     IdToBlocks_SIZE     = (BLOCKS * 12 + 15) / 16
-DAT     IDToBlocks  WORD    0[IdToBlocks_SIZE]   ' ID-to-block translation table
+DAT     IDToBlocks  WORD    0[IdToBlocks_SIZE]  ' ID-to-block translation table
+        IDToBlock   LONG    0                   '(field pointer)
 ```
 
 **Logically** this table is treated as a contiguous array of 12-bit variables indexed by blockID.
@@ -194,17 +197,18 @@ This is the way we treat this table as a contiguous allocation of 12-bit variabl
 
 ### Table IDValids: ID Valid Flags
 
-This table is initialized to zeros and filling in when mount() is called.
+This table is initialized to zeros and filled-in when mount() is called. This table is indexed by blockID and returns a [0,1] where 1 means the blockID is in use.
 
 **Physically** this table is a contiguous allocation of BYTEs which consists of 1 byte for every 8 valid block IDs, 1 bit per block ID. Its size is calculated so that it can contain a 1-bit variable for each block allocated to the filesystem which is then rounded up to nearest BYTE boundary.
 
 ```spin2
 CON     Flags_SIZE		   = (BLOCKS * 1 + 7) / 8
 DAT     IDValids  BYTE    0[Flags_SIZE]    'ID-valid flags
+        IDValid   LONG    0                '(field pointer)
 ```
 
 **Logically** this table is treated as a contiguous array of 1-bit variables indexed by blockID.
-Each 1-bit variable contains a [0,1] where 1 means the blockID is in use.  We accomplish this logical behavior by creating a "field pointer" indicating that it points to a 1-bit value within the contiguous allocation of BYTESs:
+Each 1-bit variable contains a [0,1] where 1 means the blockID is in use.  We accomplish this logical behavior by creating a "field pointer" indicating that it points to a 1-bit value within the contiguous allocation of BYTEs:
 
 ```spin2
     IDValid    := ^@IDValids.[0]
@@ -218,7 +222,33 @@ Each 1-bit variable contains a [0,1] where 1 means the blockID is in use.  We ac
 
 This is the way we treat this table as a contiguous allocation of 1-bit variables!
 
-### Table: Block States
+### Table BlockStates: Block States
+
+This table is initialized to zeros and filled-in when mount() is called.  This table is indexed by blockAddress (offset into the filesystem) and returns a blockState enum value [sFREE, sTEMP, sHEAD, sBODY].
+
+**Physically** this table is a contiguous allocation of BYTEs which consists of 1 byte for every 4 valid block address, 2 bits per block address. Its size is calculated so that it can contain a 2-bit variable for each block allocated to the filesystem which is then rounded up to nearest BYTE boundary.
+
+```spin2
+CON     States_SIZE 	= (BLOCKS * 2 + 7) / 8
+DAT     BlockStates BYTE    0[States_SIZE]   'block states
+        BlockState 	LONG    0                '(field pointer)
+```
+
+**Logically** this table is treated as a contiguous array of 2-bit variables indexed by blockAddress (**NOTE**: this is NOT blockID!).
+Each 2-bit variable contains a a block state enum value [sFREE, sTEMP, sHEAD, sBODY].  
+We accomplish this logical behavior by creating a "field pointer" indicating that it points to a 2-bit value within the contiguous allocation of BYTEs:
+
+```spin2
+    BlockState := ^@BlockStates.[1..0]
+```
+
+**Access**: To determine the state of a block at blockAddress using this table, we use:
+
+```spin2
+	blockState := field[BlockState][blockAddress] 
+```
+
+This is the way we treat this table as a contiguous allocation of 2-bit variables!
 
 ## Tracking Data (Open Files)
 
