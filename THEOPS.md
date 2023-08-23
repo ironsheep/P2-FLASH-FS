@@ -11,10 +11,11 @@ THis page presents the theory behind our Flash FS a filesystem for the FLASH chi
 On this Page:
 
 - [Flash Filesystem Features](#flash-filesystem-features) - key features of this filesystem / design goals
-- Initial build - Constants
-- Concepts
-- File System Block types/format
-- Tracking Data
+- [Initial build - Constants](#initial-build---constants)
+- [Concepts](#concepts) - and terminology
+- [File System Block types/format](#file-system-block-types-and-formats-of-these-blocks)
+- [Tracking Data](#tracking-data-state-of-filesystem) - State of Filesystem
+- [Tracking Data](#tracking-data-open-files) - Open Files
 - The Mount Process [M]
 - Locating a next block to allocate to a file [L]
 - The File Open Process [O]
