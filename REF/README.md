@@ -7,7 +7,7 @@ Versioned releases from Chip which we roll into the formal verison.
 
 
 ## Versions from Chip
-This is a recap of the version history.
+This is a recap of the version history of files arriving from Chip:
 
 | Version | Date | Purpose |
 | --- | --- | --- |
@@ -20,15 +20,24 @@ This is the latest files from the [Forum Thread](https://forums.parallax.com/dis
 
 | File | Purpose |
 | --- | --- |
-| FlashFileSystem_16MB.spin2 | Chip's latest found in the forums |
-| FlashFileSystem_16MB_Demo.spin2 | A demo using Chip's driver |
+| [FlashFileSystem_16MB.spin2](FlashFileSystem_16MB.spin2) | Chip's latest found in the forums |
+| [FlashFileSystem_16MB_Demo.spin2](FlashFileSystem_16MB_Demo.spin2) | A demo using Chip's driver |
 
 ## Files for Review by Stephen
+
+This is my work in preogress as I'm working toward customer facing release of the FileSystem code
 
 | File | Purpose |
 | --- | --- |
 | [Draft\_FlashFilesystem_16M.spin2](Draft_FlashFilesystem_16M.spin2) | A draft of the filesystem code reworked for publication |
 | [Draft\_FlashFilesystem_16M.txt](Draft_FlashFilesystem_16M.txt) | The Object Interface document generated from the new draft |
+
+### Next Steps:
+
+- Add in locking for PUB methods
+- Merge with Jon's API extension (new FLASH-Chip id methods, new file support methods, etc.)
+- ... more I'm sure ...
+- Publish for API review and testing
 
 ---
 
