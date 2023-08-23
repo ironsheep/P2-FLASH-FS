@@ -35,6 +35,7 @@ This is my work in preogress as I'm working toward customer facing release of th
 ### Next Steps:
 
 - Add in locking for PUB methods
+- Apply fixes to FLASH Chip signalling as reported in Forums
 - Merge with Jon's API extension (new FLASH-Chip id methods, new file support methods, etc.)
 - ... more I'm sure ...
 - Publish for API review and testing
