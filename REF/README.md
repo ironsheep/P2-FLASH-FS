@@ -29,8 +29,10 @@ This is my work in preogress as I'm working toward customer facing release of th
 
 | File | Purpose |
 | --- | --- |
-| [Draft\_FlashFilesystem_16M.spin2](Draft_FlashFilesystem_16M.spin2) | A draft of the filesystem code reworked for publication |
-| [Draft\_FlashFilesystem_16M.txt](Draft_FlashFilesystem_16M.txt) | The Object Interface document generated from the new draft |
+| [Draft\_FlashFileSystem_16MB_Demo.spin2](Draft_FlashFileSystem_16MB_Demo.spin2) | A Demo of the filesystem code reworked for publication |
+| [Draft\_FlashFilesystem_16MB.spin2](Draft_FlashFilesystem_16MB.spin2) | A draft of the filesystem code reworked for publication |
+| [Draft\_FlashFilesystem_16MB.txt](Draft_FlashFilesystem_16MB.txt) | The Object Interface document generated from the new draft |
+| [Draft\_flash\_fs_Demo.spin2](Draft_flash_fs_Demo.spin2) | A Demo of the filesystem code  with Jon's API changes reworked for publication |
 | [Draft\_flash_fs.spin2](Draft__flash_fs.spin2) | A draft of the filesystem code  with Jon's API changes reworked for publication |
 | [Draft\_flash_fs.txt](Draft_flash_fs.txt) | The Object Interface document generated from the new draft |
 
