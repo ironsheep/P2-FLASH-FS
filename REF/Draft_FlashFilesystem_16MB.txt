@@ -1,0 +1,110 @@
+
+Object "Draft_FlashFilesystem_16MB" Interface:
+
+PUB Format() : status
+PUB Mount() : status
+PUB OpenRead(pFilename) : handle
+PUB ByteRead(handle) : byteValue
+PUB OpenWrite(pFilename) : handle
+PUB ByteWrite(handle, byteValue) : status
+PUB Close(handle) : status
+PUB Delete(pFilename) : status
+PUB Rename(pOldFilename, pNewFilename) : status
+PUB Exists(pFilename) : status
+PUB SizeOf(pFilename) : byteCount
+PUB Directory(pBlockID, pFilename, pSize)
+PUB Stats() : usedBlocks, freeBlocks, fileCount
+
+_____________________
+PUB Format() : status
+
+ Format file system and (re)mount it
+ @returns status - ebadBlocksRemoved if bad blocks were found and fixed (SHOULD NOT HAPPEN ON FORMAT), otherwise 0 for success
+
+____________________
+PUB Mount() : status
+
+ Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
+ @returns status - eBadBlocksRemoved if BAD blocks were found adn fixed, otherwise 0 for success
+
+________________________________
+PUB OpenRead(pFilename) : handle
+
+ Open a file for reading, returns handle
+
+________________________________
+PUB ByteRead(handle) : byteValue
+
+ Read and return next byte [0-255] from file opened for reading (or eAtEndOfFile if no more data)
+ @param handle - the handle to the file from which to read a byte
+ @returns byteValue - einvalidHandle if the handle is not valid, eFileWriting if the file is not open for rading, eAtEndOfFile if no more data, otherwise the next byte [0-255] from the file
+
+_________________________________
+PUB OpenWrite(pFilename) : handle
+
+ Open a file for (re)writing
+ @param pFilename - pointer to a zstring containing the filename
+ @returns handle - efileWriting if file is being written, eFileOpen if file is open, or 0 if successful
+
+_________________________________________
+PUB ByteWrite(handle, byteValue) : status
+
+ Write a byte to a file that is open for write or rewrite
+ @param handle - handle to a file that is open for write or rewrite
+ @param byteValue - value to write to the file
+ @returns status - either eInvalidHandle or eFileReading if the handle is not valid or the file is open for reading, otherwise 0 for success
+
+__________________________
+PUB Close(handle) : status
+
+ Close an open file, completes file (re)write, frees handle
+ @param handle - a file handle to an open file
+ @returns status - either eInvalidHandle if the handle is not valid, otherwise 0 for success
+
+______________________________
+PUB Delete(pFilename) : status
+
+ Delete a file
+ @param pFilename - pointer to zstring containing the filename
+ @returns status - eFileNotFound if file doesn't exist, eFileOpen if file is open, or 0 if successful
+
+_______________________________________________
+PUB Rename(pOldFilename, pNewFilename) : status
+
+ Rename a file
+ @param pOldFilename - pointer to zstring containing old filename
+ @param pNewFilename - pointer to zstring containing new filename
+ @returns status - eFileNotFound if old file doesn't exist, eFileOpen if old file is open, eFileExists if new file exists -or- 0 if successful
+
+______________________________
+PUB Exists(pFilename) : status
+
+ Check if a file exists
+ @param pFilename - pointer to zstring containing the filename
+ @returns status - return T/F where T means the file exists
+
+_________________________________
+PUB SizeOf(pFilename) : byteCount
+
+ Get size of file in bytes
+ @param pFilename - pointer to zstring containing the filename
+ @returns byteCount - either the size of the file in bytes or eFileNotFound if the file doesn't exist
+
+_________________________________________
+PUB Directory(pBlockID, pFilename, pSize)
+
+ Get next file's filename and size in bytes via current blockID
+ @param pBlockID - the next block ID to check for a file head. (Initialize to 0, will be auto-advanced by each call to this method)
+ @param pFilename - the filename of the file found (or a zero length string if no more files)
+ @param pSize - the number of bytes in the file found (or 0 when no more files)
+
+_______________________________________________
+PUB Stats() : usedBlocks, freeBlocks, fileCount
+
+ Get fielsystem stats: used/free block counts and file count
+ @returns usedBlocks - the number of blocks in use
+ @returns freeBlocks - the number of free blocks
+ @returns fileCount - the number of files recorded in filesystem
+
+
+

@@ -1,5 +1,5 @@
  =================================================================================================
-   File....... Draft_flash_fs.spin2
+   File....... flash_fs.spin2
    Purpose.... This object is the full flash file system driver for the P2
                it manages all but the first 512KB of the flash chip (where the boot image is stored)
                it provides a standard file system interface to the flash chip
@@ -42,6 +42,7 @@ pub rd_long(handle) : value
 pub rd_str(handle, p_str, count) : result
 pub directory(p_block_id, p_filename, p_file_size)
 pub stats() : usedBlocks, freeBlocks, fileCount
+pub string_for_error(error_code) : p_interpretation
 
 __________
 pub null()
@@ -296,6 +297,13 @@ pub stats() : usedBlocks, freeBlocks, fileCount
  @returns usedBlocks - the number of blocks in use
  @returns freeBlocks - the number of free blocks
  @returns fileCount - the number of files recorded in filesystem
+
+___________________________________________________
+pub string_for_error(error_code) : p_interpretation
+
+ Return a string describing the error code
+ @param error_code - the error code to translate
+ @returns p_interpretation - interpretation of the errcode
 
 
 

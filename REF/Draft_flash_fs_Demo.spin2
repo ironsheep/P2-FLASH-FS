@@ -1,0 +1,90 @@
+CON     _CLKFREQ        = 320_000_000
+
+OBJ
+    Flash : "Draft_flash_fs"
+
+PUB go() : status
+
+  status := Flash.format()              'Comment out this line to not erase all files
+  if status < 0
+    showError(@"format()", status)
+    return
+
+  status := Flash.mount()
+  if status < 0
+    showError(@"mount()", status)
+    return
+
+  ShowStats()                   'Do a bunch of file stuff while reporting status, along the way
+  ShowFiles()
+
+  WriteZStringToFile(@"file1", @file1)
+  WriteZStringToFile(@"file2", @file2)
+  WriteZStringToFile(@"file3", @file3)
+
+  ShowStats()
+  ShowFiles()
+
+  if Flash.exists(@"file3") and not Flash.exists(@"Apples")
+    status := Flash.rename(@"file3",@"Apples")
+    if status < 0
+      showError(@"rename()", status)
+
+  status := Flash.delete(@"file1")
+  if status < 0
+    showError(@"delete()", status)
+
+  ShowStats()
+  ShowFiles()
+
+  Flash.unmount()
+
+PRI showError(pCaller, errorCode)
+    debug("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
+
+PRI ShowStats() | BlocksUsed, BlocksFree, Files
+
+  BlocksUsed, BlocksFree, Files := Flash.stats()
+  debug(udec(BlocksUsed, BlocksFree, Files))
+
+
+PRI ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
+  repeat
+    Flash.Directory(@ID, @Filename, @Bytes)                     'get next file
+    if Filename[0]                                              'is there a filename?
+      ReadFile(@Filename, @Buff, 30)                            'read file
+      debug(zstr(@Filename), udec(Bytes, ID), zstr(@Buff))      'show filename, bytes, ID, and file contents
+    else
+      quit                                                      'no more files, quit
+
+
+PRI ReadFile(pFilename, pStr, maxlen) | handle
+
+  handle := Flash.open_read(pFilename)                          'open file for reading
+  if handle >= 0
+    Flash.rd_str(handle, pStr, maxlen)          'read bytes of zstring
+
+    Flash.Close(handle)                                         'close file
+
+
+PRI WriteZStringToFile(pFilename, pStr) | handle, status
+
+  debug("Writing: ", zstr_(pFilename))
+
+  handle := Flash.open_write(pFilename)                         'open file for writing
+  if handle >= 0
+    status := Flash.wr_str(handle, pStr)
+    if status < 0
+        showError(@"wr_str()", status)
+
+    status := Flash.close(handle)                                               'close file
+    if status < 0
+        showError(@"close()", status)
+  else
+    showError(@"open_write()", handle)
+
+DAT
+
+file1   byte    "The car goes.",0
+file2   byte    "His cat meows.",0
+file3   byte    "My boat floats.",0
