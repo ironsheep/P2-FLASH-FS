@@ -31,12 +31,13 @@ This is my work in preogress as I'm working toward customer facing release of th
 | --- | --- |
 | [Draft\_FlashFilesystem_16M.spin2](Draft_FlashFilesystem_16M.spin2) | A draft of the filesystem code reworked for publication |
 | [Draft\_FlashFilesystem_16M.txt](Draft_FlashFilesystem_16M.txt) | The Object Interface document generated from the new draft |
+| [Draft\_flash_fs.spin2](Draft__flash_fs.spin2) | A draft of the filesystem code  with Jon's API changes reworked for publication |
+| [Draft\_flash_fs.txt](Draft_flash_fs.txt) | The Object Interface document generated from the new draft |
 
 ### Next Steps:
 
 - Add in locking for PUB methods
 - Apply fixes to FLASH Chip signalling as reported in Forums
-- Merge with Jon's API extension (new FLASH-Chip id methods, new file support methods, etc.)
 - ... more I'm sure ...
 - Publish for API review and testing
 

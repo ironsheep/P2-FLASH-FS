@@ -1,0 +1,324 @@
+ =================================================================================================
+   File....... Draft_flash_fs.spin2
+   Purpose.... This object is the full flash file system driver for the P2
+               it manages all but the first 512KB of the flash chip (where the boot image is stored)
+               it provides a standard file system interface to the flash chip
+   Author..... Chip Gracey
+   Conrtributions..... Jon McPhalen, Stephen M Moraco
+               -- see below for terms of use
+   E-mail.....stephen@ironsheep.biz
+   Started.... AUG 2023
+   Updated.... 23 AUG 2023
+ =================================================================================================
+
+Object "Draft_flash_fs" Interface:
+
+pub null()
+pub version() : result
+pub serial_number() : snHi, snLo
+pub mount() : status
+pub unmount()
+pub format() : status
+pub error() : result
+pub open(p_filename, mode) : handle
+pub open_read(p_filename) : handle
+pub open_write(p_filename) : handle
+pub open_append(p_filename) : handle
+PUB close(handle) : status
+PUB rename(p_old_filename, p_new_filename) : status
+PUB delete(p_filename) : status
+pub exists(p_filename) : result
+pub file_size(p_filename) : fsize
+pub seek(handle, position) : result
+pub write(handle, p_buffer, count) : result
+pub wr_byte(handle, byteValue) : result
+pub wr_word(handle, word_value) : result
+pub wr_long(handle, long_value) : result
+pub wr_str(handle, p_str) : result
+pub read(handle, p_buffer, count) : result
+pub rd_byte(handle) : value
+pub rd_word(handle) : value
+pub rd_long(handle) : value
+pub rd_str(handle, p_str, count) : result
+pub directory(p_block_id, p_filename, p_file_size)
+pub stats() : usedBlocks, freeBlocks, fileCount
+
+__________
+pub null()
+
+ This is not an application
+  (invoke format() or mount() to use the flash file system)
+
+______________________
+pub version() : result
+
+ Returns flash file system library version as integer
+ -- e.g., version 120 is 1.2.0 (major, minor, bugfix)
+
+________________________________
+pub serial_number() : snHi, snLo
+
+ Returns 64-bit unique id of flash chip
+ @returns snHi - high 32 bits of 64-bit unique id of flash chip
+ @returns snLo - low 32 bits of 64-bit unique id of flash chip
+
+____________________
+pub mount() : status
+
+ Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
+ @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+ .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
+
+_____________
+pub unmount()
+
+ Prepare for shutdown / power-off by closing any open files
+
+_____________________
+pub format() : status
+
+ Format the file system blocks and (re)mount it
+ @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+ .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
+
+____________________
+pub error() : result
+
+ Returns error code from most recent operation
+ @returns result - latest error code (0 for no error)
+
+___________________________________
+pub open(p_filename, mode) : handle
+
+ Open file in mode; return handle (0..n) if successful
+ @param p_filename - address of a zstring containing the filename
+ @param mode - the mode in which to open the file:
+ -- mode "r", "R" to read an existing file
+ -- mode "w", "W" to write to a new file (overwrites existing file)
+ -- mode "a", "A" to write to the end of an existing file
+ @returns handle - E_FILE_MODE if mode letter is invalid,
+ .. E_FILE_OPEN if file is already open,
+ .. E_FILE_EXISTS if file exists,
+ .. E_FILE_NOT_FOUND if file does not exist,
+ .. E_NO_HANDLE if no handle is available, otherwise the next available handle
+
+__________________________________
+pub open_read(p_filename) : handle
+
+ Open a file for reading, returning handle if success
+ @param p_filename - address of a zstring containing the filename
+ @returns handle - E_FILE_NOT_FOUND if file doesn't exist, E_FILE_WRITING if file is being written, or 0 if successful
+ Open a file for reading, returns handle
+
+___________________________________
+pub open_write(p_filename) : handle
+
+ Open a file for (re)writing
+ @param p_filename - pointer to a zstring containing the filename
+ @returns handle - efileWriting if file is being written, E_FILE_OPEN if file is open, or 0 if successful
+
+____________________________________
+pub open_append(p_filename) : handle
+
+ open for appeand not yet implemented!
+ @param p_filename - address of a zstring containing the filename
+ @returns handle - handle to open file if successful,
+ .. E_FILE_NOT_FOUND if file doesn't exist,
+ .. E_FILE_OPEN if file is already open,
+ .. or E_NO_HANDLE if no handle is available
+
+__________________________
+PUB close(handle) : status
+
+ Close an open file, completes file (re)write, frees handle
+ @param handle - a file handle to an open file
+ @returns status - either E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
+
+___________________________________________________
+PUB rename(p_old_filename, p_new_filename) : status
+
+ Rename a a file named p_old_filename to p_new_filename
+ @param p_old_filename - address of a zstring containing the existing filename
+ @param p_new_filename - address of a zstring containing the new filename
+ @returns status - E_FILE_NOT_FOUND if old file doesn't exist,
+ .. E_FILE_OPEN if old file is open,
+ .. E_FILE_EXISTS if new file exists,
+ .. otherwise 0 (SUCCESS) if successful
+
+_______________________________
+PUB delete(p_filename) : status
+
+ Delete a named file
+ @param p_filename - address of a zstring containing the filename
+ @returns status - E_FILE_NOT_FOUND if file doesn't exist, E_FILE_OPEN if file is open, or 0 if successful
+
+_______________________________
+pub exists(p_filename) : result
+
+ Determine if named file is present in file system
+ @param p_filename - address of a zstring containing the filename
+ @returns result - True/False where True means the file exists
+
+_________________________________
+pub file_size(p_filename) : fsize
+
+ Return size of file in bytes
+ @param p_filename - pointer to zstring containing the filename
+ @returns fsize - either the size of the file in bytes or E_FILE_NOT_FOUND if the file doesn't exist
+
+___________________________________
+pub seek(handle, position) : result
+
+ ...
+ @param handle - handle to a file that is open for read or read/write
+ @param position - location within the file to which to position the file pointer
+ @returns result - E_FILE_SEEK if the position is not within the file, E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
+ Move file pointer to position
+ -- file at handle must be open
+ -- postion must be 0 to length of file
+    * position contrained between 0 and length
+
+___________________________________________
+pub write(handle, p_buffer, count) : result
+
+ Write count bytes from p_buffer to the file associated with handle
+ @param handle - the handle to the file to which to write byte(s)
+ @param p_buffer - the address of the buffer containing the users' data to write
+ @param count - the number of bytes to write to the file
+ @returns result - E_BAD_HANDLE if the handle is not valied,
+ .. E_FILE_MODE if the file is not open for writing,
+ .. otherwise 0 to indicate SUCCESS
+
+_______________________________________
+pub wr_byte(handle, byteValue) : result
+
+ Write a byte to a file that is open for write or rewrite
+ @param handle - handle to a file that is open for write or rewrite
+ @param byteValue - value to write to the file
+ @returns status - either E_BAD_HANDLE or E_FILE_READING if the handle is not valid or the file is not open for writing, otherwise 0 indicating success
+
+________________________________________
+pub wr_word(handle, word_value) : result
+
+ Write word to file associated with handle
+ -- order is Little Endian
+ @param handle - the handle of the file to which to write the WORD
+ @param word_value - the 16 bit WORD to write to the file
+ @returns result - E_BAD_HANDLE if the handle is not valied,
+ .. E_FILE_MODE if the file is not open for writing,
+ .. otherwise 0 to indicate SUCCESS
+
+________________________________________
+pub wr_long(handle, long_value) : result
+
+ Write long to file associated with handle
+ -- order is Little Endian
+ @param handle - the handle of the file to which to write the LONG
+ @param long_value - the 32 bit LONG to write to the file
+ @returns result - E_BAD_HANDLE if the handle is not valied,
+ .. E_FILE_MODE if the file is not open for writing,
+ .. otherwise 0 to indicate SUCCESS
+
+__________________________________
+pub wr_str(handle, p_str) : result
+
+ Write string (including the terminator) at p_str to file associate with handle
+ @param handle - the handle of the file to which to write the zString
+ @param p_str - the address of the zString to write to the file
+ @returns result - E_BAD_HANDLE if the handle is not valied,
+ .. E_FILE_MODE if the file is not open for writing,
+ .. otherwise 0 to indicate SUCCESS
+
+__________________________________________
+pub read(handle, p_buffer, count) : result
+
+ Read count bytes from file associated with handle to p_buffer or to end of file which ever comes first
+ -- returns count of bytes read (negative result indicates error)
+ @param handle - the handle to the file from which to read bytes
+ @param p_buffer - address of the buffer into which to place the data read
+ @param count - the maximum number of bytes to place into the buffer
+ @returns result - E_BAD_HANDLE if the handle is not valied, E_FILE_WRITING if the file is not open for reading, otherwise the number of bytes read
+
+___________________________
+pub rd_byte(handle) : value
+
+ Read next byte from file associated with handle
+  -- negative value indicates error or end of file
+ @param handle - the handle to the file from which to read a byte
+ @returns byteValue - E_BAD_HANDLE if the handle is not valid,
+ .. E_FILE_MODE if the file is not open for reading,
+ .. E_END_OF_FILE if no more data,
+ .. otherwise, the next byte [0-255] from the file
+
+___________________________
+pub rd_word(handle) : value
+
+ Read next WORD from file associated with the handle
+ @param handle - the handle to the file from which to read a byte
+ @returns value - E_BAD_HANDLE if the handle is not valid,
+ .. E_FILE_MODE if the file is not open for reading,
+ .. E_END_OF_FILE if no more data,
+ .. otherwise, the next byte [0-255] from the file
+
+___________________________
+pub rd_long(handle) : value
+
+ Read next LONG from file associated with the handle
+ @param handle - the handle to the file from which to read a byte
+ @returns value - E_BAD_HANDLE if the handle is not valid,
+ .. E_FILE_MODE if the file is not open for reading,
+ .. E_END_OF_FILE if no more data,
+ .. otherwise, the next byte [0-255] from the file
+
+_________________________________________
+pub rd_str(handle, p_str, count) : result
+
+ Read z-string from file at handle into buffer at p_str (count is max length of string + terminator)
+ @param handle - the handle to the file from which to read a byte
+ @param p_str - the address of the buffer into which to place the string
+ @param count - the maximum number of bytes to place into the buffer
+ @returns result - E_BAD_HANDLE if the handle is not valid,
+ .. E_FILE_MODE if the file is not open for reading,
+ .. otherwise, the length of the string placed into the buffer
+
+__________________________________________________
+pub directory(p_block_id, p_filename, p_file_size)
+
+ Get next file's filename and size in bytes via current blockID
+ @param p_block_id - the next block ID to check for a file head. (Initialize to 0, will be auto-advanced by each call to this method)
+ @param p_filename - the filename of the file found (or a zero length string if no more files)
+ @param p_file_size - the number of bytes in the file found (or 0 when no more files)
+
+_______________________________________________
+pub stats() : usedBlocks, freeBlocks, fileCount
+
+ Get fielsystem stats: used/free block counts and file count
+ @returns usedBlocks - the number of blocks in use
+ @returns freeBlocks - the number of free blocks
+ @returns fileCount - the number of files recorded in filesystem
+
+
+
+
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
