@@ -58,11 +58,14 @@ PRI ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
       quit                                                      'no more files, quit
 
 
-PRI ReadFile(pFilename, pStr, maxlen) | handle
+PRI ReadFile(pFilename, pStr, maxlen) | handle, byteCount
 
-  handle := Flash.open_read(pFilename)                          'open file for reading
+  handle := Flash.open(pFilename,"R")                          'open file for reading
   if handle >= 0
-    Flash.rd_str(handle, pStr, maxlen)          'read bytes of zstring
+    byteCount := Flash.rd_str(handle, pStr, maxlen)             'read bytes of zstring
+    if byteCount < 0
+        showError(@"rd_str()", byteCount)
+    'debug("- read str(", udec_(byteCount), ")=[", zstr_(pStr), "]")      'show filename, bytes, ID, and file contents
 
     Flash.Close(handle)                                         'close file
 
@@ -71,13 +74,13 @@ PRI WriteZStringToFile(pFilename, pStr) | handle, status
 
   debug("Writing: ", zstr_(pFilename))
 
-  handle := Flash.open_write(pFilename)                         'open file for writing
+  handle := Flash.open(pFilename, "W")                         'open file for writing
   if handle >= 0
     status := Flash.wr_str(handle, pStr)
     if status < 0
         showError(@"wr_str()", status)
 
-    status := Flash.close(handle)                                               'close file
+    status := Flash.close(handle)                               'close file
     if status < 0
         showError(@"close()", status)
   else

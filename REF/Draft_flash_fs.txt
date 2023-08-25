@@ -196,12 +196,14 @@ pub wr_byte(handle, byteValue) : result
  Write a byte to a file that is open for write or rewrite
  @param handle - handle to a file that is open for write or rewrite
  @param byteValue - value to write to the file
- @returns status - either E_BAD_HANDLE or E_FILE_READING if the handle is not valid or the file is not open for writing, otherwise 0 indicating success
+ @returns result - E_BAD_HANDLE if the handle is not valied,
+ .. E_FILE_MODE if the file is not open for writing,
+ .. otherwise 0 to indicate SUCCESS
 
 ________________________________________
 pub wr_word(handle, word_value) : result
 
- Write word to file associated with handle
+ Write WORD (16-bits) to file associated with handle
  -- order is Little Endian
  @param handle - the handle of the file to which to write the WORD
  @param word_value - the 16 bit WORD to write to the file
@@ -212,7 +214,7 @@ pub wr_word(handle, word_value) : result
 ________________________________________
 pub wr_long(handle, long_value) : result
 
- Write long to file associated with handle
+ Write LONG (32-bits) to file associated with handle
  -- order is Little Endian
  @param handle - the handle of the file to which to write the LONG
  @param long_value - the 32 bit LONG to write to the file
@@ -223,7 +225,7 @@ pub wr_long(handle, long_value) : result
 __________________________________
 pub wr_str(handle, p_str) : result
 
- Write string (including the terminator) at p_str to file associate with handle
+ Write string (including the terminator) from p_str to file associate with handle
  @param handle - the handle of the file to which to write the zString
  @param p_str - the address of the zString to write to the file
  @returns result - E_BAD_HANDLE if the handle is not valied,
