@@ -24,11 +24,11 @@ pub open(p_filename, mode) : handle
 pub open_read(p_filename) : handle
 pub open_write(p_filename) : handle
 pub open_append(p_filename) : handle
-PUB close(handle) : status
 PUB rename(p_old_filename, p_new_filename) : status
 PUB delete(p_filename) : status
 pub exists(p_filename) : result
 pub file_size(p_filename) : fsize
+PUB close(handle) : status
 pub seek(handle, position) : result
 pub write(handle, p_buffer, count) : result
 pub wr_byte(handle, byteValue) : result
@@ -128,13 +128,6 @@ pub open_append(p_filename) : handle
  .. E_FILE_OPEN if file is already open,
  .. or E_NO_HANDLE if no handle is available
 
-__________________________
-PUB close(handle) : status
-
- Close an open file, completes file (re)write, frees handle
- @param handle - a file handle to an open file
- @returns status - either E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
-
 ___________________________________________________
 PUB rename(p_old_filename, p_new_filename) : status
 
@@ -166,6 +159,13 @@ pub file_size(p_filename) : fsize
  Return size of file in bytes
  @param p_filename - pointer to zstring containing the filename
  @returns fsize - either the size of the file in bytes or E_FILE_NOT_FOUND if the file doesn't exist
+
+__________________________
+PUB close(handle) : status
+
+ Close an open file, completes file (re)write, frees handle
+ @param handle - a file handle to an open file
+ @returns status - either E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
 
 ___________________________________
 pub seek(handle, position) : result
@@ -304,6 +304,7 @@ pub string_for_error(error_code) : p_interpretation
  Return a string describing the error code
  @param error_code - the error code to translate
  @returns p_interpretation - interpretation of the errcode
+
 
 
 

@@ -171,29 +171,27 @@ pub mount() : status | block_address, cycleBits, signature
 ' @local cycleBits - lifeCycle bit-pattern to place into block
 ' @local signature - block state bits of block being checked
 
-  debug("* mount()")
   errorCode := SUCCESS                                                          ' preset to success
 
   ' don't mount if already mounted
   if fs_mounted
-   debug("* already mounted, SKIP")
-   return
+    'debug("* already mounted, SKIP")
+    return
   else
     fs_mounted := true
+  debug("* mount()")
 
-{
   if fs_lock == -1
     fs_lock := locknew()                                                          'reserve a lock for driver use
     if(fs_lock < 0)                                                               'if lock allocation failed
         fs_mounted := false                                                         ' clear "mounted" inidcation
         return (errorCode := E_NO_LOCK_AVAIL)                                       '..abort with error
 
-  debug("- have lock, trying...")
+  'debug("- have lock, trying...")
   repeat while locktry(fs_lock) == 0                                            ' try to get the lock
     waitms(100)                                                                 ' .. wait 1/10 second fi didn't
-'}
 
-  debug("- mounting...")
+  'debug("- mounting...")
   bytefill(@hStatus, 0, MAX_FILES_OPEN)                                         'clear handles
   bytefill(@IDValids, 0, Flags_SIZE)                                            'clear ID flags
   bytefill(@BlockStates, 0, States_SIZE)                                        'clear block states to B_FREE
@@ -202,11 +200,11 @@ pub mount() : status | block_address, cycleBits, signature
   IDValid    := ^@IDValids.[0]
   BlockState := ^@BlockStates.[1..0]
 
-  debug("- fixing power-out leftovers...")
+  'debug("- fixing power-out leftovers...")
   repeat block_address from 0 to BLOCKS - 1                                     'check each block and fix any duplicate IDs
     check_block_fix_dupe_id(block_address)                                      '(recovers from incomplete block switchover due to power loss)
 
-  debug("- locating files...")
+  'debug("- locating files...")
   repeat block_address from 0 to BLOCKS - 1                                     'trace head blocks and cancel any broken files
     if field[BlockState][block_address] == B_TEMP                               'is this a valid block?
       flash_read_block(block_address, @cycleBits, $000, $000)                   'yes, read first byte of block
@@ -214,21 +212,21 @@ pub mount() : status | block_address, cycleBits, signature
         ifnot trace_file_set_flags(block_address, true)                         'yes, trace file, set block states to B_HEAD/B_BODY
           trace_file_set_flags(block_address, false)                            'if error, retrace file, return block states to B_TEMP
 
-  debug("- clearing dead blocks...")
+  'debug("- clearing dead blocks...")
   repeat block_address from 0 to BLOCKS - 1                                     'cancel B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
     if field[BlockState][block_address] == B_TEMP                               'is this an B_TEMP block?
       flash_read_block(block_address, @signature, $000, $003)                   'if so, read first long of block to get ID
       field[IDValid][signature.[19..8]]~                                        '..cancel ID flag
       field[BlockState][block_address] := B_FREE                                '..return block state to B_FREE
       cancel_block(block_address)                                               '..cancel block to inhibit future CRC checks
-      debug(" -- found dead block...")
+      'debug(" -- found dead block...")
       status :=  (errorCode := E_BAD_BLOCKS_REMOVED)
 
-  debug("- mount done")
-{
+  'debug("- mount done")
+
   lockrel(fs_lock)              ' release the lock, we're done with it
-  debug("- lock released")
-'}
+  'debug("- lock released")
+
 
 pub unmount() | handle
 
@@ -237,10 +235,10 @@ pub unmount() | handle
 
 ' Local Variables:
 ' @local handle - temporary handle to check for open files
-debug("* unmount()")
-repeat handle from 0 to MAX_FILES_OPEN - 1              ' for each handle
-  if hStatus[handle]                                    ' if handle is open...
-    close(handle)                                       ' close it!
+    debug("* unmount()")
+    repeat handle from 0 to MAX_FILES_OPEN - 1              ' for each handle
+    if hStatus[handle]                                    ' if handle is open...
+        close(handle)                                       ' close it!
 
 
 pub format() : status | block_address, cycleBits
@@ -254,36 +252,32 @@ pub format() : status | block_address, cycleBits
 ' @local block_address - the block offset within the file system
 ' @local cycleBits - lifeCycle bit-pattern to place into block
 
-  debug("* format()")
+  'debug("* format()")
   ' ensure we have a lock first!  Abort if we can't get one
 
-{
   if fs_lock == -1
     fs_lock := locknew()                                                        'reserve a lock for driver use
     if(fs_lock < 0)                                                             'if lock creation failed
       return (errorCode := E_NO_LOCK_AVAIL)                                     '..abort with error
 
-  debug("- have lock, trying...")
+  'debug("- have lock, trying...")
   repeat while locktry(fs_lock) == 0                                            ' try to get the lock
     waitms(100)                                                                 ' .. wait 1/10 second fi didn't
-'}
 
-  debug("- formatting...zzz")
+  'debug("- formatting...zzz")
   repeat block_address from 0 to BLOCKS - 1                                     'cancel all active blocks
     flash_read_block(block_address, @cycleBits, $000, $000)
     'if block_address // 128 == 0
-      'debug(" -- block ", uhex_word_(block_address),", cycle...", ubin_byte(cycleBits))
+    '  debug(" -- block ", uhex_word_(block_address),", cycle...", ubin_byte(cycleBits))
     if lookdown(cycleBits.[7..5] : %011, %101, %110)
       'debug(" -- clearing...")
       cancel_block(block_address)
 
-  debug("- formatting done")
+  'debug("- formatting done")
   fs_mounted := false           ' clear "mounted" indcation so it will mount the scan structures
 
-{
   lockrel(fs_lock)              ' release the lock, we're done with it
-  debug("- lock released")
-'}
+  'debug("- lock released")
   return Mount()                                                                '(re)mount flash
 
 pub error() : result
@@ -414,38 +408,6 @@ if not exists(p_filename)                                                       
   seek_to_block(handle, file_size(handle))                                      ' set file pointer to end of file
 
 
-PUB close(handle) : status
-
-'' Close an open file, completes file (re)write, frees handle
-''
-'' @param handle - a file handle to an open file
-'' @returns status - either E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
-
-  if handle < 0 or handle > MAX_FILES_OPEN - 1
-     return (errorCode := E_BAD_HANDLE)
-
-  case hStatus[handle]~                                                         'get handle and post-clear
-    H_READ:                                                                     'READ?
-      {okay, nothing to do}
-    H_WRITE, H_REWRITE:                                                         'WRITE/REWRITE?
-
-      LONG[buffer_pointer(handle)].[31..20] := hBlockPtr[handle]                'cap last block and write it
-      write_block(handle)
-
-      activate_block(hHeadBlock[handle], hHeadCycle[handle])                    'activate head block, replaces file if rewrite
-
-      if hStatus[handle] == H_REWRITE                                           'if file rewrite, delete old file to clean up
-        delete_chain_at_block_id(hHeadID[handle])
-        field[IDValid][hHeadID[handle]]~~                                       'set IDValid again, since it was cleared during file deletion
-
-      field[IDToBlock][hHeadID[handle]] := hHeadBlock[handle]                   'set IDToBlock
-      field[BlockState][hHeadBlock[handle]] := B_HEAD                           'change head block status from B_TEMP to B_HEAD
-    other:
-      return (errorCode := E_BAD_HANDLE)
-
-  errorCode := SUCCESS
-
-
 PUB rename(p_old_filename, p_new_filename) : status | signature, new_block_address, old_block_address, next_cycle_bits
 
 '' Rename a a file named p_old_filename to p_new_filename
@@ -532,6 +494,38 @@ pub file_size(p_filename) : fsize | signature
         return count_file_bytes(field[IDToBlock][signature.[19..8]])              'yes, get file size
   else
      return (errorCode := E_FILE_NOT_FOUND)
+
+
+PUB close(handle) : status
+
+'' Close an open file, completes file (re)write, frees handle
+''
+'' @param handle - a file handle to an open file
+'' @returns status - either E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return (errorCode := E_BAD_HANDLE)
+
+  case hStatus[handle]~                                                         'get handle and post-clear
+    H_READ:                                                                     'READ?
+      {okay, nothing to do}
+    H_WRITE, H_REWRITE:                                                         'WRITE/REWRITE?
+
+      LONG[buffer_pointer(handle)].[31..20] := hBlockPtr[handle]                'cap last block and write it
+      write_block(handle)
+
+      activate_block(hHeadBlock[handle], hHeadCycle[handle])                    'activate head block, replaces file if rewrite
+
+      if hStatus[handle] == H_REWRITE                                           'if file rewrite, delete old file to clean up
+        delete_chain_at_block_id(hHeadID[handle])
+        field[IDValid][hHeadID[handle]]~~                                       'set IDValid again, since it was cleared during file deletion
+
+      field[IDToBlock][hHeadID[handle]] := hHeadBlock[handle]                   'set IDToBlock
+      field[BlockState][hHeadBlock[handle]] := B_HEAD                           'change head block status from B_TEMP to B_HEAD
+    other:
+      return (errorCode := E_BAD_HANDLE)
+
+  errorCode := SUCCESS
 
 
 pub seek(handle, position) : result | load_status
@@ -1247,8 +1241,9 @@ pri flash_read_block(block_address, p_buffer, firstByte, lastByte)
 ' @param firstByte - address of first byte to read
 ' @param lastByte - address of last byte to read
 
+  'debug("* rb(", uhex_word_(block_address), ", ", uhex_word_(firstByte), ", ", uhex_word_(lastByte),")")
   flash_command($03 | (FIRST_BLOCK + block_address) << 20 | firstByte << 8, 4)  'read 4KB block
-  flash_receive(block_address, lastByte - firstByte + 1)                        'receive block data
+  flash_receive(p_buffer, lastByte - firstByte + 1)                        'receive block data
 
 
 pri program_block(block_address, p_buffer, cycle_bits) | pageIndex
@@ -1272,10 +1267,10 @@ pri program_block(block_address, p_buffer, cycle_bits) | pageIndex
   flash_wait()                                                                               'wait for erasure to complete (~45ms)
 
   repeat pageIndex from 0 to 15                                                              'program 16 pages within 4KB block
-        flash_command($06, 1)                                                                'enable write
-        flash_command($02 | (FIRST_BLOCK + block_address) << 20 | pageIndex << 16, 4)        'program
-        flash_send(p_buffer + pageIndex << 8, 256)                                           'send 256 bytes
-        flash_wait()                                                                                                             'wait for programming to complete (~400us)
+    flash_command($06, 1)                                                                'enable write
+    flash_command($02 | (FIRST_BLOCK + block_address) << 20 | pageIndex << 16, 4)        'program
+    flash_send(p_buffer + pageIndex << 8, 256)                                           'send 256 bytes
+    flash_wait()                                                                                                             'wait for programming to complete (~400us)
 
 
 pri activate_block(block_address, cycle_bits)
@@ -1294,7 +1289,7 @@ pri cancel_block(block_address)
 '
 ' @param block_address - the block offset within the file system
 
-  debug("* cancel block")
+  'debug("* cancel block")
   program_bit(block_address, %00011111)                                         'clear all cycle bits to cancel block
 
 
@@ -1320,8 +1315,8 @@ pri flash_wait()| statusBits
 ' @local statusBits - status register bits read from FLASH Chip
 
   repeat
-        flash_command($05, 1)                                                    'read status register
-        flash_receive(@statusBits, 1)
+    flash_command($05, 1)                                                    'read status register
+    flash_receive(@statusBits, 1)
   while statusBits.[0]                                                          'loop until BUSY bit clear
 
 
@@ -1347,7 +1342,7 @@ pri flash_command(command, count)
 
                 end
 
-  flash_send(@command, count)                            'send command
+                flash_send(@command, count)                            'send command
 
 
 pri flash_send(p_buffer, count) | tx_byte
@@ -1414,6 +1409,8 @@ pri flash_receive(p_buffer, count) | rx_byte
                 wypin   #1,#SF_SCLK                     '2*     CK high, leave SD card CS high
 
                 end
+
+con { methods supporting regression testing }
 
 
 con { technical details }
