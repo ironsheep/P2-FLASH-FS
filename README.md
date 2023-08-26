@@ -16,6 +16,7 @@ Additional pages:
 
 - [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
 - [FS Theory of Operations](THEOPS.md) - a deteailed descript of how this filesystem works
+- [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features
 
 ## Flash Filesystem Features
 
