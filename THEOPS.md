@@ -134,6 +134,10 @@ Blocks written to our flash filesystem are of the following formats:
 
 #### A File is comprised of blocks
 
+A file is a one-way linked list. From the study of the block structures above, we see that the file contains control structures and data. The last bock of the file aways contains the End-Pointer which is the address of the next byte to be written or the value of $FFC which points to the CRC which means there is no more room to write in this block. In this condition (end pointer is $FFC) a next write to this file will first allocate a new block adding more space in which to write. The End pointer in this new last block is set to the first byte of data space in the new block. The former last block is set to point to the new last block and its type is set to body/more instead of body/last.
+
+The file's control data also contains logical next pointers in each block except the last block. These next pointers contain the block ID of next block that is part of this file. WE use block IDs instead of block addreses so the blocks containing the ID can be replaced with another block having the same ID when the file content changes but the block pointing to this ID don't have to change. 
+
 A file made up of these blocks can exist in one of three shapes:
 
 | Constituency | Max size | Notes
@@ -145,6 +149,15 @@ A file made up of these blocks can exist in one of three shapes:
 **NOTE1**: the largest file would be a 1 x **Head/More block** (4,028 bytes) -> 3,966 x **Body/More block**s (4,088 bytes ea.) -> 1x **Body/Last block** (4,088 bytes) which yeilds a max length of 16,221,124 bytes.
 
 **NOTE2**: Given this block-type composition of our files, our flash chip using this system can contain a **maximum** of 3,968 **files** of 1-4,028 bytes each.
+
+#### File open Modes
+
+| Open Mode | supports seek() | description |
+| --- | --- | ---|
+| read ["r", "R"] | YES | Read from an **existing file**,<BR>Supports direct access via seek() |
+| write ["w", "W"]  | no | Write to a **new file**, creating it (or write to an **existing file**, replacing it))<br>use `if exists(@"filename") ...` to avoid overwriting an <BR>existing file |
+| append ["a", "A"]  | no | Write to an **existing file**, extending the existing file |
+| modify  ["rw", "RW"] | YES | Open an **existing file** for reads, or writes within the file,<BR> or writes that extend the file.<BR>Supports direct access via seek() |
 
 
 #### Writing to a File
@@ -163,6 +176,10 @@ When appending there are really two cases with the more normal case being the fi
 The less frequent case is when we append to a file that contains less than 4,028 bytes:
 
 - **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File" (above.)
+
+#### Seeking within an existing File
+
+Seeking within an existing file is supported without any control structures being recorded/or updated within the file itself. A seek pointer is maintained for the open file handle. When a seek is requested the location is stored in the handle state data and the block underlying that location is loaded into the handle's buffer. When a read or write follows the seek the seek pointer is updated with the length of the data read or written. If a write occurred the buffer is marked as needing to be rewritten. If a close or a seek to an out-of-buffer location occurs the buffer will be written replacing the original block with the new. Then the block at the new seek location will be loaded in the handle's buffer.
 
 ## Tracking Data (State of Filesystem)
 
