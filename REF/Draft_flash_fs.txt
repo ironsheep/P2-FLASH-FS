@@ -8,7 +8,7 @@
                -- see below for terms of use
    E-mail.....stephen@ironsheep.biz
    Started.... AUG 2023
-   Updated.... 23 AUG 2023
+   Updated.... 26 AUG 2023
  =================================================================================================
 
 Object "Draft_flash_fs" Interface:
@@ -24,10 +24,12 @@ pub open(p_filename, mode) : handle
 pub open_read(p_filename) : handle
 pub open_write(p_filename) : handle
 pub open_append(p_filename) : handle
+pub open_modify(p_filename) : handle
 PUB rename(p_old_filename, p_new_filename) : status
 PUB delete(p_filename) : status
 pub exists(p_filename) : result
-pub file_size(p_filename) : fsize
+pub file_size(p_filename) : size_in_bytes
+pub file_size_unused(p_filename) : size_in_bytes_unused
 PUB close(handle) : status
 pub seek(handle, position) : result
 pub write(handle, p_buffer, count) : result
@@ -35,7 +37,7 @@ pub wr_byte(handle, byteValue) : result
 pub wr_word(handle, word_value) : result
 pub wr_long(handle, long_value) : result
 pub wr_str(handle, p_str) : result
-pub read(handle, p_buffer, count) : result
+pub read(handle, p_buffer, count) : bytes_read
 pub rd_byte(handle) : value
 pub rd_word(handle) : value
 pub rd_long(handle) : value
@@ -43,6 +45,9 @@ pub rd_str(handle, p_str, count) : result
 pub directory(p_block_id, p_filename, p_file_size)
 pub stats() : usedBlocks, freeBlocks, fileCount
 pub string_for_error(error_code) : p_interpretation
+pub test_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count
+pub getHead4kBlock(p_filename) : p_buffer
+pub getFileBlockSignatures(p_filename) : p_sigLong, sigCount
 
 __________
 pub null()
@@ -94,9 +99,10 @@ pub open(p_filename, mode) : handle
  Open file in mode; return handle (0..n) if successful
  @param p_filename - address of a zstring containing the filename
  @param mode - the mode in which to open the file:
- -- mode "r", "R" to read an existing file
+ -- mode "r", "R" to read from an existing file
  -- mode "w", "W" to write to a new file (overwrites existing file)
- -- mode "a", "A" to write to the end of an existing file
+ -- mode "a", "A" to append to the end of an existing file
+ -- mode "rw", "RW" to read from or / write to anywhere within an existing file
  @returns handle - E_FILE_MODE if mode letter is invalid,
  .. E_FILE_OPEN if file is already open,
  .. E_FILE_EXISTS if file exists,
@@ -109,19 +115,28 @@ pub open_read(p_filename) : handle
  Open a file for reading, returning handle if success
  @param p_filename - address of a zstring containing the filename
  @returns handle - E_FILE_NOT_FOUND if file doesn't exist, E_FILE_WRITING if file is being written, or 0 if successful
- Open a file for reading, returns handle
 
 ___________________________________
 pub open_write(p_filename) : handle
 
  Open a file for (re)writing
- @param p_filename - pointer to a zstring containing the filename
+ @param p_filename - address of a zstring containing the filename
  @returns handle - efileWriting if file is being written, E_FILE_OPEN if file is open, or 0 if successful
 
 ____________________________________
 pub open_append(p_filename) : handle
 
- open for appeand not yet implemented!
+ open for append not yet implemented!
+ @param p_filename - address of a zstring containing the filename
+ @returns handle - handle to open file if successful,
+ .. E_FILE_NOT_FOUND if file doesn't exist,
+ .. E_FILE_OPEN if file is already open,
+ .. or E_NO_HANDLE if no handle is available
+
+____________________________________
+pub open_modify(p_filename) : handle
+
+ open for modify not yet implemented!
  @param p_filename - address of a zstring containing the filename
  @returns handle - handle to open file if successful,
  .. E_FILE_NOT_FOUND if file doesn't exist,
@@ -149,35 +164,43 @@ PUB delete(p_filename) : status
 _______________________________
 pub exists(p_filename) : result
 
- Determine if named file is present in file system
+ Determine if named file is present in the file system
  @param p_filename - address of a zstring containing the filename
  @returns result - True/False where True means the file exists
 
-_________________________________
-pub file_size(p_filename) : fsize
+_________________________________________
+pub file_size(p_filename) : size_in_bytes
 
  Return size of file in bytes
- @param p_filename - pointer to zstring containing the filename
- @returns fsize - either the size of the file in bytes or E_FILE_NOT_FOUND if the file doesn't exist
+ @param p_filename - address of a zstring containing the filename
+ @returns size_in_bytes - either the count of bytes contained in the file or E_FILE_NOT_FOUND if the file doesn't exist
+
+_______________________________________________________
+pub file_size_unused(p_filename) : size_in_bytes_unused
+
+ Return the number of bytes not yet written to in the last allocated block
+ @param p_filename - address of a zstring containing the filename
+ @returns size_in_bytes_unused - either the count of unwritten bytes of the file or E_FILE_NOT_FOUND if the file doesn't exist
 
 __________________________
 PUB close(handle) : status
 
  Close an open file, completes file (re)write, frees handle
- @param handle - a file handle to an open file
+ @param handle - a handle to an open file
  @returns status - either E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
 
 ___________________________________
 pub seek(handle, position) : result
 
- ...
- @param handle - handle to a file that is open for read or read/write
+ Postion seek file pointer to position within the file or at the end of the file
+ -- use 0 for position to seek to the start of the file
+ -- use "size of file" to seek to the end of the file for append
+ @param handle - handle to a file that is open for read or read or read-modify-write
  @param position - location within the file to which to position the file pointer
- @returns result - E_FILE_SEEK if the position is not within the file, E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
- Move file pointer to position
- -- file at handle must be open
- -- postion must be 0 to length of file
-    * position contrained between 0 and length
+ @returns result - E_FILE_SEEK if the position is not within the file,
+ ..E_FILE_MODE if the file is not open in a mode allowing seeking
+ ..E_NOT_FOUND if the file is not on the filesystem
+ ..E_BAD_HANDLE if the handle is not valid, otherwise 0 for success
 
 ___________________________________________
 pub write(handle, p_buffer, count) : result
@@ -232,15 +255,18 @@ pub wr_str(handle, p_str) : result
  .. E_FILE_MODE if the file is not open for writing,
  .. otherwise 0 to indicate SUCCESS
 
-__________________________________________
-pub read(handle, p_buffer, count) : result
+______________________________________________
+pub read(handle, p_buffer, count) : bytes_read
 
  Read count bytes from file associated with handle to p_buffer or to end of file which ever comes first
  -- returns count of bytes read (negative result indicates error)
  @param handle - the handle to the file from which to read bytes
  @param p_buffer - address of the buffer into which to place the data read
  @param count - the maximum number of bytes to place into the buffer
- @returns result - E_BAD_HANDLE if the handle is not valied, E_FILE_WRITING if the file is not open for reading, otherwise the number of bytes read
+ @returns bytes_read - the number of bytes read. If number doesn't match expected, then check error() for reason:
+ ..E_BAD_HANDLE if the handle is not valied,
+ ..E_FILE_WRITING if the file is not open for reading,
+ ..E_END_OF_FILE if attempted read beyond written data,
 
 ___________________________
 pub rd_byte(handle) : value
@@ -258,20 +284,21 @@ pub rd_word(handle) : value
 
  Read next WORD from file associated with the handle
  @param handle - the handle to the file from which to read a byte
- @returns value - E_BAD_HANDLE if the handle is not valid,
- .. E_FILE_MODE if the file is not open for reading,
- .. E_END_OF_FILE if no more data,
- .. otherwise, the next byte [0-255] from the file
+ @returns result - the number of bytes read. If number doesn't match expected, then check error() for reason:
+ .. E_BAD_HANDLE if the handle is not valied,
+ .. E_FILE_WRITING if the file is not open for reading,
+ .. E_END_OF_FILE if attempted read beyond written data,
+ .. the WORD value read from the file
 
 ___________________________
 pub rd_long(handle) : value
 
  Read next LONG from file associated with the handle
  @param handle - the handle to the file from which to read a byte
- @returns value - E_BAD_HANDLE if the handle is not valid,
- .. E_FILE_MODE if the file is not open for reading,
- .. E_END_OF_FILE if no more data,
- .. otherwise, the next byte [0-255] from the file
+ @returns value - E_BAD_HANDLE if the handle is not valied,
+ .. E_FILE_WRITING if the file is not open for reading,
+ .. E_END_OF_FILE if attempted read beyond written data,
+ .. the LONG value read from the file
 
 _________________________________________
 pub rd_str(handle, p_str, count) : result
@@ -307,8 +334,29 @@ pub string_for_error(error_code) : p_interpretation
  @param error_code - the error code to translate
  @returns p_interpretation - interpretation of the errcode
 
+___________________________________________________________________________
+pub test_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count
 
+ TEST METHOD: return information about a file: blocks allocated, bytes used, bytes free
+ @param p_filename - address of a zstring containing the filename
+ @returns bytes_used - the number of bytes written to file, E_FILE_NOT_FOUND if the file doesn't exist
+ @returns bytes_free - the number of bytes allocated but not yet written (in the last block)
+ @returns block_count - the number of blocks allocation to this file
 
+_________________________________________
+pub getHead4kBlock(p_filename) : p_buffer
+
+ TEST METHOD: Return the named file's head block
+ @param p_filename - address of a zstring containing the filename
+ @returns p_buffer - address of a 4KB buffer containing the head block
+
+____________________________________________________________
+pub getFileBlockSignatures(p_filename) : p_sigLong, sigCount
+
+ TEST METHOD: return the named file's list block signatures for blocks allocated to the file
+ @param p_filename - address of a zstring containing the filename
+ @returns p_sigLong - address of a long array containing the block signatures
+ @returns sigCount - the number of signatures in the array
 
 
   =================================================================================================

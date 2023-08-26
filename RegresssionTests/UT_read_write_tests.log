@@ -1,0 +1,219 @@
+Cog0  INIT $0000_0000 $0000_0000 load
+Cog0  INIT $0000_0EB8 $0000_9678 jump
+Cog0  * mount()
+Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
+Cog0
+Cog0    All Files:
+Cog0
+Cog0  * Test #1: BAD: Read when file doesn't exist
+Cog0     ECode: E_FILE_NOT_FOUND: File not present
+Cog0     -> pass
+Cog0
+Cog0  * Test #2: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #3: Write 10 BYTEs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #4: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #5: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [rw10bytes.bin], bytes_used = 10, bytes_free = 4_018, block_count = 1
+Cog0
+Cog0  * Test #6: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 1
+Cog0    # blocks used: 1
+Cog0     -> pass
+Cog0
+Cog0  * Test #7: Ensure expected file stats
+Cog0    File: [rw10bytes.bin]
+Cog0    # blocks: 1
+Cog0    # bytes used: 10
+Cog0     -> pass
+Cog0
+Cog0  * Test #8: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #9: read expected 10 BYTEs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #10: ensure no errors on reads
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #11: BAD: read one more BYTE than written
+Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #12: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
+Cog0
+Cog0  * Test #13: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #14: Write 10 WORDs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #15: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #16: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [rw9words.bin], bytes_used = 20, bytes_free = 4_008, block_count = 1
+Cog0
+Cog0  * Test #17: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 2
+Cog0    # blocks used: 2
+Cog0     -> pass
+Cog0
+Cog0  * Test #18: Ensure expected file stats
+Cog0    File: [rw9words.bin]
+Cog0    # blocks: 1
+Cog0    # bytes used: 20
+Cog0     -> pass
+Cog0
+Cog0  * Test #19: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #20: read expected 10 WORDs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #21: ensure no errors on reads
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #22: BAD: read one more WORD than written
+Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #23: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
+Cog0  rw9words.bin, Bytes = 20, ID = 2, @Buff={binary data}
+Cog0
+Cog0  * Test #24: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #25: Write 10 LONGs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #26: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #27: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [rw12longs.bin], bytes_used = 40, bytes_free = 3_988, block_count = 1
+Cog0
+Cog0  * Test #28: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 3
+Cog0    # blocks used: 3
+Cog0     -> pass
+Cog0
+Cog0  * Test #29: Ensure expected file stats
+Cog0    File: [rw12longs.bin]
+Cog0    # blocks: 1
+Cog0    # bytes used: 40
+Cog0     -> pass
+Cog0
+Cog0  * Test #30: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #31: read expected 10 LONGs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #32: ensure no errors on reads
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #33: BAD: read one more LONG than written
+Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #34: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
+Cog0  rw9words.bin, Bytes = 20, ID = 2, @Buff={binary data}
+Cog0  rw12longs.bin, Bytes = 40, ID = 3, @Buff={binary data}
+Cog0
+Cog0  * Test #35: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #36: Write 10 STRINGs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #37: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #38: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [rw10strings.zstr], bytes_used = 444, bytes_free = 3_584, block_count = 1
+Cog0
+Cog0  * Test #39: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 4
+Cog0    # blocks used: 4
+Cog0     -> pass
+Cog0
+Cog0  * Test #40: Ensure expected file stats
+Cog0    File: [rw10strings.zstr]
+Cog0    # blocks: 1
+Cog0    # bytes used: 444
+Cog0     -> pass
+Cog0
+Cog0  * Test #41: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #42: read expected 10 STRINGs
+Cog0    Sub-Test Results: Pass: 20, Fail: 0
+Cog0
+Cog0  * Test #43: ensure no errors on reads
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #44: BAD: read one more STRING than written
+Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #45: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
+Cog0  rw9words.bin, Bytes = 20, ID = 2, @Buff={binary data}
+Cog0  rw12longs.bin, Bytes = 40, ID = 3, @Buff={binary data}
+Cog0  rw10strings.zstr, Bytes = 444, ID = 4, @Buff={binary data}
+Cog0
+Cog0  * 45 Tests: , Pass: 45, Fail: 0
+Cog0  * Test Complete
