@@ -11,8 +11,9 @@ This is a recap of the version history of files arriving from Chip:
 
 | Version | Date | Purpose |
 | --- | --- | --- |
-|  v1.0 | 2023-08-14 | Initial release.	 |
-| v1.1 |  2023-08-18 | Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI_CS now resets high.	|
+|  v1.0 | <PRE>2023-08-14</PRE> | Initial release.	 |
+| v1.1 |  <PRE>2023-08-18</PRE> | Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI\_CS now resets high.	|
+| v1.2 |  <PRE>2023-08-25</PRE> | Adds open_append(), cleans up byte counting, adjusts get new handle to set filename for handle.
 
 ## The latest Files from Chip
 
