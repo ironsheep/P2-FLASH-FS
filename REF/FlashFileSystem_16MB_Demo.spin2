@@ -9,7 +9,7 @@ PUB gox()
 
 PUB go()
 
-'  Flash.Format()		'Comment out this line to not erase all files
+  Flash.Format()		'Comment out this line to not erase all files
   Flash.Mount()
 
   ShowStats()			'Do a bunch of file stuff while reporting status, along the way
@@ -18,6 +18,9 @@ PUB go()
   WriteFile(@"file1", @file1)
   WriteFile(@"file2", @file2)
   WriteFile(@"file3", @file3)
+
+
+  AppendFile(@"file2", @" Appended.")
 
   ShowStats()
   ShowFiles()
@@ -50,7 +53,6 @@ PRI ShowFiles() | ID, Bytes, Handle, Ptr, x, byte Filename[60], byte Buff[30]
 PRI ReadFile(pFilename, pBuff) | Handle, x
 
   Handle := Flash.OpenRead(pFilename)				'open file for reading
-
   repeat Flash.SizeOf(pFilename)
     byte[pBuff++] := Flash.ByteRead(Handle)			'read bytes
 
@@ -62,6 +64,19 @@ PRI WriteFile(pFilename, pBuff) | Handle
   debug("Writing: ", zstr_(pFilename))
 
   Handle := Flash.OpenWrite(pFilename)				'open file for writing
+
+  repeat							'write bytes until 0 written
+    Flash.ByteWrite(Handle, byte[pBuff])
+  while byte[pBuff++]
+
+  Flash.Close(Handle)						'close file
+
+
+PRI AppendFile(pFilename, pBuff) | Handle
+
+  debug("Appending: ", zstr_(pFilename))
+
+  Handle := Flash.OpenAppend(pFilename)				'open file for appending
 
   repeat							'write bytes until 0 written
     Flash.ByteWrite(Handle, byte[pBuff])
