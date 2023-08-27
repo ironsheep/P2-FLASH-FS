@@ -15,7 +15,7 @@ for FIL in `ls -1 "${DST_SPIN_DIR}" | grep \.spin2`; do
                 # compare the two sums
                 if [ "$LOCL_SUM" != "$RMTE_SUM" ]; then
                         echo "- ${RMTE_SUM} : ${LOCL_SUM} : DIFFERENT  [${filename}]"
-                        (set -x; cp -p "$FIL" "${filename}")
+                        (set -x; diff "$FIL" "${filename}")
                 else
                         echo "* ${RMTE_SUM} : ${LOCL_SUM} : MATCH    [${filename}]"
                 fi
