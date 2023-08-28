@@ -1,9 +1,51 @@
-# P2-FLASH-FS / RegresssionTests
-These are unit/regression test files that I'm using to certify the FS operation with each release.
+# P2-FLASH-FS / Regresssion Tests
 
 ![Project Maintenance][maintenance-shield]
 
 [![License][license-shield]](LICENSE)
+
+These are regression test files that I'm using to certify the FS operation with each release.  All tests must pass! The regression test programss are versioned here so you can repeat this testing any time to verify your driver operation.
+
+The point of these tests is to exercise each method attempting to check both normal and error/exception cases.
+
+## Test Coverage
+
+The Regression test coverage is nearly complete!  This table indicates which methods have been test by the current regression test programs.
+
+| Public Method | tested | Notes
+| --- | --- | --- |
+| PUB version() : result | 
+| PUB serial_number() : snHi, snLo
+| PUB mount() : status | YES
+| PUB unmount() | YES
+| PUB format() : status | YES
+| PUB error() : result | YES
+| PUB open(p_filename, mode) : handle | YES
+| PUB open\_read(p_filename) : handle | YES
+| PUB open\_write(p_filename) : handle | YES
+| PUB open\_append(p_filename) : handle
+| PUB open\_modify(p_filename) : handle
+| PUB rename(p_old_filename, p_new_filename) : status | YES
+| PUB delete(p_filename) : status | YES
+| PUB exists(p_filename) : result | YES
+| PUB file\_size(p_filename) : size_in_bytes | YES
+| PUB file\_size_unused(p_filename) : size_in_bytes_unused | YES
+| PUB close(handle) : status | YES
+| PUB seek(handle, position) : result | YES
+| PUB write(handle, p_buffer, count) : result | YES
+| PUB wr_byte(handle, byteValue) : result | YES
+| PUB wr_word(handle, word_value) : result | YES
+| PUB wr_long(handle, long_value) : result | YES
+| PUB wr_str(handle, p_str) : result | YES
+| PUB read(handle, p_buffer, count) : bytes_read | YES
+| PUB rd_byte(handle) : value | YES
+| PUB rd_word(handle) : value | YES
+| PUB rd_long(handle) : value | YES
+| PUB rd_str(handle, p_str, count) : result | YES
+| PUB directory(p_block_id, p_filename, p_file_size)
+| PUB stats() : usedBlocks, freeBlocks, fileCount | YES
+| PUB string_for_error(error_code) : p_interpretation | YES
+
 
 ## Running the tests
 
@@ -19,9 +61,9 @@ In order the compile the tests you need to uncomment the test-support routines i
 comment out the 1st line to enable the code that follows. [ place a ' before the {... ]
 
 
-#### Determine debug output routing (UT_*.spin2 files)
+#### Determine debug output routing (RT_*.spin2 files)
 
-At the head of each of test UT .spin2 files you want to run look for the debug output lines:
+At the head of each of test RT .spin2 files you want to run look for the debug output lines:
 
 ```spin2
 {
@@ -37,34 +79,38 @@ These lines when uncommented route the debug serial to PINs 57/58 which I connec
 In their present for (commented out) the debug output just goes the debug window on windows where you are running the compiler.
 
 
-## The test files 
+## The Test files 
 
 This is a recap of the version history of these files:
 
 | Date | Status |
 | --- | --- |
-|  <PRE>2023-Aug-26</PRE> | Initial release. `UT_read_write_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() <br>Spanning blocks tests need to be added|
-|  <PRE>2023-Aug-27</PRE> | More Tests: `UT_read_write_block_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for read(), write(), and file\_size_unused(): in only block, spanning two blocks, spanning 3 blocks |
+|  <PRE>2023-Aug-26</PRE> | Initial release. `RT_read_write_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() <br>Spanning blocks tests need to be added|
+|  <PRE>2023-Aug-27</PRE> | More Tests: `RT_read_write_block_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for read(), write(), and file\_size_unused(): in only block, spanning two blocks, spanning 3 blocks |
+|  <PRE>2023-Aug-28</PRE> | More Tests: `RT_read_seek_test.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for seek(): in only block, spanning two blocks, spanning 3 blocks |
 
 
-
-
-## Test Files by Stephen
+## Test files by Stephen
 
 This is my work in progress as I'm working toward customer facing release of the FileSystem code
 
 
 | File | Purpose |
 | --- | --- |
-| [UT\_utilities.spin2](UT_utilities.spin2) | Utility methods common to all Test Files |
-| [UT\_read\_write_tests.spin2](UT_read_write_tests.spin2) | The read/write basic types test suite - more testing to be awakened in it! |
-| [UT\_read\_write_tests.log](UT_read_write_tests.log) | Log of the read/write basic types tests [45 passes, 0 fails] |
-| [UT\_read\_write\_block_tests.spin2](UT_read_write_block_tests.spin2) | The read/write records(blocks) test suite  |
-| [UT\_read\_write\_block_tests.log](UT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [39 passes, 0 fails]<br>(*42 successes (+3) were extra checks I did for 3 tests*) |
+| [RT\_utilities.spin2](RT_utilities.spin2) | Utility methods common to all Test Files |
+| [RT\_read\_write_tests.spin2](RT_read_write_tests.spin2) | The read/write basic types test suite - more testing to be awakened in it! |
+| [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [45 passes, 0 fails] |
+| [RT\_read\_write\_block_tests.spin2](RT_read_write_block_tests.spin2) | The read/write records(blocks) test suite  |
+| [RT\_read\_write\_block_tests.log](RT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [39 passes, 0 fails]<br>(*42 successes (+3) were extra checks I did for 3 tests*) |
+| [RT\_read\_seek_test.spin2](RT_read_seek_test.spin2) | The read/write seek test suite - more testing to be awakened in it! |
+| [RT\_read\_seek_test.log](RT_read_seek_test.log) | Log of the read/write seek tests [61 passes, 0 fails] |
 
 ### Next Steps:
 
-- Add many more tests!
+- finish tests for append modes
+- finish tests for read-modify write modes
+- finish tests for version(), directory() methods
+- finsih tests for multi-cog reads/writes 
 - ...
 
 ---
