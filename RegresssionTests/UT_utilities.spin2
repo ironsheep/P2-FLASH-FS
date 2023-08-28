@@ -25,7 +25,7 @@ DAT { test stats vars }
     passCountSub    LONG    0
     failCountSub    LONG    0
 
-PUB startTest(pDesciption) | pPassFail, ecGot, ecExpected
+pub  startTest(pDesciption) | pPassFail, ecGot, ecExpected
     if failCountSub <> 0 or passCountSub <> 0
         debug("  Sub-Test Results: Pass: ", udec_(passCountSub), ", Fail: ", udec_(failCountSub))
         if failCountSub <> 0
@@ -38,11 +38,11 @@ PUB startTest(pDesciption) | pPassFail, ecGot, ecExpected
     debug(" ")  ' blank line
     debug("* Test #", udec_(numberTests), ": ", zstr_(pDesciption))
 
-PUB ShowTestEndCounts()
+pub  ShowTestEndCounts()
     debug(" ")  ' blank line
     debug("* ", udec_(numberTests), " Tests: , Pass: ", udec_(passCount), ", Fail: ", udec_(failCount))
 
-PUB evaluate(result, expectedResult) | pPassFail, ecGot, ecExpected
+pub  evaluate(result, expectedResult) | pPassFail, ecGot, ecExpected
     ecGot := Flash.string_for_error(result)
     ecExpected := Flash.string_for_error(expectedResult)
     if result <> expectedResult
@@ -54,7 +54,7 @@ PUB evaluate(result, expectedResult) | pPassFail, ecGot, ecExpected
     pPassFail := result <> expectedResult ? @"FAIL" : @"pass"
     debug("   -> ", zstr_(pPassFail))
 
-PUB evaluateStatus(result, pMessage, expectedResult) | pPassFail, ecGot, ecExpected, bPassed
+pub  evaluateStatus(result, pMessage, expectedResult) | pPassFail, ecGot, ecExpected, bPassed
     ecGot := Flash.string_for_error(result)
     ecExpected := Flash.string_for_error(expectedResult)
     bPassed := result == expectedResult
@@ -70,7 +70,7 @@ PUB evaluateStatus(result, pMessage, expectedResult) | pPassFail, ecGot, ecExpec
             debug("  Status: ", zstr_(result), "(", sdec_(result), ")")
         debug("   -> ", zstr_(pPassFail))
 
-PUB evaluateValue(result, pMessage, expectedResult) | pPassFail, bPassed
+pub evaluateValue(result, pMessage, expectedResult) | pPassFail, bPassed
     bPassed := result == expectedResult
     if result <> expectedResult
         failCountSub++
@@ -84,11 +84,22 @@ PUB evaluateValue(result, pMessage, expectedResult) | pPassFail, bPassed
             debug("  Value: ", uhex_long_(result))
         debug("   -> ", zstr_(pPassFail))
 
-PUB showFileDetails(pFilename) | bytes_used, bytes_free, block_count
+pub evaluateSingleValue(result, pMessage, expectedResult) | pPassFail, bPassed
+    bPassed := result == expectedResult
+    pPassFail := !bPassed ? @"FAIL" : @"pass"
+    if result <> expectedResult
+        debug("  ", zstr_(pMessage), ": ", sdec_long_(result), " (expected ", sdec_long_(expectedResult), ")")
+        failCount++
+    else
+        debug("  ", zstr_(pMessage), ": ", sdec_long_(result))
+        passCount++
+    debug("   -> ", zstr_(pPassFail))
+
+pub  showFileDetails(pFilename) | bytes_used, bytes_free, block_count
     bytes_used, bytes_free, block_count := Flash.test_count_file_bytes(pFilename)
     debug("  File: [", zstr_(pFilename), "], ", udec(bytes_used, bytes_free, block_count))
 
-PUB evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount, bPassed, pPassFail
+pub  evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount, bPassed, pPassFail
     debug("* ", zstr_(pMessage))
     blocksUsed, blocksFree, fileCount := Flash.stats()
     bPassed := expectedFileCount == fileCount and expectedBlocksUsed == blocksUsed
@@ -107,7 +118,7 @@ PUB evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUse
         passCount++
     debug("   -> ", zstr_(pPassFail))
 
-PUB evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, bPassed, pPassFail
+pub  evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, bPassed, pPassFail
     debug("  File: [", zstr_(pFilename), "]")
     bytesUsed, bytesFree, blockCount := Flash.test_count_file_bytes(pFilename)
     bPassed := expectedBlockCount == blockCount and expectedBytesUsed == bytesUsed
@@ -126,16 +137,16 @@ PUB evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesU
         passCount++
     debug("   -> ", zstr_(pPassFail))
 
-PUB showError(pCaller, errorCode)
+pub  showError(pCaller, errorCode)
     debug("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
 
-PUB ShowStats() | blocksUsed, blocksFree, fileCount
+pub  ShowStats() | blocksUsed, blocksFree, fileCount
 
     blocksUsed, blocksFree, fileCount := Flash.stats()
     debug(udec(blocksUsed, blocksFree, fileCount))
 
 
-PUB ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
+pub  ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat
@@ -149,20 +160,20 @@ PUB ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
         else
             quit                                                      'no more files, quit
 
-PUB isBinaryFile(pFilename) : bIsBinaryStatus | pFileType
+pub  isBinaryFile(pFilename) : bIsBinaryStatus | pFileType
     pFileType := fileTypePtr(pFilename)
     bIsBinaryStatus :=  strcomp(pFileType, @"bin")
 
-PUB isStringsFile(pFilename) : bIsBinaryStatus | pFileType
+pub  isStringsFile(pFilename) : bIsBinaryStatus | pFileType
     pFileType := fileTypePtr(pFilename)
     bIsBinaryStatus :=  strcomp(pFileType, @"zstr")
 
-PUB fileTypePtr(pFilename) : pFileType | byteIdx
+pub  fileTypePtr(pFilename) : pFileType | byteIdx
     repeat byteIdx from 0 to strsize(pFilename) - 1
         if pFilename[byteIdx] == "."
             return @pFilename[byteIdx + 1]
 
-PUB isZstr(pBffr, count) : bIsStringStatus | bytIdx
+pub  isZstr(pBffr, count) : bIsStringStatus | bytIdx
     bIsStringStatus := false
     repeat bytIdx from 0 to count - 1
             if pBffr[bytIdx] == 0
@@ -170,7 +181,7 @@ PUB isZstr(pBffr, count) : bIsStringStatus | bytIdx
             if pBffr[bytIdx] < 32 or pBffr[bytIdx] > 126
                 return
 
-PUB ReadFile(pFilename, pStr, maxlen) | handle, byteCount
+pub  ReadFile(pFilename, pStr, maxlen) | handle, byteCount
     if isStringsFile(pFilename)
         handle := Flash.open(pFilename,"R")                          'open file for reading
         if handle >= 0
@@ -185,7 +196,7 @@ PUB ReadFile(pFilename, pStr, maxlen) | handle, byteCount
 ' -------
 ' dbgMemDump(@"TASK Stack", pStack, (nStackLongCt + 1) * 4)
 
-PUB dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar
+pub  dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar
 '' Dump rows of hex values with address preceeding
 
     if pMessage
@@ -207,10 +218,17 @@ PUB dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRo
         ' emit last line
         dbgMemDumpRow(pCurrByte, lastRowByteCount)
 
-PRI dbgMemDumpRow(pBytes, lenBytes)
+pri dbgMemDumpRow(pBytes, lenBytes)
 ' emit address followed by bytes
     debug(" ", uhex_long_(pBytes), ": ", uhex_byte_array_(pBytes, lenBytes))
 
+PUB record_crc(p_record_buffer, record_length) : crc
+' Calculate and return the CRC for this pointed to block
+'
+' @param p_block_buffer - the address of the 4KB buffer for the file associated with this handle
+' @returns crc - the calculated CRC for the block
+
+  return getcrc(p_record_buffer, $AD0424F3 rev 31, record_length - 4)  'compute CRC of a buffered block
 
 con { license }
 

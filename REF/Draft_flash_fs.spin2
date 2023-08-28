@@ -140,6 +140,8 @@ errorCode     LONG    0                                                         
 fs_lock       LONG    -1                                                        'flash lock semaphore for driver use
 fs_mounted    LONG    false                                                     ' T/F where T means the filesystem is mounted
 
+fs_cog_cts    LONG    $7fff_ffff[8]                                             'cog counts: one for each cog that is attempting to start the filesystem
+
 pub null()
 
 '' This is not an application
@@ -173,7 +175,6 @@ pub serial_number() : snHi, snLo
                         movbyts   snLo, #%%0123
   end
 
-
 pub mount() : status | block_address, cycleBits, signature
 
 '' Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
@@ -186,61 +187,61 @@ pub mount() : status | block_address, cycleBits, signature
 ' @local cycleBits - lifeCycle bit-pattern to place into block
 ' @local signature - block state bits of block being checked
 
-  errorCode := SUCCESS                                                          ' preset to success
 
-  ' don't mount if already mounted
-  if fs_mounted
-    'debug("* already mounted, SKIP")
-    return
-  else
-    fs_mounted := true
-  debug("* mount()")
+    if fs_lock == -1
+        if acquire_lock_and_mount() == false
+            ' i was NOT first so I just wait
+            repeat while fs_mounted == false or fs_lock == -1                   ' I'm not allocating, just wait until is allocated
+        else
+            ' i was the first to mount this thing
+            fs_lock := locknew()                                                'reserve a lock for driver use
+            if(fs_lock < 0)                                                     'if lock allocation failed
+                fs_mounted := false                                             ' clear "mounted" inidcation
+                return (errorCode := E_NO_LOCK_AVAIL)                           '..abort with error
 
-  if fs_lock == -1
-    fs_lock := locknew()                                                          'reserve a lock for driver use
-    if(fs_lock < 0)                                                               'if lock allocation failed
-        fs_mounted := false                                                         ' clear "mounted" inidcation
-        return (errorCode := E_NO_LOCK_AVAIL)                                       '..abort with error
+    debug("* mount()")
+    errorCode := SUCCESS                                                        ' preset to success
 
-  'debug("- have lock, trying...")
-  repeat while locktry(fs_lock) == 0                                            ' try to get the lock
-    waitms(100)                                                                 ' .. wait 1/10 second fi didn't
+    'debug("- have lock, trying...")
+    repeat while locktry(fs_lock) == 0                                  ' try to get the lock
+    'debug("- locked")
+    fs_mounted := true                                                  ' set "mounted" inidcation
 
-  'debug("- mounting...")
-  bytefill(@hStatus, 0, MAX_FILES_OPEN)                                         'clear handles
-  bytefill(@IDValids, 0, Flags_SIZE)                                            'clear ID flags
-  bytefill(@BlockStates, 0, States_SIZE)                                        'clear block states to B_FREE
+    'debug("- mounting...")
+    bytefill(@hStatus, 0, MAX_FILES_OPEN)                                         'clear handles
+    bytefill(@IDValids, 0, Flags_SIZE)                                            'clear ID flags
+    bytefill(@BlockStates, 0, States_SIZE)                                        'clear block states to B_FREE
 
-  IDToBlock  := ^@IDToBlocks.[11..0]                                            'set field pointers
-  IDValid    := ^@IDValids.[0]
-  BlockState := ^@BlockStates.[1..0]
+    IDToBlock  := ^@IDToBlocks.[11..0]                                            'set field pointers
+    IDValid    := ^@IDValids.[0]
+    BlockState := ^@BlockStates.[1..0]
 
-  'debug("- fixing power-out leftovers...")
-  repeat block_address from 0 to BLOCKS - 1                                     'check each block and fix any duplicate IDs
-    check_block_fix_dupe_id(block_address)                                      '(recovers from incomplete block switchover due to power loss)
+    'debug("- fixing power-out leftovers...")
+    repeat block_address from 0 to BLOCKS - 1                                     'check each block and fix any duplicate IDs
+        check_block_fix_dupe_id(block_address)                                      '(recovers from incomplete block switchover due to power loss)
 
-  'debug("- locating files...")
-  repeat block_address from 0 to BLOCKS - 1                                     'trace head blocks and cancel any broken files
-    if field[BlockState][block_address] == B_TEMP                               'is this a valid block?
-      flash_read_block(block_address, @cycleBits, $000, $000)                   'yes, read first byte of block
-      ifnot cycleBits.[1]                                                       'is this also a head block?
-        ifnot trace_file_set_flags(block_address, true)                         'yes, trace file, set block states to B_HEAD/B_BODY
-          trace_file_set_flags(block_address, false)                            'if error, retrace file, return block states to B_TEMP
+    'debug("- locating files...")
+    repeat block_address from 0 to BLOCKS - 1                                     'trace head blocks and cancel any broken files
+        if field[BlockState][block_address] == B_TEMP                               'is this a valid block?
+            flash_read_block(block_address, @cycleBits, $000, $000)                   'yes, read first byte of block
+            ifnot cycleBits.[1]                                                       'is this also a head block?
+                ifnot trace_file_set_flags(block_address, true)                         'yes, trace file, set block states to B_HEAD/B_BODY
+                trace_file_set_flags(block_address, false)                            'if error, retrace file, return block states to B_TEMP
 
-  'debug("- clearing dead blocks...")
-  repeat block_address from 0 to BLOCKS - 1                                     'cancel B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
-    if field[BlockState][block_address] == B_TEMP                               'is this an B_TEMP block?
-      flash_read_block(block_address, @signature, $000, $003)                   'if so, read first long of block to get ID
-      field[IDValid][signature.[19..8]]~                                        '..cancel ID flag
-      field[BlockState][block_address] := B_FREE                                '..return block state to B_FREE
-      cancel_block(block_address)                                               '..cancel block to inhibit future CRC checks
-      'debug(" -- found dead block...")
-      status :=  (errorCode := E_BAD_BLOCKS_REMOVED)
+    'debug("- clearing dead blocks...")
+    repeat block_address from 0 to BLOCKS - 1                                     'cancel B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
+        if field[BlockState][block_address] == B_TEMP                               'is this an B_TEMP block?
+            flash_read_block(block_address, @signature, $000, $003)                   'if so, read first long of block to get ID
+            field[IDValid][signature.[19..8]]~                                        '..cancel ID flag
+            field[BlockState][block_address] := B_FREE                                '..return block state to B_FREE
+            cancel_block(block_address)                                               '..cancel block to inhibit future CRC checks
+            'debug(" -- found dead block...")
+            status :=  (errorCode := E_BAD_BLOCKS_REMOVED)
 
-  'debug("- mount done")
+    'debug("- mount done")
 
-  lockrel(fs_lock)              ' release the lock, we're done with it
-  'debug("- lock released")
+    lockrel(fs_lock)              ' release the lock, we're done with it
+    'debug("- lock released")
 
 
 pub unmount() | handle
@@ -270,30 +271,37 @@ pub format() : status | block_address, cycleBits
   'debug("* format()")
   ' ensure we have a lock first!  Abort if we can't get one
 
-  if fs_lock == -1
-    fs_lock := locknew()                                                        'reserve a lock for driver use
-    if(fs_lock < 0)                                                             'if lock creation failed
-      return (errorCode := E_NO_LOCK_AVAIL)                                     '..abort with error
+    if fs_lock == -1
+        if acquire_lock_and_mount() == false
+            ' i was NOT first so I just wait
+            repeat while fs_mounted == false or fs_lock == -1                   ' I'm not allocating, just wait until is allocated
+        else
+            ' i was the first to mount this thing
+            fs_lock := locknew()                                                'reserve a lock for driver use
+            if(fs_lock < 0)                                                     'if lock allocation failed
+                fs_mounted := false                                             ' clear "mounted" inidcation
+                return (errorCode := E_NO_LOCK_AVAIL)                           '..abort with error
 
-  'debug("- have lock, trying...")
-  repeat while locktry(fs_lock) == 0                                            ' try to get the lock
-    waitms(100)                                                                 ' ..wait 1/10 second fi didn't
+    debug("* format()")
 
-  'debug("- formatting...")
-  repeat block_address from 0 to BLOCKS - 1                                     'cancel all active blocks
-    flash_read_block(block_address, @cycleBits, $000, $000)
-    'if block_address // 128 == 0
-    '  debug(" -- block ", uhex_word_(block_address),", cycle...", ubin_byte(cycleBits))
-    if lookdown(cycleBits.[7..5] : %011, %101, %110)
-      'debug(" -- clearing...")
-      cancel_block(block_address)
+    'debug("- have lock, trying...")
+    repeat while locktry(fs_lock) == 0                                            ' try to get the lock
 
-  'debug("- formatting done")
-  fs_mounted := false                                                           ' clear "mounted" indcation so it will mount the scan structures
+    'debug("- formatting...")
+    repeat block_address from 0 to BLOCKS - 1                                     'cancel all active blocks
+        flash_read_block(block_address, @cycleBits, $000, $000)
+        'if block_address // 128 == 0
+        '  debug(" -- block ", uhex_word_(block_address),", cycle...", ubin_byte(cycleBits))
+        if lookdown(cycleBits.[7..5] : %011, %101, %110)
+            'debug(" -- clearing...")
+            cancel_block(block_address)
 
-  lockrel(fs_lock)                                                              ' release the lock, we're done with it
-  'debug("- lock released")
-  return Mount()                                                                '(re)mount flash
+    'debug("- formatting done")
+    fs_mounted := false                                                           ' clear "mounted" indcation so it will mount the scan structures
+
+    lockrel(fs_lock)                                                              ' release the lock, we're done with it
+    'debug("- lock released")
+    return Mount()                                                                '(re)mount flash
 
 
 pub error() : result
@@ -459,7 +467,7 @@ pub open_modify(p_filename) : handle | signature
   hSeekPtr[handle] := 0                                                         'yes, see seek pointer to head of file
 
 
-PUB rename(p_old_filename, p_new_filename) : status | signature, new_block_address, old_block_address, next_cycle_bits
+pub rename(p_old_filename, p_new_filename) : status | signature, new_block_address, old_block_address, next_cycle_bits
 
 '' Rename a a file named p_old_filename to p_new_filename
 ''
@@ -507,7 +515,7 @@ PUB rename(p_old_filename, p_new_filename) : status | signature, new_block_addre
   field[BlockState][old_block_address] := B_FREE                                'make old block FREE
 
 
-PUB delete(p_filename) : status | signature
+pub delete(p_filename) : status | signature
 
 '' Delete a named file
 ''
@@ -571,8 +579,9 @@ pub file_size_unused(p_filename) : size_in_bytes_unused | signature
   else
     size_in_bytes_unused := (errorCode := E_FILE_NOT_FOUND)
 
+  'debug("file_size_unused(", zstr_(p_filename), ") = (", sdec_(size_in_bytes_unused), ")")
 
-PUB close(handle) : status
+pub close(handle) : status
 
 '' Close an open file, completes file (re)write, frees handle
 ''
@@ -665,6 +674,9 @@ pub write(handle, p_buffer, count) : result | checkValue, byteIndex, wr_value, w
 ' @local byteIndex - the index into the users' buffer for the next byte to write
 ' @local wr_value - the next value to be written to the file
 ' @local wr_status - the status returned from the wr_byte() function
+
+  errorCode := SUCCESS          ' preset no error occurred from this operation
+  'debug("write(", udec(handle), uhex_long(p_buffer), udec(count) ,")")
 
   if (checkValue := ensure_handle_mode(handle, H_WRITE | H_REWRITE)) < 0        ' is handle valid and open for writing?
      return (errorCode := checkValue)                                           ' no, return error code
@@ -985,6 +997,26 @@ pub string_for_error(error_code) : p_interpretation
 con { low-level support }
 
 
+pri acquire_lock_and_mount() : bItsMe | myCogId, tmpCogId, lowestValue, lowestID
+    lowestValue := $7fff_ffff   ' max signed long value
+    if fs_lock == -1
+        myCogId := cogid()                                                      ' get our cog ID
+        LONG[@fs_cog_cts][myCogId] := getct()                                   ' set our cog timer value
+        waitms(10)                                                              'let any other cogs get in here too
+        repeat tmpCogId from 0 to 8-1                                           ' now scan to see if we win!
+            ' determine cog id of earliest cog that tried to start the filesystem
+            if LONG[@fs_cog_cts][tmpCogId] < lowestValue
+                lowestValue := LONG[@fs_cog_cts][tmpCogId]
+                lowestID := tmpCogId
+        ' if we were earliest, we get to allocate the lock and mount
+        debug("acquire_lock_and_mount() ", udec(lowestValue, lowestID, myCogId))
+        if lowestID == myCogId
+            ' i was first so I get to allocate lock
+            bItsMe := true
+        else
+            ' i was NOT first so I just wait
+            bItsMe := false
+
 pri blocks_free() : count | block_address
 
 ' Return the count of available blocks
@@ -1185,7 +1217,7 @@ pri count_file_bytes(block_address) : bytes_used, bytes_free, block_count | sign
     block_address := field[IDToBlock][signature.[31..20]]                       'get next block to count
 
 
-PRI locate_file_byte(head_block_address, file_offset) : block_address, end_ptr | signature, offsetToData, lastDataOffset, overallOffset
+pri locate_file_byte(head_block_address, file_offset) : block_address, end_ptr | signature, offsetToData, lastDataOffset, overallOffset
 
 ' locate position (file_offset) within file list of blocks
 '
@@ -1689,7 +1721,7 @@ con { constants exposed for regression testing }
 
 con { methods supporting regression testing }
 
-pub test_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count | signature
+pub TEST_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count | signature
 
 '' TEST METHOD: return information about a file: blocks allocated, bytes used, bytes free
 ''
@@ -1712,7 +1744,7 @@ dat { regression testing buffers and such }
    blockForUser     BYTE    0[4096]
    signatures       LONG    0[MAX_FILE_LEN_IN_BLOCKS]
 
-pub getHead4kBlock(p_filename) : p_buffer | signature
+pub TEST_getHead4kBlock(p_filename) : p_buffer | signature
 
 '' TEST METHOD: Return the named file's head block
 ''
@@ -1728,7 +1760,7 @@ pub getHead4kBlock(p_filename) : p_buffer | signature
     flash_read_block(field[IDToBlock][signature.[19..8]], @blockForUser, $000, $FFF)   'read head block into buffer
 
 
-pub getFileBlockSignatures(p_filename) : p_sigLong, sigCount | signature, block_address
+pub TEST_getFileBlockSignatures(p_filename) : p_sigLong, sigCount | signature, block_address
 
 '' TEST METHOD: return the named file's list block signatures for blocks allocated to the file
 ''

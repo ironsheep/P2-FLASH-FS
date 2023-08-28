@@ -1,0 +1,203 @@
+'' =================================================================================================
+''
+''   File....... UT_read_seek_test.spin2
+''   Purpose.... This object exercises the
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... AUG 2023
+''   Updated.... 26 AUG 2023
+''
+'' =================================================================================================
+
+CON
+
+     _CLKFREQ        = 320_000_000
+
+{
+    ' debug via serial to RPi (using RPi gateway pins)
+    DEBUG_PIN_TX = 57
+    DEBUG_PIN_RX = 56
+    DEBUG_BAUD = 2_000_000
+'}
+
+OBJ
+    Flash : "Draft_flash_fs"
+    utils : "UT_utilities"
+
+CON
+    RECORD_LEN = 88 ' just for fun, tiny but even number of longs
+    RECORD_DATA_LEN = RECORD_LEN - 12
+DAT
+
+'---+-----------+---+---+---+-------------------+---+---+---+---+---+-----------+
+testfile        BYTE    "rwblocks.bin", 0
+testfile2        BYTE    "rw2blocks.bin", 0
+testfile3        BYTE    "rw3blocks.bin", 0
+
+record
+recordMARK       LONG    $beadfeed              ' visual start of record marker
+recordID         LONG    0
+recordData       LONG    0[RECORD_DATA_LEN/4]
+recordCRC        LONG    0
+recordEnd
+
+PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern
+
+    status := Flash.format()      ' Comment out this line to not erase all files
+    if status < 0
+        utils.showError(@"format()", status)
+        return
+
+    status := Flash.mount()
+    if status < 0
+        utils.showError(@"mount()", status)
+        return
+
+    utils.ShowStats()                                   ' should have empty filesystem
+    utils.ShowFiles()
+
+    testWriteRecords(@testfile, 10, 1, 0)
+    testWriteRecords(@testfile2, 46, 2, 1)                 ' tail last record in 2nd block
+    testWriteRecords(@testfile3, 92, 3, 3)                 ' tail of last record in 3rd block
+
+    utils.ShowTestEndCounts()
+
+    debug("* Test Complete")
+
+pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | status, handle, testValue, expectedValue, recordNbr, wrLength, rdLength, pBlock, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
+    ' ----------------------------------
+    ' TEST
+        '  open file for write
+    '  ensure returns SUCCESS
+    utils.startTest(@"Open File for write")
+    handle := Flash.open(pFilename,"w")
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    utils.startTest(@"Write Records")
+    status := Flash.SUCCESS
+    repeat recordNbr from 1 to recordCount
+        testValue := $40 + recordNbr                    ' A, B, C, etc.
+        recordId := recordNbr
+        bytefill(@recordData, testValue, RECORD_DATA_LEN)
+        recordCRC := utils.record_crc(@record, RECORD_LEN)
+        'debug("* write rcd #", udec_(recordNbr), " of 10")
+        'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
+        status := Flash.write(handle, @record, RECORD_LEN)
+        utils.evaluateStatus(status, @"write()", Flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on Record writes")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  close file
+    utils.startTest(@"Close written file")
+    status := Flash.Close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+{
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    ' reuse status for a minute
+    status := ((4 * RECORD_LEN + 64) + 32) & $FFFF_FFF0            ' ensure multiple of 16 bytes
+    utils.dbgMemDump(@"Records file Head block", pBlock, status)
+    status := Flash.SUCCESS ' clear our temp use
+'}
+    expectedFileSize := recordCount * RECORD_LEN
+
+    expectedFileBlocks := 1
+    if expectedFileSize > Flash.BYTES_IN_HEAD_BLOCK
+        expectedFileBlocks ++
+    elseif expectedFileSize > Flash.BYTES_IN_HEAD_BLOCK + Flash.BYTES_IN_BODY_BLOCK
+        expectedFileBlocks ++
+
+    '  get filesystem stats and verify against expectation
+    utils.startTest(@"Ensure expected file system changes")
+    utils.evaluateFSStats(@"post file write", fileCount, expectedFileBlocks + blocksAllocated)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats")
+    utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedFileSize)
+
+    utils.startTest(@"Ensure expected unused bytes stats")
+    sizeUnused := Flash.file_size_unused(pFilename)
+
+    expectedFileSize := recordCount * RECORD_LEN
+    allocatedFileSize := Flash.BYTES_IN_HEAD_BLOCK
+    if expectedFileBlocks > 2
+        allocatedFileSize += (Flash.BYTES_IN_BODY_BLOCK * 2)
+    elseif expectedFileBlocks > 1
+        allocatedFileSize += Flash.BYTES_IN_BODY_BLOCK
+    utils.evaluateSingleValue(sizeUnused, @"file_size_unused()", allocatedFileSize - expectedFileSize)
+
+    utils.startTest(@"Ensure no error on size unused call")
+    status := Flash.error()
+    utils.evaluate(status, Flash.SUCCESS)
+
+    'debug("* holding...")
+    'repeat ' hold here
+
+    '  open file for read
+    utils.startTest(@"Open File for read")
+    handle := Flash.open(pFilename,"r")
+    utils.evaluate(handle, Flash.SUCCESS)
+    '    seek to various locations and read longs validating for correct value
+
+    utils.startTest(@"read expected RECORDs")
+    repeat recordNbr from 1 to recordCount
+        rdLength := Flash.read(handle, @record, RECORD_LEN)
+        if rdLength <> RECORD_LEN
+            status := Flash.error()
+            quit
+        ' ensure length is same as expected
+        utils.evaluateValue(rdLength, @"read()", RECORD_LEN)
+        ' ensure record ID is same as expected
+        utils.evaluateValue(recordId, @"recordId", recordNbr)
+        ' ensure record CRC is same as expected
+        calcCRC := utils.record_crc(@record, RECORD_LEN)
+        utils.evaluateValue(calcCRC, @"recordCRC", recordCRC)
+
+    utils.startTest(@"ensure no errors on reads")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  read past end of file to verify read returns error
+    utils.startTest(@"BAD: read one more Record than written")
+    rdLength := Flash.read(handle, @record, RECORD_LEN)
+    utils.evaluateSingleValue(rdLength, @"read()", 0)
+    status := Flash.error()
+    utils.evaluate(status, Flash.E_END_OF_FILE)
+
+    '  close file
+    utils.startTest(@"Close read file")
+    status := Flash.Close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.ShowFiles()
+
+
+
+con { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}
