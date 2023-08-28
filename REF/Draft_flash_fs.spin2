@@ -9,7 +9,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 26 AUG 2023
+''   Updated.... 28 AUG 2023
 ''
 '' =================================================================================================
 
@@ -433,7 +433,6 @@ pub open_append(p_filename) : handle | signature
   hHeadCycle[handle] := signature.[7..5]                                        'yes, get current lifecycle from head block
 
   seek_to_block(handle, file_size(p_filename))                                  ' set file pointer to end of file, loading last block into buffer
-  hSeekPtr[handle] := NOT_ENABLED                                               ' but! we are NOT seeking - just opening at end of file
 
 
 pub open_modify(p_filename) : handle | signature
@@ -615,6 +614,7 @@ pub close(handle) : status
       return (errorCode := E_BAD_HANDLE)
 
   errorCode := SUCCESS
+  hSeekPtr[handle] := NOT_ENABLED                                               ' Ensure seek mode is disabled for this handle
 
 
 pub seek(handle, position) : result | load_status, file_length
@@ -1237,14 +1237,14 @@ pri locate_file_byte(head_block_address, file_offset) : block_address, end_ptr |
     flash_read_block(block_address, @signature, $000, $003)                                             'read the first long of the head/body block
     offsetToData := signature.[1] ? $004 : $040                                                         'body or head?
     lastDataOffset := signature.[0] ? $FFC : signature.[31..20]                                         'more or last?
-    debug("locate_file_byte(",udec(head_block_address, file_offset), ") ", udec(overallOffset, offsetToData, lastDataOffset))
+    'debug("locate_file_byte(",uhex(head_block_address, file_offset), ")(",  udec(file_offset), ") ", udec(overallOffset, offsetToData, lastDataOffset))
     if file_offset >= overallOffset and file_offset < overallOffset + lastDataOffset - offsetToData     'if pointer is within block,
       end_ptr := file_offset - overallOffset + offsetToData                                             'if last block,
-      debug("locate_file_byte() WITHIN --> ", udec(block_address, end_ptr))
+      'debug("locate_file_byte() WITHIN --> ", uhex(block_address, end_ptr))
       return                                   '..return block and block pointer
     ifnot signature.[0]
       end_ptr := lastDataOffset                                                                         'if last block,
-      debug("locate_file_byte() LAST --> ", udec(block_address, end_ptr))
+      'debug("locate_file_byte() LAST --> ", uhex(block_address, end_ptr))
       return                                                                                            '..return block and end pointer
     overallOffset += lastDataOffset - offsetToData                                                      'advance position
     block_address := field[IDToBlock][signature.[31..20]]                                               'get next block
