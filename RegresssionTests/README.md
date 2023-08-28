@@ -5,6 +5,37 @@ These are unit/regression test files that I'm using to certify the FS operation 
 
 [![License][license-shield]](LICENSE)
 
+## Running the tests
+
+In order the compile the tests you need to uncomment the test-support routines in `Draft_flash_fs.spin2`. Look for line 1705:
+
+#### Driver file: Draft\_flash\_fs.spin2: line 1705
+```spin2
+{   ' REMOVE BEFORE FLIGHT: uncomment this line before release!!!
+
+' ----------------------------------------------------------------------------------------------
+'   these methods are for regression testing only - they are not used in production code
+```
+comment out the 1st line to enable the code that follows. [ place a ' before the {... ]
+
+
+#### Determine debug output routing (UT_*.spin2 files)
+
+At the head of each of test UT .spin2 files you want to run look for the debug output lines:
+
+```spin2
+{
+    ' debug via serial to RPi (using RPi gateway pins)
+    DEBUG_PIN_TX = 57
+    DEBUG_PIN_RX = 56
+    DEBUG_BAUD = 2_000_000
+'}
+```
+
+These lines when uncommented route the debug serial to PINs 57/58 which I connect to the a Raspberry Pi for logging as there is lot of output from the test runs.
+
+In their present for (commented out) the debug output just goes the debug window on windows where you are running the compiler.
+
 
 ## The test files 
 
@@ -12,7 +43,9 @@ This is a recap of the version history of these files:
 
 | Date | Status |
 | --- | --- |
-|  <PRE>2023-Aug-26</PRE> | Initial release.	Working Format, Mount, open(file, "R"), open(file, "W"), close(), wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() |
+|  <PRE>2023-Aug-26</PRE> | Initial release. `UT_read_write_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() <br>Spanning blocks tests need to be added|
+|  <PRE>2023-Aug-27</PRE> | More Tests: `UT_read_write_block_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for read(), write(), and file\_size_unused(): in only block, spanning two blocks, spanning 3 blocks |
+
 
 
 
@@ -25,7 +58,9 @@ This is my work in progress as I'm working toward customer facing release of the
 | --- | --- |
 | [UT\_utilities.spin2](UT_utilities.spin2) | Utility methods common to all Test Files |
 | [UT\_read\_write_tests.spin2](UT_read_write_tests.spin2) | The read/write basic types test suite - more testing to be awakened in it! |
-| [UT\_read\_write_tests.log](UT_read_write_tests.log) | Log of the read/write basic types tests |
+| [UT\_read\_write_tests.log](UT_read_write_tests.log) | Log of the read/write basic types tests [45 passes, 0 fails] |
+| [UT\_read\_write\_block_tests.spin2](UT_read_write_block_tests.spin2) | The read/write records(blocks) test suite  |
+| [UT\_read\_write\_block_tests.log](UT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [39 passes, 0 fails]<br>(*42 successes (+3) were extra checks I did for 3 tests*) |
 
 ### Next Steps:
 

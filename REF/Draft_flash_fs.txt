@@ -25,12 +25,12 @@ pub open_read(p_filename) : handle
 pub open_write(p_filename) : handle
 pub open_append(p_filename) : handle
 pub open_modify(p_filename) : handle
-PUB rename(p_old_filename, p_new_filename) : status
-PUB delete(p_filename) : status
+pub rename(p_old_filename, p_new_filename) : status
+pub delete(p_filename) : status
 pub exists(p_filename) : result
 pub file_size(p_filename) : size_in_bytes
 pub file_size_unused(p_filename) : size_in_bytes_unused
-PUB close(handle) : status
+pub close(handle) : status
 pub seek(handle, position) : result
 pub write(handle, p_buffer, count) : result
 pub wr_byte(handle, byteValue) : result
@@ -45,9 +45,6 @@ pub rd_str(handle, p_str, count) : result
 pub directory(p_block_id, p_filename, p_file_size)
 pub stats() : usedBlocks, freeBlocks, fileCount
 pub string_for_error(error_code) : p_interpretation
-pub test_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count
-pub getHead4kBlock(p_filename) : p_buffer
-pub getFileBlockSignatures(p_filename) : p_sigLong, sigCount
 
 __________
 pub null()
@@ -144,7 +141,7 @@ pub open_modify(p_filename) : handle
  .. or E_NO_HANDLE if no handle is available
 
 ___________________________________________________
-PUB rename(p_old_filename, p_new_filename) : status
+pub rename(p_old_filename, p_new_filename) : status
 
  Rename a a file named p_old_filename to p_new_filename
  @param p_old_filename - address of a zstring containing the existing filename
@@ -155,7 +152,7 @@ PUB rename(p_old_filename, p_new_filename) : status
  .. otherwise 0 (SUCCESS) if successful
 
 _______________________________
-PUB delete(p_filename) : status
+pub delete(p_filename) : status
 
  Delete a named file
  @param p_filename - address of a zstring containing the filename
@@ -183,7 +180,7 @@ pub file_size_unused(p_filename) : size_in_bytes_unused
  @returns size_in_bytes_unused - either the count of unwritten bytes of the file or E_FILE_NOT_FOUND if the file doesn't exist
 
 __________________________
-PUB close(handle) : status
+pub close(handle) : status
 
  Close an open file, completes file (re)write, frees handle
  @param handle - a handle to an open file
@@ -333,30 +330,6 @@ pub string_for_error(error_code) : p_interpretation
  Return a string describing the error code
  @param error_code - the error code to translate
  @returns p_interpretation - interpretation of the errcode
-
-___________________________________________________________________________
-pub test_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count
-
- TEST METHOD: return information about a file: blocks allocated, bytes used, bytes free
- @param p_filename - address of a zstring containing the filename
- @returns bytes_used - the number of bytes written to file, E_FILE_NOT_FOUND if the file doesn't exist
- @returns bytes_free - the number of bytes allocated but not yet written (in the last block)
- @returns block_count - the number of blocks allocation to this file
-
-_________________________________________
-pub getHead4kBlock(p_filename) : p_buffer
-
- TEST METHOD: Return the named file's head block
- @param p_filename - address of a zstring containing the filename
- @returns p_buffer - address of a 4KB buffer containing the head block
-
-____________________________________________________________
-pub getFileBlockSignatures(p_filename) : p_sigLong, sigCount
-
- TEST METHOD: return the named file's list block signatures for blocks allocated to the file
- @param p_filename - address of a zstring containing the filename
- @returns p_sigLong - address of a long array containing the block signatures
- @returns sigCount - the number of signatures in the array
 
 
   =================================================================================================
