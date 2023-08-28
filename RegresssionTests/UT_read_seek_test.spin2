@@ -1,0 +1,226 @@
+'' =================================================================================================
+''
+''   File....... UT_read_seek_test.spin2
+''   Purpose.... This object exercises the
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... AUG 2023
+''   Updated.... 26 AUG 2023
+''
+'' =================================================================================================
+
+CON
+
+     _CLKFREQ        = 320_000_000
+
+'{
+    ' debug via serial to RPi (using RPi gateway pins)
+    DEBUG_PIN_TX = 57
+    DEBUG_PIN_RX = 56
+    DEBUG_BAUD = 2_000_000
+'}
+
+OBJ
+    Flash : "Draft_flash_fs"
+    utils : "UT_utilities"
+
+DAT
+
+testfile            byte    "seekLongs.bin", 0
+testfile2           byte    "seekLongs2blk.bin", 0
+testfile3           byte    "seekLongs3blk.bin", 0
+testfile4           byte    "seekLongs3blkFull.bin", 0
+
+pBlock              long    0
+expectedFileSize    long    0
+status              long    0
+handle              long    0
+longValue           long    0
+byteOffset          long    0
+fileSizeBlocks      long    0
+
+PUB go()
+
+    status := Flash.format()      ' Comment out this line to not erase all files
+    if status < 0
+        utils.showError(@"format()", status)
+        return
+
+    status := Flash.mount()
+    if status < 0
+        utils.showError(@"mount()", status)
+        return
+
+    utils.ShowStats()                   ' should have empty filesystem
+    utils.ShowFiles()
+
+    utils.startTest(@"BAD: Read when file doesn't exist")
+    handle := Flash.open(@testfile,"r")
+    utils.evaluate(handle, Flash.E_FILE_NOT_FOUND)
+
+    ' fill head block with longs (only block file)
+    utils.startTestGroup(@"Head block only - filled with longs")
+    writeAddressedLongs(@testfile, Flash.LONGS_IN_HEAD_BLOCK, 0, 0)
+
+    VerifyAddressedLongs(@testfile, Flash.LONGS_IN_HEAD_BLOCK)
+
+    ' fill head block + 2 longs with longs (2 block file)
+    utils.startTestGroup(@"Head block + body block - head full, body has 2 longs")
+    writeAddressedLongs(@testfile2, Flash.LONGS_IN_HEAD_BLOCK + 2, 1, 1)
+
+    VerifyAddressedLongs(@testfile2, Flash.LONGS_IN_HEAD_BLOCK + 2)
+
+    ' fill head block + body block + 2 longs with longs (3 block file)
+    utils.startTestGroup(@"Head block + 2x body block - head full, body full, 2nd body has 2 longs")
+    writeAddressedLongs(@testfile3, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + 2, 2, 3)
+
+    VerifyAddressedLongs(@testfile3, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + 2)
+
+     ' fill head block + 2x body block with longs (full 3 block file)
+    utils.startTestGroup(@"Head block + 2x body block - all block full")
+    writeAddressedLongs(@testfile4, Flash.LONGS_IN_HEAD_BLOCK + (Flash.LONGS_IN_BODY_BLOCK * 2), 3, 6)
+
+    VerifyAddressedLongs(@testfile4, Flash.LONGS_IN_HEAD_BLOCK + (Flash.LONGS_IN_BODY_BLOCK * 2))
+
+    utils.ShowFiles()
+
+    'utils.dumpFileHeads()
+
+    utils.ShowTestEndCounts()
+
+    debug("* Test Complete")
+
+
+pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
+    ' ----------------------------------
+    ' TEST
+    '  open file for read
+    '  ensure returns error (doesn't exist)
+    '  open file for write
+    '  ensure returns SUCCESS
+    utils.startTest(@"Open File for write")
+    handle := Flash.open(pFilename,"w")
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    '  attempt seek and verify that seek on write-only file returns error
+    utils.startTest(@"BAD: seek on write-only file")
+    status := Flash.seek(handle, 0)
+    utils.evaluate(status, Flash.E_FILE_MODE)
+
+    '  write a fixed length file of longs where value of long is offset into file
+    expectedFileSize := 0
+    utils.startTest(@"Write head block full of longs")
+    repeat longValue from 0 to count - 1
+        status := Flash.wr_long(handle, longValue)
+        expectedFileSize += 4
+        if status < 0
+            utils.showError(@"wr_long()", status)
+            quit
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  close file
+    utils.startTest(@"Close written file")
+    status := Flash.Close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.showFileDetails(pFilename)
+
+    {
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    ' reuse status for a minute
+    status := ((expectedFileSize) + 32) & $FFFF_FFF0            ' ensure muiple of 16 bytes
+    utils.dbgMemDump(@"Longs file Head block", pBlock, 4096)
+    status := Flash.SUCCESS ' clear our temp use
+    '}
+
+    '  get filesystem stats and verify against expectation
+    fileSizeBlocks := 1
+    if expectedFileSize > Flash.BYTES_IN_HEAD_BLOCK + Flash.BYTES_IN_BODY_BLOCK
+        fileSizeBlocks := 3
+    elseif expectedFileSize > Flash.BYTES_IN_HEAD_BLOCK
+        fileSizeBlocks := 2
+    utils.startTest(@"Ensure expected file system changes")
+    utils.evaluateFSStats(@"post file write", startingFileCount+1, startingBlockCount+fileSizeBlocks)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats")
+    utils.evaluateFileStats(pFilename, fileSizeBlocks, count * 4)
+
+
+pri VerifyAddressedLongs(pFilename, count)
+    '  open file for read
+    utils.startTest(@"Open File for read")
+    handle := Flash.open(pFilename,"r")
+    utils.evaluate(handle, Flash.SUCCESS)
+    '    seek to various locations and read longs validating for correct value
+    utils.startTest(@"read 1st long")
+        status := Flash.seek(handle, 0)
+        if status == Flash.SUCCESS
+            longValue := Flash.rd_long(handle)
+            status := Flash.error()
+            utils.evaluateValue(longValue, @"rd_long", 0)
+    utils.startTest(@"ensure no errors on read 1st")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.startTest(@"read 20 longs randomly ensure offset is value of long")
+    repeat 20
+        byteOffset := (GETRND() +// count) * 4
+        'debug("  Offset: ", udec_(byteOffset), " (", udec_(byteOffset / 4), " of ", udec_(count), ")")
+        status := Flash.seek(handle, byteOffset)
+        if status < 0
+            quit
+        longValue := Flash.rd_long(handle)
+        status := Flash.error()
+        if status < 0
+            quit
+        utils.evaluateValue(longValue, @"rd_long", byteOffset / 4)
+    utils.startTest(@"ensure no errors on read")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.startTest(@"read last long")
+        status := Flash.seek(handle, (count - 1) * 4)
+        if status == Flash.SUCCESS
+            longValue := Flash.rd_long(handle)
+            status := Flash.error()
+            utils.evaluateValue(longValue, @"rd_long", count - 1)
+    utils.startTest(@"ensure no errors on read last")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  seek past end of file to verify seek returns error
+    utils.startTest(@"BAD: see beyond end of file")
+    status := Flash.seek(handle, (count + 2) * 4)
+    utils.evaluate(status, Flash.E_FILE_SEEK)
+
+    '  close file
+    utils.startTest(@"Close file we were reading")
+    status := Flash.Close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+con { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}

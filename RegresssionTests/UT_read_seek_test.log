@@ -1,0 +1,286 @@
+Cog0  INIT $0000_0000 $0000_0000 load
+Cog0  INIT $0000_0EB8 $0000_9298 jump
+Cog0  acquire_lock_and_mount() lowestValue = 10_656_251, lowestID = 0, myCogId = 0
+Cog0  * format()
+Cog0  * mount()
+Cog0  * mount()
+Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
+Cog0
+Cog0    All Files:
+Cog0
+Cog0  * Test #1: BAD: Read when file doesn't exist
+Cog0     ECode: E_FILE_NOT_FOUND: File not present
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Head block only - filled with longs
+Cog0
+Cog0  * Test #2: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #3: BAD: seek on write-only file
+Cog0     ECode: E_FILE_MODE: file not opened in desired mode
+Cog0     -> pass
+Cog0
+Cog0  * Test #4: Write head block full of longs
+Cog0     Code: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #5: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [seekLongs.bin], bytes_used = 4_028, bytes_free = 0, block_count = 1
+Cog0
+Cog0  * Test #6: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 1
+Cog0    # blocks used: 1
+Cog0     -> pass
+Cog0
+Cog0  * Test #7: Ensure expected file stats
+Cog0    File: [seekLongs.bin]
+Cog0    # blocks: 1
+Cog0    # bytes used: 4_028
+Cog0     -> pass
+Cog0
+Cog0  * Test #8: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #9: read 1st long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #10: ensure no errors on read 1st
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #11: read 20 longs randomly ensure offset is value of long
+Cog0    Sub-Test Results: Pass: 20, Fail: 0
+Cog0
+Cog0  * Test #12: ensure no errors on read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #13: read last long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #14: ensure no errors on read last
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #15: BAD: see beyond end of file
+Cog0     ECode: E_FILE_SEEK: Attempted seek past end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #16: Close file we were reading
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Head block + body block - head full, body has 2 longs
+Cog0
+Cog0  * Test #17: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #18: BAD: seek on write-only file
+Cog0     ECode: E_FILE_MODE: file not opened in desired mode
+Cog0     -> pass
+Cog0
+Cog0  * Test #19: Write head block full of longs
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #20: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [seekLongs2blk.bin], bytes_used = 4_036, bytes_free = 4_080, block_count = 2
+Cog0
+Cog0  * Test #21: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 2
+Cog0    # blocks used: 3
+Cog0     -> pass
+Cog0
+Cog0  * Test #22: Ensure expected file stats
+Cog0    File: [seekLongs2blk.bin]
+Cog0    # blocks: 2
+Cog0    # bytes used: 4_036
+Cog0     -> pass
+Cog0
+Cog0  * Test #23: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #24: read 1st long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #25: ensure no errors on read 1st
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #26: read 20 longs randomly ensure offset is value of long
+Cog0    Sub-Test Results: Pass: 20, Fail: 0
+Cog0
+Cog0  * Test #27: ensure no errors on read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #28: read last long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #29: ensure no errors on read last
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #30: BAD: see beyond end of file
+Cog0     ECode: E_FILE_SEEK: Attempted seek past end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #31: Close file we were reading
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Head block + 2x body block - head full, body full, 2nd body has 2 longs
+Cog0
+Cog0  * Test #32: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #33: BAD: seek on write-only file
+Cog0     ECode: E_FILE_MODE: file not opened in desired mode
+Cog0     -> pass
+Cog0
+Cog0  * Test #34: Write head block full of longs
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #35: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [seekLongs3blk.bin], bytes_used = 8_124, bytes_free = 4_080, block_count = 3
+Cog0
+Cog0  * Test #36: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 3
+Cog0    # blocks used: 6
+Cog0     -> pass
+Cog0
+Cog0  * Test #37: Ensure expected file stats
+Cog0    File: [seekLongs3blk.bin]
+Cog0    # blocks: 3
+Cog0    # bytes used: 8_124
+Cog0     -> pass
+Cog0
+Cog0  * Test #38: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #39: read 1st long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #40: ensure no errors on read 1st
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #41: read 20 longs randomly ensure offset is value of long
+Cog0    Sub-Test Results: Pass: 20, Fail: 0
+Cog0
+Cog0  * Test #42: ensure no errors on read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #43: read last long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #44: ensure no errors on read last
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #45: BAD: see beyond end of file
+Cog0     ECode: E_FILE_SEEK: Attempted seek past end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #46: Close file we were reading
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Head block + 2x body block - all block full
+Cog0
+Cog0  * Test #47: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #48: BAD: seek on write-only file
+Cog0     ECode: E_FILE_MODE: file not opened in desired mode
+Cog0     -> pass
+Cog0
+Cog0  * Test #49: Write head block full of longs
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #50: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0    File: [seekLongs3blkFull.bin], bytes_used = 12_204, bytes_free = 0, block_count = 3
+Cog0
+Cog0  * Test #51: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # files: 4
+Cog0    # blocks used: 9
+Cog0     -> pass
+Cog0
+Cog0  * Test #52: Ensure expected file stats
+Cog0    File: [seekLongs3blkFull.bin]
+Cog0    # blocks: 3
+Cog0    # bytes used: 12_204
+Cog0     -> pass
+Cog0
+Cog0  * Test #53: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #54: read 1st long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #55: ensure no errors on read 1st
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #56: read 20 longs randomly ensure offset is value of long
+Cog0    Sub-Test Results: Pass: 20, Fail: 0
+Cog0
+Cog0  * Test #57: ensure no errors on read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #58: read last long
+Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0
+Cog0  * Test #59: ensure no errors on read last
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #60: BAD: see beyond end of file
+Cog0     ECode: E_FILE_SEEK: Attempted seek past end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #61: Close file we were reading
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  seekLongs.bin, Bytes = 4_028, ID = 1, @Buff={binary data}
+Cog0  seekLongs2blk.bin, Bytes = 4_036, ID = 2, @Buff={binary data}
+Cog0  seekLongs3blk.bin, Bytes = 8_124, ID = 4, @Buff={binary data}
+Cog0  seekLongs3blkFull.bin, Bytes = 12_204, ID = 7, @Buff={binary data}
+Cog0
+Cog0  * 61 Tests: , Pass: 61, Fail: 0
+Cog0  * Test Complete

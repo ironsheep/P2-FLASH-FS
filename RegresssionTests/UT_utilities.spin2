@@ -25,7 +25,15 @@ DAT { test stats vars }
     passCountSub    LONG    0
     failCountSub    LONG    0
 
-pub  startTest(pDesciption) | pPassFail, ecGot, ecExpected
+pub startTestGroup(pDesciption)
+    ' show test-group heading
+    debug(" ")  ' blank line
+    debug(" ")  ' blank line
+    debug(" ------------------------------------------------------------")  ' blank line
+    debug("* Test Group: ", zstr_(pDesciption))
+
+pub startTest(pDesciption) | pPassFail, ecGot, ecExpected
+    ' if prior sub tests show sub tests results
     if failCountSub <> 0 or passCountSub <> 0
         debug("  Sub-Test Results: Pass: ", udec_(passCountSub), ", Fail: ", udec_(failCountSub))
         if failCountSub <> 0
@@ -35,22 +43,32 @@ pub  startTest(pDesciption) | pPassFail, ecGot, ecExpected
         passCountSub := 0
         failCountSub := 0
     numberTests++
+    '  now show new test info
     debug(" ")  ' blank line
     debug("* Test #", udec_(numberTests), ": ", zstr_(pDesciption))
 
 pub  ShowTestEndCounts()
+    ' show summary of all tests
     debug(" ")  ' blank line
     debug("* ", udec_(numberTests), " Tests: , Pass: ", udec_(passCount), ", Fail: ", udec_(failCount))
 
 pub  evaluate(result, expectedResult) | pPassFail, ecGot, ecExpected
-    ecGot := Flash.string_for_error(result)
     ecExpected := Flash.string_for_error(expectedResult)
-    if result <> expectedResult
-        debug("   ECode: ", zstr_(ecGot), " (expected ", zstr_(ecExpected), ")")
-        failCount++
+    if result > 0
+        if result <> expectedResult
+            debug("  Result: ", udec_(result), " (expected ", zstr_(ecExpected), ")")
+            failCount++
+        else
+            debug("  Result: ", udec_(result))
+            passCount++
     else
-        debug("   ECode: ", zstr_(ecGot))
-        passCount++
+        ecGot := Flash.string_for_error(result)
+        if result <> expectedResult
+            debug("   ECode: ", zstr_(ecGot), " (expected ", zstr_(ecExpected), ")")
+            failCount++
+        else
+            debug("   ECode: ", zstr_(ecGot))
+            passCount++
     pPassFail := result <> expectedResult ? @"FAIL" : @"pass"
     debug("   -> ", zstr_(pPassFail))
 
@@ -196,12 +214,13 @@ pub  ReadFile(pFilename, pStr, maxlen) | handle, byteCount
 ' -------
 ' dbgMemDump(@"TASK Stack", pStack, (nStackLongCt + 1) * 4)
 
-pub  dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar
+pub  dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar, offset
 '' Dump rows of hex values with address preceeding
 
     if pMessage
         debug("** ", zstr_(pMessage), ":")
 
+    offset := 0
     rowCount := lenBytes / 16
     lastRowByteCount := lenBytes - (rowCount * 16)
     pCurrByte := pBytes
@@ -210,25 +229,38 @@ pub  dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastR
     ' emit full lines
     if rowCount > 0
         repeat rowCount
-            dbgMemDumpRow(pCurrByte, 16)
+            dbgMemDumpRow(pCurrByte, 16, offset)
+            offset += 16
             pCurrByte += 16
             bytesSoFar += 16
 
     if  bytesSoFar < lenBytes
         ' emit last line
-        dbgMemDumpRow(pCurrByte, lastRowByteCount)
+        dbgMemDumpRow(pCurrByte, lastRowByteCount, offset)
 
-pri dbgMemDumpRow(pBytes, lenBytes)
+pri dbgMemDumpRow(pBytes, lenBytes, offset)
 ' emit address followed by bytes
-    debug(" ", uhex_long_(pBytes), ": ", uhex_byte_array_(pBytes, lenBytes))
+    debug(" ", uhex_long_(offset), ": ", uhex_byte_array_(pBytes, lenBytes))
 
-PUB record_crc(p_record_buffer, record_length) : crc
+pub record_crc(p_record_buffer, record_length) : crc
 ' Calculate and return the CRC for this pointed to block
 '
 ' @param p_block_buffer - the address of the 4KB buffer for the file associated with this handle
 ' @returns crc - the calculated CRC for the block
 
   return getcrc(p_record_buffer, $AD0424F3 rev 31, record_length - 4)  'compute CRC of a buffered block
+
+pub dumpFileHeads() | ID, Bytes, byte Filename[60], byte Buff[30], pBlock
+    debug(" ")  ' blank line
+    debug("  All Files:")
+    repeat
+        Flash.Directory(@ID, @Filename, @Bytes)                     'get next file
+        if Filename[0]                                              'is there a filename?
+            pBlock := Flash.TEST_getHead4kBlock(@Filename)
+            dbgMemDump(@Filename, pBlock, 64)
+            debug(" ")  ' blank line
+        else
+            quit                                                      'no more files, quit
 
 con { license }
 
