@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 26 AUG 2023
+''   Updated.... 29 AUG 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -27,17 +27,57 @@ OBJ
 
 DAT
 
-testfile1        BYTE "rw10bytes.bin", 0
-testfile2        BYTE "rw9words.bin", 0
-testfile3        BYTE "rw12longs.bin", 0
-testfile4        BYTE "rw10strings.zstr", 0
-testfile5        BYTE "fullHeadLongs.bin", 0
-testfile6        BYTE "moreThanHeadLongs.bin", 0
-testfile7        BYTE "moreThanHeadBodyLongs.bin", 0
+testfile1       BYTE    "rw10bytes.bin", 0
+testfile2       BYTE    "rw9words.bin", 0
+testfile3       BYTE    "rw12longs.bin", 0
+testfile4       BYTE    "rw10strings.zstr", 0
+testfile5       BYTE    "fullHeadLongs.bin", 0
+testfile6       BYTE    "moreThanHeadLongs.bin", 0
+testfile7       BYTE    "moreThanHeadBodyLongs.bin", 0
 
-PUB go() | status, handle, testValue, expectedValue
+handle          LONG    0
+testValue       LONG    0
+status          LONG    0
+expectedValue   LONG    0
 
-    status := Flash.format()      ' Comment out this line to not erase all files
+' structure for directory checking
+dirEntr01        LONG    @testfile1     ' pointer to filename
+fileBytes01      LONG    10             ' length in bytes
+fileBlocks01     LONG    1              ' number of blocks allocated
+dirEntr02        LONG    @testfile2     ' pointer to filename
+fileBytes02      LONG    18             ' length in bytes
+fileBlocks02     LONG    1              ' number of blocks allocated
+dirEnd0          LONG    0              ' ptr = NULL, no more entries
+
+dirEntr11        LONG    @testfile1     ' pointer to filename
+fileBytes11      LONG    10             ' length in bytes
+fileBlocks11     LONG    1              ' number of blocks allocated
+dirEntr12        LONG    @testfile2     ' pointer to filename
+fileBytes12      LONG    18             ' length in bytes
+fileBlocks12     LONG    1              ' number of blocks allocated
+dirEntr13        LONG    @testfile3     ' pointer to filename
+fileBytes13      LONG    48             ' length in bytes
+fileBlocks13     LONG    1              ' number of blocks allocated
+dirEnd1          LONG    0              ' ptr = NULL, no more entries
+
+
+versionString   BYTE    "flash_fs v"
+vDigits         BYTE    "x.x.x", 0
+{
+pub goTest()
+
+    utils.dbgMemDumpAbs(@"Filename 1", @testfile1, strsize(@testfile1) + 1)
+    utils.dbgMemDumpAbs(@"Filename 2", @testfile2, strsize(@testfile2) + 1)
+    utils.dbgMemDumpAbs(@"Filename 3", @testfile3, strsize(@testfile3) + 1)
+    utils.dbgMemDumpAbs(@"Table 2dirEnt", @dirEntr1, 7 * 4)
+    dirEntr1 := @@testfile1
+    dirEntr2 := @@testfile3
+    utils.dumpDirEnts(@dirEntr1)
+'}
+
+PUB go() | hundreds, tens, units, snHi, snLo
+
+    status := Flash.format()      ' Comment out this line to NOT erase all files
     if status < 0
         utils.showError(@"format()", status)
         return
@@ -50,6 +90,9 @@ PUB go() | status, handle, testValue, expectedValue
     utils.ShowStats()                   ' should have empty filesystem
     utils.ShowFiles()
 
+    utils.startTest(@"Ensure we have no files at start")
+    utils.ensureEmptyDirectory()
+
     ' ----------------------------------
     ' TEST
     '  open file for read
@@ -58,26 +101,92 @@ PUB go() | status, handle, testValue, expectedValue
     handle := Flash.open(@testfile1,"r")
     utils.evaluate(handle, Flash.E_FILE_NOT_FOUND)
 
-    testWriteBytes(@testfile1)
+    debug(" ")
+    debug(" - report on chip S/N and Driver version")
+    snHi, snLo := Flash.serial_number()
+    debug("CHIP Serial Number: ", uhex_long_(snHi), "-", uhex_long_(snLo))
 
-    testWriteWords(@testfile2)
+    utils.startTest(@"Get and parse out Driver version")
+    status := Flash.version()
+    utils.evaluateSingleValue(status, @"version()", 120)
 
-    testWriteLongs(@testfile3)
+   ' brute force... (someone didn't import a string formatter, I wonder who that was?)
+    hundreds := status / 100
+    BYTE[@vDigits][0] := "0" + hundreds
+    tens := (status - (hundreds * 100)) / 10
+    BYTE[@vDigits][2] := "0" + tens
+    units := status - (hundreds * 100) - (tens * 10)
+    BYTE[@vDigits][4] := "0" + units
+    debug ("Driver: ", zstr_(@versionString))
 
-    testWriteStrings(@testfile4)
+
+    ' Real tests start here:
+    utils.startTestGroup(@"Head block only - partially filled with 10 BYTEs")
+    testWriteBytes(@testfile1, 10, 0, 0)
+    testVerifyBytes(@testfile1, 10)
+
+    utils.ShowFiles()
+
+    utils.startTestGroup(@"Head block only - partially filled with 9 WORDs")
+    testWriteWords(@testfile2, 9, 1, 1)
+    testVerifyWords(@testfile2, 9)
+
+    utils.ShowFiles()
+
+    utils.startTest(@"Ensure we have 2 files written so far")
+    'stuff absolute addresses of filenames into directory entries
+    dirEntr01 := @testfile1
+    dirEntr02 := @testfile2
+    utils.checkMatchingEntries(@dirEntr01)
+
+    'debug("Holding...")
+    'repeat ' hold here
+
+    utils.startTestGroup(@"Head block only - partially filled with 12 LONGs")
+    testWriteLongs(@testfile3, 12, 2, 2)
+    testVerifyLongs(@testfile3, 12)
+
+    utils.ShowFiles()
+
+    utils.startTest(@"Ensure we have 3 files written so far")
+    'stuff absolute addresses of filenames into directory entries
+    dirEntr11 := @testfile1
+    dirEntr12 := @testfile2
+    dirEntr13 := @testfile3
+    utils.checkMatchingEntries(@dirEntr11)
+
+    utils.startTestGroup(@"Head block only - partially filled with 10 STRINGs")
+    testWriteStrings(@testfile4, 10, 3, 3)              ' 10 is built in for now, so ignored in this call
+
+    utils.ShowFiles()
+
+    utils.startTestGroup(@"Head block only - filled with LONGs")
+    testWriteLongs(@testfile5, Flash.LONGS_IN_HEAD_BLOCK, 4, 4)
+    testVerifyLongs(@testfile5, Flash.LONGS_IN_HEAD_BLOCK)
+
+    utils.startTestGroup(@"Head block + body block - filled with LONGs full head + 2")
+    testWriteLongs(@testfile6, Flash.LONGS_IN_HEAD_BLOCK+2, 5, 5)
+    testVerifyLongs(@testfile6, Flash.LONGS_IN_HEAD_BLOCK+2)
+
+    utils.startTestGroup(@"Head block + body block * 2 - filled with LONGs full head, full body, + 2")
+    testWriteLongs(@testfile7, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK+2, 6, 7)
+    testVerifyLongs(@testfile7, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK+2)
+
+    utils.ShowFiles()
+
 
     utils.ShowTestEndCounts()
 
     debug("* Test Complete")
 
-pri testWriteBytes(pFilename) | status, handle, testValue, expectedValue
 
+pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | blocksUsed
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := Flash.open(pFilename,"w")
     utils.evaluate(handle, Flash.SUCCESS)
-    utils.startTest(@"Write 10 BYTEs")
+    utils.startTest(@"Write N BYTEs")
     testValue := 0
     repeat 10
         testValue++
@@ -96,19 +205,21 @@ pri testWriteBytes(pFilename) | status, handle, testValue, expectedValue
 
     '  get filesystem stats and verify against expectation
     utils.startTest(@"Ensure expected file system changes")
-    utils.evaluateFSStats(@"post file write", 1, 1)
+    utils.evaluateFSStats(@"post file write", startingFileCount + 1, 1 + startingBlockCount)
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
     utils.evaluateFileStats(pFilename, 1, 10)
 
+
+pri testVerifyBytes(pFilename, count)
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := Flash.open(pFilename,"r")
     utils.evaluate(handle, Flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
-    utils.startTest(@"read expected 10 BYTEs")
+    utils.startTest(@"read expected N BYTEs")
     expectedValue := 0
     repeat 10
         expectedValue++
@@ -131,18 +242,17 @@ pri testWriteBytes(pFilename) | status, handle, testValue, expectedValue
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
-    utils.ShowFiles()
 
-pri testWriteWords(pFilename) | status, handle, testValue, expectedValue
+pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
 
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := Flash.open(pFilename,"w")
     utils.evaluate(handle, Flash.SUCCESS)
-    utils.startTest(@"Write 10 WORDs")
+    utils.startTest(@"Write N WORDs")
     testValue := 0
-    repeat 10
+    repeat count
         testValue++
         status := Flash.wr_word(handle, testValue)
         utils.evaluateStatus(status, @"wr_word()", Flash.SUCCESS)
@@ -159,11 +269,14 @@ pri testWriteWords(pFilename) | status, handle, testValue, expectedValue
 
     '  get filesystem stats and verify against expectation
     utils.startTest(@"Ensure expected file system changes")
-    utils.evaluateFSStats(@"post file write", 2, 2)
+    utils.evaluateFSStats(@"post file write", startingFileCount + 1, 1 + startingBlockCount)
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
-    utils.evaluateFileStats(pFilename, 1, 10 * 2)
+    utils.evaluateFileStats(pFilename, 1, count * 2)
+
+
+pri testVerifyWords(pFilename, count)
 
     '  open file for read
     utils.startTest(@"Open File for read")
@@ -171,9 +284,9 @@ pri testWriteWords(pFilename) | status, handle, testValue, expectedValue
     utils.evaluate(handle, Flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
-    utils.startTest(@"read expected 10 WORDs")
+    utils.startTest(@"read expected N WORDs")
     expectedValue := 0
-    repeat 10
+    repeat count
         expectedValue++
         testValue := Flash.rd_word(handle)
         if testValue < 0
@@ -194,18 +307,17 @@ pri testWriteWords(pFilename) | status, handle, testValue, expectedValue
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
-    utils.ShowFiles()
 
-pri testWriteLongs(pFilename) | status, handle, testValue, expectedValue
+pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | blocksUsed
 
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := Flash.open(pFilename,"w")
     utils.evaluate(handle, Flash.SUCCESS)
-    utils.startTest(@"Write 10 LONGs")
+    utils.startTest(@"Write N LONGs")
     testValue := 0
-    repeat 10
+    repeat count
         testValue++
         status := Flash.wr_long(handle, testValue)
         utils.evaluateStatus(status, @"wr_long()", Flash.SUCCESS)
@@ -221,12 +333,16 @@ pri testWriteLongs(pFilename) | status, handle, testValue, expectedValue
     utils.showFileDetails(pFilename)
 
     '  get filesystem stats and verify against expectation
+    blocksUsed := utils.blockCountForFileSize(count * 4)
     utils.startTest(@"Ensure expected file system changes")
-    utils.evaluateFSStats(@"post file write", 3, 3)
+    utils.evaluateFSStats(@"post file write", startingFileCount + 1, startingBlockCount + blocksUsed)
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
-    utils.evaluateFileStats(pFilename, 1, 10 * 4)
+    utils.evaluateFileStats(pFilename, blocksUsed, count * 4)
+
+
+pri testVerifyLongs(pFilename, count)
 
     '  open file for read
     utils.startTest(@"Open File for read")
@@ -234,9 +350,9 @@ pri testWriteLongs(pFilename) | status, handle, testValue, expectedValue
     utils.evaluate(handle, Flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
-    utils.startTest(@"read expected 10 LONGs")
+    utils.startTest(@"read expected LONGs")
     expectedValue := 0
-    repeat 10
+    repeat count
         expectedValue++
         testValue := Flash.rd_long(handle)
         if testValue < 0
@@ -256,8 +372,6 @@ pri testWriteLongs(pFilename) | status, handle, testValue, expectedValue
     utils.startTest(@"Close read file")
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
-
-    utils.ShowFiles()
 
 DAT { test strings }
 
@@ -294,7 +408,7 @@ con   MAX_STRING_SIZE = (9*16)+1
 dat   testStrBuffer     BYTE    0[MAX_STRING_SIZE]
       idxStringWritten     BYTE    0[MAX_STRINGS_WRITTEN]               ' index to strings in order written
 
-pri testWriteStrings(pFilename) | status, handle, strIdx, pString, expectedFileSize, expectedFileBlocks, foundFileSize, rdLength, readWriteIdx, expectedLength, compareResult, pBlock
+pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | strIdx, pString, expectedFileSize, expectedFileBlocks, foundFileSize, rdLength, readWriteIdx, expectedLength, compareResult, pBlock
 
     '  open file for write
     '  ensure returns SUCCESS
@@ -329,10 +443,10 @@ pri testWriteStrings(pFilename) | status, handle, strIdx, pString, expectedFileS
     '}
 
     utils.showFileDetails(pFilename)
-    expectedFileBlocks := (expectedFileSize > Flash.BYTES_IN_HEAD_BLOCK) ? 2 : 1
+    expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
     '  get filesystem stats and verify against expectation
     utils.startTest(@"Ensure expected file system changes")
-    utils.evaluateFSStats(@"post file write", 4, 3 + expectedFileBlocks)
+    utils.evaluateFSStats(@"post file write", startingFileCount + 1, startingBlockCount + expectedFileBlocks)
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
@@ -373,8 +487,6 @@ pri testWriteStrings(pFilename) | status, handle, strIdx, pString, expectedFileS
     utils.startTest(@"Close read file")
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
-
-    utils.ShowFiles()
 
 
 con { license }

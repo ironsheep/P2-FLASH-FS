@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 28 AUG 2023
+''   Updated.... 29 AUG 2023
 ''
 '' =================================================================================================
 
@@ -32,7 +32,7 @@ pub startTestGroup(pDesciption)
     debug(" ------------------------------------------------------------")  ' blank line
     debug("* Test Group: ", zstr_(pDesciption))
 
-pub startTest(pDesciption) | pPassFail, ecGot, ecExpected
+pub startTest(pDesciption) | ecGot, ecExpected
     ' if prior sub tests show sub tests results
     if failCountSub <> 0 or passCountSub <> 0
         debug("  Sub-Test Results: Pass: ", udec_(passCountSub), ", Fail: ", udec_(failCountSub))
@@ -47,12 +47,12 @@ pub startTest(pDesciption) | pPassFail, ecGot, ecExpected
     debug(" ")  ' blank line
     debug("* Test #", udec_(numberTests), ": ", zstr_(pDesciption))
 
-pub  ShowTestEndCounts()
+pub ShowTestEndCounts()
     ' show summary of all tests
     debug(" ")  ' blank line
     debug("* ", udec_(numberTests), " Tests: , Pass: ", udec_(passCount), ", Fail: ", udec_(failCount))
 
-pub  evaluate(result, expectedResult) | pPassFail, ecGot, ecExpected
+pub evaluate(result, expectedResult) | ecGot, ecExpected
     ecExpected := Flash.string_for_error(expectedResult)
     if result > 0
         if result <> expectedResult
@@ -72,7 +72,7 @@ pub  evaluate(result, expectedResult) | pPassFail, ecGot, ecExpected
     pPassFail := result <> expectedResult ? @"FAIL" : @"pass"
     debug("   -> ", zstr_(pPassFail))
 
-pub  evaluateStatus(result, pMessage, expectedResult) | pPassFail, ecGot, ecExpected, bPassed
+pub evaluateStatus(result, pMessage, expectedResult) | ecGot, ecExpected
     ecGot := Flash.string_for_error(result)
     ecExpected := Flash.string_for_error(expectedResult)
     bPassed := result == expectedResult
@@ -88,7 +88,7 @@ pub  evaluateStatus(result, pMessage, expectedResult) | pPassFail, ecGot, ecExpe
             debug("  Status: ", zstr_(result), "(", sdec_(result), ")")
         debug("   -> ", zstr_(pPassFail))
 
-pub evaluateValue(result, pMessage, expectedResult) | pPassFail, bPassed
+pub evaluateValue(result, pMessage, expectedResult)
     bPassed := result == expectedResult
     if result <> expectedResult
         failCountSub++
@@ -102,7 +102,7 @@ pub evaluateValue(result, pMessage, expectedResult) | pPassFail, bPassed
             debug("  Value: ", uhex_long_(result))
         debug("   -> ", zstr_(pPassFail))
 
-pub evaluateSingleValue(result, pMessage, expectedResult) | pPassFail, bPassed
+pub evaluateSingleValue(result, pMessage, expectedResult)
     bPassed := result == expectedResult
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     if result <> expectedResult
@@ -113,11 +113,11 @@ pub evaluateSingleValue(result, pMessage, expectedResult) | pPassFail, bPassed
         passCount++
     debug("   -> ", zstr_(pPassFail))
 
-pub  showFileDetails(pFilename) | bytes_used, bytes_free, block_count
+pub showFileDetails(pFilename) | bytes_used, bytes_free, block_count
     bytes_used, bytes_free, block_count := Flash.test_count_file_bytes(pFilename)
     debug("  File: [", zstr_(pFilename), "], ", udec(bytes_used, bytes_free, block_count))
 
-pub  evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount, bPassed, pPassFail
+pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount
     debug("* ", zstr_(pMessage))
     blocksUsed, blocksFree, fileCount := Flash.stats()
     bPassed := expectedFileCount == fileCount and expectedBlocksUsed == blocksUsed
@@ -136,7 +136,7 @@ pub  evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUs
         passCount++
     debug("   -> ", zstr_(pPassFail))
 
-pub  evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, bPassed, pPassFail
+pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount
     debug("  File: [", zstr_(pFilename), "]")
     bytesUsed, bytesFree, blockCount := Flash.test_count_file_bytes(pFilename)
     bPassed := expectedBlockCount == blockCount and expectedBytesUsed == bytesUsed
@@ -155,16 +155,16 @@ pub  evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytes
         passCount++
     debug("   -> ", zstr_(pPassFail))
 
-pub  showError(pCaller, errorCode)
+pub showError(pCaller, errorCode)
     debug("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
 
-pub  ShowStats() | blocksUsed, blocksFree, fileCount
+pub ShowStats() | blocksUsed, blocksFree, fileCount
 
     blocksUsed, blocksFree, fileCount := Flash.stats()
     debug(udec(blocksUsed, blocksFree, fileCount))
 
 
-pub  ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
+pub ShowFiles() | ID, Bytes, byte Filename[60], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat
@@ -178,20 +178,20 @@ pub  ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
         else
             quit                                                      'no more files, quit
 
-pub  isBinaryFile(pFilename) : bIsBinaryStatus | pFileType
+pub isBinaryFile(pFilename) : bIsBinaryStatus | pFileType
     pFileType := fileTypePtr(pFilename)
     bIsBinaryStatus :=  strcomp(pFileType, @"bin")
 
-pub  isStringsFile(pFilename) : bIsBinaryStatus | pFileType
+pub isStringsFile(pFilename) : bIsBinaryStatus | pFileType
     pFileType := fileTypePtr(pFilename)
     bIsBinaryStatus :=  strcomp(pFileType, @"zstr")
 
-pub  fileTypePtr(pFilename) : pFileType | byteIdx
+pub fileTypePtr(pFilename) : pFileType | byteIdx
     repeat byteIdx from 0 to strsize(pFilename) - 1
         if pFilename[byteIdx] == "."
             return @pFilename[byteIdx + 1]
 
-pub  isZstr(pBffr, count) : bIsStringStatus | bytIdx
+pub isZstr(pBffr, count) : bIsStringStatus | bytIdx
     bIsStringStatus := false
     repeat bytIdx from 0 to count - 1
             if pBffr[bytIdx] == 0
@@ -199,7 +199,7 @@ pub  isZstr(pBffr, count) : bIsStringStatus | bytIdx
             if pBffr[bytIdx] < 32 or pBffr[bytIdx] > 126
                 return
 
-pub  ReadFile(pFilename, pStr, maxlen) | handle, byteCount
+pub ReadFile(pFilename, pStr, maxlen) | handle, byteCount
     if isStringsFile(pFilename)
         handle := Flash.open(pFilename,"R")                          'open file for reading
         if handle >= 0
@@ -211,11 +211,144 @@ pub  ReadFile(pFilename, pStr, maxlen) | handle, byteCount
             Flash.Close(handle)                                         'close file
     else
         bytefill(pStr, $ff, maxlen)
+
+pub ensureEmptyDirectory() | ID, Bytes, byte Filename[60], byte Buff[30]
+'' validate that directory is empty!
+    Flash.Directory(@ID, @Filename, @Bytes)                     'get first file
+    bPassed := true
+    if Filename[0]                                              'is there a filename?
+        bPassed := false
+
+    if !bPassed
+        debug("  # Error Found file: [", zstr_(@Filename), "] (expected: no files)")
+    pPassFail := bPassed == false ? @"FAIL" : @"pass"
+    if bPassed == false
+        failCount++
+    else
+        passCount++
+    debug("   -> ", zstr_(pPassFail))
+
+pub blockCountForFileSize(fileSizeInBytes) : blockCount | remainingSize, overflowBodyCount
+    ' return number of blocks for given file size
+    blockCount := 1
+    if fileSizeInBytes > Flash.BYTES_IN_HEAD_BLOCK
+        remainingSize := fileSizeInBytes - Flash.BYTES_IN_HEAD_BLOCK
+        blockCount += remainingSize / Flash.BYTES_IN_BODY_BLOCK
+        overflowBodyCount := remainingSize +// Flash.BYTES_IN_BODY_BLOCK
+        'debug("blockCountForFileSize()  # remainByt: ", udec_(remainingSize), ", ovflwByt: ", udec_(overflowBodyCount))
+        if overflowBodyCount > 0
+            blockCount++
+    'debug("blockCountForFileSize()  # bytes: ", udec_(fileSizeInBytes), ", blocks: ", udec_(blockCount))
+
+dat
+    pCurrRefDir     long    0
+    refFileCount    long    0
+    foundFileCount  long    0
+    refByteCount    long    0
+    calcBlocks      long    0
+    refBlocks       long    0
+    pRefFilename    long    0
+    bStop           long    0
+    bPassed         long    0
+    bBadEntry       long    0
+    pPassFail       long    0
+
+pub checkMatchingEntries(pDirEntries) | ID, Bytes, byte Filename[60], byte Buff[30]
+{
+        ' structure for directory checking
+        ' (pDirEntries := @dirEntr1)
+dirEntr1        LONG    @testfile1     ' pointer to filename
+fileBytes1      LONG    10             ' length in bytes
+fileBlocks1     LONG    1              ' number of blocks allocated
+dirEntr2        LONG    @testfile2     ' pointer to filename
+fileBytes2      LONG    20             ' length in bytes
+fileBlocks2     LONG    1              ' number of blocks allocated
+dirEnd          LONG    0              ' ptr = NULL, no more entries
+}
+    bPassed := true
+    pCurrRefDir := pDirEntries
+    refFileCount := 0
+    foundFileCount := 0
+    repeat
+        pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
+        refByteCount := LONG[pCurrRefDir][1]            ' get byte count
+        refblocks    := LONG[pCurrRefDir][2]            ' get block count
+        Flash.Directory(@ID, @Filename, @Bytes)         'get next file
+        if pRefFilename == 0                            ' if not beyond last REF entry
+            'debug(" - end of table entries!")
+        else
+            refFileCount++
+        if Filename[0] == 0                             'is there a filename?
+            'debug(" - end of directory entries!")
+        else
+            foundFileCount++
+        if pRefFilename == 0 && Filename[0] == 0
+            quit
+
+        if pRefFilename <> 0 && Filename[0] <> 0
+            calcBlocks := blockCountForFileSize(Bytes)
+            'debug(" read ->: [", zstr_(@Filename), "], bytes=(", udec_(Bytes), "), blocks(", udec_(calcBlocks), ")")
+            'debug(" load ->: [", zstr_(pRefFilename), "], bytes=(", udec_(refByteCount), "), blocks(", udec_(refBlocks), ")")
+            bBadEntry := false
+            ' ensure all three values match
+            if strcomp(@Filename, pRefFilename) == false
+                debug(" - BAD filenames!")
+                bBadEntry := true
+            if Bytes <> refByteCount
+                debug(" - BAD byte count!")
+                bBadEntry := true
+            if calcBlocks <> refBlocks
+                debug(" - BAD block count!")
+                bBadEntry := true
+            ' checked, now summarize findings iff bad
+            if bBadEntry
+                debug("  #    Found: [", zstr_(@Filename), "], bytes=(", udec_(Bytes), "), blocks(", udec_(calcBlocks), ")")
+                debug("  # Expected: [", zstr_(pRefFilename), "], bytes=(", udec_(refByteCount), "), blocks(", udec_(refBlocks), ")")
+                bPassed := false
+        if pRefFilename <> 0                            ' if not beyond last REF entry
+            pCurrRefDir := @LONG[pCurrRefDir][3]
+
+    if foundFileCount <> refFileCount
+        debug("  # Found ", udec_(foundFileCount), " files (expected ", udec_(refFileCount), ")")
+        bPassed := false
+    pPassFail := bPassed == false ? @"FAIL" : @"pass"
+    if bPassed == false
+        failCount++
+    else
+        passCount++
+    debug("   -> ", zstr_(pPassFail))
+
+
 ' -------
 ' dbgMemDump(@"TASK Stack", pStack, (nStackLongCt + 1) * 4)
 
-pub  dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar, offset
+pub dbgMemDumpAbs(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar
 '' Dump rows of hex values with address preceeding
+    if pMessage
+        debug("** ", zstr_(pMessage), ":")
+
+    rowCount := lenBytes / 16
+    lastRowByteCount := lenBytes - (rowCount * 16)
+    pCurrByte := pBytes
+    bytesSoFar := 0
+
+    ' emit full lines
+    if rowCount > 0
+        repeat rowCount
+            dbgMemDumpRowAbs(pCurrByte, 16)
+            pCurrByte += 16
+            bytesSoFar += 16
+
+    if  bytesSoFar < lenBytes
+        ' emit last line
+        dbgMemDumpRowAbs(pCurrByte, lastRowByteCount)
+
+pri dbgMemDumpRowAbs(pBytes, lenBytes)
+' emit address followed by bytes
+    debug(" ", uhex_long_(pBytes), ": ", uhex_byte_array_(pBytes, lenBytes))
+
+
+pub dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar, offset
 
     if pMessage
         debug("** ", zstr_(pMessage), ":")
@@ -261,6 +394,44 @@ pub dumpFileHeads() | ID, Bytes, byte Filename[60], byte Buff[30], pBlock
             debug(" ")  ' blank line
         else
             quit                                                      'no more files, quit
+
+pub checkMatchingXXXEntries(pDirEntries) | ID, Bytes, byte Filename[60], byte Buff[30], refBytes
+'pub dumpDirEnts(pDirEntries) | ID, Bytes, byte Filename[60], byte Buff[30], bBadEntry, refBytes
+{
+        ' structure for directory checking
+        ' (pDirEntries := @dirEntr1)
+dirEntr1        LONG    @testfile1     ' pointer to filename
+fileBytes1      LONG    10             ' length in bytes
+fileBlocks1     LONG    1              ' number of blocks allocated
+dirEntr2        LONG    @testfile2     ' pointer to filename
+fileBytes2      LONG    20             ' length in bytes
+fileBlocks2     LONG    1              ' number of blocks allocated
+dirEnd          LONG    0              ' ptr = NULL, no more entries
+}
+    bPassed := true
+    pCurrRefDir := pDirEntries
+    debug(" -ptrs ", uhex_long(pCurrRefDir, pDirEntries))
+    repeat
+        pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
+        refBytes := LONG[pCurrRefDir][1]            ' get pointer to reference filename -OR- NULL
+        refblocks := LONG[pCurrRefDir][2]            ' get pointer to reference filename -OR- NULL
+        debug(" - FNamePtr ", uhex_long(pRefFilename))
+        if pRefFilename <> 0                            ' if not beyond last REF entry
+            ' ensure all three values match
+            ' checked, now summarize findings iff bad
+                debug("  # Expected: [", zstr_(pRefFilename), "], bytes=(", udec_(refBytes), "), blocks(", udec_(refBlocks), ")")
+
+        if pRefFilename <> 0
+            pCurrRefDir := @LONG[pCurrRefDir][3]
+            debug(" -ptrs ", uhex_long(pCurrRefDir, pDirEntries))
+        else
+            quit
+
+        'debug(" - Holding...")
+        'repeat ' hold
+
+    debug(" - DONE")
+
 
 con { license }
 
