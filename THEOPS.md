@@ -187,11 +187,11 @@ Seeking within an existing file is supported without any control structures bein
 
 #### Treating a file as a circular buffer
 
-We are implenting this very simply, two new open methods provide the functionality. When **opening for append** or **opening for read** you will **specify the max length of the file** (logically, when you want it to wrap.)  We accomplish the wrap by always appending to the end of the file and removing the head block making the body block after the head into the new head keeping the file at your desired fixed length. Let's look at this in slightly more detail.
+We are implenting this very simply, two new open methods provide the functionality. When **opening for append** or **opening for read** you will **specify the max length of the file** (logically, when you want it to wrap.)  We accomplish the wrap by always appending to the end of the file and removing the head block keeping the file at your desired fixed length. Let's look at this in slightly more detail.
 
-Under the covers this affect reads and writes. When **opened for read as circular** the first data returned will be from the front of the file unless the file has reached the max size. If it has then the first data returned will instead be the data at the (file length - max size) offet (The front of your circular buffer.)
+Under the covers this circular behavior affect reads and writes. When **opened for read as circular** the first data returned will be from the front of the file unless the file has reached the max size. If it has then the first data returned will instead be the data at the (file length - max size) offet (The front of your circular buffer.)
 
-When the file is **opened for write as circular** then when ever a new tail block is added to the file after the file reached the desired size then the head block will removed and the next body block will be made into the new head block. In net, we've added 4088 bytes to the end of the file and we've removed 4088 bytes from the front of the file.
+When the file is **opened for write as circular** after the write, if a new tail block is added to the file after the file has reached the desired size then the head block will removed and the next body block will be made into the new head block. In net, we've added 4088 bytes to the end of the file and we've removed 4088 bytes from the front of the file.
 
 
 ## Tracking Data (State of Filesystem)
