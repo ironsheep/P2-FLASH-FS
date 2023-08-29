@@ -14,6 +14,10 @@ On this Page:
 - [Initial build - Constants](#initial-build---constants)
 - [Concepts](#concepts) - and terminology
 - [File System Block types/format](#file-system-block-types-and-formats-of-these-blocks)
+  - [Writing to a file](https://github.com/ironsheep/P2-FLASH-FS/blob/main/THEOPS.md#writing-to-a-file)
+  - [Appending to an existing File](#appending-to-an-existing-file)
+  - [Seeking within an existing File](#seeking-within-an-existing-file)
+  - [Treating a file as a circular buffer](#treating-a-file-as-a-circular-buffer)
 - [Tracking Data](#tracking-data-state-of-filesystem) - State of Filesystem
 - [Tracking Data](#tracking-data-open-files) - Open Files
 - The Mount Process [M]
