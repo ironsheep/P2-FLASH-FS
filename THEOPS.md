@@ -119,13 +119,15 @@ Blocks written to our flash filesystem are of the following formats:
 | --- | --- | --- |
 | **Head/Last block** 
 | 000..003 | long {EndPtr[11:0], ThisID[11:0], %vvv11100} | vvv = lifecycle, 00 = head/last
-| 004..03F | byte filename[60] | filename
-| 040..FFB | byte data[4028] | data
+| 004..007 | long {Filename crc32} | crc32 of filename + terminator
+| 008..087 | byte filename[127+1] | filename + terminator
+| 088..FFB | byte data[3956] | data
 | FFC..FFF | long crc32	 | crc32 of 000..FFB
 | **Head/More block** |
 | 000..003 | long {NextID[11:0], ThisID[11:0], %vvv11101} | vvv = lifecycle, 01 = head/more
-| 004..03F | byte filename[60] | filename
-| 040..FFB | byte data[4028] | data
+| 004..007 | long {Filename crc32} | crc32 of filename + terminator
+| 008..087 | byte filename[127+1] | filename + terminator
+| 088..FFB | byte data[3956] | data
 | FFC..FFF | long crc32	 | crc32 of 000..FFB
 | **Body/Last block**
 | 000..003 | long {EndPtr[11:0], ThisID[11:0], %vvv11110} | vvv = lifecycle, 10 = body/last
@@ -146,13 +148,13 @@ A file made up of these blocks can exist in one of three shapes:
 
 | Constituency | Max size | Notes
 | --- | --- | --- |
-| Head/Last block | 0 - 4,028 bytes | 1 block file
-| Head/More block -> Body/Last block | 0 - 8,116 bytes | 2 block file
-| Head/More block -> (1 or more) Body/More block -> Body/Last block | 0 - 16,221,124 bytes | up to a 3,968-block file
+| Head/Last block | 0 - 3,956 bytes | 1 block file
+| Head/More block -> Body/Last block | 0 - 8,044 bytes | 2 block file
+| Head/More block -> (1 or more) Body/More block -> Body/Last block | 0 - 16,221,052 bytes | up to a 3,968-block file
 
-**NOTE1**: the largest file would be a 1 x **Head/More block** (4,028 bytes) -> 3,966 x **Body/More block**s (4,088 bytes ea.) -> 1x **Body/Last block** (4,088 bytes) which yeilds a max length of 16,221,124 bytes.
+**NOTE1**: the largest file would be a 1 x **Head/More block** (3,956 bytes) -> 3,966 x **Body/More block**s (4,088 bytes ea.) -> 1x **Body/Last block** (4,088 bytes) which yields a max length of 16,221,052 bytes.
 
-**NOTE2**: Given this block-type composition of our files, our flash chip using this system can contain a **maximum** of 3,968 **files** of 1-4,028 bytes each.
+**NOTE2**: Given this block-type composition of our files, our flash chip using this system can contain a **maximum** of 3,968 **files** ea. 1 block, 3,956 bytes each.
 
 #### File open Modes
 
@@ -166,9 +168,9 @@ A file made up of these blocks can exist in one of three shapes:
 
 #### Writing to a File
 
-- A filestarts out as a **Head/Last block** and remains so while it is <= 4,028 bytes.
-- When file gets to 4,029 bytes, the 4,028+1 byte is written to a **Body/Last block** and the **Head/Last block** is rewritten as a **Head/More block**
-- When the file then gets to 4,028+4,088+1 (the 8,117th byte) is written to a new **Body/Last block** and the current **Body/Last block** is rewritten as a **Body/More block**.
+- A filestarts out as a **Head/Last block** and remains so while it is <= 3,956 bytes.
+- When file gets to 3,957 bytes, the 3,956+1 byte is written to a **Body/Last block** and the **Head/Last block** is rewritten as a **Head/More block**
+- When the file then gets to 3,956+4,088+1 (the 8,045th byte) is written to a new **Body/Last block** and the current **Body/Last block** is rewritten as a **Body/More block**.
 - ... and so on ...
 
 #### Appending to an existing File
@@ -177,7 +179,7 @@ When appending there are really two cases with the more normal case being the fi
 
 - **Case #1**: In the case of appending to a longer file (a file which is 2 or more blocks) then the append consists of wirting to the **Body/Last block** until we attmpt to write the byte just past then end of theis block. At this time we allocate a new **Body/Last block** to contain this new byte and rewrite the prior **Body/Last block** as a **Body/More block**.
 
-The less frequent case is when we append to a file that contains less than 4,028 bytes:
+The less frequent case is when we append to a file that contains less than 3,956 bytes:
 
 - **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File" (above.)
 
