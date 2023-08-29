@@ -187,7 +187,7 @@ Seeking within an existing file is supported without any control structures bein
 
 #### Treating a file as a circular buffer
 
-We are implenting this very simply, two new open methods provide the functionality. When **opening for append** or **opening for read** you will **specify the max length of the file** (logically, when you want it to wrap.)  We accomplish the wrap by always appending to the end of the file and removing the head block keeping the file at your desired fixed length. Let's look at this in slightly more detail.
+Maintaining an existing file in a circular fashion is supported without any control structures being recorded/or updated within the file itself.  We are implementing this very simply, two new open methods provide the functionality. When **opening for append** or **opening for read** you will **specify the max length of the file** (logically, when you want it to wrap.)  We accomplish the wrap by always appending to the end of the file and removing the head block keeping the file at your desired fixed length. Let's look at this in slightly more detail.
 
 Under the covers this circular behavior affect reads and writes. When **opened for read as circular** the first data returned will be from the front of the file unless the file has reached the max size. If it has then the first data returned will instead be the data at the (file length - max size) offet (The front of your circular buffer.)
 
