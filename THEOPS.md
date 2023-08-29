@@ -181,6 +181,15 @@ The less frequent case is when we append to a file that contains less than 4,028
 
 Seeking within an existing file is supported without any control structures being recorded/or updated within the file itself. A seek pointer is maintained for the open file handle. When a seek is requested the location is stored in the handle state data and the block underlying that location is loaded into the handle's buffer. When a read or write follows the seek the seek pointer is updated with the length of the data read or written. If a write occurred the buffer is marked as needing to be rewritten. If a close or a seek to an out-of-buffer location occurs the buffer will be written replacing the original block with the new. Then the block at the new seek location will be loaded in the handle's buffer.
 
+#### Treating a file as a circular buffer
+
+We are implenting this very simmply two new open methods provide the functionality. When opening for append or for read you will specify the max length of the file (when you want it to wrap.  We accomplish the wrap by always appending to the end of the file. When the file has finally reached the size limit then every time we need to append a new block then we also remove the head block making the body block after the head into the new head. In this way the file now stays at the desired limit.
+
+Under the covers this affect reads and writes. When opened for read as circular the first data returned will be from the front of the file unless the file has reached the max size. If it has then the first data returned will instead be the data at the (file length - max size) offet.  The front of your circular buffer.
+
+When the file is opened for write as circular then when ever a new tail block is added to the file and the file reached the desired size then the head block will removed and the next body block will be made into the new head block. In net we've added 4088 bytes to the end of the file and we've removed 4088 bytes from the front of the file.
+
+
 ## Tracking Data (State of Filesystem)
 
 When the filesystem is first mounted the following 3 tables are zeroed and then populated by mount() as it scanns all the blocks in the space allocated to the filesystem. The tables are:
