@@ -23,6 +23,13 @@ Additional pages:
 - Wear-leveling write mechanism
 - Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
 - Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
+- Block identification is independent of a blocks physical location
+- Filenames are 127 characters plus zero terminator
+- Seeks supported
+- File Append supported
+- Read-Modify-Write supported
+- Circular file writes supported (emulation)
+- Directory features coming soon (emulation)
 
 ## How to Contribute
 

@@ -37,6 +37,13 @@ Additional pages:
 - Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
 - Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
 - Block identification is independent of a blocks physical location
+- Filenames are 127 characters plus zero terminator
+- Seeks supported
+- File Append supported
+- Read-Modify-Write supported
+- Circular file writes supported (emulation)
+- Directory features coming soon (emulation)
+
 
 ## Initial build - Constants
 
@@ -45,7 +52,7 @@ Key Constants in the file describe:
 - **SPI_[CS|CK|DI|DO]** - The signal lines used for the SPI flash chip
 - **FIRST_BLOCK** - The starting block to be used within the Flash chip.  By default the value is chosen to allow for the first 512KB to be resorced the boot loaded code for the P2. (Default: $080)
 - **LAST_BLOCK** - The address of the last block to be allocated to the filesystem. This effectivly tells us the amount of space which is allocated to this filesystem (Default: $FFF)
-- **MAX_FILES_OPEN** - a 4k buffer is allocated to each file we could have open at the same time as another. This is set to 2 so we can at least copy one file to another. (Default: 2)
+- **MAX\_FILES_OPEN** - a 4k buffer is allocated to each file we could have open at the same time as another. This is set to 2 so we can at least copy one file to another. (Default: 2)
 - **BLOCK_SIZE** - fixed at 4KB, this is the smallest eraseable amount of space within the SPI FLASH chip we use. (Default $1000)
 
 *Most users will not need to adjust these values!*
