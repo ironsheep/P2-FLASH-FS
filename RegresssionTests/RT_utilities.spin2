@@ -164,7 +164,7 @@ pub ShowStats() | blocksUsed, blocksFree, fileCount
     debug(udec(blocksUsed, blocksFree, fileCount))
 
 
-pub ShowFiles() | ID, Bytes, byte Filename[60], byte Buff[30]
+pub ShowFiles() | ID, Bytes, byte Filename[128], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat
@@ -212,7 +212,7 @@ pub ReadFile(pFilename, pStr, maxlen) | handle, byteCount
     else
         bytefill(pStr, $ff, maxlen)
 
-pub ensureEmptyDirectory() | ID, Bytes, byte Filename[60], byte Buff[30]
+pub ensureEmptyDirectory() | ID, Bytes, byte Filename[128], byte Buff[30]
 '' validate that directory is empty!
     Flash.Directory(@ID, @Filename, @Bytes)                     'get first file
     bPassed := true
@@ -253,7 +253,7 @@ dat
     bBadEntry       long    0
     pPassFail       long    0
 
-pub checkMatchingEntries(pDirEntries) | ID, Bytes, byte Filename[60], byte Buff[30]
+pub checkMatchingEntries(pDirEntries) | ID, Bytes, byte Filename[128], byte Buff[30]
 {
         ' structure for directory checking
         ' (pDirEntries := @dirEntr1)
@@ -383,7 +383,7 @@ pub record_crc(p_record_buffer, record_length) : crc
 
   return getcrc(p_record_buffer, $AD0424F3 rev 31, record_length - 4)  'compute CRC of a buffered block
 
-pub dumpFileHeads() | ID, Bytes, byte Filename[60], byte Buff[30], pBlock
+pub dumpFileHeads() | ID, Bytes, byte Filename[128], byte Buff[30], pBlock
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat

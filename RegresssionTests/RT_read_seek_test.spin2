@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 28 AUG 2023
+''   Updated.... 30 AUG 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -180,11 +180,11 @@ pri VerifyAddressedLongs(pFilename, count)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.startTest(@"read last long")
-        status := Flash.seek(handle, (count - 1) * 4)
-        if status == Flash.SUCCESS
-            longValue := Flash.rd_long(handle)
-            status := Flash.error()
-            utils.evaluateValue(longValue, @"rd_long", count - 1)
+    status := Flash.seek(handle, (count - 1) * 4)
+    if status == Flash.SUCCESS
+        longValue := Flash.rd_long(handle)
+        status := Flash.error()
+        utils.evaluateValue(longValue, @"rd_long", count - 1)
     utils.startTest(@"ensure no errors on read last")
     utils.evaluate(status, Flash.SUCCESS)
 

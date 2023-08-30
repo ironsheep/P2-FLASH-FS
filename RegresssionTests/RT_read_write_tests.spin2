@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 29 AUG 2023
+''   Updated.... 30 AUG 2023
 ''
 '' =================================================================================================
 
@@ -355,8 +355,8 @@ pri testVerifyLongs(pFilename, count)
     repeat count
         expectedValue++
         testValue := Flash.rd_long(handle)
-        if testValue < 0
-            status := testValue
+        status := Flash.error()
+        if status <> Flash.SUCCESS
             quit
         utils.evaluateValue(testValue, @"rd_long()", expectedValue)
 
@@ -365,7 +365,8 @@ pri testVerifyLongs(pFilename, count)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more LONG than written")
-    status := Flash.rd_long(handle)
+    testValue := Flash.rd_long(handle)
+    status := Flash.error()
     utils.evaluate(status, Flash.E_END_OF_FILE)
 
     '  close file
@@ -480,7 +481,8 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more STRING than written")
-    status := Flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
+    Flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
+    status := Flash.error()
     utils.evaluate(status, Flash.E_END_OF_FILE)
 
     '  close file
