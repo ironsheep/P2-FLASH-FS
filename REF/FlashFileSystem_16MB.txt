@@ -1,0 +1,97 @@
+
+Object "FlashFileSystem_16MB" Interface:
+
+PUB Format()
+PUB Mount()
+PUB OpenRead(pFilename) : handle
+PUB SeekRead(handle, pointer)
+PUB ByteRead(handle) : b
+PUB OpenWrite(pFilename) : handle
+PUB OpenAppend(pFilename) : handle
+PUB ByteWrite(handle, b)
+PUB Close(handle)
+PUB Delete(pFilename)
+PUB Rename(pOldFilename, pNewFilename)
+PUB Exists(pFilename) : result
+PUB SizeOf(pFilename) : ByteCount
+PUB Directory(pID, pFilename, pSize)
+PUB Stats() : UsedBlocks, FreeBlocks, FileCount
+
+____________
+PUB Format()
+
+ Format file system and (re)mount it
+
+___________
+PUB Mount()
+
+ Mount file system so it is ready to use
+
+________________________________
+PUB OpenRead(pFilename) : handle
+
+ Open a file for reading, returns handle
+
+_____________________________
+PUB SeekRead(handle, pointer)
+
+ Go to location in file opened for reading
+ if pointer exceeds size of file, ByteRead() will return -1
+
+________________________
+PUB ByteRead(handle) : b
+
+ Read next byte from file opened for reading
+
+_________________________________
+PUB OpenWrite(pFilename) : handle
+
+ Open a file for (re)writing, returns handle
+
+__________________________________
+PUB OpenAppend(pFilename) : handle
+
+ Open a file for appending, returns handle
+ if file doesn't exist, it will be created
+
+________________________
+PUB ByteWrite(handle, b)
+
+ Write next byte to file opened for (re)writing
+
+_________________
+PUB Close(handle)
+
+ Close an open file, completes file (re)write, frees handle
+
+_____________________
+PUB Delete(pFilename)
+
+ Delete a file
+
+______________________________________
+PUB Rename(pOldFilename, pNewFilename)
+
+ Rename a file
+
+______________________________
+PUB Exists(pFilename) : result
+
+ Check if a file exists
+
+_________________________________
+PUB SizeOf(pFilename) : ByteCount
+
+ Get size of file in bytes
+
+____________________________________
+PUB Directory(pID, pFilename, pSize)
+
+ Get next file's filename and size in bytes via current ID
+ - Initialize ID to 0, will be auto-advanced by each call to this method
+ - When filename returns empty, no more files
+
+_______________________________________________
+PUB Stats() : UsedBlocks, FreeBlocks, FileCount
+
+ Get stats on used/free blocks and file count

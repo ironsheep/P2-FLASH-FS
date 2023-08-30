@@ -14,6 +14,8 @@ PUB go()
   WriteFile(@"file2", @file2)
   WriteFile(@"file3", @file3)
 
+  AppendFile(@"file2", @" Appended.")
+
   ShowStats()
   ShowFiles()
 
@@ -63,6 +65,18 @@ PRI WriteFile(pFilename, pBuff) | Handle
   while byte[pBuff++]
 
   Flash.Close(Handle)                                           'close file
+
+PRI AppendFile(pFilename, pBuff) | Handle
+
+  debug("Appending: ", zstr_(pFilename))
+
+  Handle := Flash.OpenAppend(pFilename)				'open file for appending
+
+  repeat							'write bytes until 0 written
+    Flash.ByteWrite(Handle, byte[pBuff])
+  while byte[pBuff++]
+
+  Flash.Close(Handle)						'close file
 
 
 DAT
