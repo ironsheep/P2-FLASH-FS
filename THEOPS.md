@@ -41,8 +41,8 @@ Additional pages:
 - Seeks supported
 - File Append supported
 - Read-Modify-Write supported
-- Circular file writes supported (emulation)
-- Directory features coming soon (emulation)
+- Circular file writes supported (simulation)
+- Directory features coming soon (simulation)
 
 
 ## Initial build - Constants
