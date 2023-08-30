@@ -4,8 +4,10 @@ Object "Draft_FlashFilesystem_16MB" Interface:
 PUB Format() : status
 PUB Mount() : status
 PUB OpenRead(pFilename) : handle
+PUB SeekRead(handle, pointer)
 PUB ByteRead(handle) : byteValue
 PUB OpenWrite(pFilename) : handle
+PUB OpenAppend(pFilename) : handle
 PUB ByteWrite(handle, byteValue) : status
 PUB Close(handle) : status
 PUB Delete(pFilename) : status
@@ -32,6 +34,12 @@ PUB OpenRead(pFilename) : handle
 
  Open a file for reading, returns handle
 
+_____________________________
+PUB SeekRead(handle, pointer)
+
+ Go to location in file opened for reading
+ if pointer exceeds size of file, ByteRead() will return -1
+
 ________________________________
 PUB ByteRead(handle) : byteValue
 
@@ -45,6 +53,12 @@ PUB OpenWrite(pFilename) : handle
  Open a file for (re)writing
  @param pFilename - pointer to a zstring containing the filename
  @returns handle - efileWriting if file is being written, eFileOpen if file is open, or 0 if successful
+
+__________________________________
+PUB OpenAppend(pFilename) : handle
+
+ Open a file for appending, returns handle
+ if file doesn't exist, it will be created
 
 _________________________________________
 PUB ByteWrite(handle, byteValue) : status

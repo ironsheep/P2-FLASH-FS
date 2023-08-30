@@ -9,6 +9,7 @@
 '********************************************************************************************************
 '*  v1.0  2023-08-14  Initial release.                                                                  *
 '*  v1.1  2023-08-18  Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI_CS now rests high.  *
+'*  v1.2  2023-08-25  Adds open_append(), cleans up byte counting, adjusts get new handle to set fname. *
 '*  v2.0  2023-08-23  draft renovated file with new internal documentation.                             *
 '********************************************************************************************************
 
@@ -83,8 +84,8 @@ hHeadID       WORD    0[MAX_FILES_OPEN]                                         
 hHeadBlock    WORD    0[MAX_FILES_OPEN]                                         'handle: head blockAddress
 hHeadCycle    BYTE    0[MAX_FILES_OPEN]                                         'handle: head block lifecycle
 hBlockPtr     WORD    0[MAX_FILES_OPEN]                                         'handle: pointer to next byte in block
-hBlockBuff    BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                            'handle: 4KB buffer for file data
 hFilename     BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                         'handle: 59+1 byte buffer for filename
+hBlockBuff    BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                            'handle: 4KB buffer for file data
 
 
 CON ' --- Public Methods ---
@@ -155,11 +156,19 @@ PUB OpenRead(pFilename) : handle | i, signature
   if isFileOpen(pFilename, sWRITEONLY)  'if file is being written, abort
     return eFileWriting
 
-  handle := NewHandle()                                                         'get new handle, aborts if no handle available
+  handle := NewHandle(pFilename)                                                'get new handle, aborts if no handle available
   hStatus[handle] := sREAD                                                      'set handle status to READ
-  ReadBlock(field[IDToBlock][signature.[19..8]], BuffPtr(handle), $000, $FFF)   'read head block into buffer
   hBlockPtr[handle] := $040                                                     'point to first data byte in head block
-  SetFilenameForHandle(handle, pFilename)                                       'set handle filename
+  ReadBlock(field[IDToBlock][signature.[19..8]], BuffPtr(handle), $000, $FFF)   'read head block into buffer
+
+PUB SeekRead(handle, pointer) | Block, BlockPtr
+
+'' Go to location in file opened for reading
+'' if pointer exceeds size of file, ByteRead() will return -1
+
+  Block, BlockPtr := LocateFileByte(hHeadBlock[handle], pointer)
+  ReadBlock(Block, BuffPtr(handle), $000, $FFF)
+  hBlockPtr[handle] := BlockPtr
 
 
 PUB ByteRead(handle) : byteValue | ptr , signature
@@ -209,7 +218,7 @@ PUB OpenWrite(pFilename) : handle | signature, ptr
   if isFileOpen(pFilename, sREADWRITE)          'if file already open, abort
     return eFileOpen
 
-  handle := NewHandle()                                                         'get new handle, aborts if no handle available
+  handle := NewHandle(pFilename)                                                'get new handle, aborts if no handle available
 
   if signature := GetFileHeadSignature(pFilename)                               'does file already exist?
     hStatus[handle] := sREWRITE                                                 'yes, REWRITING
@@ -229,7 +238,36 @@ PUB OpenWrite(pFilename) : handle | signature, ptr
 
   hBlockPtr[handle] := $040                                                     'point to start of data in head block
 
-  SetFilenameForHandle(handle, pFilename)                                       'set handle filename
+
+PUB OpenAppend(pFilename) : handle | ptr, signature, Block, BlockPtr
+
+'' Open a file for appending, returns handle
+'' if file doesn't exist, it will be created
+
+  if isFileOpen(pFilename, sREADWRITE)          'if file already open, abort
+    return eFileOpen
+
+  handle := NewHandle(pFilename)            'get new handle, aborts if no handle available
+
+  ptr := BuffPtr(handle)                'get buffer pointer
+
+  if signature := GetFileHeadSignature(pFilename)           'if file already exists..
+    hStatus[handle] := sREWRITE             '..set REWRITING to indicate appending
+    Block := field[IDToBlock][signature.[19..8]]        '..get first block of file
+    Block, BlockPtr := LocateFileByte(Block, $FFFFFF)   '..locate last block of file and block pointer
+    ReadBlock(Block, ptr, $000, $FFF)           '..read last block into buffer
+    hHeadID[handle] := long[ptr].[19..8]        '..set ID from last block
+    hHeadCycle[handle] := NextActiveCycle(long[ptr].[7..5]) '..get next lifecycle from last block
+    hBlockPtr[handle] := BlockPtr           '..point to append point in last block
+  else                          'else, if file doesn't exist..
+    hStatus[handle] := sWRITE               '..set WRITING
+    hHeadID[handle] := NextAvailableBlockID()               '..get new ID
+    hHeadCycle[handle] := %011              '..set new lifecycle
+    bytefill(ptr, $FF, BLOCK_SIZE)          '..erase block buffer
+    long[ptr].[1..0] := %00             '..set head/last
+    long[ptr].[19..8] := hHeadID[handle]        '..set ID
+    strcopy(ptr + $004, pFilename, FILENAME_SIZE - 1)   '..set filename
+    hBlockPtr[handle] := $040               '..point to start of data in head block
 
 
 PUB ByteWrite(handle, byteValue) : status | ptr, nextBlockID
@@ -511,7 +549,7 @@ PRI TraceFileAndSetFlags(blockAddress, isSet) : valid | signature, blockID
     field[BlockState][blockAddress] := isSet ? sBODY : sTEMP                    'set block state to sBODY or sTEMP
 
 
-PRI NewHandle() : handle | potentialHandle
+PRI NewHandle(pFilename) : handle | potentialHandle
 
 ' Calculate and return next available handle
 '
@@ -524,6 +562,7 @@ PRI NewHandle() : handle | potentialHandle
   repeat potentialHandle from 0 to MAX_FILES_OPEN - 1                           'find first free handle
     ifnot hStatus[potentialHandle]                                              'if handle not in use
       handle := potentialHandle                                                 '..select as handle to use
+      strcopy(@hFilename + handle * FILENAME_SIZE, pFilename, FILENAME_SIZE - 1)
       quit                                                                      '..exit loop, we have our answer
 
 
@@ -587,14 +626,14 @@ PRI AddressOfNextBlock() : blockAddress | blockFreeCount, freeBlockAddress, free
         blockAddress := abs getrnd() // BLOCKS                                  '(random block selection results in +-5% wear leveling)
   until field[BlockState][blockAddress] <> sTEMP
 
-  ifnot field[BlockState][blockAddress]                                         'if the block is sFREE, change its state to sTEMP and exit
+  if field[BlockState][blockAddress] == sFREE                                         'if the block is sFREE, change its state to sTEMP and exit
         field[BlockState][blockAddress] := sTEMP
         return
 
   ' now we are using head or body so we have to move it!
   freeIndex := abs getrnd() // blockFreeCount                                   'randomly pick an sFREE block to move the sHEAD/sBODY block to
   repeat freeBlockAddress from 0 to BLOCKS - 1
-        ifnot field[BlockState][freeBlockAddress]                               'if the block is sFREE
+        if field[BlockState][freeBlockAddress] == sFREE                              'if the block is sFREE
           ifnot freeIndex--
                 quit
 
@@ -626,7 +665,7 @@ PRI GetFileHeadSignature(pFilename) : foundSignature | blockAddress, BYTE header
                 quit                                                            ' end the repeat, we have our answer
 
 
-PRI CountFileBytes(blockAddress) : byteCount | signature
+PRI CountFileBytes(blockAddress) : byteCount | signature, bot, top
 ' Return the number of bytes written to file
 '
 ' @param blockAddress - the offset within the file system of the first block of the file
@@ -637,18 +676,29 @@ PRI CountFileBytes(blockAddress) : byteCount | signature
 
   repeat                                                                        'trace blocks to count file bytes
     ReadBlock(blockAddress, @signature, $000, $003)                             'read the first long of the head/body block
-    case signature.[1..0]
-      %00:                                                                      'head/last
-        byteCount := signature.[31..20] - $040
-        return
-      %01:                                                                      'head/more
-        byteCount := $FFC - $040
-      %10:                                                                      'body/last
-        byteCount += signature.[31..20] - $004
-        return
-      %11:                                                                      'body/more
-        byteCount += $FFC - $004
+    bot := signature.[1] ? $004 : $040                                          'body or head?
+    top := signature.[0] ? $FFC : signature.[31..20]                            'more or last?
+    ByteCount += top - bot                                                      'accumulate bytes
     blockAddress := field[IDToBlock][signature.[31..20]]                        'get next block to count
+  while signature.[0]                                                           'loop if another block
+
+
+PRI LocateFileByte(blockAddress, pointer) : LocBlockAddress, LocEndPtr | first, bot, top, pos
+
+  repeat                                                'trace blocks to count file bytes
+    ReadBlock(blockAddress, @first, $000, $003)         'read the first long of the head/body block
+    bot := first.[1] ? $004 : $040                      'body or head?
+    top := first.[0] ? $FFC : first.[31..20]            'more or last?
+    if pointer >= pos and pointer < pos + top - bot     'if pointer is within block,
+      LocBlockAddress := blockAddress
+      LocEndPtr := pointer - pos + bot
+      quit                                              '..return block and block pointer
+    ifnot first.[0]                                     'if last block,
+      LocBlockAddress := blockAddress
+      LocEndPtr := top
+      quit                                              '..return block and end pointer
+    pos += top - bot                                    'advance position
+    blockAddress := field[IDToBlock][first.[31..20]]    'get next block
 
 
 PRI DeleteChainAtBlockID(blockID) | signature, blockAddress
@@ -694,7 +744,7 @@ PRI BlocksFree() : count | blockAddress
 ' @local blockAddress - the block offset within the file system
 
   repeat blockAddress from 0 to BLOCKS - 1                              'count free blocks
-        ifnot field[BlockState][blockAddress]
+        if field[BlockState][blockAddress] == sFREE
           count++
 
 
@@ -716,22 +766,13 @@ PRI BuffPtr(handle) : ptr
   return @hBlockBuff + handle << BLOCK_SIZE_EXP
 
 
-PRI SetFilenameForHandle(handle, pFilename)
-' Write filename into block buffer for this handle
-'
-' @param handle - the handle to the file
-' @param pFilename - pointer to zstring containing the filename
-
-  strcopy(@hFilename + handle * FILENAME_SIZE, pFilename, FILENAME_SIZE - 1)
-
-
 PRI BlockCRC(ptr) : CRC
 ' Calculate and return the CRC for this pointed to block
 '
 ' @param ptr - the address of the 4KB buffer for the file associated with this handle
 ' @returns CRC - the calculated CRC for the block
 
-  return getcrc(ptr, $AD0424F3 rev 31, BLOCK_SIZE - 4)  'compute CRC of a buffered block
+  return getcrc(ptr, $AD0424F3 rev 31, BLOCK_SIZE - 4)         'compute CRC of a buffered block
 
 
 CON ' --- Flash Operations ---
@@ -744,8 +785,8 @@ PRI ReadBlock(blockAddress, buffAddress, firstByte, lastByte)
 ' @param firstByte - address of first byte to read
 ' @param lastByte - address of last byte to read
 
-  FlashCommand($03 | (FIRST_BLOCK + blockAddress) << 20 | firstByte << 8, 4)    'read 4KB block
-  FlashReceive(buffAddress, lastByte - firstByte + 1)                                   'receive block data
+  FlashCommand($03 | (FIRST_BLOCK + blockAddress) << 20 | firstByte << 8, 4)                            'read 4KB block
+  FlashReceive(buffAddress, lastByte - firstByte + 1)                                                   'receive block data
 
 
 PRI ProgramBlock(blockAddress, buffAddress, cycleBits) | pageIndex
@@ -758,20 +799,20 @@ PRI ProgramBlock(blockAddress, buffAddress, cycleBits) | pageIndex
 ' Local Variables:
 ' @local pageIndex - index [0-15] of 256-Byte page within 4KB block
 
-  FlashCommand($06, 1)                                                                  'enable write
-  FlashCommand($20 | (FIRST_BLOCK + blockAddress) << 20, 4)     'erase 4KB block
+  FlashCommand($06, 1)                                                                                  'enable write
+  FlashCommand($20 | (FIRST_BLOCK + blockAddress) << 20, 4)                                             'erase 4KB block
 
-  BYTE[buffAddress].[7..5] := cycleBits                                         'install lifecycle for CRC computation
-  LONG[buffAddress + $FFC] := BlockCRC(buffAddress)     'compute and install CRC
-  BYTE[buffAddress].[7..5]~~                                                    'block will be inactive until activated
+  BYTE[buffAddress].[7..5] := cycleBits                                                                 'install lifecycle for CRC computation
+  LONG[buffAddress + $FFC] := BlockCRC(buffAddress)                                                     'compute and install CRC
+  BYTE[buffAddress].[7..5]~~                                                                            'block will be inactive until activated
 
-  FlashWait()                                                                                   'wait for erasure to complete (~45ms)
+  FlashWait()                                                                                           'wait for erasure to complete (~45ms)
 
-  repeat pageIndex from 0 to 15                                                                                                 'program 16 pages within 4KB block
-        FlashCommand($06, 1)                                                                                            'enable write
-        FlashCommand($02 | (FIRST_BLOCK + blockAddress) << 20 | pageIndex << 16, 4)             'program
-        FlashSend(buffAddress + pageIndex << 8, 256)                                                            'send 256 bytes
-        FlashWait()                                                                                                             'wait for programming to complete (~400us)
+  repeat pageIndex from 0 to 15                                                                         'program 16 pages within 4KB block
+        FlashCommand($06, 1)                                                                            'enable write
+        FlashCommand($02 | (FIRST_BLOCK + blockAddress) << 20 | pageIndex << 16, 4)                     'program
+        FlashSend(buffAddress + pageIndex << 8, 256)                                                    'send 256 bytes
+        FlashWait()                                                                                     'wait for programming to complete (~400us)
 
 
 PRI ActivateBlock(blockAddress, cycleBits)
@@ -780,7 +821,7 @@ PRI ActivateBlock(blockAddress, cycleBits)
 ' @param blockAddress - the block offset within the file system
 ' @param cycleBits - lifeCycle bit-pattern to place into block
 
-  ProgramBit(blockAddress, cycleBits << 5 | %00011111)                  'clear one cycle bit to activate block
+  ProgramBit(blockAddress, cycleBits << 5 | %00011111)                          'clear one cycle bit to activate block
 
 
 PRI CancelBlock(blockAddress)
@@ -788,7 +829,7 @@ PRI CancelBlock(blockAddress)
 '
 ' @param blockAddress - the block offset within the file system
 
-  ProgramBit(blockAddress, %00011111)                                                   'clear all cycle bits to cancel block
+  ProgramBit(blockAddress, %00011111)                                           'clear all cycle bits to cancel block
 
 
 PRI ProgramBit(blockAddress, bitPattern)
@@ -797,10 +838,10 @@ PRI ProgramBit(blockAddress, bitPattern)
 ' @param blockAddress - the block offset within the file system
 ' @param bitPattern - the value to be placed in first byte of block
 
-  FlashCommand($06, 1)                                                                  'enable write
-  FlashCommand($02 | (FIRST_blockAddress + blockAddress) << 20, 4)      'program
+  FlashCommand($06, 1)                                                          'enable write
+  FlashCommand($02 | (FIRST_BLOCK + blockAddress) << 20, 4)                     'program
   FlashSend(@bitPattern, 1)                                                     'send byte with bit pattern
-  FlashWait()                                                                                   'wait for programming to complete
+  FlashWait()                                                                   'wait for programming to complete
 
 
 PRI FlashWait() | statusBits
@@ -811,9 +852,9 @@ PRI FlashWait() | statusBits
 ' @local statusBits - status register bits read from FLASH Chip
 
   repeat
-        FlashCommand($05, 1)                                                            'read status register
+        FlashCommand($05, 1)                                                    'read status register
         FlashReceive(@statusBits, 1)
-  while statusBits.[0]                                                                          'loop until BUSY bit clear
+  while statusBits.[0]                                                          'loop until BUSY bit clear
 
 
 PRI FlashCommand(command, byteCount)
@@ -822,23 +863,23 @@ PRI FlashCommand(command, byteCount)
 ' @param command - the command for the chip to execute
 ' @param byteCount - number of bytes to send
 
-                org
+              org
 
-                fltl    #SPI_DO                                 '2!     DO input
+              fltl    #SPI_DO                           '2!     DO input
 
-                fltl    #SPI_CK                                 '2!     reset CK smart pin
-                wrpin   #%01_00101_0,#SPI_CK    '2              set CK for transition output, starts out low
-                wxpin   #4,#SPI_CK                              '2              set timebase to 4 clocks per transition
+              fltl    #SPI_CK                           '2!     reset CK smart pin
+              wrpin   ##%001000000_01_00101_0,#SPI_CK    '2      set CK for transition output, inverted - SPI mode 3
+              wxpin   #4,#SPI_CK                        '2      set timebase to 4 clocks per transition
 
-                drvh    #SPI_CS                                 '2!     CS high
-                waitx   #14                                     '2+14   CS deselect is 50ns at 350 MHz (50 / 2.777ns = 18)
-                drvl    #SPI_CS                                 '2!     CS low
+              drvh    #SPI_CS                           '2!     CS high
+              waitx   #14                               '2+14   CS deselect is 50ns at 350 MHz (50 / 2.777ns = 18)
+              drvl    #SPI_CS                           '2!     CS low
 
-                movbyts command,#%%1230                 'reverse order of post-command address bytes for sending
+              movbyts command,#%%1230                   'reverse order of post-command address bytes for sending
 
-                end
+              end
 
-  FlashSend(@command, byteCount)                'send command
+  FlashSend(@command, byteCount)                        'send command
 
 
 PRI FlashSend(buffAddress, byteCount) | byteToSend
@@ -850,28 +891,28 @@ PRI FlashSend(buffAddress, byteCount) | byteToSend
 ' Local Variables:
 ' @local byteToSend - the byte value being sent over SPI
 
-                org
+              org
 
-                rdfast  #0,buffAddress                  'start fast read
+              rdfast  #0,BuffAddress                    'start fast read
 
-.byte   rfbyte  byteToSend                              '2              read byte
+.byte         rfbyte  byteToSend                        '2  read byte to send
+              shl byteToSend,#24 + 1            wc      '2  msb-justify bits and get D7 into c
 
-                rep     @.r,#1                                  '2              protect from interrupts
-                fltl    #SPI_CK                                 '2!     reset smart pin CK
-                drvl    #SPI_CK                                 '2!     start smart pin CK, starts base period
-                shl     byteToSend,#24 + 1      wc      '2              get D7
-                drvc    #SPI_DI                                 '2!     output D7
-                wypin   #16,#SPI_CK                     '2*     begin 16 clock transitions
-                rep     @.r,#7                                  '2              repeat to output D6..D0
-                shl     byteToSend,#1           wc      '2              get data bit
-                drvc    #SPI_DI                                 '2!     output data bit
-                waitx   #2                                              '2+2    delay makes 8 clocks/bit
+              rep @.r,#1                                '2  protect from interrupts
+              fltl    #SPI_CK                           '2! reset smart pin CK
+              drvl    #SPI_CK                           '2! start smart pin CK, starts base period
+              drvc    #SPI_DI                           '2! output D7
+              wypin   #16,#SPI_CK                       '2* begin 16 clock transitions
+              rep @.r,#7                                '2  repeat to output D6..D0
+              shl byteToSend,#1                 wc      '2    get data bit
+              drvc    #SPI_DI                           '2!   output data bit
+              waitx   #2                                '2+2  delay makes 8 clocks/bit
 .r
-                djnz    byteCount,#.byte                '4|2    loop if another byte to send
+              djnz    ByteCount,#.byte                  '4|2 loop if another byte to send
 
-                drvl    #SPI_DI                                 '2!     DI low
+              drvl    #SPI_DI                           '2! DI low
 
-                end
+              end
 
 
 PRI FlashReceive(buffAddress, byteCount) | byteReceived
@@ -884,24 +925,24 @@ PRI FlashReceive(buffAddress, byteCount) | byteReceived
 ' @local byteReceived - gather bits received into a byte
 
                 org
+'-------+-----+---------+-------+---------------+-------+-----------------------+
 
                 wrfast  #0,buffAddress                  'start fast write
 
-.byte   rep     @.r,#1                                  '2              protect from interrupts
-                fltl    #SPI_CK                                 '2!     reset smart pin CK
-                drvl    #SPI_CK                                 '2!     start smart pin CK, starts base period
+.byte           rep     @.r,#1                          '2      protect from interrupts
+                fltl    #SPI_CK                         '2!     reset smart pin CK
+                drvl    #SPI_CK                         '2!     start smart pin CK, starts base period
                 wypin   #16,#SPI_CK                     '2*     begin 16 clock transitions
-                waitx   #3                                              '2+3    align TESTP's to before clock fall (DC..350MHz+)
-                rep     @.r,#8                                  '2              repeat to input D7..D0
-                waitx   #2                                              '2+2    delay makes 8 clocks/bit
-                testp   #SPI_DO                 wc              '2              input data bit
-                rcl     byteReceived,#1                 '2              save data bit
+                waitx   #7                              '2+3    align TESTP's to before 2nd clock fall (DC..350MHz+)
+                rep     @.r,#8                          '2      repeat to input D7..D0
+                waitx   #2                              '2+2      delay makes 8 clocks/bit
+                testp   #SPI_DO                 wc      '2        input data bit
+                rcl     byteReceived,#1                 '2        save data bit
 .r
-                wfbyte  byteReceived                    '2              write byte
+                wfbyte  byteReceived                    '2      write received byte
                 djnz    byteCount,#.byte                '4|2    loop if another byte to receive
 
-                drvh    #SPI_CS                                 '2!     CS high, terminates command
-                wypin   #1,#SPI_CK                              '2*     CK high, leave SD card CS high
+                drvh    #SPI_CS                         '2!     CS high, terminates command
 
                 end
 
@@ -938,37 +979,17 @@ body/more block
 FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
 
 
-------------------------------------------
-SPECIAL NEW BLOCKs for circular buffer use
-------------------------------------------
-head/more block w/EndPtr
-------------------------------------------------------------------------------------------------
-000..003                LONG {NextID[11:0], ThisID[11:0], %vvv11101}    'vvv = lifecycle, 101 = head/more w/EndPtr
-004..007                LONG EndPtr[11:0], rest unused                                  'End pointer in block that doesn't have one
-008..FFB                BYTE data[4024]                                                                 'data
-FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
-
-body/more block w/EndPtr
-------------------------------------------------------------------------------------------------
-000..003                LONG {NextID[11:0], ThisID[11:0], %vvv11111}    'vvv = lifecycle, 111 = body/more w/EndPtr
-004..007                LONG EndPtr[11:0], rest unused                                  'End pointer in block that doesn't have one
-008..FFB                BYTE data[4084]                                                                 'data
-FFC..FFF                LONG crc32                                                                              'crc32 of 000..FFB
-
-------------------------------------------
-
-
 vvv lifecycle rules
-- single-zero ring counter state sequence is 011..101..110..repeat
+- single-zero ring counter state sequence is 011..101..110..repeat (akin to "rock, paper, scissors")
 - the block with the greater state is the valid block between two blocks with identical IDs
 - this allows for make-before-break block replacement that can be recovered after unexpected power loss
 -------------------------------------------------------------------------------------------------------
-111                                     inactive                no zeroes
+111                             inactive                no zeroes
 011/101/110                     active                  one zero
 001/010/100/000                 canceled                two or three zeroes
 
-011 > 110                               new > old
-101 > 011                               new > old
-110 > 101                               new > old
+011 > 110                       new > old   rock > scissors
+101 > 011                       new > old   paper > rock
+110 > 101                       new > old   scissors > paper
 
 }
