@@ -21,8 +21,10 @@ The Regression test coverage is nearly complete!  This table indicates which met
 | PUB format() : status | YES
 | PUB error() : result | YES
 | PUB open(p_filename, mode) : handle | YES
+| PUB open\_circular\_read(p_filename, max_file_length) : handle 
 | PUB open\_read(p_filename) : handle | YES
 | PUB open\_write(p_filename) : handle | YES
+| PUB open\_circular\_append(p_filename, max_file_length) : handle |
 | PUB open\_append(p_filename) : handle
 | PUB open\_modify(p_filename) : handle
 | PUB rename(p_old_filename, p_new_filename) : status | YES
