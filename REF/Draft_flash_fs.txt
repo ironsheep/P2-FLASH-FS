@@ -8,8 +8,10 @@
                -- see below for terms of use
    E-mail.....stephen@ironsheep.biz
    Started.... AUG 2023
-   Updated.... 30 AUG 2023
+   Updated.... 31 AUG 2023
  =================================================================================================
+ v1.2.0 - initial release of flash_fs with full API
+ -------------------------------------------------------------------------------------------------
 
 Object "Draft_flash_fs" Interface:
 
@@ -17,22 +19,17 @@ pub null()
 pub version() : result
 pub serial_number() : snHi, snLo
 pub mount() : status
-pub unmount()
+pub unmount() : status
 pub format() : status
 pub error() : result
 pub open(p_filename, mode) : handle
-pub open_circular_read(p_filename, max_file_length) : handle
-pub open_read(p_filename) : handle
-pub open_write(p_filename) : handle
-pub open_circular_append(p_filename, max_file_length) : handle
-pub open_append(p_filename) : handle
-pub open_modify(p_filename) : handle
+pub open_circular(p_filename, mode, max_file_length) : handle
+pub close(handle) : status
 pub rename(p_old_filename, p_new_filename) : status
 pub delete(p_filename) : status
 pub exists(p_filename) : bool
 pub file_size(p_filename) : size_in_bytes
 pub file_size_unused(p_filename) : size_in_bytes_unused
-pub close(handle) : status
 pub seek(handle, position) : status
 pub write(handle, p_buffer, count) : status
 pub wr_byte(handle, byteValue) : status
@@ -74,23 +71,27 @@ pub mount() : status
  @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
  .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
 
-_____________
-pub unmount()
+______________________
+pub unmount() : status
 
  Prepare for shutdown / power-off by closing any open files
+ @returns status - 0 (SUCCESS) if successful,
+ .. E_NOT_MOUNTED if filesystem had not been mounted
 
 _____________________
 pub format() : status
 
  Format the file system blocks and (re)mount it
- @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+ @returns status - 0 (SUCCESS) if successful,
+ .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
  .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
+ .. E_NOT_MOUNTED if filesystem has not been mounted
 
 ____________________
 pub error() : result
 
  Returns error code from most recent operation
- @returns result - latest error code (0 for no error)
+ @returns result - latest error code (SUCCESS, for no error)
 
 ___________________________________
 pub open(p_filename, mode) : handle
@@ -100,8 +101,8 @@ pub open(p_filename, mode) : handle
  @param mode - the mode in which to open the file:
  -- mode "r", "R" to read from an existing file
  -- mode "w", "W" to write to a new file (overwrites existing file)
- -- mode "a", "A" to append to the end of an existing file
- -- mode "rw", "RW" to read from or / write to anywhere within an existing file
+ -- mode "a", "A" to append to the end of an existing file (file created if doesn't exist)
+ -- mode "r+", "R+" to read from or / write to anywhere within an existing file
  @returns handle - handle to open file if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
  .. E_FILE_MODE if mode letter(s) is/are invalid,
@@ -110,73 +111,31 @@ pub open(p_filename, mode) : handle
  .. E_FILE_NOT_FOUND if file does not exist (depends upon mode requested),
  .. or E_NO_HANDLE if no handle is available
 
-____________________________________________________________
-pub open_circular_read(p_filename, max_file_length) : handle
+_____________________________________________________________
+pub open_circular(p_filename, mode, max_file_length) : handle
 
- NOT YET Implemented!  Open a circular file for reading, returning handle if success
+ Open circular file of max_file_length in mode; return handle (0..n) if successful
  @param p_filename - address of a zstring containing the filename
+ @param mode - the mode in which to open the file:
+ -- mode "a", "A" to append to the end of an existing circular file (file created if doesn't exist)
+ -- mode "r", "R" to read from an existing circular file
+ @param max_file_length - constrain the file to this length (in bytes)
  @returns handle - handle to open file if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
- .. E_BAD_FILE_LENGTH if file length is negative or zero
- .. E_FILE_OPEN if file is already open
- .. E_FILE_NOT_FOUND if file doesn't exist
- .. or E_NO_HANDLE if no handle is available
-
-__________________________________
-pub open_read(p_filename) : handle
-
- Open a file for reading, returning handle if success
- @param p_filename - address of a zstring containing the filename
- @returns handle - handle to open file if successful,
- .. E_NOT_MOUNTED if filesystem has not been mounted,
- .. E_FILE_OPEN if file is already open
- .. E_FILE_NOT_FOUND if file doesn't exist
- .. or E_NO_HANDLE if no handle is available
-
-___________________________________
-pub open_write(p_filename) : handle
-
- Open a file for (re)writing, returning handle if success
-  (overwrites existing file, if you wish to prevent overwrite, use exists() to check!)
- @param p_filename - address of a zstring containing the filename
- @returns handle - handle to open file if successful,
- .. E_NOT_MOUNTED if filesystem has not been mounted,
- .. E_FILE_OPEN if file is already open
- .. or E_NO_HANDLE if no handle is available
-
-______________________________________________________________
-pub open_circular_append(p_filename, max_file_length) : handle
-
- NOT YET Implemented!  Open a circular file for writing (appending), returning handle if success
- @param p_filename - address of a zstring containing the filename
- @returns handle - handle to open file if successful,
- .. E_NOT_MOUNTED if filesystem has not been mounted,
- .. E_BAD_FILE_LENGTH if file length is negative or zero
+ .. E_FILE_MODE if mode letter(s) is/are invalid,
  .. E_FILE_OPEN if file is already open,
- .. E_FILE_NOT_FOUND if file doesn't exist,
+ .. E_FILE_EXISTS if file exists (depends upon mode requested),
+ .. E_FILE_NOT_FOUND if file does not exist (depends upon mode requested),
  .. or E_NO_HANDLE if no handle is available
 
-____________________________________
-pub open_append(p_filename) : handle
+__________________________
+pub close(handle) : status
 
- NOT YET Implemented!  open for append, returning handle if success
- @param p_filename - address of a zstring containing the filename
- @returns handle - handle to open file if successful,
+ Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
+ @param handle - a handle to an open file
+ @returns status - 0 (SUCCESS) if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
- .. E_FILE_OPEN if file is already open,
- .. E_FILE_NOT_FOUND if file doesn't exist,
- .. or E_NO_HANDLE if no handle is available
-
-____________________________________
-pub open_modify(p_filename) : handle
-
- NOT YET Implemented!  open for read-modify-write, returning handle if success
- @param p_filename - address of a zstring containing the filename
- @returns handle - handle to open file if successful,
- .. E_NOT_MOUNTED if filesystem has not been mounted,
- .. E_FILE_OPEN if file is already open,
- .. E_FILE_NOT_FOUND if file doesn't exist,
- .. or E_NO_HANDLE if no handle is available
+ .. E_BAD_HANDLE if the handle is not valid
 
 ___________________________________________________
 pub rename(p_old_filename, p_new_filename) : status
@@ -189,6 +148,7 @@ pub rename(p_old_filename, p_new_filename) : status
  .. E_FILE_NOT_FOUND if old file doesn't exist,
  .. E_FILE_OPEN if either file is open,
  .. E_FILE_EXISTS if new file already exists,
+ .. E_DRIVE_FULL if no avaiable space left in filesystem
 
 _______________________________
 pub delete(p_filename) : status
@@ -225,15 +185,6 @@ pub file_size_unused(p_filename) : size_in_bytes_unused
  @returns size_in_bytes_unused - either the count of unwritten bytes of the file or
  .. E_NOT_MOUNTED if filesystem has not been mounted,
  .. E_FILE_NOT_FOUND if the file doesn't exist
-
-__________________________
-pub close(handle) : status
-
- Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
- @param handle - a handle to an open file
- @returns status - 0 (SUCCESS) if successful,
- .. E_NOT_MOUNTED if filesystem has not been mounted,
- .. E_BAD_HANDLE if the handle is not valid
 
 ___________________________________
 pub seek(handle, position) : status

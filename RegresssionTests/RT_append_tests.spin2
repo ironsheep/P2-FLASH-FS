@@ -1,12 +1,12 @@
 '' =================================================================================================
 ''
-''   File....... RT_read_seek_test.spin2
-''   Purpose.... This object exercises the
+''   File....... RT_append_tests.spin2
+''   Purpose.... This object exercises the append functionality of the flash_fs object
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 30 AUG 2023
+''   Updated.... 31 AUG 2023
 ''
 '' =================================================================================================
 
@@ -27,53 +27,19 @@ OBJ
 
 DAT
 
-testfile1       BYTE    "rw10bytes.bin", 0
-testfile2       BYTE    "rw9words.bin", 0
-testfile3       BYTE    "rw12longs.bin", 0
-testfile4       BYTE    "rw10strings.zstr", 0
-testfile5       BYTE    "fullHeadLongs.bin", 0
-testfile6       BYTE    "moreThanHeadLongs.bin", 0
-testfile7       BYTE    "moreThanHeadBodyLongs.bin", 0
+testfile1       BYTE    "ap1010bytes.bin", 0
+testfile2       BYTE    "ap99words.bin", 0
+testfile3       BYTE    "ap1212longs.bin", 0
+testfile4       BYTE    "ap1010strings.zstr", 0
+testfile5       BYTE    "apLongsHeadBody.bin", 0
+testfile6       BYTE    "apLongsHead2xBody.bin", 0
+testfile7       BYTE    "apLongsHead3xBody.bin", 0
 
 handle          LONG    0
 testValue       LONG    0
 status          LONG    0
 expectedValue   LONG    0
 
-' structure for directory checking
-dirEntr01        LONG    @testfile1     ' pointer to filename
-fileBytes01      LONG    10             ' length in bytes
-fileBlocks01     LONG    1              ' number of blocks allocated
-dirEntr02        LONG    @testfile2     ' pointer to filename
-fileBytes02      LONG    18             ' length in bytes
-fileBlocks02     LONG    1              ' number of blocks allocated
-dirEnd0          LONG    0              ' ptr = NULL, no more entries
-
-dirEntr11        LONG    @testfile1     ' pointer to filename
-fileBytes11      LONG    10             ' length in bytes
-fileBlocks11     LONG    1              ' number of blocks allocated
-dirEntr12        LONG    @testfile2     ' pointer to filename
-fileBytes12      LONG    18             ' length in bytes
-fileBlocks12     LONG    1              ' number of blocks allocated
-dirEntr13        LONG    @testfile3     ' pointer to filename
-fileBytes13      LONG    48             ' length in bytes
-fileBlocks13     LONG    1              ' number of blocks allocated
-dirEnd1          LONG    0              ' ptr = NULL, no more entries
-
-
-versionString   BYTE    "flash_fs v"
-vDigits         BYTE    "x.x.x", 0
-{
-pub goTest()
-
-    utils.dbgMemDumpAbs(@"Filename 1", @testfile1, strsize(@testfile1) + 1)
-    utils.dbgMemDumpAbs(@"Filename 2", @testfile2, strsize(@testfile2) + 1)
-    utils.dbgMemDumpAbs(@"Filename 3", @testfile3, strsize(@testfile3) + 1)
-    utils.dbgMemDumpAbs(@"Table 2dirEnt", @dirEntr1, 7 * 4)
-    dirEntr1 := @@testfile1
-    dirEntr2 := @@testfile3
-    utils.dumpDirEnts(@dirEntr1)
-'}
 
 PUB go() | hundreds, tens, units, snHi, snLo
 
@@ -106,74 +72,49 @@ PUB go() | hundreds, tens, units, snHi, snLo
     snHi, snLo := Flash.serial_number()
     debug("CHIP Serial Number: ", uhex_long_(snHi), "-", uhex_long_(snLo))
 
-    utils.startTest(@"Get and parse out Driver version")
-    status := Flash.version()
-    utils.evaluateSingleValue(status, @"version()", 120)
-
-   ' brute force... (someone didn't import a string formatter, I wonder who that was?)
-    hundreds := status / 100
-    BYTE[@vDigits][0] := "0" + hundreds
-    tens := (status - (hundreds * 100)) / 10
-    BYTE[@vDigits][2] := "0" + tens
-    units := status - (hundreds * 100) - (tens * 10)
-    BYTE[@vDigits][4] := "0" + units
-    debug ("Driver: ", zstr_(@versionString))
-
+    ' FIXME: add free block checks after each file write/append
 
     ' Real tests start here:
-    utils.startTestGroup(@"Head block only - partially filled with 10 BYTEs")
+    utils.startTestGroup(@"Head block only - partially filled with 10 BYTEs then apppend 10 more")
     testWriteBytes(@testfile1, 10, 0, 0)
-    testVerifyBytes(@testfile1, 10)
+    testAppendBytes(@testfile1, 10)
 
     utils.showFiles()
 
-    utils.startTestGroup(@"Head block only - partially filled with 9 WORDs")
+    utils.startTestGroup(@"Head block only - partially filled with 9 WORDs then apppend 9 more")
     testWriteWords(@testfile2, 9, 1, 1)
-    testVerifyWords(@testfile2, 9)
+    testAppendWords(@testfile2, 9)
 
     utils.showFiles()
 
-    utils.startTest(@"Ensure we have 2 files written so far")
-    'stuff absolute addresses of filenames into directory entries
-    dirEntr01 := @testfile1
-    dirEntr02 := @testfile2
-    utils.checkMatchingEntries(@dirEntr01)
-
-    'debug("Holding...")
-    'repeat ' hold here
-
-    utils.startTestGroup(@"Head block only - partially filled with 12 LONGs")
+    utils.startTestGroup(@"Head block only - partially filled with 12 LONGs then apppend 12 more")
     testWriteLongs(@testfile3, 12, 2, 2)
-    testVerifyLongs(@testfile3, 12)
+    testAppendLongs(@testfile3, 12)
 
     utils.showFiles()
 
-    utils.startTest(@"Ensure we have 3 files written so far")
-    'stuff absolute addresses of filenames into directory entries
-    dirEntr11 := @testfile1
-    dirEntr12 := @testfile2
-    dirEntr13 := @testfile3
-    utils.checkMatchingEntries(@dirEntr11)
+    utils.startTestGroup(@"Head block only - partially filled with 10 STRINGs then apppend 10 more")
+    testWriteStrings(@testfile4, 10, 3, 3)
+    testAppendStrings(@testfile4, 10, expectedStrFileSize)
 
-    utils.startTestGroup(@"Head block only - partially filled with 10 STRINGs")
-    testWriteStrings(@testfile4, 10, 3, 3)              ' 10 is built in for now, so ignored in this call
-
+    utils.startTestGroup(@"Read and verify the content of all 20 string")
+    testVerifyAllStrings(@testfile4, 20)
     utils.showFiles()
 
-    utils.startTestGroup(@"Head block only - filled with LONGs")
-    testWriteLongs(@testfile5, Flash.LONGS_IN_HEAD_BLOCK, 4, 4)
-    testVerifyLongs(@testfile5, Flash.LONGS_IN_HEAD_BLOCK)
+    utils.startTestGroup(@"Head block + body block - filled with LONGs full HEAD, 2 in BODY, append 8 more")
+    testWriteLongs(@testfile5, Flash.LONGS_IN_HEAD_BLOCK +2, 4, 4)
+    testAppendLongs(@testfile5, 8)
 
-    utils.startTestGroup(@"Head block + body block - filled with LONGs full head + 2")
-    testWriteLongs(@testfile6, Flash.LONGS_IN_HEAD_BLOCK+2, 5, 5)
-    testVerifyLongs(@testfile6, Flash.LONGS_IN_HEAD_BLOCK+2)
+    utils.startTestGroup(@"Head block + 2 x body block - filled with LONGs full HEAD & BODY, 2 in 2nd BODY, append 8 more")
+    testWriteLongs(@testfile6, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK +2, 5, 6)
+    testAppendLongs(@testfile6, 8)
 
-    utils.startTestGroup(@"Head block + body block * 2 - filled with LONGs full head, full body, + 2")
-    testWriteLongs(@testfile7, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK+2, 6, 7)
-    testVerifyLongs(@testfile7, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK+2)
+    utils.startTestGroup(@"Head block + 2 x body block - filled with LONGsfull HEAD & 2 BODY (-3), append 9 more append causes add of new body")
+    testWriteLongs(@testfile7, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + (Flash.LONGS_IN_BODY_BLOCK - 3), 6, 9)
+    testAppendLongs(@testfile7, 9)
+
 
     utils.showFiles()
-
 
     utils.ShowTestEndCounts()
 
@@ -186,6 +127,7 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
     utils.startTest(@"Open File for write")
     handle := Flash.open(pFilename,"w")
     utils.evaluate(handle, Flash.SUCCESS)
+
     utils.startTest(@"Write N BYTEs")
     testValue := 0
     repeat 10
@@ -204,7 +146,7 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
     utils.showFileDetails(pFilename)
 
     '  get filesystem stats and verify against expectation
-    utils.startTest(@"Ensure expected file system changes")
+    utils.startTest(@"Ensure expected file system changes post BYTEs write")
     utils.evaluateFSStats(@"post file write", startingFileCount + 1, 1 + startingBlockCount)
 
     '  get single file stats and verify against expectation
@@ -212,35 +154,50 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
     utils.evaluateFileStats(pFilename, 1, 10)
 
 
-pri testVerifyBytes(pFilename, count)
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle := Flash.open(pFilename,"r")
+pri testAppendBytes(pFilename, count) | startLength, endLength, pBlock
+
+    utils.startTest(@"Get starting length before append of BYTEs")
+    startLength := Flash.file_size(pFilename)
+    status := Flash.error()
+    utils.evaluate(handle, Flash.SUCCESS)
+    utils.evaluateSingleValue(startLength, @"file_size()", 10)
+
+    '  open file for append
+    utils.startTest(@"Open File for append")
+    handle := Flash.open(pFilename,"a")
     utils.evaluate(handle, Flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
-    utils.startTest(@"read expected N BYTEs")
-    expectedValue := 0
-    repeat 10
-        expectedValue++
-        testValue := Flash.rd_byte(handle)
-        if testValue < 0
-            status := testValue
-            quit
-        utils.evaluateValue(testValue, @"rd_byte()", expectedValue)
+    utils.startTest(@"Append count BYTEs")
+    testValue := $40
+    repeat count
+        testValue++
+        status := Flash.wr_byte(handle, testValue)
+        utils.evaluateStatus(status, @"wr_byte()", Flash.SUCCESS)
 
-    utils.startTest(@"ensure no errors on reads")
+    utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
-
-    '  read past end of file to verify read returns error
-    utils.startTest(@"BAD: read one more BYTE than written")
-    status := Flash.rd_byte(handle)
-    utils.evaluate(status, Flash.E_END_OF_FILE)
 
     '  close file
-    utils.startTest(@"Close read file")
+    utils.startTest(@"Close append file")
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
+
+{
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    if pBlock < 0
+        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
+    else
+        utils.dbgMemDump(@"Append BYTEs file Head block", pBlock, 4096)
+        status := Flash.SUCCESS ' clear our temp use
+'}
+
+    utils.showFileDetails(pFilename)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats post BYTEs append")
+    utils.evaluateFileStats(pFilename, 1, startLength + count)
 
 
 pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
@@ -268,44 +225,58 @@ pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
     utils.showFileDetails(pFilename)
 
     '  get filesystem stats and verify against expectation
-    utils.startTest(@"Ensure expected file system changes")
-    utils.evaluateFSStats(@"post file write", startingFileCount + 1, 1 + startingBlockCount)
+    utils.startTest(@"Ensure expected file system changes post WORDs write")
+    utils.evaluateFSStats(@"post file write", startingFileCount + 1, startingBlockCount + 1)
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
     utils.evaluateFileStats(pFilename, 1, count * 2)
 
 
-pri testVerifyWords(pFilename, count)
+pri testAppendWords(pFilename, count) | startLength, endLength, pBlock
 
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle := Flash.open(pFilename,"r")
+    utils.startTest(@"Get starting length before append of WORDs")
+    startLength := Flash.file_size(pFilename)
+    status := Flash.error()
+    utils.evaluate(handle, Flash.SUCCESS)
+    utils.evaluateSingleValue(startLength, @"file_size()", count * 2)
+
+    '  open file for append
+    utils.startTest(@"Open File for append")
+    handle := Flash.open(pFilename,"a")
     utils.evaluate(handle, Flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
-    utils.startTest(@"read expected N WORDs")
-    expectedValue := 0
+    utils.startTest(@"Append count WORDs")
+    testValue := $40
     repeat count
-        expectedValue++
-        testValue := Flash.rd_word(handle)
-        if testValue < 0
-            status := testValue
-            quit
-        utils.evaluateValue(testValue, @"rd_word()", expectedValue)
+        testValue++
+        status := Flash.wr_word(handle, testValue)
+        utils.evaluateStatus(status, @"wr_word()", Flash.SUCCESS)
 
-    utils.startTest(@"ensure no errors on reads")
+    utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
-
-    '  read past end of file to verify read returns error
-    utils.startTest(@"BAD: read one more WORD than written")
-    status := Flash.rd_word(handle)
-    utils.evaluate(status, Flash.E_END_OF_FILE)
 
     '  close file
-    utils.startTest(@"Close read file")
+    utils.startTest(@"Close append file")
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
+
+{
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    if pBlock < 0
+        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
+    else
+        utils.dbgMemDump(@"Append WORDs file Head block", pBlock, 4096)
+        status := Flash.SUCCESS ' clear our temp use
+'}
+
+    utils.showFileDetails(pFilename)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats post WORDs append")
+    utils.evaluateFileStats(pFilename, 1, startLength + count * 2)
 
 
 pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | blocksUsed
@@ -334,7 +305,7 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | bl
 
     '  get filesystem stats and verify against expectation
     blocksUsed := utils.blockCountForFileSize(count * 4)
-    utils.startTest(@"Ensure expected file system changes")
+    utils.startTest(@"Ensure expected file system changes post LONGs write")
     utils.evaluateFSStats(@"post file write", startingFileCount + 1, startingBlockCount + blocksUsed)
 
     '  get single file stats and verify against expectation
@@ -342,37 +313,51 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | bl
     utils.evaluateFileStats(pFilename, blocksUsed, count * 4)
 
 
-pri testVerifyLongs(pFilename, count)
+pri testAppendLongs(pFilename, count) | startLength, blocksUsed
 
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle := Flash.open(pFilename,"r")
+    utils.startTest(@"Get starting length before append of LONGs")
+    startLength := Flash.file_size(pFilename)
+    status := Flash.error()
+    utils.evaluateStatus(handle, @"file_size()", Flash.SUCCESS)
+
+    '  open file for append
+    utils.startTest(@"Open File for append")
+    handle := Flash.open(pFilename,"a")
     utils.evaluate(handle, Flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
-    utils.startTest(@"read expected LONGs")
-    expectedValue := 0
+    utils.startTest(@"Append count LONGs")
+    testValue := $40
     repeat count
-        expectedValue++
-        testValue := Flash.rd_long(handle)
-        status := Flash.error()
-        if status <> Flash.SUCCESS
-            quit
-        utils.evaluateValue(testValue, @"rd_long()", expectedValue)
+        testValue++
+        status := Flash.wr_long(handle, testValue)
+        utils.evaluateStatus(status, @"wr_long()", Flash.SUCCESS)
 
-    utils.startTest(@"ensure no errors on reads")
+    utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
-
-    '  read past end of file to verify read returns error
-    utils.startTest(@"BAD: read one more LONG than written")
-    testValue := Flash.rd_long(handle)
-    status := Flash.error()
-    utils.evaluate(status, Flash.E_END_OF_FILE)
 
     '  close file
-    utils.startTest(@"Close read file")
+    utils.startTest(@"Close append file")
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
+
+{
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    if pBlock < 0
+        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
+    else
+        utils.dbgMemDump(@"Append WORDs file Head block", pBlock, 4096)
+        status := Flash.SUCCESS ' clear our temp use
+'}
+
+    utils.showFileDetails(pFilename)
+
+    '  get single file stats and verify against expectation
+    blocksUsed := utils.blockCountForFileSize(startLength + count * 4)
+    utils.startTest(@"Ensure expected file stats post LONGs append")
+    utils.evaluateFileStats(pFilename, blocksUsed, startLength + count * 4)
+
 
 DAT { test strings }
 
@@ -404,25 +389,31 @@ DAT { test strings }
 stringIdCt       BYTE    (@stringIdTableEnd-@stringIdTable) >> 1   ' div by 2
 ' ------------------------------------------------------------
 
-con   MAX_STRING_SIZE = (9*16)+1
-      MAX_STRINGS_WRITTEN = 10
-dat   testStrBuffer     BYTE    0[MAX_STRING_SIZE]
-      idxStringWritten     BYTE    0[MAX_STRINGS_WRITTEN]               ' index to strings in order written
+con
 
-pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | strIdx, pString, expectedFileSize, expectedFileBlocks, foundFileSize, rdLength, readWriteIdx, expectedLength, compareResult, pBlock
+    MAX_STRING_SIZE = (9*16)+1
+    MAX_STRINGS_WRITTEN = 30 ' we use 20 for tests, this is larger
+dat
+
+testStrBuffer       BYTE    0[MAX_STRING_SIZE]
+idxStringWritten    BYTE    0[MAX_STRINGS_WRITTEN]               ' index to strings in order written
+expectedStrFileSize LONG    0
+
+pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | strIdx, pString, readWriteIdx, expectedFileBlocks, pBlock
 
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := Flash.open(pFilename,"w")
     utils.evaluate(handle, Flash.SUCCESS)
-    utils.startTest(@"Write 10 STRINGs")
-    expectedFileSize := 0
-    repeat readWriteIdx from 0 to MAX_STRINGS_WRITTEN - 1
+
+    utils.startTest(@"Write N STRINGs")
+    expectedStrFileSize := 0
+    repeat readWriteIdx from 0 to count - 1
         strIdx := (GETRND() +// stringIdCt)
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
         BYTE[@idxStringWritten][readWriteIdx] := strIdx
-        expectedFileSize += strsize(pString) + 1
+        expectedStrFileSize += strsize(pString) + 1
         status := Flash.wr_str(handle, pString)
         utils.evaluateStatus(status, @"wr_str()", Flash.SUCCESS)
 
@@ -444,15 +435,67 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
     '}
 
     utils.showFileDetails(pFilename)
-    expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
+    expectedFileBlocks := utils.blockCountForFileSize(expectedStrFileSize)
     '  get filesystem stats and verify against expectation
-    utils.startTest(@"Ensure expected file system changes")
+    utils.startTest(@"Ensure expected file system changes post STRINGs write")
     utils.evaluateFSStats(@"post file write", startingFileCount + 1, startingBlockCount + expectedFileBlocks)
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
-    utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedFileSize)
+    utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedStrFileSize)
 
+
+pri testAppendStrings(pFilename, count, initialSize) | startLength, readWriteIdx, strIdx, pString, pBlock
+
+    utils.startTest(@"Get starting length before append of STRINGs")
+    startLength := Flash.file_size(pFilename)
+    status := Flash.error()
+    utils.evaluateStatus(handle, @"file_size()", Flash.SUCCESS)
+
+    '  open file for append
+    utils.startTest(@"Open File for append")
+    handle := Flash.open(pFilename,"a")
+    utils.evaluate(handle, Flash.SUCCESS)
+    '    seek to various locations and read longs validating for correct value
+
+    utils.startTest(@"Append N STRINGs")
+    repeat readWriteIdx from 10 to 10 + count - 1
+        strIdx := (GETRND() +// stringIdCt)
+        pString := WORD[@stringIdTable][strIdx] ' get ptr to string
+        BYTE[@idxStringWritten][readWriteIdx] := strIdx
+        expectedStrFileSize += strsize(pString) + 1
+        status := Flash.wr_str(handle, pString)
+        utils.evaluateStatus(status, @"wr_str()", Flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on append writes")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  close file
+    utils.startTest(@"Close append file")
+    status := Flash.Close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+{
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    if pBlock < 0
+        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
+    else
+        utils.dbgMemDump(@"Append WORDs file Head block", pBlock, 4096)
+        status := Flash.SUCCESS ' clear our temp use
+'}
+
+    utils.showFileDetails(pFilename)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats post STRINGs append")
+    utils.evaluateFileStats(pFilename, 1, expectedStrFileSize)
+
+    utils.startTest(@"Readback all strings and verify")
+    utils.evaluateFileStats(pFilename, 1, expectedStrFileSize)
+
+
+pri testVerifyAllStrings(pFilename, count) | foundFileSize,  strIdx, pString, readWriteIdx, expectedLength, rdLength, compareResult
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := Flash.open(pFilename,"r")
@@ -461,8 +504,8 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
 
     utils.startTest(@"read expected 10 STRINGs")
     foundFileSize := 0
-    repeat readWriteIdx from 0 to MAX_STRINGS_WRITTEN - 1
-         strIdx := BYTE[@idxStringWritten][readWriteIdx]
+    repeat readWriteIdx from 0 to count - 1
+        strIdx := BYTE[@idxStringWritten][readWriteIdx]
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
         ' the read call doesn't count terminator in length
         expectedLength := strsize(pString)

@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-'{
+{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -53,7 +53,7 @@ PUB go()
         return
 
     utils.ShowStats()                   ' should have empty filesystem
-    utils.ShowFiles()
+    utils.showFiles()
 
     utils.startTest(@"BAD: Read when file doesn't exist")
     handle := Flash.open(@testfile,"r")
@@ -83,7 +83,7 @@ PUB go()
 
     VerifyAddressedLongs(@testfile4, Flash.LONGS_IN_HEAD_BLOCK + (Flash.LONGS_IN_BODY_BLOCK * 2))
 
-    utils.ShowFiles()
+    utils.showFiles()
 
     'utils.dumpFileHeads()
 

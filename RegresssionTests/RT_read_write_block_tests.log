@@ -1,8 +1,7 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_905C jump
-Cog0  acquire_lock_and_mount() lowestValue = 10_474_066, lowestID = 0, myCogId = 0
+Cog0  INIT $0000_0EB8 $0000_9B44 jump
+Cog0  acquire_lock_and_mount() lowestValue = 10_960_364, lowestID = 0, myCogId = 0
 Cog0  * format()
-Cog0  * mount()
 Cog0  * mount()
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
@@ -25,18 +24,21 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #5: Ensure expected file system changes
 Cog0  * post file write
+Cog0    # FileSystem: 1, 3_967, 1
 Cog0    # files: 1
 Cog0    # blocks used: 1
 Cog0     -> pass
 Cog0
 Cog0  * Test #6: Ensure expected file stats
 Cog0    File: [rwblocks.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: HEAD/last, thisID=0, endPtr=$03F8, lifeCycle [active-3]
 Cog0    # blocks: 1
 Cog0    # bytes used: 880
 Cog0     -> pass
 Cog0
 Cog0  * Test #7: Ensure expected unused bytes stats
-Cog0    file_size_unused(): 3_148
+Cog0    file_size_unused(): 3_076
 Cog0     -> pass
 Cog0
 Cog0  * Test #8: Ensure no error on size unused call
@@ -72,7 +74,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #15: Write Records
-Cog0    Sub-Test Results: Pass: 46, Fail: 0
+Cog0    Sub-Test Results: Pass: 45, Fail: 0
 Cog0
 Cog0  * Test #16: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
@@ -84,18 +86,22 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #18: Ensure expected file system changes
 Cog0  * post file write
+Cog0    # FileSystem: 3, 3_965, 2
 Cog0    # files: 2
 Cog0    # blocks used: 3
 Cog0     -> pass
 Cog0
 Cog0  * Test #19: Ensure expected file stats
 Cog0    File: [rw2blocks.bin]
+Cog0    # 2 Blocks in file:
+Cog0      1: HEAD/more, thisID=1, nextId=2, lifeCycle [active-3]
+Cog0      2: BODY/last, thisID=2, endPtr=$0008, lifeCycle [active-3]
 Cog0    # blocks: 2
-Cog0    # bytes used: 4_048
+Cog0    # bytes used: 3_960
 Cog0     -> pass
 Cog0
 Cog0  * Test #20: Ensure expected unused bytes stats
-Cog0    file_size_unused(): 4_068
+Cog0    file_size_unused(): 4_084
 Cog0     -> pass
 Cog0
 Cog0  * Test #21: Ensure no error on size unused call
@@ -107,7 +113,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #23: read expected RECORDs
-Cog0    Sub-Test Results: Pass: 138, Fail: 0
+Cog0    Sub-Test Results: Pass: 135, Fail: 0
 Cog0
 Cog0  * Test #24: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
@@ -125,7 +131,7 @@ Cog0     -> pass
 Cog0
 Cog0    All Files:
 Cog0  rwblocks.bin, Bytes = 880, ID = 1, @Buff={binary data}
-Cog0  rw2blocks.bin, Bytes = 4_048, ID = 2, @Buff={binary data}
+Cog0  rw2blocks.bin, Bytes = 3_960, ID = 2, @Buff={binary data}
 Cog0
 Cog0  * Test #27: Open File for write
 Cog0     ECode: SUCCESS: No error
@@ -144,18 +150,23 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #31: Ensure expected file system changes
 Cog0  * post file write
+Cog0    # FileSystem: 6, 3_962, 3
 Cog0    # files: 3
-Cog0    # blocks used: 5
+Cog0    # blocks used: 6
 Cog0     -> pass
 Cog0
 Cog0  * Test #32: Ensure expected file stats
 Cog0    File: [rw3blocks.bin]
-Cog0    # blocks: 2
+Cog0    # 3 Blocks in file:
+Cog0      1: HEAD/more, thisID=3, nextId=4, lifeCycle [active-3]
+Cog0      2: BODY/more, thisID=4, nextId=5, lifeCycle [active-3]
+Cog0      3: BODY/last, thisID=5, endPtr=$0038, lifeCycle [active-3]
+Cog0    # blocks: 3
 Cog0    # bytes used: 8_096
 Cog0     -> pass
 Cog0
 Cog0  * Test #33: Ensure expected unused bytes stats
-Cog0    file_size_unused(): 20
+Cog0    file_size_unused(): 4_036
 Cog0     -> pass
 Cog0
 Cog0  * Test #34: Ensure no error on size unused call
@@ -185,7 +196,7 @@ Cog0     -> pass
 Cog0
 Cog0    All Files:
 Cog0  rwblocks.bin, Bytes = 880, ID = 1, @Buff={binary data}
-Cog0  rw2blocks.bin, Bytes = 4_048, ID = 2, @Buff={binary data}
+Cog0  rw2blocks.bin, Bytes = 3_960, ID = 2, @Buff={binary data}
 Cog0  rw3blocks.bin, Bytes = 8_096, ID = 4, @Buff={binary data}
 Cog0
 Cog0  * 39 Tests: , Pass: 42, Fail: 0

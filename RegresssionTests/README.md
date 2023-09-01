@@ -20,19 +20,18 @@ The Regression test coverage is nearly complete!  This table indicates which met
 | PUB unmount() | YES
 | PUB format() : status | YES
 | PUB error() : result | YES
-| PUB open(p_filename, mode) : handle | YES
-| PUB open\_circular\_read(p_filename, max_file_length) : handle 
-| PUB open\_read(p_filename) : handle | YES
-| PUB open\_write(p_filename) : handle | YES
-| PUB open\_circular\_append(p_filename, max_file_length) : handle |
-| PUB open\_append(p_filename) : handle
-| PUB open\_modify(p_filename) : handle
+| PUB open(p_filename,"r") : handle | YES
+| PUB open(p_filename,"w") : handle | YES
+| PUB open(p_filename,"a") : handle | YES
+| PUB open(p_filename,"r+") : handle |
+| PUB open\_circular(p_filename,"r") : handle |
+| PUB open\_circular(p_filename,"a") : handle |
+| PUB close(handle) : status | YES
 | PUB rename(p_old_filename, p_new_filename) : status | YES
 | PUB delete(p_filename) : status | YES
 | PUB exists(p_filename) : result | YES
 | PUB file\_size(p_filename) : size_in_bytes | YES
 | PUB file\_size_unused(p_filename) : size_in_bytes_unused | YES
-| PUB close(handle) : status | YES
 | PUB seek(handle, position) : result | YES
 | PUB write(handle, p_buffer, count) : result | YES
 | PUB wr_byte(handle, byteValue) : result | YES

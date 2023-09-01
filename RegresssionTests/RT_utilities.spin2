@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 29 AUG 2023
+''   Updated.... 31 AUG 2023
 ''
 '' =================================================================================================
 
@@ -102,6 +102,7 @@ pub evaluateValue(result, pMessage, expectedResult)
             debug("  Value: ", uhex_long_(result))
         debug("   -> ", zstr_(pPassFail))
 
+
 pub evaluateSingleValue(result, pMessage, expectedResult)
     bPassed := result == expectedResult
     pPassFail := !bPassed ? @"FAIL" : @"pass"
@@ -113,13 +114,60 @@ pub evaluateSingleValue(result, pMessage, expectedResult)
         passCount++
     debug("   -> ", zstr_(pPassFail))
 
-pub showFileDetails(pFilename) | bytes_used, bytes_free, block_count
-    bytes_used, bytes_free, block_count := Flash.test_count_file_bytes(pFilename)
-    debug("  File: [", zstr_(pFilename), "], ", udec(bytes_used, bytes_free, block_count))
+
+pub showFileDetails(pFilename) | bytesUsed, bytes_free, block_count
+    debug(" ")  ' blank line
+    'debug("* showFileDetails()...ENTRY")
+    bytesUsed, bytes_free, block_count := Flash.test_count_file_bytes(pFilename)
+    if bytesUsed < 0
+        debug("  File: [", zstr_(pFilename), "]")
+        debug("  # Error: ", zstr_(Flash.string_for_error(bytesUsed)))
+    else
+        debug("  File: [", zstr_(pFilename), "], ", udec(bytesUsed, bytes_free, block_count))
+    'debug("* showFileDetails()...EXIT")
+
+
+pub showFileSignatures(pFilename) | pSignatureAr, signatureCount, signature, signatureIdx, pBlockType, pLifeCycle, nextIdOrEndPtr, blockID
+    pSignatureAr, signatureCount := Flash.TEST_getFileBlockSignatures(pFilename)
+    if signatureCount > 0
+        debug("  # ", udec_(signatureCount), " Blocks in file:")
+        repeat signatureIdx from 0 to signatureCount -1
+            signature := LONG[pSignatureAr][signatureIdx]
+            nextIdOrEndPtr := signature.[31..20]
+            blockID := signature.[19..8]
+            case signature.[7..5]
+                %111:
+                  pLifeCycle := @"erased"
+                %001:
+                  pLifeCycle := @"canceled-1"
+                %010:
+                  pLifeCycle := @"canceled-2"
+                %100:
+                  pLifeCycle := @"canceled-4"
+                %000:
+                  pLifeCycle := @"canceled-0"
+                %011:
+                  pLifeCycle := @"active-3"
+                %101:
+                  pLifeCycle := @"active-5"
+                %110:
+                  pLifeCycle := @"active-6"
+            case signature.[1..0]
+                %00: pBlockType := @"HEAD/last"
+                %01: pBlockType := @"HEAD/more"
+                %10: pBlockType := @"BODY/last"
+                %11: pBlockType := @"BODY/more"
+            if signature.[0]
+                ' show more block
+                debug("    ", udec_(signatureIdx+1), ": ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
+            else
+                ' show last block
+                debug("    ", udec_(signatureIdx+1), ": ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
 
 pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount
     debug("* ", zstr_(pMessage))
     blocksUsed, blocksFree, fileCount := Flash.stats()
+    debug("  # FileSystem: ", udec_(blocksUsed, blocksFree, fileCount))
     bPassed := expectedFileCount == fileCount and expectedBlocksUsed == blocksUsed
     if fileCount <> expectedFileCount
         debug("  # files: ", udec_(fileCount), " (expected ", udec_(expectedFileCount), ")")
@@ -138,16 +186,21 @@ pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUse
 
 pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount
     debug("  File: [", zstr_(pFilename), "]")
+    showFileSignatures(pFilename)
     bytesUsed, bytesFree, blockCount := Flash.test_count_file_bytes(pFilename)
-    bPassed := expectedBlockCount == blockCount and expectedBytesUsed == bytesUsed
-    if blockCount <> expectedBlockCount
-        debug("  # blocks: ", udec_(blockCount), " (expected ", udec_(expectedBlockCount), ")")
+    if bytesUsed < 0
+        debug("  # Error: ", zstr_(Flash.string_for_error(bytesUsed)))
+        bPassed := false
     else
-        debug("  # blocks: ", udec_(blockCount))
-    if bytesUsed <> expectedBytesUsed
-        debug("  # bytes used: ", udec_(bytesUsed), " (expected ", udec_(expectedBytesUsed), ")")
-    else
-        debug("  # bytes used: ", udec_(bytesUsed))
+        bPassed := expectedBlockCount == blockCount and expectedBytesUsed == bytesUsed
+        if blockCount <> expectedBlockCount
+            debug("  # blocks: ", udec_(blockCount), " (expected ", udec_(expectedBlockCount), ")")
+        else
+            debug("  # blocks: ", udec_(blockCount))
+        if bytesUsed <> expectedBytesUsed
+            debug("  # bytes used: ", udec_(bytesUsed), " (expected ", udec_(expectedBytesUsed), ")")
+        else
+            debug("  # bytes used: ", udec_(bytesUsed))
     pPassFail := bPassed == false ? @"FAIL" : @"pass"
     if bPassed == false
         failCount++
@@ -164,7 +217,7 @@ pub ShowStats() | blocksUsed, blocksFree, fileCount
     debug(udec(blocksUsed, blocksFree, fileCount))
 
 
-pub ShowFiles() | ID, Bytes, byte Filename[128], byte Buff[30]
+pub showFiles() | ID, Bytes, byte Filename[128], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat

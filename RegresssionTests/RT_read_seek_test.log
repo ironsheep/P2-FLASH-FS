@@ -1,8 +1,7 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_9298 jump
-Cog0  acquire_lock_and_mount() lowestValue = 10_656_251, lowestID = 0, myCogId = 0
+Cog0  INIT $0000_0EB8 $0000_9D34 jump
+Cog0  acquire_lock_and_mount() lowestValue = 11_683_458, lowestID = 0, myCogId = 0
 Cog0  * format()
-Cog0  * mount()
 Cog0  * mount()
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
@@ -25,24 +24,28 @@ Cog0     ECode: E_FILE_MODE: file not opened in desired mode
 Cog0     -> pass
 Cog0
 Cog0  * Test #4: Write head block full of longs
-Cog0     Code: SUCCESS: No error
+Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #5: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
-Cog0    File: [seekLongs.bin], bytes_used = 4_028, bytes_free = 0, block_count = 1
+Cog0
+Cog0    File: [seekLongs.bin], bytesUsed = 3_956, bytes_free = 0, block_count = 1
 Cog0
 Cog0  * Test #6: Ensure expected file system changes
 Cog0  * post file write
+Cog0    # FileSystem: 1, 3_967, 1
 Cog0    # files: 1
 Cog0    # blocks used: 1
 Cog0     -> pass
 Cog0
 Cog0  * Test #7: Ensure expected file stats
 Cog0    File: [seekLongs.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: HEAD/last, thisID=0, endPtr=$0FFC, lifeCycle [active-3]
 Cog0    # blocks: 1
-Cog0    # bytes used: 4_028
+Cog0    # bytes used: 3_956
 Cog0     -> pass
 Cog0
 Cog0  * Test #8: Open File for read
@@ -97,18 +100,23 @@ Cog0
 Cog0  * Test #20: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
-Cog0    File: [seekLongs2blk.bin], bytes_used = 4_036, bytes_free = 4_080, block_count = 2
+Cog0
+Cog0    File: [seekLongs2blk.bin], bytesUsed = 3_964, bytes_free = 4_080, block_count = 2
 Cog0
 Cog0  * Test #21: Ensure expected file system changes
 Cog0  * post file write
+Cog0    # FileSystem: 3, 3_965, 2
 Cog0    # files: 2
 Cog0    # blocks used: 3
 Cog0     -> pass
 Cog0
 Cog0  * Test #22: Ensure expected file stats
 Cog0    File: [seekLongs2blk.bin]
+Cog0    # 2 Blocks in file:
+Cog0      1: HEAD/more, thisID=1, nextId=2, lifeCycle [active-3]
+Cog0      2: BODY/last, thisID=2, endPtr=$000C, lifeCycle [active-3]
 Cog0    # blocks: 2
-Cog0    # bytes used: 4_036
+Cog0    # bytes used: 3_964
 Cog0     -> pass
 Cog0
 Cog0  * Test #23: Open File for read
@@ -163,18 +171,24 @@ Cog0
 Cog0  * Test #35: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
-Cog0    File: [seekLongs3blk.bin], bytes_used = 8_124, bytes_free = 4_080, block_count = 3
+Cog0
+Cog0    File: [seekLongs3blk.bin], bytesUsed = 8_052, bytes_free = 4_080, block_count = 3
 Cog0
 Cog0  * Test #36: Ensure expected file system changes
 Cog0  * post file write
+Cog0    # FileSystem: 6, 3_962, 3
 Cog0    # files: 3
 Cog0    # blocks used: 6
 Cog0     -> pass
 Cog0
 Cog0  * Test #37: Ensure expected file stats
 Cog0    File: [seekLongs3blk.bin]
+Cog0    # 3 Blocks in file:
+Cog0      1: HEAD/more, thisID=3, nextId=4, lifeCycle [active-3]
+Cog0      2: BODY/more, thisID=4, nextId=5, lifeCycle [active-3]
+Cog0      3: BODY/last, thisID=5, endPtr=$000C, lifeCycle [active-3]
 Cog0    # blocks: 3
-Cog0    # bytes used: 8_124
+Cog0    # bytes used: 8_052
 Cog0     -> pass
 Cog0
 Cog0  * Test #38: Open File for read
@@ -229,18 +243,24 @@ Cog0
 Cog0  * Test #50: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
-Cog0    File: [seekLongs3blkFull.bin], bytes_used = 12_204, bytes_free = 0, block_count = 3
+Cog0
+Cog0    File: [seekLongs3blkFull.bin], bytesUsed = 12_132, bytes_free = 0, block_count = 3
 Cog0
 Cog0  * Test #51: Ensure expected file system changes
 Cog0  * post file write
+Cog0    # FileSystem: 9, 3_959, 4
 Cog0    # files: 4
 Cog0    # blocks used: 9
 Cog0     -> pass
 Cog0
 Cog0  * Test #52: Ensure expected file stats
 Cog0    File: [seekLongs3blkFull.bin]
+Cog0    # 3 Blocks in file:
+Cog0      1: HEAD/more, thisID=6, nextId=7, lifeCycle [active-3]
+Cog0      2: BODY/more, thisID=7, nextId=8, lifeCycle [active-3]
+Cog0      3: BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [active-3]
 Cog0    # blocks: 3
-Cog0    # bytes used: 12_204
+Cog0    # bytes used: 12_132
 Cog0     -> pass
 Cog0
 Cog0  * Test #53: Open File for read
@@ -277,10 +297,10 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    All Files:
-Cog0  seekLongs.bin, Bytes = 4_028, ID = 1, @Buff={binary data}
-Cog0  seekLongs2blk.bin, Bytes = 4_036, ID = 2, @Buff={binary data}
-Cog0  seekLongs3blk.bin, Bytes = 8_124, ID = 4, @Buff={binary data}
-Cog0  seekLongs3blkFull.bin, Bytes = 12_204, ID = 7, @Buff={binary data}
+Cog0  seekLongs.bin, Bytes = 3_956, ID = 1, @Buff={binary data}
+Cog0  seekLongs2blk.bin, Bytes = 3_964, ID = 2, @Buff={binary data}
+Cog0  seekLongs3blk.bin, Bytes = 8_052, ID = 4, @Buff={binary data}
+Cog0  seekLongs3blkFull.bin, Bytes = 12_132, ID = 7, @Buff={binary data}
 Cog0
 Cog0  * 61 Tests: , Pass: 61, Fail: 0
 Cog0  * Test Complete

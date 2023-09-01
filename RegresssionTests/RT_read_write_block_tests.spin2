@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-'{
+{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -27,6 +27,7 @@ OBJ
 
 CON
     RECORD_LEN = 88 ' just for fun, tiny but even number of longs
+'---+---+-------+---+-----------+-----------+-----------+-----------+-----------+
     RECORD_DATA_LEN = RECORD_LEN - 12
 DAT
 
@@ -55,7 +56,7 @@ PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern
         return
 
     utils.ShowStats()                                   ' should have empty filesystem
-    utils.ShowFiles()
+    utils.showFiles()
 
     testWriteRecords(@testfile, 10, 1, 0)
     testWriteRecords(@testfile2, 45, 2, 1)                 ' tail last record in 2nd block
@@ -167,7 +168,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     status := Flash.Close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
-    utils.ShowFiles()
+    utils.showFiles()
 
 
 
