@@ -73,9 +73,15 @@ Key Constants in the file describe:
 
 **Block Placement** - to aid in wear leveling, all 4k block locations are randomly chosen
 
+**Cancel a block** - Blocks in the file system have a life-cycle indication. When a block is to be freed/excluded from being part of a file. Then the block's life-cycle is written as %000 (3 bits of zero) This marks the block as available for use.
+
+**Commit chain** - a set of file writes that upon close will become a new file, replace an existing file, or will replace the tail of an existing file.
+
 **Flash Erase** - the Flash chip supports erasing a block at a time. A block is 4096 bytes. An erase of a block returns all bits of the block to 1 ($FF in all bytes of the block)
 
 **Flash Write** - a flash write only changes 1 bits to 0's. If a bit is 0 it can not be changed until the block containing it is erased at which the time bit becomes 1 once again.
+
+**Life Cycle** - a 3-bit field within each of our blocks that indicates precedence of blocks having the same **block ID**.
 
 ## File System Block Types and Formats of these Blocks
 
@@ -163,14 +169,13 @@ A file made up of these blocks can exist in one of three shapes:
 
 **NOTE2**: Given this block-type composition of our files, our flash chip using this system can contain a **maximum** of 3,968 **files** ea. 1 block, 3,956 bytes each.
 
-#### File open Modes
+#### File open(filename, mode) Supported Modes
 
 | Open Mode | supports seek() | description |
 | --- | --- | ---|
-| read ["r", "R"] | YES | Read from an **existing file**,<BR>Supports direct access via seek() |
-| write ["w", "W"]  | no | Write to a **new file**, creating it (or write to an **existing file**, replacing it))<br>use `if exists(@"filename") ...` to avoid overwriting an <BR>existing file |
-| append ["a", "A"]  | no | Write to an **existing file**, extending the existing file |
-| modify  ["rw", "RW"] | YES | Open an **existing file** for reads, or writes within the file,<BR> or writes that extend the file.<BR>Supports direct access via seek() |
+| <pre>read ["r", "R"]</pre>  | YES | Read from an **existing file**,<BR>Supports direct access via seek() |
+| <pre>write ["w", "W"]</pre>   | no | Write to a **new file**, creating it (or write to an **existing file**, replacing it))<br>use `if exists(@"filename") ...` to avoid overwriting an <BR>existing file |
+| <pre>append ["a", "A"]</pre> | no | Write to an **existing file**, extending the existing file. If the file didn't exist then this becomes a write ["w", "W"]  |
 
 
 #### Writing to a File
@@ -190,13 +195,36 @@ The less frequent case is when we append to a file that contains less than 3,956
 
 - **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File" (above.)
 
-#### Seeking within an existing File
+#### BEHAVIOR: Writing, Replacing, Appending
 
-Seeking within an existing file is supported without any control structures being recorded/or updated within the file itself. A seek pointer is maintained for the open file handle. When a seek is requested the location is stored in the handle state data and the block underlying that location is loaded into the handle's buffer. When a read or write follows the seek the seek pointer is updated with the length of the data read or written. If a write occurred the buffer is marked as needing to be rewritten. If a close or a seek to an out-of-buffer location occurs the buffer will be written replacing the original block with the new. Then the block at the new seek location will be loaded in the handle's buffer.
+When a file is opened for sequential writing all the writes are accumulated into what we call a "commit chain". As a commit chain block fills it is written to the filesystem. Upon close the last block is written to the filesystem. Lastly, the commit chain head block is activated. If there was a prior file (we are overwriting or appending) then the commit head block will supercede the prior files block and the prior block(s) will be deleted. If the power fails just before the head  is activated, the block will be discovered (block of same ID but with newer lifecycle) at mount and the older block will be canceled during the mount.
 
-#### Treating a file as a circular buffer
+##### Actions unique to open() mode
+
+When we **open(filename, "W")** and **there is no prior file** (Write) then we are creating a new file. In this case there is no prior block to be replaced at close.
+
+
+When we **open(filename, "W")** and a **prior file DOES exist** (Replace) then we are also creating a new file but upon close we are replacing the prior file, deleting all the blocks associated with the prior file.
+
+When we **open(filename, "A")** and **there is no prior file** (Write) then we are creating a new file. In this case there is no prior block to be replaced at close.
+
+When we **open(filename, "A")** and a **prior file DOES exist** (Append) then we are opening the file, seeking to the end and then writing bytes beyond the end of the original file. Upon close the commit head block will be activated to replace the tail block of the original file.
+
+
+#### BEHAVIOR: Seeking within an existing File opened for Read
+
+Seeking within an existing file is supported without any control structures being recorded/or updated within the file itself. A seek pointer is maintained for the open file handle. When a seek is requested the location is stored in the handle state data and the block underlying that location is loaded into the handle's buffer. When a read follows the seek the seek pointer is updated with the length of the data read.
+
+#### BEHAVIOR: Treating a file as a Circular Buffer
 
 Maintaining an existing file in a circular fashion is supported without any control structures being recorded/or updated within the file itself.  We are implementing this very simply, two new open methods provide the functionality. When **opening for append** or **opening for read** you will **specify the max length of the file** (logically, when you want it to wrap.)  We accomplish the wrap by always appending to the end of the file and removing the head block keeping the file at your desired fixed length. Let's look at this in slightly more detail.
+
+##### File open_circular(filename, mode, max\_file\_length) supported Modes
+
+| Open_circular() Mode | supports seek() | description |
+| --- | --- | ---|
+| read ["r", "R"] | YES | Read from an **existing file**, first byte read is exactly max\_file\_length from the end of the file (Allocated space will be max\_file\_length rounded up to end of block) Or it will be from first byte if file has not yet grown to max\_file\_length. |
+| append ["a", "A"]  | no | Write to an **existing file**, extending the existing file. If the file didn't exist it will be created |
 
 Under the covers this circular behavior affect reads and writes. When **opened for read as circular** the first data returned will be from the front of the file unless the file has reached the max size. If it has then the first data returned will instead be the data at the (file length - max size) offet (The front of your circular buffer.)
 
@@ -291,15 +319,24 @@ This is the way we treat this table as a contiguous allocation of 2-bit variable
 
 ## Tracking Data (Open Files)
 
-For each open file (handle) we maintain the following information:
+For each open file (handle) teh driver maintains the following information:
 
-- Handle status
-- Handle HeadID
-- Handle HeadBlock
-- Handle HeadCycle
-- Handle BlockPtr
-- Handle Block Buffer
-- Handle Filename
+| Name |Allocation | Purpose | Notes
+| --- | --- | --- | --- |
+| | **File State tracking**
+| hStatus | BYTE    0[MAX\_FILES_OPEN] | handle: status [H\_READ, H\_WRITE, H\_REPLACE, 0 not in use]| 1 byte
+| hHeadBlockAddr | WORD    0[MAX\_FILES_OPEN] | handle: first block_address of file chain | 2 bytes
+| hEndPtr | WORD    0[MAX\_FILES_OPEN] | handle: pointer to next write byte in block (or $FFC if block full) | 2 bytes
+| hFilename | BYTE    0[MAX\_FILES_OPEN * FILENAME\_SIZE] | handle: 127+1 byte buffer for filename | 128 bytes
+| hBlockBuff | BYTE    0[MAX\_FILES_OPEN * BLOCK\_SIZE] | handle: 4KB buffer for file data | <pre>4096 bytes</pre>
+| | **Commit-chain tracking**
+| hChainBlockID | WORD    0[MAX\_FILES_OPEN] | handle: first blockID of commit chain | 2 bytes
+| hChainBlockAddr | WORD    0[MAX\_FILES_OPEN] | handle: first block_address of commit chain | 2 bytes
+| hChainLifeCycle | BYTE    0[MAX\_FILES_OPEN] | handle: first block lifecycle (cycle value for replacement first block of commit chain) | 1 byte
+| | **Special Mode tracking**<br>**(Seeking, Circular files)**
+| hSeekPtr | WORD    NOT\_ENABLED[MAX\_FILES_OPEN] | handle: seek address within active block | 2 bytes
+| hCircularLength | WORD    NOT\_ENABLED[MAX\_FILES_OPEN] | handle: circular buffer length in max blocks | 2 bytes
+| | | | **4,238 bytes / handle**
 
 
 ## The Mount Process [M]
