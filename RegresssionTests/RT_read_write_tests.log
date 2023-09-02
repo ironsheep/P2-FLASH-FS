@@ -1,6 +1,6 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_A7A8 jump
-Cog0  acquire_lock_and_mount() lowestValue = 11_986_284, lowestID = 0, myCogId = 0
+Cog0  INIT $0000_0EB8 $0000_A97C jump
+Cog0  acquire_lock_and_mount() lowestValue = 11_759_185, lowestID = 0, myCogId = 0
 Cog0  * format()
 Cog0  * mount()
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
@@ -24,24 +24,29 @@ Cog0  Driver: flash_fs v1.2.0
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
-Cog0  * Test Group: Head block only - partially filled with 10 BYTEs
+Cog0  * Test Group: Head block only - partially filled with 5 BYTEs
 Cog0
 Cog0  * Test #4: Open File for write
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #5: Write N BYTEs
-Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0    Sub-Test Results: Pass: 5, Fail: 0
 Cog0
 Cog0  * Test #6: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
+Cog0    File: [rw10bytes.bin] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] HEAD/last, thisID=0, endPtr=$008D, lifeCycle [erased]
+Cog0
 Cog0  * Test #7: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [rw10bytes.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
+Cog0    File: [rw10bytes.bin], bytesUsed = 5, bytes_free = 3_951, block_count = 1
 Cog0
 Cog0  * Test #8: Ensure expected file system changes
 Cog0  * post file write
@@ -53,27 +58,92 @@ Cog0
 Cog0  * Test #9: Ensure expected file stats
 Cog0    File: [rw10bytes.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: HEAD/last, thisID=0, endPtr=$0092, lifeCycle [active-3]
+Cog0      1: [$00B2] HEAD/last, thisID=0, endPtr=$008D, lifeCycle [active-3]
 Cog0    # blocks: 1
-Cog0    # bytes used: 10
+Cog0    # bytes used: 5
 Cog0     -> pass
 Cog0
 Cog0  * Test #10: Open File for read
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #11: read expected N BYTEs
-Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0    Sub-Test Results: Pass: 5, Fail: 0
 Cog0
 Cog0  * Test #12: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #13: BAD: read one more BYTE than written
-Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
 Cog0  * Test #14: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  rw10bytes.bin, Bytes = 5, ID = 1, @Buff={binary data}
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Head block only (replace file) - partially filled with 10 BYTEs
+Cog0
+Cog0  * Test #15: Open File for write
+Cog0  new_handle() = handle = 0
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #16: Write N BYTEs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #17: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [rw10bytes.bin] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [erased]
+Cog0
+Cog0  * Test #18: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [rw10bytes.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
+Cog0
+Cog0  * Test #19: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # FileSystem: 1, 3_967, 1
+Cog0    # files: 1
+Cog0    # blocks used: 1
+Cog0     -> pass
+Cog0
+Cog0  * Test #20: Ensure expected file stats
+Cog0    File: [rw10bytes.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: [$0129] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [active-5]
+Cog0    # blocks: 1
+Cog0    # bytes used: 10
+Cog0     -> pass
+Cog0
+Cog0  * Test #21: Open File for read
+Cog0  new_handle() = handle = 0
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #22: read expected N BYTEs
+Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0
+Cog0  * Test #23: ensure no errors on reads
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #24: BAD: read one more BYTE than written
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #25: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -84,54 +154,60 @@ Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block only - partially filled with 9 WORDs
 Cog0
-Cog0  * Test #15: Open File for write
+Cog0  * Test #26: Open File for write
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #16: Write N WORDs
+Cog0  * Test #27: Write N WORDs
 Cog0    Sub-Test Results: Pass: 9, Fail: 0
 Cog0
-Cog0  * Test #17: ensure no errors on writes
+Cog0  * Test #28: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #18: Close written file
+Cog0    File: [rw9words.bin] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [erased]
+Cog0
+Cog0  * Test #29: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw9words.bin], bytesUsed = 18, bytes_free = 3_938, block_count = 1
 Cog0
-Cog0  * Test #19: Ensure expected file system changes
+Cog0  * Test #30: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 2, 3_966, 2
 Cog0    # files: 2
 Cog0    # blocks used: 2
 Cog0     -> pass
 Cog0
-Cog0  * Test #20: Ensure expected file stats
+Cog0  * Test #31: Ensure expected file stats
 Cog0    File: [rw9words.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: HEAD/last, thisID=1, endPtr=$009A, lifeCycle [active-3]
+Cog0      1: [$051D] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [active-3]
 Cog0    # blocks: 1
 Cog0    # bytes used: 18
 Cog0     -> pass
 Cog0
-Cog0  * Test #21: Open File for read
+Cog0  * Test #32: Open File for read
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #22: read expected N WORDs
+Cog0  * Test #33: read expected N WORDs
 Cog0    Sub-Test Results: Pass: 9, Fail: 0
 Cog0
-Cog0  * Test #23: ensure no errors on reads
+Cog0  * Test #34: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #24: BAD: read one more WORD than written
-Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0  * Test #35: BAD: read one more WORD than written
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #25: Close read file
+Cog0  * Test #36: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -139,61 +215,67 @@ Cog0    All Files:
 Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
 Cog0  rw9words.bin, Bytes = 18, ID = 2, @Buff={binary data}
 Cog0
-Cog0  * Test #26: Ensure we have 2 files written so far
+Cog0  * Test #37: Ensure we have 2 files written so far
 Cog0     -> pass
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block only - partially filled with 12 LONGs
 Cog0
-Cog0  * Test #27: Open File for write
+Cog0  * Test #38: Open File for write
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #28: Write N LONGs
+Cog0  * Test #39: Write N LONGs
 Cog0    Sub-Test Results: Pass: 12, Fail: 0
 Cog0
-Cog0  * Test #29: ensure no errors on writes
+Cog0  * Test #40: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #30: Close written file
+Cog0    File: [rw12longs.bin] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [erased]
+Cog0
+Cog0  * Test #41: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw12longs.bin], bytesUsed = 48, bytes_free = 3_908, block_count = 1
 Cog0
-Cog0  * Test #31: Ensure expected file system changes
+Cog0  * Test #42: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 3, 3_965, 3
 Cog0    # files: 3
 Cog0    # blocks used: 3
 Cog0     -> pass
 Cog0
-Cog0  * Test #32: Ensure expected file stats
+Cog0  * Test #43: Ensure expected file stats
 Cog0    File: [rw12longs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [active-3]
+Cog0      1: [$071A] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [active-3]
 Cog0    # blocks: 1
 Cog0    # bytes used: 48
 Cog0     -> pass
 Cog0
-Cog0  * Test #33: Open File for read
+Cog0  * Test #44: Open File for read
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #34: read expected LONGs
+Cog0  * Test #45: read expected LONGs
 Cog0    Sub-Test Results: Pass: 12, Fail: 0
 Cog0
-Cog0  * Test #35: ensure no errors on reads
+Cog0  * Test #46: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #36: BAD: read one more LONG than written
-Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0  * Test #47: BAD: read one more LONG than written
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #37: Close read file
+Cog0  * Test #48: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -202,61 +284,67 @@ Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
 Cog0  rw9words.bin, Bytes = 18, ID = 2, @Buff={binary data}
 Cog0  rw12longs.bin, Bytes = 48, ID = 3, @Buff={binary data}
 Cog0
-Cog0  * Test #38: Ensure we have 3 files written so far
+Cog0  * Test #49: Ensure we have 3 files written so far
 Cog0     -> pass
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block only - partially filled with 10 STRINGs
 Cog0
-Cog0  * Test #39: Open File for write
+Cog0  * Test #50: Open File for write
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #40: Write 10 STRINGs
+Cog0  * Test #51: Write 10 STRINGs
 Cog0    Sub-Test Results: Pass: 10, Fail: 0
 Cog0
-Cog0  * Test #41: ensure no errors on writes
+Cog0  * Test #52: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #42: Close written file
+Cog0    File: [rw10strings.zstr] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] HEAD/last, thisID=3, endPtr=$0165, lifeCycle [erased]
+Cog0
+Cog0  * Test #53: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [rw10strings.zstr], bytesUsed = 132, bytes_free = 3_824, block_count = 1
+Cog0    File: [rw10strings.zstr], bytesUsed = 221, bytes_free = 3_735, block_count = 1
 Cog0
-Cog0  * Test #43: Ensure expected file system changes
+Cog0  * Test #54: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 4, 3_964, 4
 Cog0    # files: 4
 Cog0    # blocks used: 4
 Cog0     -> pass
 Cog0
-Cog0  * Test #44: Ensure expected file stats
+Cog0  * Test #55: Ensure expected file stats
 Cog0    File: [rw10strings.zstr]
 Cog0    # 1 Blocks in file:
-Cog0      1: HEAD/last, thisID=3, endPtr=$010C, lifeCycle [active-3]
+Cog0      1: [$0DB6] HEAD/last, thisID=3, endPtr=$0165, lifeCycle [active-3]
 Cog0    # blocks: 1
-Cog0    # bytes used: 132
+Cog0    # bytes used: 221
 Cog0     -> pass
 Cog0
-Cog0  * Test #45: Open File for read
+Cog0  * Test #56: Open File for read
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #46: read expected 10 STRINGs
+Cog0  * Test #57: read expected 10 STRINGs
 Cog0    Sub-Test Results: Pass: 20, Fail: 0
 Cog0
-Cog0  * Test #47: ensure no errors on reads
+Cog0  * Test #58: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #48: BAD: read one more STRING than written
-Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0  * Test #59: BAD: read one more STRING than written
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #49: Close read file
+Cog0  * Test #60: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -264,112 +352,63 @@ Cog0    All Files:
 Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
 Cog0  rw9words.bin, Bytes = 18, ID = 2, @Buff={binary data}
 Cog0  rw12longs.bin, Bytes = 48, ID = 3, @Buff={binary data}
-Cog0  rw10strings.zstr, Bytes = 132, ID = 4, @Buff={binary data}
+Cog0  rw10strings.zstr, Bytes = 221, ID = 4, @Buff={binary data}
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block only - filled with LONGs
 Cog0
-Cog0  * Test #50: Open File for write
+Cog0  * Test #61: Open File for write
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #51: Write N LONGs
+Cog0  * Test #62: Write N LONGs
 Cog0    Sub-Test Results: Pass: 989, Fail: 0
 Cog0
-Cog0  * Test #52: ensure no errors on writes
+Cog0  * Test #63: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #53: Close written file
+Cog0    File: [fullHeadLongs.bin] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] HEAD/last, thisID=4, endPtr=$0FFC, lifeCycle [erased]
+Cog0
+Cog0  * Test #64: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [fullHeadLongs.bin], bytesUsed = 3_956, bytes_free = 0, block_count = 1
 Cog0
-Cog0  * Test #54: Ensure expected file system changes
+Cog0  * Test #65: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 5, 3_963, 5
 Cog0    # files: 5
 Cog0    # blocks used: 5
 Cog0     -> pass
 Cog0
-Cog0  * Test #55: Ensure expected file stats
+Cog0  * Test #66: Ensure expected file stats
 Cog0    File: [fullHeadLongs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: HEAD/last, thisID=4, endPtr=$0FFC, lifeCycle [active-3]
+Cog0      1: [$00D9] HEAD/last, thisID=4, endPtr=$0FFC, lifeCycle [active-3]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_956
 Cog0     -> pass
 Cog0
-Cog0  * Test #56: Open File for read
+Cog0  * Test #67: Open File for read
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0  * Test #57: read expected LONGs
-Cog0    Sub-Test Results: Pass: 989, Fail: 0
-Cog0
-Cog0  * Test #58: ensure no errors on reads
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0  * Test #59: BAD: read one more LONG than written
-Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
-Cog0     -> pass
-Cog0
-Cog0  * Test #60: Close read file
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0
-Cog0   ------------------------------------------------------------
-Cog0  * Test Group: Head block + body block - filled with LONGs full head + 2
-Cog0
-Cog0  * Test #61: Open File for write
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0  * Test #62: Write N LONGs
-Cog0    Sub-Test Results: Pass: 991, Fail: 0
-Cog0
-Cog0  * Test #63: ensure no errors on writes
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0  * Test #64: Close written file
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0    File: [moreThanHeadLongs.bin], bytesUsed = 3_964, bytes_free = 4_080, block_count = 2
-Cog0
-Cog0  * Test #65: Ensure expected file system changes
-Cog0  * post file write
-Cog0    # FileSystem: 7, 3_961, 6
-Cog0    # files: 6
-Cog0    # blocks used: 7
-Cog0     -> pass
-Cog0
-Cog0  * Test #66: Ensure expected file stats
-Cog0    File: [moreThanHeadLongs.bin]
-Cog0    # 2 Blocks in file:
-Cog0      1: HEAD/more, thisID=5, nextId=6, lifeCycle [active-3]
-Cog0      2: BODY/last, thisID=6, endPtr=$000C, lifeCycle [active-3]
-Cog0    # blocks: 2
-Cog0    # bytes used: 3_964
-Cog0     -> pass
-Cog0
-Cog0  * Test #67: Open File  for reCog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #68: read expected LONGs
-Cog0    Sub-Test Results: Pass: 991, Fail: 0
+Cog0    Sub-Test Results: Pass: 989, Fail: 0
 Cog0
 Cog0  * Test #69: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #70: BAD: read one more LONG than written
-Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
 Cog0  * Test #71: Close read file
@@ -378,58 +417,131 @@ Cog0     -> pass
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
-Cog0  * Test Group: Head block + body block * 2 - filled with LONGs full head, full body, + 2
+Cog0  * Test Group: Head block + body block - filled with LONGs full head + 2
 Cog0
 Cog0  * Test #72: Open File for write
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #73: Write N LONGs
-Cog0    Sub-Test Results: Pass: 2_013, Fail: 0
+Cog0    Sub-Test Results: Pass: 991, Fail: 0
 Cog0
 Cog0  * Test #74: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
+Cog0    File: [moreThanHeadLongs.bin] pending commit
+Cog0  TEST_getCommitBlockSignatures() head block
+Cog0    # 2 Blocks in chain:
+Cog0      1: [$00D0] HEAD/more, thisID=5, nextId=6, lifeCycle [erased]
+Cog0      2: [$0000] BODY/last, thisID=6, endPtr=$000C, lifeCycle [erased]
+Cog0
 Cog0  * Test #75: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [moreThanHeadBodyLongs.bin], bytesUsed = 8_052, bytes_free = 4_080, block_count = 3
+Cog0    File: [moreThanHeadLongs.bin], bytesUsed = 3_964, bytes_free = 4_080, block_count = 2
 Cog0
 Cog0  * Test #76: Ensure expected file system changes
 Cog0  * post file write
-Cog0    # FileSystem: 10, 3_958, 7
-Cog0    # files: 7
-Cog0    # blocks used: 10
+Cog0    # FileSystem: 7, 3_961, 6
+Cog0    # files: 6
+Cog0    # blocks used: 7
 Cog0     -> pass
 Cog0
 Cog0  * Test #77: Ensure expected file stats
-Cog0    File: [moreThanHeadBodyLongs.bin]
-Cog0    # 3 Blocks in file:
-Cog0      1: HEAD/more, thisID=7, nextId=8, lifeCycle [active-3]
-Cog0      2: BODY/more, thisID=8, nextId=9, lifeCycle [active-3]
-Cog0      3: BODY/last, thisID=9, endPtr=$000C, lifeCycle [active-3]
-Cog0    # blocks: 3
-Cog0    # bytes used: 8_052
+Cog0    File: [moreThanHeadLongs.bin]
+Cog0    # 2 Blocks in file:
+Cog0      1: [$00D0] HEAD/more, thisID=5, nextId=6, lifeCycle [active-3]
+Cog0      2: [$0B56] BODY/last, thisID=6, endPtr=$000C, lifeCycle [active-3]
+Cog0    # blocks: 2
+Cog0    # bytes used: 3_964
 Cog0     -> pass
 Cog0
 Cog0  * Test #78: Open File for read
+Cog0  new_handle() = handle = 0
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #79: read expected LONGs
-Cog0    Sub-Test Results: Pass: 2_013, Fail: 0
+Cog0    Sub-Test Results: Pass: 991, Fail: 0
 Cog0
 Cog0  * Test #80: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #81: BAD: read one more LONG than written
-Cog0     ECode: E_END_OF_FILE: no more data avaiable, at end of file
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
 Cog0  * Test #82: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Head block + body block * 2 - filled with LONGs full head, full body, + 2
+Cog0
+Cog0  * Test #83: Open File for write
+Cog0  new_handle() = handle = 0
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #84: Write N LONGs
+Cog0    Sub-Test Results: Pass: 2_013, Fail: 0
+Cog0
+Cog0  * Test #85: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [moreThanHeadBodyLongs.bin] pending commit
+Cog0  TEST_getCommitBlockSignatures() head block
+Cog0    # 3 Blocks in chain:
+Cog0      1: [$00F7] HEAD/more, thisID=7, nextId=8, lifeCycle [erased]
+Cog0      2: [$012C] BODY/more, thisID=8, nextId=9, lifeCycle [active-3]
+Cog0      3: [$0000] BODY/last, thisID=9, endPtr=$000C, lifeCycle [erased]
+Cog0
+Cog0  * Test #86: Close written file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [moreThanHeadBodyLongs.bin], bytesUsed = 8_052, bytes_free = 4_080, block_count = 3
+Cog0
+Cog0  * Test #87: Ensure expected file system changes
+Cog0  * post file write
+Cog0    # FileSystem: 10, 3_958, 7
+Cog0    # files: 7
+Cog0    # blocks used: 10
+Cog0     -> pass
+Cog0
+Cog0  * Test #88: Ensure expected file stats
+Cog0    File: [moreThanHeadBodyLongs.bin]
+Cog0    # 3 Blocks in file:
+Cog0      1: [$00F7] HEAD/more, thisID=7, nextId=8, lifeCycle [active-3]
+Cog0      2: [$012C] BODY/more, thisID=8, nextId=9, lifeCycle [active-3]
+Cog0      3: [$0F1C] BODY/last, thisID=9, endPtr=$000C, lifeCycle [active-3]
+Cog0    # blocks: 3
+Cog0    # bytes used: 8_052
+Cog0     -> pass
+Cog0
+Cog0  * Test #89: Open File for read
+Cog0  new_handle() = handle = 0
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #90: read expected LONGs
+Cog0    Sub-Test Results: Pass: 2_013, Fail: 0
+Cog0
+Cog0  * Test #91: ensure no errors on reads
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #92: BAD: read one more LONG than written
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #93: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -437,10 +549,10 @@ Cog0    All Files:
 Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
 Cog0  rw9words.bin, Bytes = 18, ID = 2, @Buff={binary data}
 Cog0  rw12longs.bin, Bytes = 48, ID = 3, @Buff={binary data}
-Cog0  rw10strings.zstr, Bytes = 132, ID = 4, @Buff={binary data}
+Cog0  rw10strings.zstr, Bytes = 221, ID = 4, @Buff={binary data}
 Cog0  fullHeadLongs.bin, Bytes = 3_956, ID = 5, @Buff={binary data}
 Cog0  moreThanHeadLongs.bin, Bytes = 3_964, ID = 6, @Buff={binary data}
 Cog0  moreThanHeadBodyLongs.bin, Bytes = 8_052, ID = 8, @Buff={binary data}
 Cog0
-Cog0  * 82 Tests: , Pass: 82, Fail: 0
+Cog0  * 93 Tests: , Pass: 93, Fail: 0
 Cog0  * Test Complete

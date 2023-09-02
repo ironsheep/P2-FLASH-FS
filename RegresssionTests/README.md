@@ -26,6 +26,7 @@ The Regression test coverage is nearly complete!  This table indicates which met
 | PUB open(p_filename,"r+") : handle |
 | PUB open\_circular(p_filename,"r") : handle |
 | PUB open\_circular(p_filename,"a") : handle |
+| PUB flush(handle) : status |
 | PUB close(handle) : status | YES
 | PUB rename(p_old_filename, p_new_filename) : status | YES
 | PUB delete(p_filename) : status | YES
@@ -90,7 +91,7 @@ This is a recap of the version history of these files:
 |  <PRE>2023-Aug-27</PRE> | More Tests: `RT_read_write_block_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for read(), write(), and file\_size_unused(): in only block, spanning two blocks, spanning 3 blocks |
 |  <PRE>2023-Aug-28</PRE> | More Tests: `RT_read_seek_test.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for seek(): in only block, spanning two blocks, spanning 3 blocks |
 |  <PRE>2023-Aug-29</PRE> | **Updated** `RT_read_write_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() <br>Added tests for version(), serial_number(), directory(), and 2, 3 block span tests using longs |
-
+|  <PRE>2023-Sep-02</PRE> | More Tests `RT_append_tests.spin2`<br>Working Format, Mount, close(),<br>Focused tests for open(file, "A"), wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() with additional tests for 2, 3 block span tests using longs |
 
 ## Test files by Stephen
 
@@ -101,17 +102,18 @@ This is my work in progress as I'm working toward customer facing release of the
 | --- | --- |
 | [RT\_utilities.spin2](RT_utilities.spin2) | Utility methods common to all Test Files |
 | [RT\_read\_write_tests.spin2](RT_read_write_tests.spin2) | The read/write basic types test suite |
-| [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [82 passes, 0 fails] |
+| [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [93 passes, 0 fails] |
 | [RT\_read\_write\_block_tests.spin2](RT_read_write_block_tests.spin2) | The read/write records(blocks) test suite  |
 | [RT\_read\_write\_block_tests.log](RT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [39 passes, 0 fails]<br>(*42 successes (+3) were extra checks I did for 3 tests*) |
-| [RT\_read\_seek_test.spin2](RT_read_seek_test.spin2) | The read/write seek test suite |
-| [RT\_read\_seek_test.log](RT_read_seek_test.log) | Log of the read/write seek tests [61 passes, 0 fails] |
+| [RT\_read\_seek_test.spin2](RT_read_seek_test.spin2) | The open for read seek test suite |
+| [RT\_read\_seek_test.log](RT_read_seek_test.log) | Log of the open for read seek tests [65 passes, 0 fails] |
+| [RT\_append_tests.spin2](RT_append_tests.spin2) | The open for append test suite |
+| [RT\_append_tests.log](RT_append_tests.log) | Log of the open for append tests [94 passes, 0 fails] |
 
 ### Next Steps:
 
-- finish tests for append modes
-- finish tests for read-modify write modes
-- finsih tests for multi-cog reads/writes 
+- finish tests for multi-cog reads/writes 
+- finish tests for read-modify write modes (*if we add read-modify-write*)
 - ...
 
 ---

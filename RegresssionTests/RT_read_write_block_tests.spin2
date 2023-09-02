@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 30 AUG 2023
+''   Updated.... 02 SEP 2023
 ''
 '' =================================================================================================
 
@@ -89,6 +89,9 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     utils.startTest(@"ensure no errors on Record writes")
     utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")

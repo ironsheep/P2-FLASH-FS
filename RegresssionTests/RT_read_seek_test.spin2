@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 30 AUG 2023
+''   Updated.... 02 SEP 2023
 ''
 '' =================================================================================================
 
@@ -114,10 +114,13 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
     repeat longValue from 0 to count - 1
         status := Flash.wr_long(handle, longValue)
         expectedFileSize += 4
-        if status < 0
-            utils.showError(@"wr_long()", status)
-            quit
+        utils.evaluateStatus(status, @"wr_long()", Flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")

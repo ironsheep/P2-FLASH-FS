@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 31 AUG 2023
+''   Updated.... 02 SEP 2023
 ''
 '' =================================================================================================
 
@@ -126,15 +126,30 @@ pub showFileDetails(pFilename) | bytesUsed, bytes_free, block_count
         debug("  File: [", zstr_(pFilename), "], ", udec(bytesUsed, bytes_free, block_count))
     'debug("* showFileDetails()...EXIT")
 
+pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount
+    pFilename := Flash.TEST_filename_for_handle(handle)
+    debug(" ")  ' blank line
+    debug("  File: [", zstr_(pFilename), "] pending commit")
+    pSignatureAr, signatureCount := Flash.TEST_getCommitBlockSignatures(handle)
+    if signatureCount > 0
+        debug("  # ", udec_(signatureCount), " Blocks in chain:")
+        showSignatureChain(pSignatureAr, signatureCount, handle)
+    else
+        debug("  # ", udec_(signatureCount), " Blocks in commit")
 
-pub showFileSignatures(pFilename) | pSignatureAr, signatureCount, signature, signatureIdx, pBlockType, pLifeCycle, nextIdOrEndPtr, blockID
+pub showFileSignatures(pFilename) | pSignatureAr, signatureCount
     pSignatureAr, signatureCount := Flash.TEST_getFileBlockSignatures(pFilename)
     if signatureCount > 0
         debug("  # ", udec_(signatureCount), " Blocks in file:")
+        showSignatureChain(pSignatureAr, signatureCount, -1)
+
+pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, signatureIdx, pBlockType, pLifeCycle, nextIdOrEndPtr, blockID, blockAddr
+    if signatureCount > 0
         repeat signatureIdx from 0 to signatureCount -1
             signature := LONG[pSignatureAr][signatureIdx]
             nextIdOrEndPtr := signature.[31..20]
             blockID := signature.[19..8]
+            blockAddr := Flash.TEST_getBlockAddressForId(blockID, possHandle)
             case signature.[7..5]
                 %111:
                   pLifeCycle := @"erased"
@@ -159,10 +174,10 @@ pub showFileSignatures(pFilename) | pSignatureAr, signatureCount, signature, sig
                 %11: pBlockType := @"BODY/more"
             if signature.[0]
                 ' show more block
-                debug("    ", udec_(signatureIdx+1), ": ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
+                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
             else
                 ' show last block
-                debug("    ", udec_(signatureIdx+1), ": ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
+                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
 
 pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount
     debug("* ", zstr_(pMessage))
@@ -447,43 +462,6 @@ pub dumpFileHeads() | ID, Bytes, byte Filename[128], byte Buff[30], pBlock
             debug(" ")  ' blank line
         else
             quit                                                      'no more files, quit
-
-pub checkMatchingXXXEntries(pDirEntries) | ID, Bytes, byte Filename[60], byte Buff[30], refBytes
-'pub dumpDirEnts(pDirEntries) | ID, Bytes, byte Filename[60], byte Buff[30], bBadEntry, refBytes
-{
-        ' structure for directory checking
-        ' (pDirEntries := @dirEntr1)
-dirEntr1        LONG    @testfile1     ' pointer to filename
-fileBytes1      LONG    10             ' length in bytes
-fileBlocks1     LONG    1              ' number of blocks allocated
-dirEntr2        LONG    @testfile2     ' pointer to filename
-fileBytes2      LONG    20             ' length in bytes
-fileBlocks2     LONG    1              ' number of blocks allocated
-dirEnd          LONG    0              ' ptr = NULL, no more entries
-}
-    bPassed := true
-    pCurrRefDir := pDirEntries
-    debug(" -ptrs ", uhex_long(pCurrRefDir, pDirEntries))
-    repeat
-        pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
-        refBytes := LONG[pCurrRefDir][1]            ' get pointer to reference filename -OR- NULL
-        refblocks := LONG[pCurrRefDir][2]            ' get pointer to reference filename -OR- NULL
-        debug(" - FNamePtr ", uhex_long(pRefFilename))
-        if pRefFilename <> 0                            ' if not beyond last REF entry
-            ' ensure all three values match
-            ' checked, now summarize findings iff bad
-                debug("  # Expected: [", zstr_(pRefFilename), "], bytes=(", udec_(refBytes), "), blocks(", udec_(refBlocks), ")")
-
-        if pRefFilename <> 0
-            pCurrRefDir := @LONG[pCurrRefDir][3]
-            debug(" -ptrs ", uhex_long(pCurrRefDir, pDirEntries))
-        else
-            quit
-
-        'debug(" - Holding...")
-        'repeat ' hold
-
-    debug(" - DONE")
 
 
 con { license }

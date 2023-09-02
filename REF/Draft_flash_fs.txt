@@ -8,7 +8,7 @@
                -- see below for terms of use
    E-mail.....stephen@ironsheep.biz
    Started.... AUG 2023
-   Updated.... 31 AUG 2023
+   Updated.... 02 SEP 2023
  =================================================================================================
  v1.2.0 - initial release of flash_fs with full API
  -------------------------------------------------------------------------------------------------
@@ -24,8 +24,9 @@ pub format() : status
 pub error() : result
 pub open(p_filename, mode) : handle
 pub open_circular(p_filename, mode, max_file_length) : handle
+pub flush(handle) : status
 pub close(handle) : status
-pub rename(p_old_filename, p_new_filename) : status
+pub rename(p_cur_filename, p_new_filename) : status
 pub delete(p_filename) : status
 pub exists(p_filename) : bool
 pub file_size(p_filename) : size_in_bytes
@@ -129,26 +130,35 @@ pub open_circular(p_filename, mode, max_file_length) : handle
  .. or E_NO_HANDLE if no handle is available
 
 __________________________
+pub flush(handle) : status
+
+ Logically, "close", then "reopen file in same mode" (but you don't lose filehandle when you flush() instead
+ @param handle - a handle to an open file
+ @returns status - 0 (SUCCESS) if successful,
+ .. E_FILE_MODE if close doens't recognize this file mode (internal error)
+ .. E_BAD_HANDLE if the handle is not valid
+
+__________________________
 pub close(handle) : status
 
  Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
  @param handle - a handle to an open file
  @returns status - 0 (SUCCESS) if successful,
- .. E_NOT_MOUNTED if filesystem has not been mounted,
+ .. E_FILE_MODE if close doens't recognize this file mode (internal error)
  .. E_BAD_HANDLE if the handle is not valid
 
 ___________________________________________________
-pub rename(p_old_filename, p_new_filename) : status
+pub rename(p_cur_filename, p_new_filename) : status
 
- Rename a a file named p_old_filename to p_new_filename
- @param p_old_filename - address of a zstring containing the existing filename
+ Rename a a file named p_cur_filename to p_new_filename
+ @param p_cur_filename - address of a zstring containing the existing filename
  @param p_new_filename - address of a zstring containing the new filename
  @returns status - 0 (SUCCESS) if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
  .. E_FILE_NOT_FOUND if old file doesn't exist,
  .. E_FILE_OPEN if either file is open,
  .. E_FILE_EXISTS if new file already exists,
- .. E_DRIVE_FULL if no avaiable space left in filesystem
+ .. E_DRIVE_FULL if no available space left in filesystem
 
 _______________________________
 pub delete(p_filename) : status

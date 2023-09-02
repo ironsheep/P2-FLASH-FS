@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 30 AUG 2023
+''   Updated.... 02 SEP 2023
 ''
 '' =================================================================================================
 
@@ -121,7 +121,13 @@ PUB go() | hundreds, tens, units, snHi, snLo
 
 
     ' Real tests start here:
-    utils.startTestGroup(@"Head block only - partially filled with 10 BYTEs")
+    utils.startTestGroup(@"Head block only - partially filled with 5 BYTEs")
+    testWriteBytes(@testfile1, 5, 0, 0)
+    testVerifyBytes(@testfile1, 5)
+
+    utils.showFiles()
+
+    utils.startTestGroup(@"Head block only (replace file) - partially filled with 10 BYTEs")
     testWriteBytes(@testfile1, 10, 0, 0)
     testVerifyBytes(@testfile1, 10)
 
@@ -188,13 +194,16 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
     utils.evaluate(handle, Flash.SUCCESS)
     utils.startTest(@"Write N BYTEs")
     testValue := 0
-    repeat 10
+    repeat count
         testValue++
         status := Flash.wr_byte(handle, testValue)
         utils.evaluateStatus(status, @"wr_byte()", Flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
@@ -209,7 +218,7 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
-    utils.evaluateFileStats(pFilename, 1, 10)
+    utils.evaluateFileStats(pFilename, 1, count)
 
 
 pri testVerifyBytes(pFilename, count)
@@ -221,7 +230,7 @@ pri testVerifyBytes(pFilename, count)
 
     utils.startTest(@"read expected N BYTEs")
     expectedValue := 0
-    repeat 10
+    repeat count
         expectedValue++
         testValue := Flash.rd_byte(handle)
         if testValue < 0
@@ -259,6 +268,9 @@ pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
 
     utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
@@ -324,6 +336,9 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | bl
 
     utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
@@ -428,6 +443,9 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
 
     utils.startTest(@"ensure no errors on writes")
     utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
