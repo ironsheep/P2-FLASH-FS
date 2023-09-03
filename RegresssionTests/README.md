@@ -4,7 +4,7 @@
 
 [![License][license-shield]](LICENSE)
 
-These are regression test files that I'm using to certify the FS operation with each release.  All tests must pass! The regression test programss are versioned here so you can repeat this testing any time to verify your driver operation.
+These are regression test files that I'm using to certify the FS operation with each release.  All tests must pass! The regression test programs are versioned here so you can repeat this testing any time to verify your driver operation.
 
 The point of these tests is to exercise each method attempting to check both normal and error/exception cases.
 
@@ -23,7 +23,7 @@ The Regression test coverage is nearly complete!  This table indicates which met
 | PUB open(p_filename,"r") : handle | YES
 | PUB open(p_filename,"w") : handle | YES
 | PUB open(p_filename,"a") : handle | YES
-| PUB open(p_filename,"r+") : handle |
+| PUB open(p_filename,"r+") : handle | | Not in initial release
 | PUB open\_circular(p_filename,"r") : handle |
 | PUB open\_circular(p_filename,"a") : handle |
 | PUB flush(handle) : status |
