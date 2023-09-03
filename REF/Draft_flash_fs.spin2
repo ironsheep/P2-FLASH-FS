@@ -9,7 +9,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 02 SEP 2023
+''   Updated.... 03 SEP 2023
 ''
 '' =================================================================================================
 '' v1.2.0 - initial release of flash_fs with full API
@@ -63,6 +63,15 @@ con { PUBLIC driver constants }
   E_SHORT_TRANSER = -16                                         ' Error: Too few bytes read or written
   E_NOT_MOUNTED = -17                                           ' Error: Filesystem NOT mounted (not yet accessible)
   E_BAD_FILE_LENGTH = -18                                       ' Error: File length given is negative or zero
+
+  BYTES_IN_HEAD_BLOCK = 3956
+  WORDS_IN_HEAD_BLOCK = BYTES_IN_HEAD_BLOCK/2
+  LONGS_IN_HEAD_BLOCK = BYTES_IN_HEAD_BLOCK/4
+
+  BYTES_IN_BODY_BLOCK = 4088
+  WORD_IN_BODY_BLOCK = BYTES_IN_BODY_BLOCK/2
+  LONGS_IN_BODY_BLOCK = BYTES_IN_BODY_BLOCK/4
+
 
 con { PRIVATE driver constants }
 
@@ -129,8 +138,6 @@ IDValid       LONG      0                                                       
 BlockStates   BYTE      0[STATES_SIZE]                                          'block states
 BlockState    LONG      0                                                       '(field pointer to 2-bit variables)
 
-tmpBlockBuffer BYTE     0[BLOCK_SIZE]                                           'buffer used for copying blocks
-
 ' handle-related variables and buffers
 '   handle is index into each of the arrays below
 
@@ -144,6 +151,8 @@ hSeekPtr        LONG    NOT_ENABLED[MAX_FILES_OPEN]                             
 hCircularLength LONG    NOT_ENABLED[MAX_FILES_OPEN]                               'handle: circular buffer length in byt
 hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                         'handle: 59+1 byte buffer for filename
 hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                            'handle: 4KB buffer for file data
+
+tmpBlockBuffer  BYTE     0[BLOCK_SIZE]                                            'buffer used for copying blocks
 
 errorCode       LONG    0                                                         'most recent error code
 fsLock          LONG    -1                                                        'flash lock semaphore for driver use
@@ -360,16 +369,17 @@ pub open(p_filename, mode) : handle
 '' @param p_filename - address of a zstring containing the filename
 '' @param mode - the mode in which to open the file:
 '' -- mode "r", "R" to read from an existing file
-'' -- mode "w", "W" to write to a new file (overwrites existing file)
-'' -- mode "a", "A" to append to the end of an existing file (file created if doesn't exist)
-'' -- mode "r+", "R+" to read from or / write to anywhere within an existing file
+'' -- mode "w", "W" to write to a new file (or overwrites existing file)
+'' -- mode "a", "A" to append to the end of an existing file (file is created if doesn't exist)
 '' @returns handle - handle to open file if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
+'' .. E_NO_HANDLE if no handle is available,
 '' .. E_FILE_MODE if mode letter(s) is/are invalid,
+'' .. E_DRIVE_FULL if flash filesystem is full (write/append mode),
 '' .. E_FILE_OPEN if file is already open,
-'' .. E_FILE_EXISTS if file exists (depends upon mode requested),
-'' .. E_FILE_NOT_FOUND if file does not exist (depends upon mode requested),
-'' .. or E_NO_HANDLE if no handle is available
+'' .. E_FILE_NOT_FOUND if file does not exist (read mode),
+
+' PENDING -- mode "r+", "R+" to read from or / write to anywhere within an existing file
 
 {
     ANSI C file info
@@ -391,15 +401,50 @@ pub open(p_filename, mode) : handle
   elseif fsFreeHndlCt == 0
     return (errorCode := E_NO_HANDLE)
 
+  ' mode-specific checks
   case mode
-    "r", "R"  : handle := open_read(p_filename)
-    "w", "W"  : handle := open_write(p_filename)
-    "a", "A"  : handle := open_append(p_filename)
-    "r+", "R+": handle := open_modify(p_filename)
-    other: handle := (errorCode := E_FILE_MODE)
+    "r", "R":
+    "w", "W":
+    "a", "A":
+    '"r+", "R+": handle := finish_open_modify(p_filename)
+      ifnot blocks_free()                                          'if no free block exists, abort with error
+        return (errorCode := E_DRIVE_FULL)
+    other: return (errorCode := E_FILE_MODE)
+
+  repeat while locktry(fsLock) == 0                                             'lock for exlusive use
+
+  errorCode := SUCCESS                                                          'new operation clear any prior error code
+
+  ' do checks that require the lock
+  case mode
+    "r", "R":
+      ifnot exists(p_filename)                                                  'if no free block exists, abort with error
+        handle := (errorCode := E_FILE_NOT_FOUND)
+    "a", "A":
+    '"r+", "R+": handle := finish_open_modify(p_filename)
+      ifnot blocks_free()                                                       'if no free block exists, abort with error
+        handle := (errorCode := E_DRIVE_FULL)
+
+  if is_file_open(p_filename, H_READ_WRITE)                                     'if file is already open, abort
+    handle := (errorCode := E_FILE_OPEN)
+
+  if errorCode <> SUCCESS
+    lockrel(fsLock)                                                             ' aborting, release the lock
+    return
+
+  ' the following calls release the lock
+  case mode
+    "r", "R"  : return finish_open_read(p_filename, 0)
+    "w", "W"  : return finish_open_write(p_filename, 0)
+    '"r+", "R+": handle := finish_open_modify(p_filename)
+    "a", "A"  :
+      if exists(p_filename)
+          return finish_open_append(p_filename, 0)
+      else
+          return finish_open_write(p_filename, 0)
 
 
-pub open_circular(p_filename, mode, max_file_length) : handle
+pub open_circular(p_filename, mode, max_file_length) : handle | max_file_blocks
 
 '' Open circular file of max_file_length in mode; return handle (0..n) if successful
 ''
@@ -410,21 +455,60 @@ pub open_circular(p_filename, mode, max_file_length) : handle
 '' @param max_file_length - constrain the file to this length (in bytes)
 '' @returns handle - handle to open file if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
+'' .. E_NO_HANDLE if no handle is available,
+'' .. E_BAD_FILE_LENGTH if file length is negative or zero
 '' .. E_FILE_MODE if mode letter(s) is/are invalid,
+'' .. E_FILE_NOT_FOUND if file does not exist (read mode),
+'' .. E_DRIVE_FULL if flash filesystem is full (write/append mode),
 '' .. E_FILE_OPEN if file is already open,
-'' .. E_FILE_EXISTS if file exists (depends upon mode requested),
-'' .. E_FILE_NOT_FOUND if file does not exist (depends upon mode requested),
-'' .. or E_NO_HANDLE if no handle is available
 
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
   elseif fsFreeHndlCt == 0
     return (errorCode := E_NO_HANDLE)
+  elseif max_file_length < 1
+    return (errorCode := E_BAD_FILE_LENGTH)
 
+  ' do we have a legal mode?
   case mode
-    "a", "A": handle := open_circular_append(p_filename, max_file_length)
-    "r", "R": handle := open_circular_read(p_filename, max_file_length)
-    other: handle := (errorCode := E_FILE_MODE)
+    "r", "R":
+    "a", "A":
+    '"r+", "R+": handle := finish_open_modify(p_filename)
+    other: return (errorCode := E_FILE_MODE)
+
+  ' acquire lock
+  repeat while locktry(fsLock) == 0                                             'lock for exlusive use
+
+  errorCode := SUCCESS                                                          'new operation clear any prior error code
+
+  ' do checks that require the lock
+  case mode
+    "r", "R":
+      ifnot exists(p_filename)                                                  'if no free block exists, abort with error
+        handle := (errorCode := E_FILE_NOT_FOUND)
+    "a", "A":
+    '"r+", "R+": handle := finish_open_modify(p_filename)
+      ifnot blocks_free()                                                       'if no free block exists, abort with error
+        handle := (errorCode := E_DRIVE_FULL)
+
+  if is_file_open(p_filename, H_READ_WRITE)                                     'if file is already open, abort
+    handle := (errorCode := E_FILE_OPEN)
+
+  if errorCode <> SUCCESS
+    lockrel(fsLock)                                                             ' aborting, release the lock
+    return
+
+  max_file_blocks := size_in_blocks(max_file_length)
+
+  ' the following calls release the lock
+  case mode
+    "a", "A":
+      if exists(p_filename)
+        return finish_open_append(p_filename, max_file_blocks)
+      else
+        return finish_open_write(p_filename, max_file_blocks)
+    "r", "R": return finish_open_read(p_filename, max_file_blocks)
+
 
 pub flush(handle) : status
 
@@ -507,6 +591,7 @@ pri commit_pending_chain(handle): status | ptr, signature
 
         if hStatus[handle] == H_REPLACE                                         'if file rewrite/append, delete old file (or tail of file) to clean up
             ' remove the old file (or tail of file) which we are replacing
+            debug("close() killing old file/tail...")
             delete_chain_at_block_id(hChainBlockID[handle])
             field[IDValid][hChainBlockID[handle]]~~                             'set IDValid again (bit := 1), since it was cleared during file deletion
 
@@ -533,123 +618,59 @@ pri commit_pending_chain(handle): status | ptr, signature
     hChainBlockAddr[handle] := 0
     hChainLifeCycle[handle] := 0
 
-pri open_circular_read(p_filename, max_file_length) : handle | signature
 
-' NOT YET Implemented!  Open a circular file for reading, returning handle if success
-'
-' @param p_filename - address of a zstring containing the filename
-' @param max_file_length - constrain the file to this length (in bytes)
-' @returns handle - handle to open file if successful,
-' .. E_BAD_FILE_LENGTH if file length is negative or zero
-' .. E_FILE_OPEN if file is already open
-' .. E_FILE_NOT_FOUND if file doesn't exist
-' .. or E_NO_HANDLE if no handle is available
-
-' Local Variables:
-' @local signature - the block state bits of the block being checked
-
-  if max_file_length < 1
-    return (errorCode := E_BAD_FILE_LENGTH)
-
-  repeat while locktry(fsLock) == 0                  ' lock for exlusive use
-
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
-
-  if is_file_open(p_filename, H_READ_WRITE)  'if file is already open, abort
-    handle := (errorCode := E_FILE_OPEN)
-
-  elseifnot signature := get_file_head_signature(p_filename)                        'if file doesn't exist, abort
-    handle := (errorCode := E_FILE_NOT_FOUND)
-
-  else
-    handle := new_handle(p_filename)                                                         'get new handle, aborts if no handle available
-    if handle >= 0
-      hCircularLength[handle] := max_file_length                                   'set file's circular buffer length
-      finish_open_read(handle, p_filename, signature)
-
-  lockrel(fsLock)                                    ' release the lock, we're done with it
-
-
-pri open_read(p_filename) : handle | signature
+pri finish_open_read(p_filename, max_file_blocks) : handle | signature
 
 ' Open a file for reading, returning handle if success
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file if successful,
-' .. E_FILE_OPEN if file is already open
-' .. E_FILE_NOT_FOUND if file doesn't exist
 ' .. or E_NO_HANDLE if no handle is available
 
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
+  debug("* finish_open_read(", zstr_(p_filename), ", blks=", udec_(max_file_blocks), ") - ENTRY")
 
-  repeat while locktry(fsLock) == 0                  ' lock for exlusive use
-
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
-
-  if is_file_open(p_filename, H_READ_WRITE)  'if file is already open, abort
-    handle := (errorCode := E_FILE_OPEN)
-
-
-  elseifnot signature := get_file_head_signature(p_filename)                        'if file doesn't exist, abort
+  ifnot signature := get_file_head_signature(p_filename)                                            'if file doesn't exist, abort
     handle := (errorCode := E_FILE_NOT_FOUND)
 
   else
-    handle := new_handle(p_filename)                                                         'get new handle, aborts if no handle available
+    handle := new_handle(p_filename)                                                                    'get new handle, aborts if no handle available
     if handle >= 0
-      finish_open_read(p_filename, handle, signature)
+      if max_file_blocks > 0                                                                            'requested fixed length file?
+        hCircularLength[handle] := max_file_blocks                                                      '..yes, set file's circular buffer length
+      hHeadBlockAddr[handle] := field[IDToBlock][signature.[19..8]]                                     'set handle's head block address
+      hStatus[handle] := H_READ                                                                         'set handle status to READ
+      flash_read_block(field[IDToBlock][signature.[19..8]], buffer_pointer(handle), $000, $FFF)         'load 1st (head) block into buffer
+      hEndPtr[handle] := $088                                                                           'point to first data byte in head block
 
   lockrel(fsLock)                                    ' release the lock, we're done with it
 
 
-pri finish_open_read(p_filename, handle, signature)
-
-' Complete our open_read operation with valid handle and signature
-'
-' @param p_filename - address of a zstring containing the filename
-' @param handle  handle to open file,
-' @param signature - the block state bits of the block being checked
-
-  hHeadBlockAddr[handle] := field[IDToBlock][signature.[19..8]]                                         'set handle's head block address
-  hStatus[handle] := H_READ                                                                             'set handle status to READ
-  flash_read_block(field[IDToBlock][signature.[19..8]], buffer_pointer(handle), $000, $FFF)             'load 1st (head) block into buffer
-  hEndPtr[handle] := $088                                                                               'point to first data byte in head block
-
-
-pri open_write(p_filename) : handle | signature, ptr
+pri finish_open_write(p_filename, max_file_blocks) : handle | signature, ptr
 
 ' Open a file for (re)writing, returning handle if success
 '  (overwrites existing file, if you wish to prevent overwrite, use exists() to check!)
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file if successful,
-' .. E_NOT_MOUNTED if filesystem has not been mounted,
-' .. E_FILE_OPEN if file is already open
-' .. E_DRIVE_FULL if no available space left in filesystem
 ' .. or E_NO_HANDLE if no handle is available
 
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
 ' @local ptr - the address of the 4KB buffer for the file associated with this handle
+    debug("* finish_open_write(", zstr_(p_filename), ", blks=", udec_(max_file_blocks), ") - ENTRY")
 
-' commit chain notes
-'   hChainBlockAddr[handle] - blockAddress of first block in commit chain
-'   hChainLifeCycle[handle] - lifeCycle value ot use when activating this first block in commit chain (next active or 1st)
-'   hChainBlockID[handle] - blockID of 1st block being replaced (head block of file if write() or write_replace() or body block if append()
-
-  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
-
-  errorCode := SUCCESS                                                          ' new operation clear any prior error code
-
-  if is_file_open(p_filename, H_READ_WRITE)                                     'if file already open, abort
-    handle :=  (errorCode := E_FILE_OPEN)
-
-  elseifnot available_blocks()
-    handle :=  (errorCode := E_DRIVE_FULL)
-
-  else
     handle := new_handle(p_filename)                                            'get new handle, aborts if no handle available
     if handle >= 0                                                              ' is error
+        if max_file_blocks > 0
+          hCircularLength[handle] := max_file_blocks                                   'set file's circular buffer length
+
+        ' commit chain notes
+        '   hChainBlockAddr[handle] - blockAddress of first block in commit chain
+        '   hChainLifeCycle[handle] - lifeCycle value ot use when activating this first block in commit chain (next active or 1st)
+        '   hChainBlockID[handle] - blockID of 1st block being replaced (head block of file if write() or write_replace() or body block if append()
+
         if signature := get_file_head_signature(p_filename)                     'does file already exist?
             hStatus[handle] := H_REPLACE                                        'yes, REPLACE replacing blocks but with new content
             hChainBlockID[handle] := signature.[19..8]                          'yes, get block ID from head block
@@ -660,160 +681,76 @@ pri open_write(p_filename) : handle | signature, ptr
             hChainBlockID[handle] := next_available_block_id()                  'no, get new ID
             hChainLifeCycle[handle] := %011                                     'no, set new lifecycle
             hHeadBlockAddr[handle] := 0                                         'no, no head block yet (let write_block set it)
+
         ptr := buffer_pointer(handle)                                           'get buffer pointer
 
         bytefill(ptr, $FF, BLOCK_SIZE)                                          'erase block buffer
-        LONG[ptr].[1..0] := %00                                                 'set head/last
+        LONG[ptr].[1..0] := %00                                                 'set HEAD/last
         LONG[ptr].[19..8] := hChainBlockID[handle]                              'set ID
         strcopy(ptr + $008, p_filename, FILENAME_SIZE - 1)                      'set filename
         LONG[ptr + $004] := calc_crc32(ptr + $008, strsize(ptr + $008)+1)       'set filename CRC
 
         hEndPtr[handle] := $088                                                 'point to start of data in head block
 
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+    lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
-pri open_circular_append(p_filename, max_file_length) : handle | signature
+pri finish_open_append(p_filename, max_file_blocks) : handle | signature, end_block_address, end_ptr, bytes_used, ptr
 
-' NOT YET Implemented!  Open a circular file for writing (appending), returning handle if success
-'
-' @param p_filename - address of a zstring containing the filename
-' @param max_file_length - constrain the file to this length (in bytes)
-' @returns handle - handle to open file if successful,
-' .. E_NOT_MOUNTED if filesystem has not been mounted,
-' .. E_DRIVE_FULL if no available space left in filesystem
-' .. E_BAD_FILE_LENGTH if file length is negative or zero
-' .. E_FILE_OPEN if file is already open,
-' .. E_FILE_NOT_FOUND if file doesn't exist,
-' .. or E_NO_HANDLE if no handle is available
-
-' Local Variables:
-' @local signature - the block state bits of the block being checked
-
-  if max_file_length < 1
-    return (errorCode := E_BAD_FILE_LENGTH)
-
-  repeat while locktry(fsLock) == 0                  ' lock for exlusive use
-
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
-
-  if is_file_open(p_filename, H_READ_WRITE)                                     ' if file already open, abort
-    handle := (errorCode := E_FILE_OPEN)
-
-  elseif not exists(p_filename)                                                     ' if file doesn't exist, abort
-    handle := (errorCode := E_FILE_NOT_FOUND)
-
-  elseifnot available_blocks()
-    handle :=  (errorCode := E_DRIVE_FULL)
-
-  else
-    handle := new_handle(p_filename)                                                        'get new handle, aborts if no handle available
-    if handle >= 0                                                                 ' is error
-        finish_open_append(p_filename, handle)
-
-  lockrel(fsLock)                                    ' release the lock, we're done with it
-
-
-pri open_append(p_filename) : handle
-
-' NOT YET Implemented!  open for append, returning handle if success
+' Open for append, returning handle if success
+'  NOTE: this is called only if file already exists
+'  (if it didn't exist finish_open_write() would have been called instead)
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file if successful,
-' .. E_NOT_MOUNTED if filesystem has not been mounted,
-' .. E_FILE_OPEN if file is already open,
-' .. E_FILE_NOT_FOUND if file doesn't exist,
-' .. E_DRIVE_FULL if no available space left in filesystem
 ' .. or E_NO_HANDLE if no handle is available
-  'debug("* open_append ENTRY:fn=[", zstr_(p_filename), "]")
 
-  repeat while locktry(fsLock) == 0                    ' lock for exlusive use
-  'debug("* open_append  have lock")
+    debug("* finish_open_append(", zstr_(p_filename), ", blks=", udec_(max_file_blocks), ") - ENTRY")
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+    'debug("finish_open_append() get handle")
 
-  if is_file_open(p_filename, H_READ_WRITE)             ' if file already open, abort
-    handle := (errorCode := E_FILE_OPEN)
-
-  elseif not exists(p_filename)                         ' if file doesn't exist, abort
-    'debug("open_append() no file EXIT")
-    handle := (errorCode := E_FILE_NOT_FOUND)
-
-  elseifnot available_blocks()
-    'debug("open_append() no blocks EXIT")
-    handle :=  (errorCode := E_DRIVE_FULL)
-
-  else
-    'debug("open_append() get handle")
     handle := new_handle(p_filename)                    'get new handle, set error() if no handle available
     if handle >= 0                                      ' is error
-        finish_open_append(p_filename, handle)
+      if max_file_blocks > 0                                                                            'requested fixed length file?
+        hCircularLength[handle] := max_file_blocks                                                      '..yes, set file's circular buffer length
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+      ' commit chain notes
+      '   hChainBlockAddr[handle] - blockAddress of first block in commit chain
+      '   hChainLifeCycle[handle] - lifeCycle value ot use when activating this first block in commit chain (next active or 1st)
+      '   hChainBlockID[handle] - blockID of 1st block being replaced (head block of file if write() or write_replace() or body block if append()
+
+      signature := get_file_head_signature(p_filename)                              'does file already exist?
+      'debug("finish_open_append() ", uhex_long(signature))
+      if signature
+        hStatus[handle] := H_REPLACE                                                'yes, APPENDING is overwrite (BUT replacing tail of file!)
+        hHeadBlockAddr[handle] := field[IDToBlock][signature.[19..8]]               'yes, get block address of head block
+
+        end_block_address, end_ptr := locate_file_byte(field[IDToBlock][signature.[19..8]], POSX)      'reqest position beyond end to get last byte/block in file
+        'debug("finish_open_append() ", uhex_long(end_block_address, end_ptr))
+        ptr := buffer_pointer(handle)                                               'get buffer pointer
+        flash_read_block(end_block_address, ptr, $000, $FFF)                        'read the block into the buffer
+        hEndPtr[handle] := end_ptr                                                  'set file pointer to position within block
+
+        ' configure our commit chain (at tail of existing file)
+        hChainLifeCycle[handle] := next_active_cycle(LONG[ptr].[7..5])              'replace current lifecycle from existing block with next
+        hChainBlockAddr[handle] := end_block_address                                'block address of current file block we are replacing
+        hChainBlockID[handle] := LONG[ptr].[19..8]                                  'ID of block being replaced
+        'debug("* finish_open_append EXIT")
+
+    lockrel(fsLock)                                    ' release the lock, we're done with it
 
 
-pri finish_open_append(p_filename, handle) | signature, end_block_address, end_ptr, bytes_used, ptr
-
-' Complete our open_append operation with valid handle, place file pointer at end of file
-'
-' @param p_filename - address of a zstring containing the filename
-' @param handle  handle to open file
-'
-' Local Variables:
-' @local signature - the block state bits of the block being checked
-' @local end_block_address - temporary block address of last block in file
-' @local end_ptr - temporary pointer past last byte in file
-' @local bytes_used - temporary count of bytes used in entire file
-
-
-' commit chain notes
-'   hChainBlockAddr[handle] - blockAddress of first block in commit chain
-'   hChainLifeCycle[handle] - lifeCycle value ot use when activating this first block in commit chain (next active or 1st)
-'   hChainBlockID[handle] - blockID of 1st block being replaced (head block of file if write() or write_replace() or body block if append()
-
-  signature := get_file_head_signature(p_filename)                              'does file already exist?
-  'debug("finish_open_append() ", uhex_long(signature))
-  if signature
-    hStatus[handle] := H_REPLACE                                                'yes, APPENDING is overwrite (BUT replacing tail of file!)
-    hHeadBlockAddr[handle] := field[IDToBlock][signature.[19..8]]               'yes, get block address of head block
-
-    end_block_address, end_ptr := locate_file_byte(field[IDToBlock][signature.[19..8]], POSX)      'reqest position beyond end to get last byte/block in file
-    'debug("finish_open_append() ", uhex_long(end_block_address, end_ptr))
-    ptr := buffer_pointer(handle)                                               'get buffer pointer
-    flash_read_block(end_block_address, ptr, $000, $FFF)                        'read the block into the buffer
-    hEndPtr[handle] := end_ptr                                                  'set file pointer to position within block
-
-    ' configure our commit chain (at tail of existing file)
-    hChainLifeCycle[handle] := next_active_cycle(LONG[ptr].[7..5])              'replace current lifecycle from existing block with next
-    hChainBlockAddr[handle] := end_block_address                                'block address of current file block we are replacing
-    hChainBlockID[handle] := LONG[ptr].[19..8]                                  'ID of block being replaced
-    'debug("* open_append EXIT")
-
-pri open_modify(p_filename) : handle | signature
+pri finish_open_modify(p_filename) : handle | signature
 
 ' NOT YET Implemented!  open for read-modify-write, returning handle if success
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file if successful,
-' .. E_NOT_MOUNTED if filesystem has not been mounted,
-' .. E_FILE_OPEN if file is already open,
-' .. E_FILE_NOT_FOUND if file doesn't exist,
 ' .. or E_NO_HANDLE if no handle is available
 
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
-
-  errorCode := SUCCESS                                                          ' new operation clear any prior error code
-
-  if is_file_open(p_filename, H_READ_WRITE)                                     ' if file already open, abort
-    handle := (errorCode := E_FILE_OPEN)
-
-  elseif not exists(p_filename)                                                 ' if file doesn't exist, abort
-    handle := (errorCode := E_FILE_NOT_FOUND)
-
-  else
     handle := new_handle(p_filename)                                            'get new handle, aborts if no handle available
     if handle >= 0                                                              ' if no error
       ' open for write but leave file pointer at head of file
@@ -824,7 +761,7 @@ pri open_modify(p_filename) : handle | signature
       hChainLifeCycle[handle] := next_active_cycle(signature.[7..5])            'yes, get next lifecycle from head block
       hSeekPtr[handle] := $088                                                  'yes, see seek pointer to head of file
 
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+    lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pub rename(p_cur_filename, p_new_filename) : status | signature, new_block_address, cur_block_address, next_cycle_bits
@@ -1145,7 +1082,7 @@ pri wr_byte_no_locks(handle, byteValue) : status | ptr, nextBlockID, isSeeking, 
         write_block(handle)                                                     'write current block
 
         bytefill(ptr, $FF, BLOCK_SIZE)                                          'make block buffer look erased (fill w/$ff's)
-        LONG[ptr].[1..0] := %10                                                 'set block type to body/last
+        LONG[ptr].[1..0] := %10                                                 'set block type to BODY/last
         LONG[ptr].[19..8] := nextBlockID                                        'set block ID
 
         endPtr := $004                                                          'point to start of data in new block
@@ -1522,6 +1459,8 @@ pub string_for_error(error_code) : p_interpretation
         E_BAD_FILE_LENGTH:      p_interpretation := @"E_BAD_FILE_LENGTH: File length is negative or zero"
         other:                  p_interpretation := @"???: Unknown error code ???"
 
+
+
 con { low-level support }
 
 
@@ -1576,7 +1515,7 @@ pri new_handle(p_filename) : handle | potentialHandle
       fsFreeHndlCt--
       quit                                                                      '..exit loop, we have our answer
 
-  debug("new_handle() = ", sdec(handle))
+  'debug("new_handle() = ", sdec(handle))
   if handle < 0                                                                 'if error, set error code
     errorCode := handle
   else
@@ -1665,6 +1604,7 @@ pri next_block_address() : block_address | blockFreeCount, freeBlockAddress, fre
 
 
 pri get_file_head_signature(p_filename) : foundSignature | nameCrc, block_address, BYTE header[8 + FILENAME_SIZE]
+
 ' Look up file by name and return the block state bits of the files' head block (or 0 if file not found)
 '
 ' @param p_filename - address of a zstring containing the filename
@@ -1673,6 +1613,7 @@ pri get_file_head_signature(p_filename) : foundSignature | nameCrc, block_addres
 ' Local Variables:
 ' @local block_address - the block offset within the file system
 ' @local BYTE header[FILENAME_SIZE] - a temp buffer the block's filename is read into for compare
+
   nameCrc := calc_crc32(p_filename, strsize(p_filename)+1)                      'get CRC of filename
   repeat block_address from 0 to BLOCKS - 1                                     'scan head blocks for filename
         if field[BlockState][block_address] == B_HEAD                           'is this a head block?
@@ -1891,9 +1832,9 @@ pri write_block(handle) | ptr, block_id, block_address
   block_address := next_block_address()                                         'get the new block to write, sets block state to B_TEMP
 
   ' is this the first block of our commit chain?
-  if block_id == hChainBlockID[handle]                                                'if this is the commit chain first block
-    program_block(block_address, ptr, hChainLifeCycle[handle])                       '..program block with head cycle
-    hChainBlockAddr[handle] := block_address                                         '..remember the block address so that it can be activated on close
+  if block_id == hChainBlockID[handle]                                          'if this is the first block of the commit chain
+    program_block(block_address, ptr, hChainLifeCycle[handle])                  '..program block with head cycle
+    hChainBlockAddr[handle] := block_address                                    '..remember the block address so that it can be activated on close
 
   else                                                                          'else, this is a subsequent block in commit chain
     ' no is block elsewhere in chain
@@ -2008,6 +1949,27 @@ pri block_crc(p_block_buffer) : crc
 ' @returns crc - the calculated CRC for the block
 
   return getcrc(p_block_buffer, $AD0424F3 rev 31, BLOCK_SIZE - 4)  'compute CRC of a buffered block
+
+
+pri size_in_blocks(size_in_bytes) : block_count | remainingSize, overflowBodyCount
+
+' Return number of blocks for given file size
+'
+' @param size_in_bytes - the number of bytes in the file
+' @returns block_count - the number of blocks that would be needed to contain the file
+
+' Local Variables:
+' @local remainingSize - temporary variable to hold the number of bytes remaining after the head block
+' @local overflowBodyCount - temporary variable to hold the number of bytes that will be in the tail block
+
+    block_count := 1
+    if size_in_bytes > BYTES_IN_HEAD_BLOCK
+        remainingSize := size_in_bytes - BYTES_IN_HEAD_BLOCK
+        block_count += remainingSize / BYTES_IN_BODY_BLOCK
+        overflowBodyCount := remainingSize +// BYTES_IN_BODY_BLOCK
+        if overflowBodyCount > 0
+            block_count++
+    'debug("size_in_blocks()  # bytes: ", udec_(size_in_bytes), ", blocks: ", udec_(block_count))
 
 
 con { flash operations }
@@ -2196,14 +2158,6 @@ pri flash_receive(p_buffer, count) | rx_byte
 '   these methods are for regression testing only - they are not used in production code
 
 con { constants exposed for regression testing }
-
-     BYTES_IN_HEAD_BLOCK = 3956
-     WORDS_IN_HEAD_BLOCK = BYTES_IN_HEAD_BLOCK/2
-     LONGS_IN_HEAD_BLOCK = BYTES_IN_HEAD_BLOCK/4
-
-     BYTES_IN_BODY_BLOCK = 4088
-     WORD_IN_BODY_BLOCK = BYTES_IN_BODY_BLOCK/2
-     LONGS_IN_BODY_BLOCK = BYTES_IN_BODY_BLOCK/4
 
      MAX_FILE_LEN_IN_BLOCKS = 16 ' not real, just our limit for passing data back to UT's
 

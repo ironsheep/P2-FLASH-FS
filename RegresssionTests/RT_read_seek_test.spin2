@@ -124,7 +124,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -198,7 +198,7 @@ pri VerifyAddressedLongs(pFilename, count)
 
     '  close file
     utils.startTest(@"Close file we were reading")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
 con { license }

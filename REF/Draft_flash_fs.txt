@@ -8,7 +8,7 @@
                -- see below for terms of use
    E-mail.....stephen@ironsheep.biz
    Started.... AUG 2023
-   Updated.... 02 SEP 2023
+   Updated.... 03 SEP 2023
  =================================================================================================
  v1.2.0 - initial release of flash_fs with full API
  -------------------------------------------------------------------------------------------------
@@ -101,16 +101,15 @@ pub open(p_filename, mode) : handle
  @param p_filename - address of a zstring containing the filename
  @param mode - the mode in which to open the file:
  -- mode "r", "R" to read from an existing file
- -- mode "w", "W" to write to a new file (overwrites existing file)
- -- mode "a", "A" to append to the end of an existing file (file created if doesn't exist)
- -- mode "r+", "R+" to read from or / write to anywhere within an existing file
+ -- mode "w", "W" to write to a new file (or overwrites existing file)
+ -- mode "a", "A" to append to the end of an existing file (file is created if doesn't exist)
  @returns handle - handle to open file if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
+ .. E_NO_HANDLE if no handle is available,
  .. E_FILE_MODE if mode letter(s) is/are invalid,
+ .. E_DRIVE_FULL if flash filesystem is full (write/append mode),
  .. E_FILE_OPEN if file is already open,
- .. E_FILE_EXISTS if file exists (depends upon mode requested),
- .. E_FILE_NOT_FOUND if file does not exist (depends upon mode requested),
- .. or E_NO_HANDLE if no handle is available
+ .. E_FILE_NOT_FOUND if file does not exist (read mode),
 
 _____________________________________________________________
 pub open_circular(p_filename, mode, max_file_length) : handle
@@ -123,11 +122,12 @@ pub open_circular(p_filename, mode, max_file_length) : handle
  @param max_file_length - constrain the file to this length (in bytes)
  @returns handle - handle to open file if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
+ .. E_NO_HANDLE if no handle is available,
+ .. E_BAD_FILE_LENGTH if file length is negative or zero
  .. E_FILE_MODE if mode letter(s) is/are invalid,
+ .. E_FILE_NOT_FOUND if file does not exist (read mode),
+ .. E_DRIVE_FULL if flash filesystem is full (write/append mode),
  .. E_FILE_OPEN if file is already open,
- .. E_FILE_EXISTS if file exists (depends upon mode requested),
- .. E_FILE_NOT_FOUND if file does not exist (depends upon mode requested),
- .. or E_NO_HANDLE if no handle is available
 
 __________________________
 pub flush(handle) : status

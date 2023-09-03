@@ -1,12 +1,12 @@
 '' =================================================================================================
 ''
 ''   File....... RT_utilites.spin2
-''   Purpose.... This object exercises the
+''   Purpose.... This object provides commonly used regression test parts to each test object
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 02 SEP 2023
+''   Updated.... 03 SEP 2023
 ''
 '' =================================================================================================
 
@@ -16,17 +16,39 @@ CON
 OBJ
     Flash : "Draft_flash_fs"
 
-DAT { test stats vars }
 
-'---+-----------+---+---+---+-------------------+---+---+---+---+---+-----------+
-    numberTests     LONG    0
-    passCount       LONG    0
-    failCount       LONG    0
-    passCountSub    LONG    0
-    failCountSub    LONG    0
+DAT
+
+   testSignature  long    $12345678
+
+VAR { test stats vars }
+
+    LONG    numberTests
+    LONG    passCount
+    LONG    failCount
+    LONG    passCountSub
+    LONG    failCountSub
+
+    LONG    varSignature
+
+pub null()
+
+'' This is not an application
+''  (invoke format() or mount() to use the flash file system)
+
+pri initIfNotAlready()
+    if varSignature <> testSignature
+        numberTests := 0
+        passCount := 0
+        failCount := 0
+        passCountSub := 0
+        failCountSub := 0
+        varSignature := testSignature
 
 pub startTestGroup(pDesciption)
     ' show test-group heading
+
+    initIfNotAlready()
     debug(" ")  ' blank line
     debug(" ")  ' blank line
     debug(" ------------------------------------------------------------")  ' blank line
@@ -34,6 +56,8 @@ pub startTestGroup(pDesciption)
 
 pub startTest(pDesciption) | ecGot, ecExpected
     ' if prior sub tests show sub tests results
+
+    initIfNotAlready()
     if failCountSub <> 0 or passCountSub <> 0
         debug("  Sub-Test Results: Pass: ", udec_(passCountSub), ", Fail: ", udec_(failCountSub))
         if failCountSub <> 0
@@ -151,22 +175,22 @@ pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, si
             blockID := signature.[19..8]
             blockAddr := Flash.TEST_getBlockAddressForId(blockID, possHandle)
             case signature.[7..5]
-                %111:
-                  pLifeCycle := @"erased"
+                %000:
+                  pLifeCycle := @"canceled-0"
                 %001:
                   pLifeCycle := @"canceled-1"
                 %010:
                   pLifeCycle := @"canceled-2"
+                %011:
+                  pLifeCycle := @"ACTIVE-3"
                 %100:
                   pLifeCycle := @"canceled-4"
-                %000:
-                  pLifeCycle := @"canceled-0"
-                %011:
-                  pLifeCycle := @"active-3"
                 %101:
-                  pLifeCycle := @"active-5"
+                  pLifeCycle := @"ACTIVE-5"
                 %110:
-                  pLifeCycle := @"active-6"
+                  pLifeCycle := @"ACTIVE-6"
+                %111:
+                  pLifeCycle := @"erased"
             case signature.[1..0]
                 %00: pBlockType := @"HEAD/last"
                 %01: pBlockType := @"HEAD/more"
@@ -174,10 +198,10 @@ pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, si
                 %11: pBlockType := @"BODY/more"
             if signature.[0]
                 ' show more block
-                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
+                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
             else
                 ' show last block
-                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "]")
+                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
 
 pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount
     debug("* ", zstr_(pMessage))
@@ -236,7 +260,7 @@ pub showFiles() | ID, Bytes, byte Filename[128], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat
-        Flash.Directory(@ID, @Filename, @Bytes)                     'get next file
+        Flash.directory(@ID, @Filename, @Bytes)                     'get next file
         if Filename[0]                                              'is there a filename?
             ReadFile(@Filename, @Buff, 30)                            'read file
             if isZstr(@Buff, 30)
@@ -276,13 +300,13 @@ pub ReadFile(pFilename, pStr, maxlen) | handle, byteCount
                     showError(@"rd_str()", byteCount)
             'debug("- read str(", udec_(byteCount), ")=[", zstr_(pStr), "]")      'show filename, bytes, ID, and file contents
 
-            Flash.Close(handle)                                         'close file
+            Flash.close(handle)                                         'close file
     else
         bytefill(pStr, $ff, maxlen)
 
 pub ensureEmptyDirectory() | ID, Bytes, byte Filename[128], byte Buff[30]
 '' validate that directory is empty!
-    Flash.Directory(@ID, @Filename, @Bytes)                     'get first file
+    Flash.directory(@ID, @Filename, @Bytes)                     'get first file
     bPassed := true
     if Filename[0]                                              'is there a filename?
         bPassed := false
@@ -341,7 +365,7 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
         pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
         refByteCount := LONG[pCurrRefDir][1]            ' get byte count
         refblocks    := LONG[pCurrRefDir][2]            ' get block count
-        Flash.Directory(@ID, @Filename, @Bytes)         'get next file
+        Flash.directory(@ID, @Filename, @Bytes)         'get next file
         if pRefFilename == 0                            ' if not beyond last REF entry
             'debug(" - end of table entries!")
         else
@@ -455,7 +479,7 @@ pub dumpFileHeads() | ID, Bytes, byte Filename[128], byte Buff[30], pBlock
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat
-        Flash.Directory(@ID, @Filename, @Bytes)                     'get next file
+        Flash.directory(@ID, @Filename, @Bytes)                     'get next file
         if Filename[0]                                              'is there a filename?
             pBlock := Flash.TEST_getHead4kBlock(@Filename)
             dbgMemDump(@Filename, pBlock, 64)

@@ -95,7 +95,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
 {
@@ -168,7 +168,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     '  close file
     utils.startTest(@"Close read file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.showFiles()

@@ -74,9 +74,12 @@ PUB go() | hundreds, tens, units, snHi, snLo
 
     ' FIXME: add free block checks after each file write/append
 
+    'utils.startTestGroup(@"Head block only - partially filled with 5 BYTEs - open append but no previous file")
+    'testNewAppendBytes(@testfile1, 5, 0, 0)
+
     ' Real tests start here:
     utils.startTestGroup(@"Head block only - partially filled with 10 BYTEs then apppend 10 more")
-    testWriteBytes(@testfile1, 10, 0, 0)
+    testWriteBytes(@testfile1, 10, 0, 0) ' this replaces file so we start at 0,0
     testAppendBytes(@testfile1, 10)
 
     utils.showFiles()
@@ -120,6 +123,48 @@ PUB go() | hundreds, tens, units, snHi, snLo
 
     debug("* Test Complete")
 
+pri testNewAppendBytes(pFilename, count, startingFileCount, startingBlockCount) | bExists, startLength, endLength, pBlock
+
+    utils.startTest(@"Ensure file doesn't exist")
+    bExists := Flash.exists(@testfile1)
+    status := Flash.error()
+    utils.evaluateStatus(bExists, @"exists()", false)
+
+    utils.startTest(@"ensure no errors for exists() call ")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.startTest(@"Open File for append")
+    handle := Flash.open(pFilename,"a")
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    utils.startTest(@"Write N BYTEs")
+    testValue := 0
+    repeat count
+        testValue++
+        status := Flash.wr_byte(handle, testValue)
+        utils.evaluateStatus(status, @"wr_byte()", Flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on writes")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
+
+    '  close file
+    utils.startTest(@"Close written file")
+    status := Flash.close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.showFileDetails(pFilename)
+
+    '  get filesystem stats and verify against expectation
+    utils.startTest(@"Ensure expected file system changes post BYTEs write")
+    utils.evaluateFSStats(@"post file write", startingFileCount + 1, 1 + startingBlockCount)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats")
+    utils.evaluateFileStats(pFilename, 1, count)
+
 
 pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | blocksUsed
     '  open file for write
@@ -143,7 +188,7 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -186,7 +231,7 @@ pri testAppendBytes(pFilename, count) | startLength, endLength, pBlock
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
 {
@@ -204,7 +249,6 @@ pri testAppendBytes(pFilename, count) | startLength, endLength, pBlock
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats post BYTEs append")
     utils.evaluateFileStats(pFilename, 1, startLength + count)
-
 
 pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
 
@@ -228,7 +272,7 @@ pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -271,7 +315,7 @@ pri testAppendWords(pFilename, count) | startLength, endLength, pBlock
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
 {
@@ -313,7 +357,7 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | bl
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -356,7 +400,7 @@ pri testAppendLongs(pFilename, count) | startLength, blocksUsed
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
 {
@@ -443,7 +487,7 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
     {
@@ -496,7 +540,7 @@ pri testAppendStrings(pFilename, count, initialSize) | startLength, readWriteIdx
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
 {
@@ -554,7 +598,7 @@ pri testVerifyAllStrings(pFilename, count) | foundFileSize,  strIdx, pString, re
 
     '  close file
     utils.startTest(@"Close read file")
-    status := Flash.Close(handle)
+    status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
 
