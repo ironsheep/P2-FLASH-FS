@@ -1,0 +1,386 @@
+'' =================================================================================================
+''
+''   File....... RT_read_write_circular_tests.spin2
+''   Purpose.... This object exercises the open_circular() methods of the Flash file system
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... AUG 2023
+''   Updated.... 07 SEP 2023
+''
+'' =================================================================================================
+
+CON
+
+     _CLKFREQ        = 320_000_000
+
+{
+    ' debug via serial to RPi (using RPi gateway pins)
+    DEBUG_PIN_TX = 57
+    DEBUG_PIN_RX = 56
+    DEBUG_BAUD = 2_000_000
+'}
+
+OBJ
+    Flash : "Draft_flash_fs"
+    utils : "RT_utilities"
+
+CON
+    RECORD_LEN = 1024  ' just for fun, tiny but even number of longs
+    RECORD_DATA_LEN = RECORD_LEN - 12
+
+    CIRCULAR_LEN_IN_BYTES = 8192
+DAT
+
+testfileA1      BYTE    "rw0KB-A1-blocks.bin", 0
+testfileA2      BYTE    "rw0KB-A2-blocks.bin", 0
+testfileA3      BYTE    "rw0KB-A3-blocks.bin", 0
+testfileB1      BYTE    "rw3KB-B1-blocks.bin", 0
+testfileB2      BYTE    "rw3KB-B2-blocks.bin", 0
+testfileB3      BYTE    "rw3KB-B3-blocks.bin", 0
+testfileB4      BYTE    "rw3KB-B4-blocks.bin", 0
+testfileB5      BYTE    "rw3KB-B5-blocks.bin", 0
+testfileC1      BYTE    "rw8KB-C1-blocks.bin", 0
+testfileC2      BYTE    "rw8KB-C2-blocks.bin", 0
+testfileC3      BYTE    "rw8KB-C3-blocks.bin", 0
+testfileD1      BYTE    "rw9KB-D1-blocks.bin", 0
+testfileD2      BYTE    "rw9KB-D2-blocks.bin", 0
+
+record
+recordMARK      LONG    $beadfeed              ' visual start of record marker
+recordID        LONG    0
+recordData      LONG    0[RECORD_DATA_LEN/4]
+recordCRC       LONG    0
+recordEnd
+
+status          LONG    0
+handle          LONG    0
+testValue       LONG    0
+recordNbr       LONG    0
+rdLength        LONG    0
+pBlock          LONG    0
+calcCRC         LONG    0
+sizeUnused      LONG    0
+expectedFileSize    LONG    0
+expectedFileBlocks  LONG    0
+allocatedFileSize   LONG    0
+
+PUB go()
+
+    utils.startTest(@"Format Flash")
+    status := Flash.format()      ' Comment out this line to not erase all files
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    utils.startTest(@"Mount Flash FS")
+    status := Flash.mount()
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    utils.ShowStats()                                   ' should have empty filesystem
+    utils.showFiles()
+
+    ' Test Cases:
+    '  Limit 8kb
+    '   A - Cases with NO starting file (0kb)
+    '     A1 - write less than 8kb                      - close as file -> end with file less than limit
+    '     A2 - write 8kb                                - close as file -> end with file at limit
+    '     A3 - write more than 8kb (9kb)                - (move head, canceling prior head and block(s)) moves head into chain, lops off head part of chain -> end with file at limit
+    '   B - Cases with SHORTer starting file (3kb)
+    '     B1 - write amount that will still fit in 8kb  - close as file -> end with file at limit (tail gets replaced) -> end with file less than limit
+    '     B2 - write amount that will fill 8kb          - close as file -> end with file at limit (tail gets replaced) -> end with file at limit
+    '     B3 - write 6k                                 - move head into file, append tail to file (removed front block(s) of orig file -> end with file at limit
+    '     B4 - write 8kb                                - moved head of file to head of chain, remove orig file -> end with file at limit
+    '     B5 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
+    '   C - Cases with 8kb starting file (8kb)
+    '     C1 - write 6k                                 - move head into file, append tail to file (removed front block(s) of orig file) -> end with file at limit
+    '     C2 - write more than 8kb (9kb)                - move head into middle of chain (remove orig file, remove from of chain prior to head) -> end with file at limit
+    '   D - Cases with LONGer starting file (11kb)
+    '     D1 - write 6k                                 - move head into file, append tail to file (removed front block(s) of orig file) -> end with file at limit
+    '     D2 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
+
+    ' Test Cases:
+    '  Limit 8kb - Allocates blocks which can handle 11KB before overflowing (12,132 technically)
+
+    '   A - Cases with NO starting file (0kb)
+    '     A1 - write less than 8kb                      - close as file -> end with file less than limit
+    utils.startTestGroup(@"A1 Append 6KB circular to empty file")
+    testAppendRecords(@testfileA1, 6, 0, 0)             ' this creates file (6,144 = 2 blocks)
+    testVerifyRecords(@testfileA1, 6)                   ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     A2 - write 8kb                                - close as file -> end with file at limit
+    utils.startTestGroup(@"A2 Append 8KB circular to empty file")
+    testAppendRecords(@testfileA2, 8, 1, 2)             ' this creates file (8,192 = 3 blocks)
+    testVerifyRecords(@testfileA2, 8)                   ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     A3 - write more than 8kb (12kb)               - (move head, canceling prior head and block(s)) moves head into chain, lops off head part of chain -> end with file at limit
+    utils.startTestGroup(@"A3 Append 12KB circular to empty file")
+    testAppendRecords(@testfileA3, 12, 2, 5)            ' this creates file (12,132 = 3 blocks)
+    testVerifyRecords(@testfileA3, 12)                  ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '   B - Cases with SHORTer starting file (3kb)
+    '     B1 - write amount that will still fit in 8kb  - close as file -> end with file at limit (tail gets replaced) -> end with file less than limit
+    utils.startTestGroup(@"B1 Append 5KB circular to 3kb file")
+    testAppendRecords(@testfileB1, 3, 3, 8) ' this creates file (3,072 = 2 blocks)
+    testAppendRecords(@testfileB1, 5, 3, 8) ' this appends to file (8,192 = 3 blocks)
+    testVerifyRecords(@testfileB1, 8) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     B2 - write amount that will fill 8kb          - close as file -> end with file at limit (tail gets replaced) -> end with file at limit
+    utils.startTestGroup(@"B2 Append 8KB circular to 3kb file")
+    testAppendRecords(@testfileB2, 3, 4, 11) ' this creates file (3,072 = 2 blocks)
+    testAppendRecords(@testfileB2, 8, 4, 11) ' this appends to file (11,264 = 3 blocks)
+    testVerifyRecords(@testfileB2, 11) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     B3 - write 8kb                                - moved head of file to head of chain, remove orig file -> end with file at limit
+    utils.startTestGroup(@"B3 Append 11KB circular to 3kb file")
+    testAppendRecords(@testfileB3, 3, 5, 14) ' this creates file (3,072 = 2 blocks)
+    testAppendRecords(@testfileB3, 11, 5, 14) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testVerifyRecords(@testfileB3, 14) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     B4 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
+    utils.startTestGroup(@"B4 Append 14KB circular to 3kb file")
+    testAppendRecords(@testfileB4, 3, 6, 17) ' this creates file (3,072 = 2 blocks)
+    testAppendRecords(@testfileB4, 14, 6, 17) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testVerifyRecords(@testfileB4, 17) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '   C - Cases with 8kb starting file (multi-block file)
+    '     C1 - write more than 8kb (3kb)                - move head into file, (remove orig file, remove from of chain prior to head) -> end with file at limit
+    utils.startTestGroup(@"C1 Append 2KB circular to 8kb file")
+    testAppendRecords(@testfileC1, 8, 7, 20) ' this creates file (8,192 = 3 blocks)
+    testAppendRecords(@testfileC1, 4, 7, 20) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testVerifyRecords(@testfileC1, 12) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     C2 - write more than 8kb (6kb)                - move head into file, append tail to file (removed front block(s) of orig file) -> end with file at limit
+    utils.startTestGroup(@"C2 Append 6KB circular to 8kb file")
+    testAppendRecords(@testfileC2, 8, 8, 23) ' this creates file (8,192 = 3 blocks)
+    testAppendRecords(@testfileC2, 6, 8, 23) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testVerifyRecords(@testfileC2, 14) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     C3 - write more than 8kb (9kb)                - move head into middle of chain (remove orig file, remove from of chain prior to head) -> end with file at limit
+    utils.startTestGroup(@"C3 Append 9KB circular to 8kb file")
+    testAppendRecords(@testfileC3, 8, 9, 26) ' this creates file (8,192 = 3 blocks)
+    testAppendRecords(@testfileC3, 9, 9, 26) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testVerifyRecords(@testfileC3, 17) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '   D - Cases with LONGer starting file (11kb)
+    '     D1 - write 6k                                 - move head into file, append tail to file (removed front block(s) of orig file) -> end with file at limit
+    utils.startTestGroup(@"D1 Append 6KB circular to 11kb file")
+    testAppendRecords(@testfileD1, 11, 10, 29) ' this creates file (11,264 = 3 blocks)
+    testAppendRecords(@testfileD1, 6, 10, 29) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testVerifyRecords(@testfileD1, 17) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    '     D2 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
+    utils.startTestGroup(@"D2 Append 9KB circular to 11kb file")
+    testAppendRecords(@testfileD2, 11, 11, 32) ' this creates file (11,264 = 3 blocks)
+    testAppendRecords(@testfileD2, 9, 11, 32) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testVerifyRecords(@testfileD2, 20) ' this verifies last 8k of file
+
+    utils.showFiles()
+
+    utils.ShowTestEndCounts()
+
+    debug("* Test Complete")
+
+pri testAppendRecords(pFilename, recordCount, fileCount, blocksAllocated) | lenBytes, startingRcdCt, maxAllocatedBytes, minWrittenBytes
+
+    startingRcdCt := 1
+    lenBytes := 0
+    if flash.exists(pFilename)
+        '  get total file size
+        utils.startTest(@"Determine size of file in records")
+        lenBytes := Flash.file_size(pFilename)
+        status := Flash.error()
+        utils.evaluate(handle, Flash.SUCCESS)
+
+        startingRcdCt := ((lenBytes + (RECORD_LEN-1)) / RECORD_LEN) + 1
+
+    debug(" ")
+    debug("****  Before Append: file size in bytes = ", udec_(lenBytes), " bytes, ", udec_(startingRcdCt-1), " records")
+
+    ' ----------------------------------
+    ' TEST
+        '  open file for write
+    '  ensure returns SUCCESS
+    utils.startTest(@"Open File for write")
+    handle := Flash.open_circular(pFilename, "a", CIRCULAR_LEN_IN_BYTES)
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    utils.startTest(@"Write Records")
+    status := Flash.SUCCESS
+    repeat recordNbr from startingRcdCt to startingRcdCt + recordCount - 1
+        testValue := $40 + recordNbr                    ' A, B, C, etc.
+        recordId := recordNbr
+        bytefill(@recordData, testValue, RECORD_DATA_LEN)
+        recordCRC := utils.record_crc(@record, RECORD_LEN)
+        'debug("* write rcd #", udec_(recordNbr), " of 10")
+        'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
+        status := Flash.write(handle, @record, RECORD_LEN)
+        utils.evaluateStatus(status, @"write()", Flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on Record writes")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
+
+    '  close file
+    utils.startTest(@"Close written file")
+    status := Flash.close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+{
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    ' reuse status for a minute
+    status := ((4 * RECORD_LEN + 64) + 32) & $FFFF_FFF0            ' ensure multiple of 16 bytes
+    utils.dbgMemDump(@"Records file Head block", pBlock, status)
+    status := Flash.SUCCESS ' clear our temp use
+'}
+
+    debug(" ")
+    if lenBytes == 0 ' are we creating new?
+        minWrittenBytes := ((recordCount * RECORD_LEN) < CIRCULAR_LEN_IN_BYTES) ? (recordCount * RECORD_LEN) : CIRCULAR_LEN_IN_BYTES
+        maxAllocatedBytes := utils.bytesAllocatedFor(CIRCULAR_LEN_IN_BYTES)
+        expectedFileSize := (recordCount * RECORD_LEN) > maxAllocatedBytes ? maxAllocatedBytes : (recordCount * RECORD_LEN)
+        expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
+
+        debug("* wrote new file: size ", udec_(expectedFileSize), " bytes, ", udec_(expectedFileBlocks), " blocks")
+
+        '  get filesystem stats and verify against expectation
+        utils.startTest(@"Ensure expected file system changes")
+        utils.evaluateFSStats(@"post file write", fileCount+1, expectedFileBlocks + blocksAllocated)
+
+        '  get single file stats and verify against expectation
+        utils.startTest(@"Ensure expected file stats")
+        utils.evaluateFileStatsRange(pFilename, expectedFileBlocks, minWrittenBytes, expectedFileSize)
+
+        allocatedFileSize := Flash.BYTES_IN_HEAD_BLOCK
+        if expectedFileBlocks > 1
+            allocatedFileSize += (Flash.BYTES_IN_BODY_BLOCK * (expectedFileBlocks - 1))
+
+        utils.startTest(@"Ensure no error on size unused call")
+        status := Flash.error()
+        utils.evaluate(status, Flash.SUCCESS)
+
+    else
+        expectedFileSize := (startingRcdCt - 1 + recordCount) * RECORD_LEN
+        if expectedFileSize > CIRCULAR_LEN_IN_BYTES
+            expectedFileSize := CIRCULAR_LEN_IN_BYTES
+
+        expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
+
+        debug("* appended to existing file: size ", udec_(expectedFileSize), " bytes, ", udec_(expectedFileBlocks), " blocks")
+
+        '  get filesystem stats and verify against expectation
+        utils.startTest(@"Ensure expected file system changes")
+        utils.evaluateFSStats(@"post file write", fileCount+1, expectedFileBlocks + blocksAllocated)
+
+        '  get single file stats and verify against expectation
+        utils.startTest(@"Ensure expected file stats")
+        utils.evaluateFileStatsRange(pFilename, expectedFileBlocks, CIRCULAR_LEN_IN_BYTES, expectedFileSize)
+
+
+pri testVerifyRecords(pFilename, totalRecordsWritten) | recordCount, lenBytes, startRcdNbr, recordInCircular
+
+    '  get total file size
+    utils.startTest(@"Determine size of file in records")
+    lenBytes := Flash.file_size(pFilename)
+    status := Flash.error()
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    recordCount := lenBytes / RECORD_LEN                ' ignore fraction at front of file
+
+    debug(" ")
+    debug("****  At Verify: file size in bytes = ", udec_(lenBytes), " bytes, (", udec_(recordCount), " records), wrote total of ", udec_(totalRecordsWritten), " records")
+
+    recordInCircular := (CIRCULAR_LEN_IN_BYTES + (RECORD_LEN-1)) / RECORD_LEN
+    debug("   Circular Buffer contains = ", udec_(recordInCircular), " records")
+
+    ' read should start at tail - file limit (8KB in our tests)
+    if totalRecordsWritten > recordInCircular
+        startRcdNbr := totalRecordsWritten - recordInCircular + 1
+    else
+        startRcdNbr := 1
+    debug("   Read should start with record #", udec_(startRcdNbr))
+
+    '  open file for read
+    utils.startTest(@"Open File for read")
+    handle := Flash.open_circular(pFilename, "r", CIRCULAR_LEN_IN_BYTES)
+    utils.evaluate(handle, Flash.SUCCESS)
+    '    seek to various locations and read longs validating for correct value
+
+    utils.startTest(@"read expected RECORDs")
+    repeat recordNbr from startRcdNbr to totalRecordsWritten
+        rdLength := Flash.read(handle, @record, RECORD_LEN)
+        if rdLength <> RECORD_LEN
+            status := Flash.error()
+            quit
+        ' ensure length is same as expected
+        utils.evaluateValue(rdLength, @"read()", RECORD_LEN)
+        ' ensure record ID is same as expected
+        utils.evaluateValue(recordId, @"recordId", recordNbr)
+        ' ensure record CRC is same as expected
+        calcCRC := utils.record_crc(@record, RECORD_LEN)
+        utils.evaluateValue(calcCRC, @"recordCRC", recordCRC)
+
+    utils.startTest(@"ensure no errors on reads")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  read past end of file to verify read returns error
+    utils.startTest(@"BAD: read one more Record than written")
+    rdLength := Flash.read(handle, @record, RECORD_LEN)
+    utils.evaluateSingleValue(rdLength, @"read()", 0)
+    status := Flash.error()
+    utils.evaluate(status, Flash.E_END_OF_FILE)
+
+    '  close file
+    utils.startTest(@"Close read file")
+    status := Flash.close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+con { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}

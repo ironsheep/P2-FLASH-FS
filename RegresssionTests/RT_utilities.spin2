@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 03 SEP 2023
+''   Updated.... 07 SEP 2023
 ''
 '' =================================================================================================
 
@@ -77,16 +77,20 @@ pub ShowTestEndCounts()
     debug("* ", udec_(numberTests), " Tests: , Pass: ", udec_(passCount), ", Fail: ", udec_(failCount))
 
 pub evaluate(result, expectedResult) | ecGot, ecExpected
-    ecExpected := Flash.string_for_error(expectedResult)
     if result > 0
         if result <> expectedResult
-            debug("  Result: ", udec_(result), " (expected ", zstr_(ecExpected), ")")
+            if expectedResult < 0
+                ecExpected := Flash.string_for_error(expectedResult)
+                debug("  Result: ", sdec_(result), " (expected ", zstr_(ecExpected), ")")
+            else
+                debug("  Result: ", udec_(result), " (expected ", udec_(expectedResult), ")")
             failCount++
         else
             debug("  Result: ", udec_(result))
             passCount++
     else
         ecGot := Flash.string_for_error(result)
+        ecExpected := Flash.string_for_error(expectedResult)
         if result <> expectedResult
             debug("   ECode: ", zstr_(ecGot), " (expected ", zstr_(ecExpected), ")")
             failCount++
@@ -247,6 +251,32 @@ pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesU
         passCount++
     debug("   -> ", zstr_(pPassFail))
 
+pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, maxBytesUsed
+    debug("  File: [", zstr_(pFilename), "]")
+    showFileSignatures(pFilename)
+    bytesUsed, bytesFree, blockCount := Flash.test_count_file_bytes(pFilename)
+    maxBytesUsed := Flash.BYTES_IN_HEAD_BLOCK
+    maxBytesUsed += (Flash.BYTES_IN_BODY_BLOCK * (expectedBlockCount - 1))
+    if bytesUsed < 0
+        debug("  # Error: ", zstr_(Flash.string_for_error(bytesUsed)))
+        bPassed := false
+    else
+        bPassed := expectedBlockCount == blockCount and bytesUsed >= exptecedMinBytesUsed and bytesUsed <= maxBytesUsed
+        if blockCount <> expectedBlockCount
+            debug("  # blocks: ", udec_(blockCount), " (expected ", udec_(expectedBlockCount), ")")
+        else
+            debug("  # blocks: ", udec_(blockCount))
+        if bytesUsed < exptecedMinBytesUsed or bytesUsed > maxBytesUsed
+            debug("  # bytes used: ", udec_(bytesUsed), " (expected ", udec_(expectedBytesUsed), " [", udec_(exptecedMinBytesUsed), "-", udec_(maxBytesUsed), "])")
+        else
+            debug("  # bytes used: ", udec_(bytesUsed), ", ", udec(expectedBytesUsed))
+    pPassFail := bPassed == false ? @"FAIL" : @"pass"
+    if bPassed == false
+        failCount++
+    else
+        passCount++
+    debug("   -> ", zstr_(pPassFail))
+
 pub showError(pCaller, errorCode)
     debug("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
 
@@ -322,15 +352,29 @@ pub ensureEmptyDirectory() | ID, Bytes, byte Filename[128], byte Buff[30]
 
 pub blockCountForFileSize(fileSizeInBytes) : blockCount | remainingSize, overflowBodyCount
     ' return number of blocks for given file size
-    blockCount := 1
+    blockCount := 1 ' head block
     if fileSizeInBytes > Flash.BYTES_IN_HEAD_BLOCK
         remainingSize := fileSizeInBytes - Flash.BYTES_IN_HEAD_BLOCK
-        blockCount += remainingSize / Flash.BYTES_IN_BODY_BLOCK
-        overflowBodyCount := remainingSize +// Flash.BYTES_IN_BODY_BLOCK
+        blockCount += remainingSize / Flash.BYTES_IN_BODY_BLOCK                 ' body blocks
+        overflowBodyCount := remainingSize +// Flash.BYTES_IN_BODY_BLOCK ' final bytes in tail block
         'debug("blockCountForFileSize()  # remainByt: ", udec_(remainingSize), ", ovflwByt: ", udec_(overflowBodyCount))
         if overflowBodyCount > 0
             blockCount++
     'debug("blockCountForFileSize()  # bytes: ", udec_(fileSizeInBytes), ", blocks: ", udec_(blockCount))
+
+pub bytesAllocatedFor(sizeInBytes) : maxAllocationBytes | bodyBlocks
+    ' return max allocation size for circular file
+    maxAllocationBytes := Flash.BYTES_IN_HEAD_BLOCK
+    if sizeInBytes > Flash.BYTES_IN_HEAD_BLOCK
+        bodyBlocks := ((sizeInBytes - Flash.BYTES_IN_HEAD_BLOCK) + (Flash.BYTES_IN_BODY_BLOCK - 1)) / Flash.BYTES_IN_BODY_BLOCK
+        maxAllocationBytes += bodyBlocks * Flash.BYTES_IN_BODY_BLOCK
+
+pub blocksAllocatedFor(sizeInBytes) : maxAllocationBlocks | bodyBlocks
+    ' return max allocation size for circular file
+    maxAllocationBlocks := 1
+    if sizeInBytes > Flash.BYTES_IN_HEAD_BLOCK
+        bodyBlocks := ((sizeInBytes - Flash.BYTES_IN_HEAD_BLOCK) + (Flash.BYTES_IN_BODY_BLOCK - 1)) / Flash.BYTES_IN_BODY_BLOCK
+        maxAllocationBlocks += bodyBlocks
 
 dat
     pCurrRefDir     long    0

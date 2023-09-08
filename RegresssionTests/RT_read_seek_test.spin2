@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 02 SEP 2023
+''   Updated.... 08 SEP 2023
 ''
 '' =================================================================================================
 
@@ -40,7 +40,7 @@ longValue           long    0
 byteOffset          long    0
 fileSizeBlocks      long    0
 
-PUB go()
+PUB go() | nbrLongs
 
     status := Flash.format()      ' Comment out this line to not erase all files
     if status < 0
@@ -61,27 +61,27 @@ PUB go()
 
     ' fill head block with longs (only block file)
     utils.startTestGroup(@"Head block only - filled with longs")
-    writeAddressedLongs(@testfile, Flash.LONGS_IN_HEAD_BLOCK, 0, 0)
-
-    VerifyAddressedLongs(@testfile, Flash.LONGS_IN_HEAD_BLOCK)
+    nbrLongs := Flash.LONGS_IN_HEAD_BLOCK
+    writeAddressedLongs(@testfile, nbrLongs, 0, 0)
+    VerifyAddressedLongs(@testfile, nbrLongs)
 
     ' fill head block + 2 longs with longs (2 block file)
     utils.startTestGroup(@"Head block + body block - head full, body has 2 longs")
-    writeAddressedLongs(@testfile2, Flash.LONGS_IN_HEAD_BLOCK + 2, 1, 1)
-
-    VerifyAddressedLongs(@testfile2, Flash.LONGS_IN_HEAD_BLOCK + 2)
+    nbrLongs := Flash.LONGS_IN_HEAD_BLOCK + 2
+    writeAddressedLongs(@testfile2, nbrLongs, 1, 1)
+    VerifyAddressedLongs(@testfile2, nbrLongs)
 
     ' fill head block + body block + 2 longs with longs (3 block file)
     utils.startTestGroup(@"Head block + 2x body block - head full, body full, 2nd body has 2 longs")
-    writeAddressedLongs(@testfile3, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + 2, 2, 3)
-
-    VerifyAddressedLongs(@testfile3, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + 2)
+    nbrLongs := Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + 2
+    writeAddressedLongs(@testfile3, nbrLongs, 2, 3)
+    VerifyAddressedLongs(@testfile3, nbrLongs)
 
      ' fill head block + 2x body block with longs (full 3 block file)
-    utils.startTestGroup(@"Head block + 2x body block - all block full")
-    writeAddressedLongs(@testfile4, Flash.LONGS_IN_HEAD_BLOCK + (Flash.LONGS_IN_BODY_BLOCK * 2), 3, 6)
-
-    VerifyAddressedLongs(@testfile4, Flash.LONGS_IN_HEAD_BLOCK + (Flash.LONGS_IN_BODY_BLOCK * 2))
+    utils.startTestGroup(@"Head block + 2x body block - all blocks full")
+    nbrLongs := Flash.LONGS_IN_HEAD_BLOCK + (Flash.LONGS_IN_BODY_BLOCK * 2)
+    writeAddressedLongs(@testfile4, nbrLongs, 3, 6)
+    VerifyAddressedLongs(@testfile4, nbrLongs)
 
     utils.showFiles()
 
@@ -92,7 +92,7 @@ PUB go()
     debug("* Test Complete")
 
 
-pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
+pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount) | dumpSize
     ' ----------------------------------
     ' TEST
     '  open file for read
@@ -110,7 +110,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
 
     '  write a fixed length file of longs where value of long is offset into file
     expectedFileSize := 0
-    utils.startTest(@"Write head block full of longs")
+    utils.startTest(@"Write N of longs")
     repeat longValue from 0 to count - 1
         status := Flash.wr_long(handle, longValue)
         expectedFileSize += 4
@@ -129,27 +129,34 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
 
     utils.showFileDetails(pFilename)
 
-    {
-    ' AUGH dump head block to see if content is correct
-    pBlock := Flash.TEST_getHead4kBlock(pFilename)
-    ' reuse status for a minute
-    status := ((expectedFileSize) + 32) & $FFFF_FFF0            ' ensure muiple of 16 bytes
-    utils.dbgMemDump(@"Longs file Head block", pBlock, 4096)
-    status := Flash.SUCCESS ' clear our temp use
-    '}
+
+    dumpSize := expectedFileSize
+    if count > Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK
+        dumpSize -= (Flash.LONGS_IN_HEAD_BLOCK * 4) + (Flash.LONGS_IN_BODY_BLOCK * 4)
+    elseif count > Flash.LONGS_IN_HEAD_BLOCK
+        dumpSize -= Flash.LONGS_IN_HEAD_BLOCK * 4
+    ' show whole block if head block
+    if expectedFileSize ==Flash.LONGS_IN_HEAD_BLOCK * 4
+        dumpSize := 4096
 
     '  get filesystem stats and verify against expectation
-    fileSizeBlocks := 1
-    if expectedFileSize > Flash.BYTES_IN_HEAD_BLOCK + Flash.BYTES_IN_BODY_BLOCK
-        fileSizeBlocks := 3
-    elseif expectedFileSize > Flash.BYTES_IN_HEAD_BLOCK
-        fileSizeBlocks := 2
+    fileSizeBlocks := utils.blockCountForFileSize(expectedFileSize)
     utils.startTest(@"Ensure expected file system changes")
     utils.evaluateFSStats(@"post file write", startingFileCount+1, startingBlockCount+fileSizeBlocks)
 
     '  get single file stats and verify against expectation
     utils.startTest(@"Ensure expected file stats")
-    utils.evaluateFileStats(pFilename, fileSizeBlocks, count * 4)
+    utils.evaluateFileStats(pFilename, fileSizeBlocks, expectedFileSize)
+
+    {
+    ' AUGH dump head block to see if content is correct
+    pBlock := Flash.TEST_getTail4kBlock(pFilename)
+    ' reuse status for a minute
+    status := dumpSize  & $FFFF_FFF0            ' ensure muiple of 16 bytes (if in head show name)
+    utils.dbgMemDump(@"Longs file Tail block", pBlock, status)
+    status := Flash.SUCCESS ' clear our temp use
+    '}
+
 
 
 pri VerifyAddressedLongs(pFilename, count)
@@ -157,6 +164,7 @@ pri VerifyAddressedLongs(pFilename, count)
     utils.startTest(@"Open File for read")
     handle := Flash.open(pFilename,"r")
     utils.evaluate(handle, Flash.SUCCESS)
+
     '    seek to various locations and read longs validating for correct value
     utils.startTest(@"read 1st long")
         status := Flash.seek(handle, 0)

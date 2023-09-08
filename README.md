@@ -16,7 +16,7 @@ Additional pages:
 
 - [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
 - [FS Theory of Operations](THEOPS.md) - a deteailed descript of how this filesystem works
-- [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features
+- [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features (604+ tests so far)
 
 ## Flash Filesystem Features
 
@@ -28,8 +28,8 @@ Additional pages:
 - Seeks supported
 - File Append supported
 - Read-Modify-Write supported
-- Circular file writes supported (simulation)
-- Directory features coming soon (simulation)
+- Circular file writes supported 
+- *Directory Support coming soon* 
 
 ## How to Contribute
 
