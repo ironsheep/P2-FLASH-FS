@@ -89,10 +89,10 @@ This is a recap of the version history of these files:
 | --- | --- |
 |  <PRE>2023-Aug-26</PRE> | Initial release. `RT_read_write_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() <br>Spanning blocks tests need to be added|
 |  <PRE>2023-Aug-27</PRE> | More Tests: `RT_read_write_block_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for read(), write(), and file\_size_unused(): in only block, spanning two blocks, spanning 3 blocks |
-|  <PRE>2023-Aug-28</PRE> | More Tests: `RT_read_seek_test.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for seek(): in only block, spanning two blocks, spanning 3 blocks |
+|  <PRE>2023-Aug-28</PRE> | More Tests: `RT_read_seek_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for seek(): in only block, spanning two blocks, spanning 3 blocks |
 |  <PRE>2023-Aug-29</PRE> | **Updated** `RT_read_write_tests.spin2`<br>Working Format, Mount, open(file, "R"), open(file, "W"), close(),<br>Focused tests for wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() <br>Added tests for version(), serial_number(), directory(), and 2, 3 block span tests using longs |
-|  <PRE>2023-Sep-02</PRE> | More Tests `RT_append_tests.spin2`<br>Working Format, Mount, close(),<br>Focused tests for open(file, "A"), wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() with additional tests for 2, 3 block span tests using longs |
-|  <PRE>2023-Sep-08</PRE> | More Tests `RT_mount_handle_basics_test.spin2`<br>This tests all methods when filesystem is not mounted, when we are out of handles and when attempting to use an illegal handle<br>The point of this testing is to ensure that methods are returning the proper error code as documented under these conditions 
+|  <PRE>2023-Sep-02</PRE> | More Tests `RT_write_append_tests.spin2`<br>Working Format, Mount, close(),<br>Focused tests for open(file, "A"), wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() with additional tests for 2, 3 block span tests using longs |
+|  <PRE>2023-Sep-08</PRE> | More Tests `RT_mount_handle_basics_tests.spin2`<br>This tests all methods when filesystem is not mounted, when we are out of handles and when attempting to use an illegal handle<br>The point of this testing is to ensure that methods are returning the proper error code as documented under these conditions 
 |  <PRE>2023-Sep-08</PRE> | More Tests `RT_read_write_circular_tests.spin2`<br>This is the full test suite exercising the open_circular() for read and append methods. They ensure that blocks are added to and removed from the filesystem as they should be. They also ensure the reading from the circular file starts at the byte that they should be. These tests use 1KB records when id and checksum in each so that the reads can be certified to start at the exact byte they should be.
 
 ## Test files by Stephen
@@ -113,8 +113,8 @@ This is my work in progress as I'm working toward customer facing release of the
 | [RT\_read\_write\_circular_tests.log](RT_read_write_circular_tests.log) | Log of the read/write basic types tests [233 passes, 0 fails] |
 | [RT\_read\_write_tests.spin2](RT_read_write_tests.spin2) | The read/write basic types test suite |
 | [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [93 passes, 0 fails] |
-| [RT\_append_tests.spin2](RT_append_tests.spin2) | The open for append test suite |
-| [RT\_append_tests.log](RT_append_tests.log) | Log of the open for append tests [92 passes, 0 fails<br>(*94 successes (+2) were extra checks I did for 2 tests*)] |
+| [RT\_write\_append_tests.spin2](RT_write_append_tests.spin2) | The open for append test suite |
+| [RT\_write\_append_tests.log](RT_write_append_tests.log) | Log of the open for append tests [92 passes, 0 fails<br>(*94 successes (+2) were extra checks I did for 2 tests*)] |
 
 ### Next Steps:
 
