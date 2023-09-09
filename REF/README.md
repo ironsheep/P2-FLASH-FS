@@ -40,11 +40,9 @@ This is my work in preogress as I'm working toward customer facing release of th
 ### Next Steps:
 
 - Finish regression tests for untested methods:
-  - Read/write file as circular buffer
-  - File append
-  - File read-modify write
-  - Certify life-cycle changes for blocks of files created/modified
-- Do 8 cog regression test for file reads/writes
+  - File append using flush()
+  - Certify life-cycle changes for blocks of files created/modified (this is visuall checked for now...)
+  - Do 8 cog regression test for file reads/writes
 - ... more I'm sure ...
 - Publish for API review and testing
 
