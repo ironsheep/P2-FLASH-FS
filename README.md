@@ -40,7 +40,7 @@ This is a project supporting our P2 Development Community. Please feel free to c
 
 ## Credits
 
-Thank you to **Chip Gracy** for the excellent **FLash File System 16MB** written for the P2 which is the core of this fileysystem.
+Thank you to **Chip Gracey** for the excellent **Flash File System 16MB** written for the P2 which is the core of this fileysystem.
 
 Thank you to **Jon McPhalen** for helping to specify the customer facing API for this filesystem and for guidance in our future directions for the upcoming dual filesystem driver as well.
 
