@@ -1,5 +1,5 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_ABA4 jump
+Cog0  INIT $0000_0EB8 $0000_AF74 jump
 Cog0
 Cog0  * Test #1: Format Flash
 Cog0  * format()
@@ -33,7 +33,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw0KB-A1-blocks.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$0DF0] HEAD/more, thisID=0, nextId=1, lifeCycle [erased], sig=[$0010_00FD]
+Cog0      1: [$0C02] HEAD/more, thisID=0, nextId=1, lifeCycle [erased], sig=[$0010_00FD]
 Cog0      2: [$0000] BODY/last, thisID=1, endPtr=$0890, lifeCycle [erased], sig=[$8900_01FE]
 Cog0
 Cog0  * Test #6: Close written file
@@ -52,8 +52,8 @@ Cog0
 Cog0  * Test #8: Ensure expected file stats
 Cog0    File: [rw0KB-A1-blocks.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$0DF0] HEAD/more, thisID=0, nextId=1, lifeCycle [ACTIVE-3], sig=[$0010_007D]
-Cog0      2: [$04EF] BODY/last, thisID=1, endPtr=$0890, lifeCycle [ACTIVE-3], sig=[$8900_017E]
+Cog0      1: [$0C02] HEAD/more, thisID=0, nextId=1, lifeCycle [ACTIVE-3], sig=[$0010_007D]
+Cog0      2: [$0452] BODY/last, thisID=1, endPtr=$0890, lifeCycle [ACTIVE-3], sig=[$8900_017E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 6_144, expectedBytesUsed = 6_144
 Cog0     -> pass
@@ -113,8 +113,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw0KB-A2-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0C10] HEAD/more, thisID=2, nextId=3, lifeCycle [erased], sig=[$0030_02FD]
-Cog0      2: [$03A7] BODY/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037F]
+Cog0      1: [$04C4] HEAD/more, thisID=2, nextId=3, lifeCycle [erased], sig=[$0030_02FD]
+Cog0      2: [$02F8] BODY/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037F]
 Cog0      3: [$0000] BODY/last, thisID=4, endPtr=$0098, lifeCycle [erased], sig=[$0980_04FE]
 Cog0
 Cog0  * Test #19: Close written file
@@ -133,9 +133,9 @@ Cog0
 Cog0  * Test #21: Ensure expected file stats
 Cog0    File: [rw0KB-A2-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0C10] HEAD/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027D]
-Cog0      2: [$03A7] BODY/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037F]
-Cog0      3: [$0C21] BODY/last, thisID=4, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_047E]
+Cog0      1: [$04C4] HEAD/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027D]
+Cog0      2: [$02F8] BODY/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037F]
+Cog0      3: [$0DEB] BODY/last, thisID=4, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_047E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_192, expectedBytesUsed = 8_192
 Cog0     -> pass
@@ -196,9 +196,9 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw0KB-A3-blocks.bin] pending commit
 Cog0    # 4 Blocks in chain:
-Cog0      1: [$0444] HEAD/more, thisID=5, nextId=6, lifeCycle [erased], sig=[$0060_05FD]
-Cog0      2: [$0053] BODY/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067F]
-Cog0      3: [$05D3] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      1: [$0010] HEAD/more, thisID=5, nextId=6, lifeCycle [erased], sig=[$0060_05FD]
+Cog0      2: [$02BF] BODY/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067F]
+Cog0      3: [$0DB4] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
 Cog0      4: [$0000] BODY/last, thisID=8, endPtr=$00A0, lifeCycle [erased], sig=[$0A00_08FE]
 Cog0
 Cog0  * Test #32: Close written file
@@ -217,9 +217,9 @@ Cog0
 Cog0  * Test #34: Ensure expected file stats
 Cog0    File: [rw0KB-A3-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0053] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-5], sig=[$0070_06BD]
-Cog0      2: [$05D3] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$0DB8] BODY/last, thisID=8, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_087E]
+Cog0      1: [$02BF] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-5], sig=[$0070_06BD]
+Cog0      2: [$0DB4] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$0588] BODY/last, thisID=8, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_087E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_200, expectedBytesUsed = 12_132
 Cog0     -> pass
@@ -299,7 +299,7 @@ Cog0
 Cog0  * Test #47: Ensure expected file stats
 Cog0    File: [rw3KB-B1-blocks.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0884] HEAD/last, thisID=5, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_057C]
+Cog0      1: [$0159] HEAD/last, thisID=5, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_057C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_072, expectedBytesUsed = 3_072
 Cog0     -> pass
@@ -327,8 +327,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw3KB-B1-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0C71] HEAD/more, thisID=5, nextId=9, lifeCycle [erased], sig=[$0090_05FD]
-Cog0      2: [$0EDC] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]
+Cog0      1: [$0813] HEAD/more, thisID=5, nextId=9, lifeCycle [erased], sig=[$0090_05FD]
+Cog0      2: [$0B49] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]
 Cog0      3: [$0000] BODY/last, thisID=10, endPtr=$0098, lifeCycle [erased], sig=[$0980_0AFE]
 Cog0
 Cog0  * Test #53: Close written file
@@ -347,9 +347,9 @@ Cog0
 Cog0  * Test #55: Ensure expected file stats
 Cog0    File: [rw3KB-B1-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0C71] HEAD/more, thisID=5, nextId=9, lifeCycle [ACTIVE-5], sig=[$0090_05BD]
-Cog0      2: [$0EDC] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]
-Cog0      3: [$0EDD] BODY/last, thisID=10, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_0A7E]
+Cog0      1: [$0813] HEAD/more, thisID=5, nextId=9, lifeCycle [ACTIVE-5], sig=[$0090_05BD]
+Cog0      2: [$0B49] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]
+Cog0      3: [$044A] BODY/last, thisID=10, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_0A7E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_192, expectedBytesUsed = 8_192
 Cog0     -> pass
@@ -393,7 +393,7 @@ Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: B2 Append 8KB circular to 3kb file
 Cog0
-Cog0  ****  Before Append: file size  in byte 0 bytes, 0 records
+Cog0  ****  Before Append: file size in bytes = 0 bytes, 0 records
 Cog0
 Cog0  * Test #62: Open File for write
 Cog0     ECode: SUCCESS: No error
@@ -426,7 +426,7 @@ Cog0
 Cog0  * Test #67: Ensure expected file stats
 Cog0    File: [rw3KB-B2-blocks.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$002E] HEAD/last, thisID=11, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_0B7C]
+Cog0      1: [$03BC] HEAD/last, thisID=11, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_0B7C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_072, expectedBytesUsed = 3_072
 Cog0     -> pass
@@ -454,8 +454,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw3KB-B2-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0296] HEAD/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFD]
-Cog0      2: [$0160] BODY/more, thisID=12, nextId=13, lifeCycle [ACTIVE-3], sig=[$00D0_0C7F]
+Cog0      1: [$09A6] HEAD/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFD]
+Cog0      2: [$08B2] BODY/more, thisID=12, nextId=13, lifeCycle [ACTIVE-3], sig=[$00D0_0C7F]
 Cog0      3: [$0000] BODY/last, thisID=13, endPtr=$0C98, lifeCycle [erased], sig=[$C980_0DFE]
 Cog0
 Cog0  * Test #73: Close written file
@@ -474,9 +474,9 @@ Cog0
 Cog0  * Test #75: Ensure expected file stats
 Cog0    File: [rw3KB-B2-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0296] HEAD/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBD]
-Cog0      2: [$0160] BODY/more, thisID=12, nextId=13, lifeCycle [ACTIVE-3], sig=[$00D0_0C7F]
-Cog0      3: [$0E23] BODY/last, thisID=13, endPtr=$0C98, lifeCycle [ACTIVE-3], sig=[$C980_0D7E]
+Cog0      1: [$09A6] HEAD/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBD]
+Cog0      2: [$08B2] BODY/more, thisID=12, nextId=13, lifeCycle [ACTIVE-3], sig=[$00D0_0C7F]
+Cog0      3: [$0B69] BODY/last, thisID=13, endPtr=$0C98, lifeCycle [ACTIVE-3], sig=[$C980_0D7E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 11_264, expectedBytesUsed = 8_192
 Cog0     -> pass
@@ -554,7 +554,7 @@ Cog0
 Cog0  * Test #87: Ensure expected file stats
 Cog0    File: [rw3KB-B3-blocks.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$04E2] HEAD/last, thisID=14, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_0E7C]
+Cog0      1: [$0D47] HEAD/last, thisID=14, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_0E7C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_072, expectedBytesUsed = 3_072
 Cog0     -> pass
@@ -582,9 +582,9 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw3KB-B3-blocks.bin] pending commit
 Cog0    # 4 Blocks in chain:
-Cog0      1: [$0773] HEAD/more, thisID=14, nextId=15, lifeCycle [erased], sig=[$00F0_0EFD]
-Cog0      2: [$0832] BODY/more, thisID=15, nextId=16, lifeCycle [ACTIVE-3], sig=[$0100_0F7F]
-Cog0      3: [$07B5] BODY/more, thisID=16, nextId=17, lifeCycle [ACTIVE-3], sig=[$0110_107F]
+Cog0      1: [$0C92] HEAD/more, thisID=14, nextId=15, lifeCycle [erased], sig=[$00F0_0EFD]
+Cog0      2: [$0F23] BODY/more, thisID=15, nextId=16, lifeCycle [ACTIVE-3], sig=[$0100_0F7F]
+Cog0      3: [$012A] BODY/more, thisID=16, nextId=17, lifeCycle [ACTIVE-3], sig=[$0110_107F]
 Cog0      4: [$0000] BODY/last, thisID=17, endPtr=$08A0, lifeCycle [erased], sig=[$8A00_11FE]
 Cog0
 Cog0  * Test #93: Close written file
@@ -603,9 +603,9 @@ Cog0
 Cog0  * Test #95: Ensure expected file stats
 Cog0    File: [rw3KB-B3-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0832] HEAD/more, thisID=15, nextId=16, lifeCycle [ACTIVE-5], sig=[$0100_0FBD]
-Cog0      2: [$07B5] BODY/more, thisID=16, nextId=17, lifeCycle [ACTIVE-3], sig=[$0110_107F]
-Cog0      3: [$0D7A] BODY/last, thisID=17, endPtr=$08A0, lifeCycle [ACTIVE-3], sig=[$8A00_117E]
+Cog0      1: [$0F23] HEAD/more, thisID=15, nextId=16, lifeCycle [ACTIVE-5], sig=[$0100_0FBD]
+Cog0      2: [$012A] BODY/more, thisID=16, nextId=17, lifeCycle [ACTIVE-3], sig=[$0110_107F]
+Cog0      3: [$0859] BODY/last, thisID=17, endPtr=$08A0, lifeCycle [ACTIVE-3], sig=[$8A00_117E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 10_248, expectedBytesUsed = 8_192
 Cog0     -> pass
@@ -639,8 +639,64 @@ Cog0  * Test #101: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: B3a Seek within file that was append 11KB circular to 3kb file
+Cog0
+Cog0  * Test #102: Determine size of file in records
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  ****  At VerifySeek: file size in bytes = 10_248 bytes, (10 records), wrote total of 14 records
+Cog0     Circular Buffer contains = 8 records
+Cog0     Read should start with record #7
+Cog0
+Cog0  * Test #103: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #104: seek to 3 then read expected RECORD
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0     -- Verifying Rcd # 9
+Cog0    Sub-Test Results: Pass: 3, Fail: 0
+Cog0
+Cog0  * Test #105: ensure no error on read after seek
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #106: seek to zero then read expected RECORD
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0     -- Verifying Rcd # 7
+Cog0    Sub-Test Results: Pass: 3, Fail: 0
+Cog0
+Cog0  * Test #107: ensure no error on read after seek
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #108: seek to N-1 then read expected RECORD
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0     -- Verifying Rcd # 14
+Cog0    Sub-Test Results: Pass: 3, Fail: 0
+Cog0
+Cog0  * Test #109: ensure no error on read after seek
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #110: BAD: read one more Record than written
+Cog0    read(): 0
+Cog0     -> pass
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #111: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
 Cog0    All Files:
-Cog0  rw0K B-A1-bocks.bin, Bytes = 6_144, ID = 1, @Buff={binary data}
+Cog0  rw0KB-A1-blocks.bin, Bytes = 6_144, ID = 1, @Buff={binary data}
 Cog0  rw0KB-A2-blocks.bin, Bytes = 8_192, ID = 3, @Buff={binary data}
 Cog0  rw3KB-B1-blocks.bin, Bytes = 8_192, ID = 6, @Buff={binary data}
 Cog0  rw0KB-A3-blocks.bin, Bytes = 8_200, ID = 7, @Buff={binary data}
@@ -653,14 +709,14 @@ Cog0  * Test Group: B4 Append 14KB circular to 3kb file
 Cog0
 Cog0  ****  Before Append: file size in bytes = 0 bytes, 0 records
 Cog0
-Cog0  * Test #102: Open File for write
+Cog0  * Test #112: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #103: Write Records
+Cog0  * Test #113: Write Records
 Cog0    Sub-Test Results: Pass: 3, Fail: 0
 Cog0
-Cog0  * Test #104: ensure no errors on Record writes
+Cog0  * Test #114: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -668,80 +724,80 @@ Cog0    File: [rw3KB-B4-blocks.bin] pending commit
 Cog0    # 1 Blocks in chain:
 Cog0      1: [$0000] HEAD/last, thisID=14, endPtr=$0C88, lifeCycle [erased], sig=[$C880_0EFC]
 Cog0
-Cog0  * Test #105: Close written file
+Cog0  * Test #115: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * wrote new file: size 3_072 bytes, 1 blocks
 Cog0
-Cog0  * Test #106: Ensure expected file system changes
+Cog0  * Test #116: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 18, 3_950, 7
 Cog0    # files: 7
 Cog0    # blocks used: 18
 Cog0     -> pass
 Cog0
-Cog0  * Test #107: Ensure expected file stats
+Cog0  * Test #117: Ensure expected file stats
 Cog0    File: [rw3KB-B4-blocks.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$06FD] HEAD/last, thisID=14, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_0E7C]
+Cog0      1: [$0CEA] HEAD/last, thisID=14, endPtr=$0C88, lifeCycle [ACTIVE-3], sig=[$C880_0E7C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_072, expectedBytesUsed = 3_072
 Cog0     -> pass
 Cog0
-Cog0  * Test #108: Ensure no error on size unused call
+Cog0  * Test #118: Ensure no error on size unused call
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #109: Determine size of file in records
+Cog0  * Test #119: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  ****  Before Append: file size in bytes = 3_072 bytes, 3 records
 Cog0
-Cog0  * Test #110: Open File for write
+Cog0  * Test #120: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #111: Write Records
+Cog0  * Test #121: Write Records
 Cog0    Sub-Test Results: Pass: 14, Fail: 0
 Cog0
-Cog0  * Test #112: ensure no errors on Record writes
+Cog0  * Test #122: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw3KB-B4-blocks.bin] pending commit
 Cog0    # 5 Blocks in chain:
-Cog0      1: [$08D2] HEAD/more, thisID=14, nextId=18, lifeCycle [erased], sig=[$0120_0EFD]
-Cog0      2: [$0E26] BODY/more, thisID=18, nextId=19, lifeCycle [ACTIVE-3], sig=[$0130_127F]
-Cog0      3: [$00CF] BODY/more, thisID=19, nextId=20, lifeCycle [ACTIVE-3], sig=[$0140_137F]
-Cog0      4: [$02C7] BODY/more, thisID=20, nextId=21, lifeCycle [ACTIVE-3], sig=[$0150_147F]
+Cog0      1: [$040F] HEAD/more, thisID=14, nextId=18, lifeCycle [erased], sig=[$0120_0EFD]
+Cog0      2: [$052F] BODY/more, thisID=18, nextId=19, lifeCycle [ACTIVE-3], sig=[$0130_127F]
+Cog0      3: [$068B] BODY/more, thisID=19, nextId=20, lifeCycle [ACTIVE-3], sig=[$0140_137F]
+Cog0      4: [$0CE5] BODY/more, thisID=20, nextId=21, lifeCycle [ACTIVE-3], sig=[$0150_147F]
 Cog0      5: [$0000] BODY/last, thisID=21, endPtr=$04A8, lifeCycle [erased], sig=[$4A80_15FE]
 Cog0
-Cog0  * Test #113: Close written file
+Cog0  * Test #123: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * appended to existing file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #114: Ensure expected file system changes
+Cog0  * Test #124: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 20, 3_948, 7
 Cog0    # files: 7
 Cog0    # blocks used: 20
 Cog0     -> pass
 Cog0
-Cog0  * Test #115: Ensure expected file stats
+Cog0  * Test #125: Ensure expected file stats
 Cog0    File: [rw3KB-B4-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$00CF] HEAD/more, thisID=19, nextId=20, lifeCycle [ACTIVE-5], sig=[$0140_13BD]
-Cog0      2: [$02C7] BODY/more, thisID=20, nextId=21, lifeCycle [ACTIVE-3], sig=[$0150_147F]
-Cog0      3: [$0017] BODY/last, thisID=21, endPtr=$04A8, lifeCycle [ACTIVE-3], sig=[$4A80_157E]
+Cog0      1: [$068B] HEAD/more, thisID=19, nextId=20, lifeCycle [ACTIVE-5], sig=[$0140_13BD]
+Cog0      2: [$0CE5] BODY/more, thisID=20, nextId=21, lifeCycle [ACTIVE-3], sig=[$0150_147F]
+Cog0      3: [$0894] BODY/last, thisID=21, endPtr=$04A8, lifeCycle [ACTIVE-3], sig=[$4A80_157E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 9_232, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #116: Determine size of file in records
+Cog0  * Test #126: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -749,24 +805,24 @@ Cog0  ****  At Verify: file size in bytes = 9_232 bytes, (9 records), wrote tota
 Cog0     Circular Buffer contains = 8 records
 Cog0     Read should start with record #10
 Cog0
-Cog0  * Test #117: Open File for read
+Cog0  * Test #127: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #118: read expected RECORDs
+Cog0  * Test #128: read expected RECORDs
 Cog0    Sub-Test Results: Pass: 24, Fail: 0
 Cog0
-Cog0  * Test #119: ensure no errors on reads
+Cog0  * Test #129: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #120: BAD: read one more Record than written
+Cog0  * Test #130: BAD: read one more Record than written
 Cog0    read(): 0
 Cog0     -> pass
 Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #121: Close read file
+Cog0  * Test #131: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -785,96 +841,96 @@ Cog0  * Test Group: C1 Append 2KB circular to 8kb file
 Cog0
 Cog0  ****  Before Append: file size in bytes = 0 bytes, 0 records
 Cog0
-Cog0  * Test #122: Open File for write
+Cog0  * Test #132: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #123: Write Records
+Cog0  * Test #133: Write Records
 Cog0    Sub-Test Results: Pass: 8, Fail: 0
 Cog0
-Cog0  * Test #124: ensure no errors on Record writes
+Cog0  * Test #134: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw8KB-C1-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0A12] HEAD/more, thisID=14, nextId=18, lifeCycle [erased], sig=[$0120_0EFD]
-Cog0      2: [$03AB] BODY/more, thisID=18, nextId=22, lifeCycle [ACTIVE-3], sig=[$0160_127F]
+Cog0      1: [$0234] HEAD/more, thisID=14, nextId=18, lifeCycle [erased], sig=[$0120_0EFD]
+Cog0      2: [$0286] BODY/more, thisID=18, nextId=22, lifeCycle [ACTIVE-3], sig=[$0160_127F]
 Cog0      3: [$0000] BODY/last, thisID=22, endPtr=$0098, lifeCycle [erased], sig=[$0980_16FE]
 Cog0
-Cog0  * Test #125: Close written file
+Cog0  * Test #135: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * wrote new file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #126: Ensure expected file system changes
+Cog0  * Test #136: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 23, 3_945, 8
 Cog0    # files: 8
 Cog0    # blocks used: 23
 Cog0     -> pass
 Cog0
-Cog0  * Test #127: Ensure expected file stats
+Cog0  * Test #137: Ensure expected file stats
 Cog0    File: [rw8KB-C1-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0A12] HEAD/more, thisID=14, nextId=18, lifeCycle [ACTIVE-3], sig=[$0120_0E7D]
-Cog0      2: [$03AB] BODY/more, thisID=18, nextId=22, lifeCycle [ACTIVE-3], sig=[$0160_127F]
-Cog0      3: [$0376] BODY/last, thisID=22, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_167E]
+Cog0      1: [$0234] HEAD/more, thisID=14, nextId=18, lifeCycle [ACTIVE-3], sig=[$0120_0E7D]
+Cog0      2: [$0286] BODY/more, thisID=18, nextId=22, lifeCycle [ACTIVE-3], sig=[$0160_127F]
+Cog0      3: [$0EA1] BODY/last, thisID=22, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_167E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_192, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #128: Ensure no error on size unused call
+Cog0  * Test #138: Ensure no error on size unused call
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #129: Determine size of file in records
+Cog0  * Test #139: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  ****  Before Append: file size in bytes = 8_192 bytes, 8 records
 Cog0
-Cog0  * Test #130: Open File for write
+Cog0  * Test #140: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #131: Write Records
+Cog0  * Test #141: Write Records
 Cog0    Sub-Test Results: Pass: 4, Fail: 0
 Cog0
-Cog0  * Test #132: ensure no errors on Record writes
+Cog0  * Test #142: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw8KB-C1-blocks.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$006C] BODY/more, thisID=22, nextId=23, lifeCycle [erased], sig=[$0170_16FF]
-Cog0      2: [$0000] BODY/last, thisID=23, endPtr=$00A0, lifeCycle [erased],  sig=[$_17FE]
+Cog0      1: [$00A8] BODY/more, thisID=22, nextId=23, lifeCycle [erased], sig=[$0170_16FF]
+Cog0      2: [$0000] BODY/last, thisID=23, endPtr=$00A0, lifeCycle [erased], sig=[$0A00_17FE]
 Cog0
-Cog0  * Test #133: Close written file
+Cog0  * Test #143: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * appended to existing file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #134: Ensure expected file system changes
+Cog0  * Test #144: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 23, 3_945, 8
 Cog0    # files: 8
 Cog0    # blocks used: 23
 Cog0     -> pass
 Cog0
-Cog0  * Test #135: Ensure expected file stats
+Cog0  * Test #145: Ensure expected file stats
 Cog0    File: [rw8KB-C1-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$092B] HEAD/more, thisID=18, nextId=22, lifeCycle [ACTIVE-5], sig=[$0160_12BD]
-Cog0      2: [$006C] BODY/more, thisID=22, nextId=23, lifeCycle [ACTIVE-5], sig=[$0170_16BF]
-Cog0      3: [$0857] BODY/last, thisID=23, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_177E]
+Cog0      1: [$045C] HEAD/more, thisID=18, nextId=22, lifeCycle [ACTIVE-5], sig=[$0160_12BD]
+Cog0      2: [$00A8] BODY/more, thisID=22, nextId=23, lifeCycle [ACTIVE-5], sig=[$0170_16BF]
+Cog0      3: [$08C7] BODY/last, thisID=23, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_177E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_200, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #136: Determine size of file in records
+Cog0  * Test #146: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -882,24 +938,24 @@ Cog0  ****  At Verify: file size in bytes = 8_200 bytes, (8 records), wrote tota
 Cog0     Circular Buffer contains = 8 records
 Cog0     Read should start with record #5
 Cog0
-Cog0  * Test #137: Open File for read
+Cog0  * Test #147: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #138: read expected RECORDs
+Cog0  * Test #148: read expected RECORDs
 Cog0    Sub-Test Results: Pass: 24, Fail: 0
 Cog0
-Cog0  * Test #139: ensure no errors on reads
+Cog0  * Test #149: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #140: BAD: read one more Record than written
+Cog0  * Test #150: BAD: read one more Record than written
 Cog0    read(): 0
 Cog0     -> pass
 Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #141: Close read file
+Cog0  * Test #151: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -919,96 +975,96 @@ Cog0  * Test Group: C2 Append 6KB circular to 8kb file
 Cog0
 Cog0  ****  Before Append: file size in bytes = 0 bytes, 0 records
 Cog0
-Cog0  * Test #142: Open File for write
+Cog0  * Test #152: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #143: Write Records
+Cog0  * Test #153: Write Records
 Cog0    Sub-Test Results: Pass: 8, Fail: 0
 Cog0
-Cog0  * Test #144: ensure no errors on Record writes
+Cog0  * Test #154: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw8KB-C2-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0E85] HEAD/more, thisID=14, nextId=24, lifeCycle [erased], sig=[$0180_0EFD]
-Cog0      2: [$0B6A] BODY/more, thisID=24, nextId=25, lifeCycle [ACTIVE-3], sig=[$0190_187F]
+Cog0      1: [$0AB9] HEAD/more, thisID=14, nextId=24, lifeCycle [erased], sig=[$0180_0EFD]
+Cog0      2: [$08E0] BODY/more, thisID=24, nextId=25, lifeCycle [ACTIVE-3], sig=[$0190_187F]
 Cog0      3: [$0000] BODY/last, thisID=25, endPtr=$0098, lifeCycle [erased], sig=[$0980_19FE]
 Cog0
-Cog0  * Test #145: Close written file
+Cog0  * Test #155: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * wrote new file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #146: Ensure expected file system changes
+Cog0  * Test #156: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 26, 3_942, 9
 Cog0    # files: 9
 Cog0    # blocks used: 26
 Cog0     -> pass
 Cog0
-Cog0  * Test #147: Ensure expected file stats
+Cog0  * Test #157: Ensure expected file stats
 Cog0    File: [rw8KB-C2-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0E85] HEAD/more, thisID=14, nextId=24, lifeCycle [ACTIVE-3], sig=[$0180_0E7D]
-Cog0      2: [$0B6A] BODY/more, thisID=24, nextId=25, lifeCycle [ACTIVE-3], sig=[$0190_187F]
-Cog0      3: [$0DBF] BODY/last, thisID=25, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_197E]
+Cog0      1: [$0AB9] HEAD/more, thisID=14, nextId=24, lifeCycle [ACTIVE-3], sig=[$0180_0E7D]
+Cog0      2: [$08E0] BODY/more, thisID=24, nextId=25, lifeCycle [ACTIVE-3], sig=[$0190_187F]
+Cog0      3: [$01A5] BODY/last, thisID=25, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_197E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_192, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #148: Ensure no error on size unused call
+Cog0  * Test #158: Ensure no error on size unused call
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #149: Determine size of file in records
+Cog0  * Test #159: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  ****  Before Append: file size in bytes = 8_192 bytes, 8 records
 Cog0
-Cog0  * Test #150: Open File for write
+Cog0  * Test #160: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #151: Write Records
+Cog0  * Test #161: Write Records
 Cog0    Sub-Test Results: Pass: 6, Fail: 0
 Cog0
-Cog0  * Test #152: ensure no errors on Record writes
+Cog0  * Test #162: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw8KB-C2-blocks.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$0374] BODY/more, thisID=25, nextId=26, lifeCycle [erased], sig=[$01A0_19FF]
+Cog0      1: [$0E95] BODY/more, thisID=25, nextId=26, lifeCycle [erased], sig=[$01A0_19FF]
 Cog0      2: [$0000] BODY/last, thisID=26, endPtr=$08A0, lifeCycle [erased], sig=[$8A00_1AFE]
 Cog0
-Cog0  * Test #153: Close written file
+Cog0  * Test #163: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * appended to existing file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #154: Ensure expected file system changes
+Cog0  * Test #164: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 26, 3_942, 9
 Cog0    # files: 9
 Cog0    # blocks used: 26
 Cog0     -> pass
 Cog0
-Cog0  * Test #155: Ensure expected file stats
+Cog0  * Test #165: Ensure expected file stats
 Cog0    File: [rw8KB-C2-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0408] HEAD/more, thisID=24, nextId=25, lifeCycle [ACTIVE-5], sig=[$0190_18BD]
-Cog0      2: [$0374] BODY/more, thisID=25, nextId=26, lifeCycle [ACTIVE-5], sig=[$01A0_19BF]
-Cog0      3: [$0951] BODY/last, thisID=26, endPtr=$08A0, lifeCycle [ACTIVE-3], sig=[$8A00_1A7E]
+Cog0      1: [$021F] HEAD/more, thisID=24, nextId=25, lifeCycle [ACTIVE-5], sig=[$0190_18BD]
+Cog0      2: [$0E95] BODY/more, thisID=25, nextId=26, lifeCycle [ACTIVE-5], sig=[$01A0_19BF]
+Cog0      3: [$01CF] BODY/last, thisID=26, endPtr=$08A0, lifeCycle [ACTIVE-3], sig=[$8A00_1A7E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 10_248, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #156: Determine size of file in records
+Cog0  * Test #166: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1016,24 +1072,24 @@ Cog0  ****  At Verify: file size in bytes = 10_248 bytes, (10 records), wrote to
 Cog0     Circular Buffer contains = 8 records
 Cog0     Read should start with record #7
 Cog0
-Cog0  * Test #157: Open File for read
+Cog0  * Test #167: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #158: read expected RECORDs
+Cog0  * Test #168: read expected RECORDs
 Cog0    Sub-Test Results: Pass: 24, Fail: 0
 Cog0
-Cog0  * Test #159: ensure no errors on reads
+Cog0  * Test #169: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #160: BAD: read one more Record than written
+Cog0  * Test #170: BAD: read one more Record than written
 Cog0    read(): 0
 Cog0     -> pass
 Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #161: Close read file
+Cog0  * Test #171: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1054,97 +1110,97 @@ Cog0  * Test Group: C3 Append 9KB circular to 8kb file
 Cog0
 Cog0  ****  Before Append: file size in bytes = 0 bytes, 0 records
 Cog0
-Cog0  * Test #162: Open File for write
+Cog0  * Test #172: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #163: Write Records
+Cog0  * Test #173: Write Records
 Cog0    Sub-Test Results: Pass: 8, Fail: 0
 Cog0
-Cog0  * Test #164: ensure no errors on Record writes
+Cog0  * Test #174: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw8KB-C3-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$095D] HEAD/more, thisID=14, nextId=27, lifeCycle [erased], sig=[$01B0_0EFD]
-Cog0      2: [$0D5B] BODY/more, thisID=27, nextId=28, lifeCycle [ACTIVE-3], sig=[$01C0_1B7F]
+Cog0      1: [$0120] HEAD/more, thisID=14, nextId=27, lifeCycle [erased], sig=[$01B0_0EFD]
+Cog0      2: [$0C39] BODY/more, thisID=27, nextId=28, lifeCycle [ACTIVE-3], sig=[$01C0_1B7F]
 Cog0      3: [$0000] BODY/last, thisID=28, endPtr=$0098, lifeCycle [erased], sig=[$0980_1CFE]
 Cog0
-Cog0  * Test #165: Close written file
+Cog0  * Test #175: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * wrote new file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #166: Ensure expected file system changes
+Cog0  * Test #176: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 29, 3_939, 10
 Cog0    # files: 10
 Cog0    # blocks used: 29
 Cog0     -> pass
 Cog0
-Cog0  * Test #167: Ensure expected file stats
+Cog0  * Test #177: Ensure expected file stats
 Cog0    File: [rw8KB-C3-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$095D] HEAD/more, thisID=14, nextId=27, lifeCycle [ACTIVE-3], sig=[$01B0_0E7D]
-Cog0      2: [$0D5B] BODY/more, thisID=27, nextId=28, lifeCycle [ACTIVE-3], sig=[$01C0_1B7F]
-Cog0      3: [$028A] BODY/last, thisID=28, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_1C7E]
+Cog0      1: [$0120] HEAD/more, thisID=14, nextId=27, lifeCycle [ACTIVE-3], sig=[$01B0_0E7D]
+Cog0      2: [$0C39] BODY/more, thisID=27, nextId=28, lifeCycle [ACTIVE-3], sig=[$01C0_1B7F]
+Cog0      3: [$0363] BODY/last, thisID=28, endPtr=$0098, lifeCycle [ACTIVE-3], sig=[$0980_1C7E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_192, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #168: Ensure no error on size unused call
+Cog0  * Test #178: Ensure no error on size unused call
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #169: Determine size of file in records
+Cog0  * Test #179: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  ****  Before Append: file size in bytes = 8_192 bytes, 8 records
 Cog0
-Cog0  * Test #170: Open File for write
+Cog0  * Test #180: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #171: Write Records
+Cog0  * Test #181: Write Records
 Cog0    Sub-Test Results: Pass: 9, Fail: 0
 Cog0
-Cog0  * Test #172: ensure no errors on Record writes
+Cog0  * Test #182: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw8KB-C3-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0418] BODY/more, thisID=28, nextId=29, lifeCycle [erased], sig=[$01D0_1CFF]
-Cog0      2: [$0465] BODY/more, thisID=29, nextId=30, lifeCycle [ACTIVE-3], sig=[$01E0_1D7F]
+Cog0      1: [$0C23] BODY/more, thisID=28, nextId=29, lifeCycle [erased], sig=[$01D0_1CFF]
+Cog0      2: [$0810] BODY/more, thisID=29, nextId=30, lifeCycle [ACTIVE-3], sig=[$01E0_1D7F]
 Cog0      3: [$0000] BODY/last, thisID=30, endPtr=$04A8, lifeCycle [erased], sig=[$4A80_1EFE]
 Cog0
-Cog0  * Test #173: Close written file
+Cog0  * Test #183: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * appended to existing file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #174: Ensure expected file system changes
+Cog0  * Test #184: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 29, 3_939, 10
 Cog0    # files: 10
 Cog0    # blocks used: 29
 Cog0     -> pass
 Cog0
-Cog0  * Test #175: Ensure expected file stats
+Cog0  * Test #185: Ensure expected file stats
 Cog0    File: [rw8KB-C3-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0418] HEAD/more, thisID=28, nextId=29, lifeCycle [erased], sig=[$01D0_1CFD]
-Cog0      2: [$0465] BODY/more, thisID=29, nextId=30, lifeCycle [ACTIVE-3], sig=[$01E0_1D7F]
-Cog0      3: [$05AC] BODY/last, thisID=30, endPtr=$04A8, lifeCycle [ACTIVE-3], sig=[$4A80_1E7E]
+Cog0      1: [$0C23] HEAD/more, thisID=28, nextId=29, lifeCycle [erased], sig=[$01D0_1CFD]
+Cog0      2: [$0810] BODY/more, thisID=29, nextId=30, lifeCycle [ACTIVE-3], sig=[$01E0_1D7F]
+Cog0      3: [$018C] BODY/last, thisID=30, endPtr=$04A8, lifeCycle [ACTIVE-3], sig=[$4A80_1E7E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 9_232, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #176: Determine size of file in records
+Cog0  * Test #186: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1152,24 +1208,24 @@ Cog0  ****  At Verify: file size in bytes = 9_232 bytes, (9 records), wrote tota
 Cog0     Circular Buffer contains = 8 records
 Cog0     Read should start with record #10
 Cog0
-Cog0  * Test #177: Open File for read
+Cog0  * Test #187: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #178: read expected RECORDs
+Cog0  * Test #188: read expected RECORDs
 Cog0    Sub-Test Results: Pass: 24, Fail: 0
 Cog0
-Cog0  * Test #179: ensure no errors on reads
+Cog0  * Test #189: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #180: BAD: read one more Record than written
+Cog0  * Test #190: BAD: read one more Record than written
 Cog0    read(): 0
 Cog0     -> pass
 Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #181: Close read file
+Cog0  * Test #191: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1191,97 +1247,97 @@ Cog0  * Test Group: D1 Append 6KB circular to 11kb file
 Cog0
 Cog0  ****  Before Append: file size in bytes = 0 bytes, 0 records
 Cog0
-Cog0  * Test #182: Open File for write
+Cog0  * Test #192: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #183: Write Records
+Cog0  * Test #193: Write Records
 Cog0    Sub-Test Results: Pass: 11, Fail: 0
 Cog0
-Cog0  * Test #184: ensure no errors on Record writes
+Cog0  * Test #194: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw9KB-D1-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0F2E] HEAD/more, thisID=14, nextId=27, lifeCycle [erased], sig=[$01B0_0EFD]
-Cog0      2: [$0988] BODY/more, thisID=27, nextId=31, lifeCycle [ACTIVE-3], sig=[$01F0_1B7F]
+Cog0      1: [$0186] HEAD/more, thisID=14, nextId=27, lifeCycle [erased], sig=[$01B0_0EFD]
+Cog0      2: [$0D6A] BODY/more, thisID=27, nextId=31, lifeCycle [ACTIVE-3], sig=[$01F0_1B7F]
 Cog0      3: [$0000] BODY/last, thisID=31, endPtr=$0C98, lifeCycle [erased], sig=[$C980_1FFE]
 Cog0
-Cog0  * Test #185: Close written file
+Cog0  * Test #195: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * wrote new file: size 11_264 bytes, 3 blocks
 Cog0
-Cog0  * Test #186: Ensure expected file system changes
+Cog0  * Test #196: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 32, 3_936, 11
 Cog0    # files: 11
 Cog0    # blocks used: 32
 Cog0     -> pass
 Cog0
-Cog0  * Test #187: Ensure expected file stats
+Cog0  * Test #197: Ensure expected file stats
 Cog0    File: [rw9KB-D1-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0F2E] HEAD/more, thisID=14, nextId=27, lifeCycle [ACTIVE-3], sig=[$01B0_0E7D]
-Cog0      2: [$0988] BODY/more, thisID=27, nextId=31, lifeCycle [ACTIVE-3], sig=[$01F0_1B7F]
-Cog0      3: [$0500] BODY/last, thisID=31, endPtr=$0C98, lifeCycle [ACTIVE-3], sig=[$C980_1F7E]
+Cog0      1: [$0186] HEAD/more, thisID=14, nextId=27, lifeCycle [ACTIVE-3], sig=[$01B0_0E7D]
+Cog0      2: [$0D6A] BODY/more, thisID=27, nextId=31, lifeCycle [ACTIVE-3], sig=[$01F0_1B7F]
+Cog0      3: [$0175] BODY/last, thisID=31, endPtr=$0C98, lifeCycle [ACTIVE-3], sig=[$C980_1F7E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 11_264, expectedBytesUsed = 11_264
 Cog0     -> pass
 Cog0
-Cog0  * Test #188: Ensure no error on size unused call
+Cog0  * Test #198: Ensure no error on size unused call
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #189: Determine size of file in records
+Cog0  * Test #199: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  ****  Before Append: file size in bytes = 11_264 bytes, 11 records
 Cog0
-Cog0  * Test #190: Open File for write
+Cog0  * Test #200: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #191: Write Records
+Cog0  * Test #201: Write Records
 Cog0    Sub-Test Results: Pass: 6, Fail: 0
 Cog0
-Cog0  * Test #192: ensure no errors on Record writes
+Cog0  * Test #202: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw9KB-D1-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$082D] BODY/more, thisID=31, nextId=32, lifeCycle [erased], sig=[$0200_1FFF]
-Cog0      2: [$0A0E] BODY/more, thisID=32, nextId=33, lifeCycle [ACTIVE-3], sig=[$0210_207F]
+Cog0      1: [$0089] BODY/more, thisID=31, nextId=32, lifeCycle [erased], sig=[$0200_1FFF]
+Cog0      2: [$08B3] BODY/more, thisID=32, nextId=33, lifeCycle [ACTIVE-3], sig=[$0210_207F]
 Cog0      3: [$0000] BODY/last, thisID=33, endPtr=$04A8, lifeCycle [erased], sig=[$4A80_21FE]
 Cog0
-Cog0  * Test #193: Close written file
+Cog0  * Test #203: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * appended to existing file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #194: Ensure expected file system changes
+Cog0  * Test #204: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 32, 3_936, 11
 Cog0    # files: 11
 Cog0    # blocks used: 32
 Cog0     -> pass
 Cog0
-Cog0  * Test #195: Ensure expected file stats
+Cog0  * Test #205: Ensure expected file stats
 Cog0    File: [rw9KB-D1-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$082D] HEAD/more, thisID=31, nextId=32, lifeCycle [erased], sig=[$0200_1FFD]
-Cog0      2: [$0A0E] BODY/more, thisID=32, nextId=33, lifeCycle [ACTIVE-3], sig=[$0210_207F]
-Cog0      3: [$0E4B] BODY/last, thisID=33, endPtr=$04A8, lifeCycle [ACTIVE-3], sig=[$4A80_217E]
+Cog0      1: [$0089] HEAD/more, thisID=31, nextId=32, lifeCycle [erased], sig=[$0200_1FFD]
+Cog0      2: [$08B3] BODY/more, thisID=32, nextId=33, lifeCycle [ACTIVE-3], sig=[$0210_207F]
+Cog0      3: [$01E6] BODY/last, thisID=33, endPtr=$04A8, lifeCycle [ACTIVE-3], sig=[$4A80_217E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 9_232, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #196: Determine size of file in records
+Cog0  * Test #206: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1289,24 +1345,24 @@ Cog0  ****  At Verify: file size in bytes = 9_232 bytes, (9 records), wrote tota
 Cog0     Circular Buffer contains = 8 records
 Cog0     Read should start with record #10
 Cog0
-Cog0  * Test #197: Open File for read
+Cog0  * Test #207: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #198: read expected RECORDs
+Cog0  * Test #208: read expected RECORDs
 Cog0    Sub-Test Results: Pass: 24, Fail: 0
 Cog0
-Cog0  * Test #199: ensure no errors on reads
+Cog0  * Test #209: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #200: BAD: read one more Record than written
+Cog0  * Test #210: BAD: read one more Record than written
 Cog0    read(): 0
 Cog0     -> pass
 Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #201: Close read file
+Cog0  * Test #211: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1315,7 +1371,7 @@ Cog0  rw0KB-A1-blocks.bin, Bytes = 6_144, ID = 1, @Buff={binary data}
 Cog0  rw0KB-A2-blocks.bin, Bytes = 8_192, ID = 3, @Buff={binary data}
 Cog0  rw3KB-B1-blocks.bin, Bytes = 8_192, ID = 6, @Buff={binary data}
 Cog0  rw0KB-A3-blocks.bin, Bytes = 8_200, ID = 7, @Buff={binary data}
-Cog0  rw3KB-B2-blocks.bin, Bytes  = 11_24, ID = 12, @Buff={binary data}
+Cog0  rw3KB-B2-blocks.bin, Bytes = 11_264, ID = 12, @Buff={binary data}
 Cog0  rw3KB-B3-blocks.bin, Bytes = 10_248, ID = 16, @Buff={binary data}
 Cog0  rw8KB-C1-blocks.bin, Bytes = 8_200, ID = 19, @Buff={binary data}
 Cog0  rw3KB-B4-blocks.bin, Bytes = 9_232, ID = 20, @Buff={binary data}
@@ -1329,98 +1385,98 @@ Cog0  * Test Group: D2 Append 9KB circular to 11kb file
 Cog0
 Cog0  ****  Before Append: file size in bytes = 0 bytes, 0 records
 Cog0
-Cog0  * Test #202: Open File for write
+Cog0  * Test #212: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #203: Write Records
+Cog0  * Test #213: Write Records
 Cog0    Sub-Test Results: Pass: 11, Fail: 0
 Cog0
-Cog0  * Test #204: ensure no errors on Record writes
+Cog0  * Test #214: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw9KB-D2-blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0E40] HEAD/more, thisID=14, nextId=27, lifeCycle [erased], sig=[$01B0_0EFD]
-Cog0      2: [$0CE1] BODY/more, thisID=27, nextId=34, lifeCycle [ACTIVE-3], sig=[$0220_1B7F]
+Cog0      1: [$032E] HEAD/more, thisID=14, nextId=27, lifeCycle [erased], sig=[$01B0_0EFD]
+Cog0      2: [$04C5] BODY/more, thisID=27, nextId=34, lifeCycle [ACTIVE-3], sig=[$0220_1B7F]
 Cog0      3: [$0000] BODY/last, thisID=34, endPtr=$0C98, lifeCycle [erased], sig=[$C980_22FE]
 Cog0
-Cog0  * Test #205: Close written file
+Cog0  * Test #215: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * wrote new file: size 11_264 bytes, 3 blocks
 Cog0
-Cog0  * Test #206: Ensure expected file system changes
+Cog0  * Test #216: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 35, 3_933, 12
 Cog0    # files: 12
 Cog0    # blocks used: 35
 Cog0     -> pass
 Cog0
-Cog0  * Test #207: Ensure expected file stats
+Cog0  * Test #217: Ensure expected file stats
 Cog0    File: [rw9KB-D2-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0E40] HEAD/more, thisID=14, nextId=27, lifeCycle [ACTIVE-3], sig=[$01B0_0E7D]
-Cog0      2: [$0CE1] BODY/more, thisID=27, nextId=34, lifeCycle [ACTIVE-3], sig=[$0220_1B7F]
-Cog0      3: [$061C] BODY/last, thisID=34, endPtr=$0C98, lifeCycle [ACTIVE-3], sig=[$C980_227E]
+Cog0      1: [$032E] HEAD/more, thisID=14, nextId=27, lifeCycle [ACTIVE-3], sig=[$01B0_0E7D]
+Cog0      2: [$04C5] BODY/more, thisID=27, nextId=34, lifeCycle [ACTIVE-3], sig=[$0220_1B7F]
+Cog0      3: [$094D] BODY/last, thisID=34, endPtr=$0C98, lifeCycle [ACTIVE-3], sig=[$C980_227E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 11_264, expectedBytesUsed = 11_264
 Cog0     -> pass
 Cog0
-Cog0  * Test #208: Ensure no error on size unused call
+Cog0  * Test #218: Ensure no error on size unused call
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #209: Determine size of file in records
+Cog0  * Test #219: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  ****  Before Append: file size in bytes = 11_264 bytes, 11 records
 Cog0
-Cog0  * Test #210: Open File for write
+Cog0  * Test #220: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #211: Write Records
+Cog0  * Test #221: Write Records
 Cog0    Sub-Test Results: Pass: 9, Fail: 0
 Cog0
-Cog0  * Test #212: ensure no errors on Record writes
+Cog0  * Test #222: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [rw9KB-D2-blocks.bin] pending commit
 Cog0    # 4 Blocks in chain:
-Cog0      1: [$0009] BODY/more, thisID=34, nextId=35, lifeCycle [erased], sig=[$0230_22FF]
-Cog0      2: [$049A] BODY/more, thisID=35, nextId=36, lifeCycle [ACTIVE-3], sig=[$0240_237F]
-Cog0      3: [$08F0] BODY/more, thisID=36, nextId=37, lifeCycle [ACTIVE-3], sig=[$0250_247F]
+Cog0      1: [$0CD8] BODY/more, thisID=34, nextId=35, lifeCycle [erased], sig=[$0230_22FF]
+Cog0      2: [$0BD4] BODY/more, thisID=35, nextId=36, lifeCycle [ACTIVE-3], sig=[$0240_237F]
+Cog0      3: [$015C] BODY/more, thisID=36, nextId=37, lifeCycle [ACTIVE-3], sig=[$0250_247F]
 Cog0      4: [$0000] BODY/last, thisID=37, endPtr=$00B0, lifeCycle [erased], sig=[$0B00_25FE]
 Cog0
-Cog0  * Test #213: Close written file
+Cog0  * Test #223: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * appended to existing file: size 8_192 bytes, 3 blocks
 Cog0
-Cog0  * Test #214: Ensure expected file system changes
+Cog0  * Test #224: Ensure expected file system changes
 Cog0  * post file write
 Cog0    # FileSystem: 35, 3_933, 12
 Cog0    # files: 12
 Cog0    # blocks used: 35
 Cog0     -> pass
 Cog0
-Cog0  * Test #215: Ensure expected file stats
+Cog0  * Test #225: Ensure expected file stats
 Cog0    File: [rw9KB-D2-blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$049A] HEAD/more, thisID=35, nextId=36, lifeCycle [ACTIVE-5], sig=[$0240_23BD]
-Cog0      2: [$08F0] BODY/more, thisID=36, nextId=37, lifeCycle [ACTIVE-3], sig=[$0250_247F]
-Cog0      3: [$0644] BODY/last, thisID=37, endPtr=$00B0, lifeCycle [ACTIVE-3], sig=[$0B00_257E]
+Cog0      1: [$0BD4] HEAD/more, thisID=35, nextId=36, lifeCycle [ACTIVE-5], sig=[$0240_23BD]
+Cog0      2: [$015C] BODY/more, thisID=36, nextId=37, lifeCycle [ACTIVE-3], sig=[$0250_247F]
+Cog0      3: [$0105] BODY/last, thisID=37, endPtr=$00B0, lifeCycle [ACTIVE-3], sig=[$0B00_257E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_216, expectedBytesUsed = 8_192
 Cog0     -> pass
 Cog0
-Cog0  * Test #216: Determine size of file in records
+Cog0  * Test #226: Determine size of file in records
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1428,24 +1484,24 @@ Cog0  ****  At Verify: file size in bytes = 8_216 bytes, (8 records), wrote tota
 Cog0     Circular Buffer contains = 8 records
 Cog0     Read should start with record #13
 Cog0
-Cog0  * Test #217: Open File for read
+Cog0  * Test #227: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #218: read expected RECORDs
+Cog0  * Test #228: read expected RECORDs
 Cog0    Sub-Test Results: Pass: 24, Fail: 0
 Cog0
-Cog0  * Test #219: ensure no errors on reads
+Cog0  * Test #229: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #220: BAD: read one more Record than written
+Cog0  * Test #230: BAD: read one more Record than written
 Cog0    read(): 0
 Cog0     -> pass
 Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #221: Close read file
+Cog0  * Test #231: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -1455,7 +1511,7 @@ Cog0  rw0KB-A2-blocks.bin, Bytes = 8_192, ID = 3, @Buff={binary data}
 Cog0  rw3KB-B1-blocks.bin, Bytes = 8_192, ID = 6, @Buff={binary data}
 Cog0  rw0KB-A3-blocks.bin, Bytes = 8_200, ID = 7, @Buff={binary data}
 Cog0  rw3KB-B2-blocks.bin, Bytes = 11_264, ID = 12, @Buff={binary data}
-Cog0  rw3KB-B3-blocks.bin, Bytes = 10_248, ID = 16, @Bu ff={bindata}
+Cog0  rw3KB-B3-blocks.bin, Bytes = 10_248, ID = 16, @Buff={binary data}
 Cog0  rw8KB-C1-blocks.bin, Bytes = 8_200, ID = 19, @Buff={binary data}
 Cog0  rw3KB-B4-blocks.bin, Bytes = 9_232, ID = 20, @Buff={binary data}
 Cog0  rw8KB-C2-blocks.bin, Bytes = 10_248, ID = 25, @Buff={binary data}
@@ -1463,5 +1519,5 @@ Cog0  rw8KB-C3-blocks.bin, Bytes = 9_232, ID = 29, @Buff={binary data}
 Cog0  rw9KB-D1-blocks.bin, Bytes = 9_232, ID = 32, @Buff={binary data}
 Cog0  rw9KB-D2-blocks.bin, Bytes = 8_216, ID = 36, @Buff={binary data}
 Cog0
-Cog0  * 221 Tests: , Pass: 233, Fail: 0
+Cog0  * 231 Tests: , Pass: 247, Fail: 0
 Cog0  * Test Complete

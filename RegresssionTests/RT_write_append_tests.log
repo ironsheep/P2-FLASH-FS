@@ -1,5 +1,5 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_B2F0 jump
+Cog0  INIT $0000_0EB8 $0000_B378 jump
 Cog0  * format()
 Cog0  * mount()
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
@@ -51,7 +51,7 @@ Cog0
 Cog0  * Test #8: Ensure expected file stats
 Cog0    File: [ap1010bytes.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0AB1] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]
+Cog0      1: [$0210] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 10
 Cog0     -> pass
@@ -75,7 +75,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [ap1010bytes.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0AB1] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]
+Cog0      1: [$0210] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]
 Cog0
 Cog0  * Test #13: Close append file
 Cog0     ECode: SUCCESS: No error
@@ -86,7 +86,7 @@ Cog0
 Cog0  * Test #14: Ensure expected file stats post BYTEs append
 Cog0    File: [ap1010bytes.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0DA8] HEAD/last, thisID=0, endPtr=$009C, lifeCycle [ACTIVE-5], sig=[$09C0_00BC]
+Cog0      1: [$0881] HEAD/last, thisID=0, endPtr=$009C, lifeCycle [ACTIVE-5], sig=[$09C0_00BC]
 Cog0    # blocks: 1
 Cog0    # bytes used: 20
 Cog0     -> pass
@@ -129,7 +129,7 @@ Cog0
 Cog0  * Test #20: Ensure expected file stats
 Cog0    File: [ap99words.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0A36] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
+Cog0      1: [$058F] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 18
 Cog0     -> pass
@@ -153,7 +153,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [ap99words.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0A36] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
+Cog0      1: [$058F] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
 Cog0
 Cog0  * Test #25: Close append file
 Cog0     ECode: SUCCESS: No error
@@ -164,7 +164,7 @@ Cog0
 Cog0  * Test #26: Ensure expected file stats post WORDs append
 Cog0    File: [ap99words.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0462] HEAD/last, thisID=1, endPtr=$00AC, lifeCycle [ACTIVE-5], sig=[$0AC0_01BC]
+Cog0      1: [$0F69] HEAD/last, thisID=1, endPtr=$00AC, lifeCycle [ACTIVE-5], sig=[$0AC0_01BC]
 Cog0    # blocks: 1
 Cog0    # bytes used: 36
 Cog0     -> pass
@@ -208,7 +208,7 @@ Cog0
 Cog0  * Test #32: Ensure expected file stats
 Cog0    File: [ap1212longs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0EB4] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
+Cog0      1: [$00AD] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 48
 Cog0     -> pass
@@ -229,7 +229,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [ap1212longs.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0EB4] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
+Cog0      1: [$00AD] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
 Cog0
 Cog0  * Test #37: Close append file
 Cog0     ECode: SUCCESS: No error
@@ -240,7 +240,7 @@ Cog0
 Cog0  * Test #38: Ensure expected file stats post LONGs append
 Cog0    File: [ap1212longs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0DC6] HEAD/last, thisID=2, endPtr=$00E8, lifeCycle [ACTIVE-5], sig=[$0E80_02BC]
+Cog0      1: [$02F6] HEAD/last, thisID=2, endPtr=$00E8, lifeCycle [ACTIVE-5], sig=[$0E80_02BC]
 Cog0    # blocks: 1
 Cog0    # bytes used: 96
 Cog0     -> pass
@@ -267,13 +267,13 @@ Cog0     -> pass
 Cog0
 Cog0    File: [ap1010strings.zstr] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0000] HEAD/last, thisID=3, endPtr=$01A7, lifeCycle [erased], sig=[$1A70_03FC]
+Cog0      1: [$0000] HEAD/last, thisID=3, endPtr=$0210, lifeCycle [erased], sig=[$2100_03FC]
 Cog0
 Cog0  * Test #42: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [ap1010strings.zstr], bytesUsed = 287, bytes_free = 3_669, block_count = 1
+Cog0    File: [ap1010strings.zstr], bytesUsed = 392, bytes_free = 3_564, block_count = 1
 Cog0
 Cog0  * Test #43: Ensure expected file system changes post STRINGs write
 Cog0  * post file write
@@ -285,9 +285,9 @@ Cog0
 Cog0  * Test #44: Ensure expected file stats
 Cog0    File: [ap1010strings.zstr]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0EA2] HEAD/last, thisID=3, endPtr=$01A7, lifeCycle [ACTIVE-3], sig=[$1A70_037C]
+Cog0      1: [$0D11] HEAD/last, thisID=3, endPtr=$0210, lifeCycle [ACTIVE-3], sig=[$2100_037C]
 Cog0    # blocks: 1
-Cog0    # bytes used: 287
+Cog0    # bytes used: 392
 Cog0     -> pass
 Cog0
 Cog0  * Test #45: Get starting length before append of STRINGs
@@ -306,28 +306,28 @@ Cog0     -> pass
 Cog0
 Cog0    File: [ap1010strings.zstr] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0EA2] HEAD/last, thisID=3, endPtr=$01A7, lifeCycle [ACTIVE-3], sig=[$1A70_037C]
+Cog0      1: [$0D11] HEAD/last, thisID=3, endPtr=$0210, lifeCycle [ACTIVE-3], sig=[$2100_037C]
 Cog0
 Cog0  * Test #49: Close append file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [ap1010strings.zstr], bytesUsed = 714, bytes_free = 3_242, block_count = 1
+Cog0    File: [ap1010strings.zstr], bytesUsed = 646, bytes_free = 3_310, block_count = 1
 Cog0
 Cog0  * Test #50: Ensure expected file stats post STRINGs append
 Cog0    File: [ap1010strings.zstr]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$04F0] HEAD/last, thisID=3, endPtr=$0352, lifeCycle [ACTIVE-5], sig=[$3520_03BC]
+Cog0      1: [$023A] HEAD/last, thisID=3, endPtr=$030E, lifeCycle [ACTIVE-5], sig=[$30E0_03BC]
 Cog0    # blocks: 1
-Cog0    # bytes used: 714
+Cog0    # bytes used: 646
 Cog0     -> pass
 Cog0
 Cog0  * Test #51: Readback all strings and verify
 Cog0    File: [ap1010strings.zstr]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$04F0] HEAD/last, thisID=3, endPtr=$0352, lifeCycle [ACTIVE-5], sig=[$3520_03BC]
+Cog0      1: [$023A] HEAD/last, thisID=3, endPtr=$030E, lifeCycle [ACTIVE-5], sig=[$30E0_03BC]
 Cog0    # blocks: 1
-Cog0    # bytes used: 714
+Cog0    # bytes used: 646
 Cog0     -> pass
 Cog0
 Cog0
@@ -357,7 +357,7 @@ Cog0    All Files:
 Cog0  ap1010bytes.bin, Bytes = 20, ID = 1, @Buff={binary data}
 Cog0  ap99words.bin, Bytes = 36, ID = 2, @Buff={binary data}
 Cog0  ap1212longs.bin, Bytes = 96, ID = 3, @Buff={binary data}
-Cog0  ap1010strings.zstr, Bytes = 714, ID = 4, @Buff={binary data}
+Cog0  ap1010strings.zstr, Bytes = 646, ID = 4, @Buff={binary data}
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
@@ -376,7 +376,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHeadBody.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$02FE] HEAD/more, thisID=4, nextId=5, lifeCycle [erased], sig=[$0050_04FD]
+Cog0      1: [$0952] HEAD/more, thisID=4, nextId=5, lifeCycle [erased], sig=[$0050_04FD]
 Cog0      2: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05FE]
 Cog0
 Cog0  * Test #60: Close written file
@@ -395,8 +395,8 @@ Cog0
 Cog0  * Test #62: Ensure expected file stats
 Cog0    File: [apLongsHeadBody.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$02FE] HEAD/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]
-Cog0      2: [$02B1] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
+Cog0      1: [$0952] HEAD/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]
+Cog0      2: [$0BA8] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_964
 Cog0     -> pass
@@ -417,7 +417,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHeadBody.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$02B1] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
+Cog0      1: [$0BA8] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
 Cog0
 Cog0  * Test #67: Close append file
 Cog0     ECode: SUCCESS: No error
@@ -428,8 +428,8 @@ Cog0
 Cog0  * Test #68: Ensure expected file stats post LONGs append
 Cog0    File: [apLongsHeadBody.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$02FE] HEAD/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]
-Cog0      2: [$0B2E] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_05BE]
+Cog0      1: [$0952] HEAD/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]
+Cog0      2: [$0105] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_05BE]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_996
 Cog0     -> pass
@@ -451,8 +451,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead2xBody.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0887] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
-Cog0      2: [$01B0] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      1: [$09F3] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
+Cog0      2: [$0A8C] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
 Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$000C, lifeCycle [erased], sig=[$00C0_08FE]
 Cog0
 Cog0  * Test #72: Close written file
@@ -471,9 +471,9 @@ Cog0
 Cog0  * Test #74: Ensure expected file stats
 Cog0    File: [apLongsHead2xBody.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0887] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
-Cog0      2: [$01B0] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$027D] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]
+Cog0      1: [$09F3] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
+Cog0      2: [$0A8C] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$0841] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_052
 Cog0     -> pass
@@ -494,7 +494,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead2xBody.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$027D] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]
+Cog0      1: [$0841] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]
 Cog0
 Cog0  * Test #79: Close append file
 Cog0     ECode: SUCCESS: No error
@@ -505,9 +505,9 @@ Cog0
 Cog0  * Test #80: Ensure expected file stats post LONGs append
 Cog0    File: [apLongsHead2xBody.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0887] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
-Cog0      2: [$01B0] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$0C54] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_08BE]
+Cog0      1: [$09F3] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
+Cog0      2: [$0A8C] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$0165] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_08BE]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_084
 Cog0     -> pass
@@ -529,8 +529,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$025A] HEAD/more, thisID=9, nextId=10, lifeCycle [erased], sig=[$00A0_09FD]
-Cog0      2: [$075C] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      1: [$0A17] HEAD/more, thisID=9, nextId=10, lifeCycle [erased], sig=[$00A0_09FD]
+Cog0      2: [$0CD1] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
 Cog0      3: [$0000] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [erased], sig=[$FF00_0BFE]
 Cog0
 Cog0  * Test #84: Close written file
@@ -549,9 +549,9 @@ Cog0
 Cog0  * Test #86: Ensure expected file stats
 Cog0    File: [apLongsHead3xBody.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$025A] HEAD/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
-Cog0      2: [$075C] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
-Cog0      3: [$0A02] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [ACTIVE-3], sig=[$FF00_0B7E]
+Cog0      1: [$0A17] HEAD/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0CD1] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0081] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [ACTIVE-3], sig=[$FF00_0B7E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 12_120
 Cog0     -> pass
@@ -572,7 +572,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$0062] BODY/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFF]
+Cog0      1: [$0E65] BODY/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFF]
 Cog0      2: [$0000] BODY/last, thisID=12, endPtr=$001C, lifeCycle [erased], sig=[$01C0_0CFE]
 Cog0
 Cog0  * Test #91: Close append file
@@ -584,10 +584,10 @@ Cog0
 Cog0  * Test #92: Ensure expected file stats post LONGs append
 Cog0    File: [apLongsHead3xBody.bin]
 Cog0    # 4 Blocks in file:
-Cog0      1: [$025A] HEAD/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
-Cog0      2: [$075C] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
-Cog0      3: [$0062] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
-Cog0      4: [$0532] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]
+Cog0      1: [$0A17] HEAD/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0CD1] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0E65] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
+Cog0      4: [$0796] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]
 Cog0    # blocks: 4
 Cog0    # bytes used: 12_156
 Cog0     -> pass
@@ -596,7 +596,7 @@ Cog0    All Files:
 Cog0  ap1010bytes.bin, Bytes = 20, ID = 1, @Buff={binary data}
 Cog0  ap99words.bin, Bytes = 36, ID = 2, @Buff={binary data}
 Cog0  ap1212longs.bin, Bytes = 96, ID = 3, @Buff={binary data}
-Cog0  ap1010strings.zstr, Bytes = 714, ID = 4, @Buff={binary data}
+Cog0  ap1010strings.zstr, Bytes = 646, ID = 4, @Buff={binary data}
 Cog0  apLongsHeadBody.bin, Bytes = 3_996, ID = 5, @Buff={binary data}
 Cog0  apLongsHead2xBody.bin, Bytes = 8_084, ID = 7, @Buff={binary data}
 Cog0  apLongsHead3xBody.bin, Bytes = 12_156, ID = 10, @Buff={binary data}
