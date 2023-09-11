@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 07 SEP 2023
+''   Updated.... 11 SEP 2023
 ''
 '' =================================================================================================
 
@@ -144,6 +144,8 @@ PUB go()
     testAppendRecords(@testfileB3, 3, 5, 14) ' this creates file (3,072 = 2 blocks)
     testAppendRecords(@testfileB3, 11, 5, 14) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     testVerifyRecords(@testfileB3, 14) ' this verifies last 8k of file
+    utils.startTestGroup(@"B3a Seek within file that was append 11KB circular to 3kb file")
+    testVerifySeekRecords(@testfileB3, 14) ' this verifies seeks within last 8k of file
 
     utils.showFiles()
 
@@ -356,6 +358,87 @@ pri testVerifyRecords(pFilename, totalRecordsWritten) | recordCount, lenBytes, s
     '  close file
     utils.startTest(@"Close read file")
     status := Flash.close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+
+pri testVerifySeekRecords(pFilename, totalRecordsWritten) | recordCount, lenBytes, startRcdNbr, recordInCircular
+
+    '  get total file size
+    utils.startTest(@"Determine size of file in records")
+    lenBytes := Flash.file_size(pFilename)
+    status := Flash.error()
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    recordCount := lenBytes / RECORD_LEN                ' ignore fraction at front of file
+
+    debug(" ")
+    debug("****  At VerifySeek: file size in bytes = ", udec_(lenBytes), " bytes, (", udec_(recordCount), " records), wrote total of ", udec_(totalRecordsWritten), " records")
+
+    recordInCircular := (CIRCULAR_LEN_IN_BYTES + (RECORD_LEN-1)) / RECORD_LEN
+    debug("   Circular Buffer contains = ", udec_(recordInCircular), " records")
+
+    ' read should start at tail - file limit (8KB in our tests)
+    if totalRecordsWritten > recordInCircular
+        startRcdNbr := totalRecordsWritten - recordInCircular + 1
+    else
+        startRcdNbr := 1
+    debug("   Read should start with record #", udec_(startRcdNbr))
+
+    '  open file for read
+    utils.startTest(@"Open File for read")
+    handle := Flash.open_circular(pFilename, "r", CIRCULAR_LEN_IN_BYTES)
+    utils.evaluate(handle, Flash.SUCCESS)
+    '    seek to various locations and read longs validating for correct value
+
+    ' seek to 3
+    utils.startTest(@"seek to 3 then read expected RECORD")
+    recordNbr := startRcdNbr + 2
+    status := Flash.seek(handle, RECORD_LEN * 2)
+    utils.evaluate(handle, Flash.SUCCESS)
+    rdLength := Flash.read(handle, @record, RECORD_LEN)
+    verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
+
+   ' seek to zero
+    utils.startTest(@"seek to zero then read expected RECORD")
+    recordNbr := startRcdNbr
+    status := Flash.seek(handle, 0)
+    utils.evaluate(handle, Flash.SUCCESS)
+    rdLength := Flash.read(handle, @record, RECORD_LEN)
+    verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
+
+   ' seek to n-1
+    utils.startTest(@"seek to N-1 then read expected RECORD")
+    recordNbr := totalRecordsWritten
+    status := Flash.seek(handle, (totalRecordsWritten - startRcdNbr) * RECORD_LEN)
+    utils.evaluate(handle, Flash.SUCCESS)
+    rdLength := Flash.read(handle, @record, RECORD_LEN)
+    verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
+
+    '  read past end of file to verify read returns error
+    utils.startTest(@"BAD: read one more Record than written")
+    rdLength := Flash.read(handle, @record, RECORD_LEN)
+    utils.evaluateSingleValue(rdLength, @"read()", 0)
+    status := Flash.error()
+    utils.evaluate(status, Flash.E_END_OF_FILE)
+
+    '  close file
+    utils.startTest(@"Close read file")
+    status := Flash.close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+
+pri verifyRecord(pRcd, rcdSize, expectedId, readLength)
+    ' ensure length is same as expected
+    Debug("   -- Verifying Rcd # ", udec_(expectedId))
+    utils.evaluateValue(readLength, @"read()", rcdSize)
+    ' ensure record ID is same as expected
+    utils.evaluateValue(recordId, @"recordId", expectedId)
+    ' ensure record CRC is same as expected
+    calcCRC := utils.record_crc(@record, rcdSize)
+    utils.evaluateValue(calcCRC, @"recordCRC", recordCRC)
+
+    utils.startTest(@"ensure no error on read after seek")
+    status := Flash.error()
     utils.evaluate(status, Flash.SUCCESS)
 
 con { license }
