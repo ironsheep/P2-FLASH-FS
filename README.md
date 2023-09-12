@@ -14,6 +14,7 @@ On this Page:
 
 Additional pages:
 
+- [The flash_fs object documentation](flash_fs.txt)
 - [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
 - [FS Theory of Operations](THEOPS.md) - a deteailed descript of how this filesystem works
 - [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features (604+ tests so far)
@@ -30,6 +31,61 @@ Additional pages:
 - Read-Modify-Write supported
 - Circular file writes supported 
 - *Directory Support coming soon* 
+
+## Adding the Flash FS to your own project
+
+This section describes how to quickly get the flash filesystem working in your project.
+
+### Download the latest flash_fs.spin2 file
+
+Every time you wish to start a project using the flash filesystem you will want to download the latest version from the repository [ironsheep/P2-FLASH-FS](https://github.com/ironsheep/P2-FLASH-FS). In the list of files on the top page you will see the file `flash_fs.spin2`. You can download this single file to get the latest or you can navigate to the [releases](https://github.com/ironsheep/P2-FLASH-FS/releases) page where you can download the latest release which includes demo files as well as the filesystem object.
+
+### Include the Flash FS object in your top file
+
+Place the downloaded `flash_fs.spin2` in your project and in your top-level object include the flash object:
+
+```spin2
+OBJ { Objects Used by this Object }
+
+    flash  : "flash_fs"	           ' the Flash Filesystem
+```
+
+The driver keeps about ~4250 bytes per open file. The space is allocated for two open files by default.  You can override this in your top-level file by changing the include to something like:
+
+```spin2
+OBJ { Objects Used by this Object }
+
+    flash  : "flash_fs"	 | MAX_FILES_OPEN = 4       ' the Flash Filesystem
+```
+
+In this case we are telling the compiler to allocate room for 4 simultaneously accessable files instead of the default two files.
+
+### Format() or Mount() the flash filesystem
+
+At the start of your application will need to mount() the filesystem.  
+
+```spin2
+PRI main() | status
+
+    status := flash.mount()	           ' start up the FLASH filesystem
+    if status <> flash.SUCCESS
+      '... you know that some blocks were corrupted and freed ...
+```
+
+If you know that that the flash chip in your P2 Edge module has never been formatted then you can call format instead of mount. (The format will then do the mount for you.)
+
+```spin2
+PRI main()
+
+    flash.format()	           ' start up the FLASH filesystem
+```
+
+
+### work with files on flash as you would normally
+
+Now that your filesystem is mounted you are free to do normal file operations. The filesystem API is very similar to the ANSI-C file handling API so this all should feel pretty natural to you.
+
+Please Enjoy!
 
 ## How to Contribute
 
