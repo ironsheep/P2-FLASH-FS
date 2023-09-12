@@ -1,5 +1,5 @@
 # P2-FLASH-FS
-The future home of our Flash FS a filesystem for the FLASH chip on the P2 Edge Module.
+Flash FS - a filesystem for the FLASH chip on the P2 Edge Module.
 
 ![Project Maintenance][maintenance-shield]
 
@@ -87,7 +87,10 @@ PRI main()
 
 Now that your filesystem is mounted you are free to do normal file operations. The filesystem API is very similar to the ANSI-C file handling API so this all should feel pretty natural to you.
 
+Review the [Flash F/S Object I/F Documentation](flash_fs.txt) then start reading and writing files!
+
 Please Enjoy!
+*Stephen*
 
 ## How to Contribute
 
