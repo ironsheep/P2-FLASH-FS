@@ -10,27 +10,29 @@ The future home of our Flash FS a filesystem for the FLASH chip on the P2 Edge M
 On this Page:
 
 - [Flash Filesystem Features](#flash-filesystem-features) - key features of this filesystem / design goals
+- [Adding the flash fs to your own project](#adding-the-flash-fs-to-your-own-project)
 - [Contributing](#how-to-contribute) - you can contribute to this project
 
 Additional pages:
 
-- [The flash_fs object documentation](flash_fs.txt)
+- [The flash_fs Object I/F Documentation](flash_fs.txt) - the object interface with documentation for each public method
 - [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
-- [FS Theory of Operations](THEOPS.md) - a deteailed descript of how this filesystem works
+- [FS Theory of Operations](THEOPS.md) - a detailed description of key concepts of this filesystem
 - [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features (604+ tests so far)
 
 ## Flash Filesystem Features
 
+Key features of this Flash Filesystem for the P2 Edge Flash chip:
+
 - Wear-leveling write mechanism
 - Writes are stuctured to facilitate recovery  of file structure after unplanned power failure
-- Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
 - Block identification is independent of a blocks physical location
 - Filenames are 127 characters plus zero terminator
 - Seeks supported
 - File Append supported
-- Read-Modify-Write supported
 - Circular file writes supported 
-- *Directory Support coming soon* 
+- **Coming Soon** Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
+- **Coming soon** *Directory Support* 
 
 ## Adding the Flash FS to your own project
 
