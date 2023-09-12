@@ -20,11 +20,10 @@ On this Page:
   - [Treating a file as a circular buffer](#treating-a-file-as-a-circular-buffer)
 - [Tracking Data](#tracking-data-state-of-filesystem) - State of Filesystem
 - [Tracking Data](#tracking-data-open-files) - Open Files
-- The Mount Process [M]
-- Locating a next block to allocate to a file [L]
-- The File Open Process [O]
-- The File Close Process [C]
-- The File Write Process [W]
+- The Format Process [F]
+- [The Mount Process [M]](#the-mount-process-m)
+- [Locating a next block to allocate to a file [L]](#locating-a-next-block-to-allocate-to-a-file-l)
+
 
 Additional pages:
 
@@ -339,21 +338,41 @@ For each open file (handle) teh driver maintains the following information:
 | | | | **4,238 bytes / handle**
 
 
+## The Format Process [F]
+
+Formatting the Flash is a simple process. The first byte of every block allocated to the flash fileystem is read and if the lifecycle bits indicate the block is active [%011, %101, or %011] then the block is "canceled." That is the lifecyle bits are set to %000 and the byte is written to flash. Once this is complete all blocks will be seen as not in use when the mount occurs.
+
 ## The Mount Process [M]
 
-Upon Mount the entire flash space is scanned for well-formed blocks and work is completed if found incomplete. Lastly any badly formed blocks/block chains are freed. In this last case an error code is returned from mount
+Upon Mount the entire flash space is scanned for well-formed blocks and work is completed if found incomplete. All files are located. Lastly any badly formed blocks/block chains are freed. In this last case an error code is returned from mount.  Here's a bit more detail:
 
 ### [M1] Initial scan
-### [M2] Completing work which didn't complete due to power fail
+
+The first step in the mount process is to locate all valid active blocks (active lifecycle and valid 32-bit block CRC) and check for any duplicate block IDs. If a duplicate is found then the valid block with the higher priority is kept while the block with the lower priority is "canceled.".  In actuality, there should only ever be one occurance of this. A 2nd case should never be found. This one occurance would be due to a power failure occurring after the block with the higher priority was written but before the block with the lower priority could be canceled.
+ 
+This step in the mount process effectively finishes the work that didn't complete due to a power failure.
+
+### [M2] Locating complete files and canceling incomplete
+
+This next step uses the product of the first step. The first step left indications of which blocks are valid within the entire space allocated to the flash filesystem.  This step then iterates over the known good blocks identifying which are file head blocks [HEAD/last block or HEAD/more block] and then locating all remaining blocks in the file chain.
+
+The end product of this seach is that all file locations are now known in addition to which blocks belong to files.  We also know if any blocks are somehow active but no longer belong to any files.
+
 ### [M3] Clearing blocks that no longer read correctly
+
+The final pass then clears these somehow damaged blocks by canceling each of them effectively marking each of them as free/not in use.  This "clearing" is not a normal case. It only happens when the flash memory has somehow changed state (or aged.). In the case of blocks being found during the mount effort and then canceled an error code **E\_BAD\_BLOCKS_REMOVED** is returned from the mount call.  This is to allow and application to be able to detect if files are somehow being lost to the aging effects of the flash chip.
 
 ## Locating a next block to allocate to a file [L]
 
-## The File Open Process [O]
+Our wear leveling is accomplished by two mechanisms. The first is by how we choose a block to be allocated. We randomly pick a block from within the entire flash filesystem space. The 2nd mechanism then ensures the leveling. Once the new location is randomly determined then if the block is already in use we relocate the contents of that block and continue to place our new content in this location.
 
-## The File Close Process [C]
+## This is my first ...
 
-## The File Write Process [W]
+This is my first version of this Theory of Operations Document. If I've not covered something here that you would like to see please let me know by filing issue, contacting me directly or by posting your request in our P2 Forums.
+
+Please enjoy!
+
+ *Stephen*
 
 
 ---
