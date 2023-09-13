@@ -1,12 +1,12 @@
 '' =================================================================================================
 ''
 ''   File....... RT_write_append_tests.spin2
-''   Purpose.... This object exercises the append functionality of the flash_fs object
+''   Purpose.... This object exercises the append and flush() functionality of the flash filesystem
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 02 SEP 2023
+''   Updated.... 12 SEP 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -115,6 +115,24 @@ PUB go() | hundreds, tens, units, snHi, snLo
     utils.startTestGroup(@"Head block + 2 x body block - filled with LONGsfull HEAD & 2 BODY (-3), append 9 more append causes add of new body")
     testWriteLongs(@testfile7, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + (Flash.LONGS_IN_BODY_BLOCK - 3), 6, 9)
     testAppendLongs(@testfile7, 9)
+
+    utils.startTestGroup(@"Certifying Flush - appends to existing file with flush() for each")
+
+    ' --- special case - flush() testing
+    ' open file
+    utils.startTest(@"Open File for append")
+    handle := Flash.open(@testfile7,"a")
+    utils.evaluate(handle, Flash.SUCCESS)
+
+    testFlushAppendLongs(handle, @testfile7, 6) ' leaves file open after flush
+    testFlushAppendLongs(handle, @testfile7, 22) ' leaves file open after flush
+
+    '  close file
+    utils.startTest(@"Close append file")
+    status := Flash.close(handle)
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.showFileDetails(@testfile7)
 
 
     utils.showFiles()
@@ -377,7 +395,7 @@ pri testAppendLongs(pFilename, count) | startLength, blocksUsed
     utils.startTest(@"Get starting length before append of LONGs")
     startLength := Flash.file_size(pFilename)
     status := Flash.error()
-    utils.evaluateStatus(handle, @"file_size()", Flash.SUCCESS)
+    utils.evaluateStatus(status, @"file_size()", Flash.SUCCESS)
 
     '  open file for append
     utils.startTest(@"Open File for append")
@@ -403,15 +421,31 @@ pri testAppendLongs(pFilename, count) | startLength, blocksUsed
     status := Flash.close(handle)
     utils.evaluate(status, Flash.SUCCESS)
 
-{
-    ' AUGH dump head block to see if content is correct
-    pBlock := Flash.TEST_getHead4kBlock(pFilename)
-    if pBlock < 0
-        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
-    else
-        utils.dbgMemDump(@"Append WORDs file Head block", pBlock, 4096)
-        status := Flash.SUCCESS ' clear our temp use
-'}
+
+pri testFlushAppendLongs(appendHandle, pFilename, count) | startLength, blocksUsed
+
+    utils.startTest(@"Get starting length before append of LONGs")
+    startLength := Flash.file_size(pFilename)
+    status := Flash.error()
+    utils.evaluateStatus(status, @"file_size()", Flash.SUCCESS)
+
+    utils.startTest(@"Append count LONGs")
+    testValue := $40
+    repeat count
+        testValue++
+        status := Flash.wr_long(appendHandle, testValue)
+        utils.evaluateStatus(status, @"wr_long()", Flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on writes")
+    utils.evaluate(status, Flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(appendHandle)
+
+    '  flush changes to file
+    utils.startTest(@"Flush append file")
+    status := Flash.flush(appendHandle)
+    utils.evaluate(status, Flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 

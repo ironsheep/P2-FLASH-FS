@@ -1,7 +1,5 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_A44C jump
-Cog0  * format()
-Cog0  * mount()
+Cog0  INIT $0000_0EB8 $0000_A444 jump
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
 Cog0    All Files:
@@ -49,7 +47,7 @@ Cog0
 Cog0  * Test #8: Ensure expected file stats
 Cog0    File: [seekLongs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$04D8] HEAD/last, thisID=0, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_007C]
+Cog0      1: [$04E5] HEAD/last, thisID=0, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_007C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_956
 Cog0     -> pass
@@ -108,7 +106,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs2blk.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$04D8] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
+Cog0      1: [$0781] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
 Cog0      2: [$0000] BODY/last, thisID=2, endPtr=$000C, lifeCycle [erased], sig=[$00C0_02FE]
 Cog0
 Cog0  * Test #22: Close written file
@@ -119,7 +117,7 @@ Cog0    File: [seekLongs2blk.bin], bytesUsed = 3_964, bytes_free = 4_080, block_
 Cog0
 Cog0  * Test #23: Ensure expected file system changes
 Cog0  * post file write
-Cog0     FileSystem: 3, 3_965, 2
+Cog0    # FileSystem: 3, 3_965, 2
 Cog0    # files: 2
 Cog0    # blocks used: 3
 Cog0     -> pass
@@ -127,8 +125,8 @@ Cog0
 Cog0  * Test #24: Ensure expected file stats
 Cog0    File: [seekLongs2blk.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$04D8] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
-Cog0      2: [$05E2] BODY/last, thisID=2, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_027E]
+Cog0      1: [$0781] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
+Cog0      2: [$0AC0] BODY/last, thisID=2, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_027E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_964
 Cog0     -> pass
@@ -187,8 +185,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs3blk.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$01B9] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
-Cog0      2: [$079E] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      1: [$081E] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
+Cog0      2: [$0842] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
 Cog0      3: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05FE]
 Cog0
 Cog0  * Test #38: Close written file
@@ -207,9 +205,9 @@ Cog0
 Cog0  * Test #40: Ensure expected file stats
 Cog0    File: [seekLongs3blk.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$01B9] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
-Cog0      2: [$079E] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
-Cog0      3: [$00CF] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
+Cog0      1: [$081E] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
+Cog0      2: [$0842] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      3: [$056E] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_052
 Cog0     -> pass
@@ -268,8 +266,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs3blkFull.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$02B6] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
-Cog0      2: [$07AF] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      1: [$00E1] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
+Cog0      2: [$00FD] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
 Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [erased], sig=[$FFC0_08FE]
 Cog0
 Cog0  * Test #54: Close written file
@@ -288,9 +286,9 @@ Cog0
 Cog0  * Test #56: Ensure expected file stats
 Cog0    File: [seekLongs3blkFull.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$02B6] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
-Cog0      2: [$07AF] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$001C] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_087E]
+Cog0      1: [$00E1] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
+Cog0      2: [$00FD] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$0C62] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_087E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 12_132
 Cog0     -> pass

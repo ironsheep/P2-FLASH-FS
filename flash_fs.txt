@@ -8,7 +8,7 @@
                -- see below for terms of use
    E-mail.....stephen@ironsheep.biz
    Started.... AUG 2023
-   Updated.... 11 SEP 2023
+   Updated.... 12 SEP 2023
  =================================================================================================
  v1.2.0 - initial release of flash_fs with full API
  -------------------------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ Object "Draft_flash_fs" Interface:
 
 pub null()
 pub version() : result
-pub serial_number() : snHi, snLo
+pub serial_number() : sn_hi, sn_lo
 pub mount() : status
 pub unmount() : status
 pub format() : status
@@ -43,7 +43,7 @@ pub rd_word(handle) : value
 pub rd_long(handle) : value
 pub rd_str(handle, p_str, count) : bytes_read
 pub directory(p_block_id, p_filename, p_file_size) : status
-pub stats() : usedBlocks, freeBlocks, fileCount
+pub stats() : used_blocks, free_blocks, file_count
 pub string_for_error(error_code) : p_interpretation
 
 __________
@@ -58,12 +58,13 @@ pub version() : result
  Returns flash file system library version as integer
  -- e.g., version 120 is 1.2.0 (major, minor, bugfix)
 
-________________________________
-pub serial_number() : snHi, snLo
+__________________________________
+pub serial_number() : sn_hi, sn_lo
 
  Returns 64-bit unique id of flash chip
- @returns snHi - high 32 bits of 64-bit unique id of flash chip (E_NOT_MOUNTED if filesystem has not been mounted)
- @returns snLo - low 32 bits of 64-bit unique id of flash chip (0 when error return)
+ @returns sn_hi - high 32 bits of 64-bit unique id of flash chip (0 when error return)
+ @returns sn_lo - low 32 bits of 64-bit unique id of flash chip (0 when error return)
+ (sets error() to E_NOT_MOUNTED and returns 0,0 if filesystem has not been mounted)
 
 ____________________
 pub mount() : status
@@ -349,13 +350,13 @@ pub directory(p_block_id, p_filename, p_file_size) : status
  @returns status - 0 (SUCCESS) if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
 
-_______________________________________________
-pub stats() : usedBlocks, freeBlocks, fileCount
+__________________________________________________
+pub stats() : used_blocks, free_blocks, file_count
 
  Get filesystem stats: used/free block counts and file count
- @returns usedBlocks - the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
- @returns freeBlocks - the number of free blocks (or 0 if there is an error)
- @returns fileCount - the number of files recorded in filesystem (or 0 if there is an error)
+ @returns used_blocks - the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
+ @returns free_blocks - the number of free blocks (or 0 if there is an error)
+ @returns file_count - the number of files recorded in filesystem (or 0 if there is an error)
 
 ___________________________________________________
 pub string_for_error(error_code) : p_interpretation

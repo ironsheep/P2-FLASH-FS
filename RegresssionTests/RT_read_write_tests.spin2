@@ -1,12 +1,12 @@
 '' =================================================================================================
 ''
 ''   File....... RT_read_seek_test.spin2
-''   Purpose.... This object exercises the
+''   Purpose.... This object exercises the read/write and mount/unmount functions of the flash filesystem
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 02 SEP 2023
+''   Updated.... 12 SEP 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -180,6 +180,29 @@ PUB go() | hundreds, tens, units, snHi, snLo
 
     utils.showFiles()
 
+
+    ' --- special case - Mount() testing do files survive unmount()/mount()?
+    utils.startTestGroup(@"unmount(), mount() - ensure files survive")
+    status := Flash.unmount()
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.startTest(@"serial_number()  while FS not mounted")
+    snHi, snLo := Flash.serial_number()
+    utils.evaluateValue(snHi, @"serial_number() hi", 0)
+    utils.evaluateValue(snLo, @"serial_number() lo", 0)
+
+    utils.startTest(@"serial_number() valid not mounted status")
+    status := Flash.error()
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
+
+    utils.startTest(@"open()  while FS not mounted")
+    status := Flash.open(@testfile7, "r")
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
+
+    status := Flash.mount()
+    utils.evaluate(status, Flash.SUCCESS)
+
+    utils.showFiles()
 
     utils.ShowTestEndCounts()
 

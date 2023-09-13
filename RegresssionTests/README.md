@@ -15,7 +15,7 @@ The Regression test coverage is nearly complete!  This table indicates which met
 | Public Method | tested | Notes
 | --- | --- | --- |
 | PUB version() : result | YES
-| PUB serial_number() : snHi, snLo | YES
+| PUB serial_number() : sn\_hi, sn\_lo | YES
 | PUB mount() : status | YES
 | PUB unmount() | YES
 | PUB format() : status | YES
@@ -26,27 +26,27 @@ The Regression test coverage is nearly complete!  This table indicates which met
 | PUB open(p_filename,"r+") : handle | | Not in initial release
 | PUB open\_circular(p_filename,"r") : handle | YES
 | PUB open\_circular(p_filename,"a") : handle | YES
-| PUB flush(handle) : status |
+| PUB flush(handle) : status | YES
 | PUB close(handle) : status | YES
 | PUB rename(p_old_filename, p_new_filename) : status | YES
 | PUB delete(p_filename) : status | YES
 | PUB exists(p_filename) : result | YES
-| PUB file\_size(p_filename) : size_in_bytes | YES
-| PUB file\_size_unused(p_filename) : size_in_bytes_unused | YES
+| PUB file\_size(p_filename) : size\_in\_bytes | YES
+| PUB file\_size\_unused(p_filename) : size\_in\_bytes\_unused | YES
 | PUB seek(handle, position) : result | YES
 | PUB write(handle, p_buffer, count) : result | YES
 | PUB wr_byte(handle, byteValue) : result | YES
-| PUB wr_word(handle, word_value) : result | YES
-| PUB wr_long(handle, long_value) : result | YES
-| PUB wr_str(handle, p_str) : result | YES
-| PUB read(handle, p_buffer, count) : bytes_read | YES
+| PUB wr\_word(handle, word_value) : result | YES
+| PUB wr\_long(handle, long_value) : result | YES
+| PUB wr\_str(handle, p_str) : result | YES
+| PUB read(handle, p_buffer, count) : bytes\_read | YES
 | PUB rd_byte(handle) : value | YES
 | PUB rd_word(handle) : value | YES
 | PUB rd_long(handle) : value | YES
-| PUB rd_str(handle, p_str, count) : result | YES
-| PUB directory(p_block_id, p_filename, p_file_size) | YES
-| PUB stats() : usedBlocks, freeBlocks, fileCount | YES
-| PUB string_for_error(error_code) : p_interpretation | YES
+| PUB rd\_str(handle, p_str, count) : result | YES
+| PUB directory(p\_block\_id, p\_filename, p\_file\_size) | YES
+| PUB stats() : used\_blocks, free\_blocks, file\_count | YES
+| PUB string\_for\_error(error_code) : p\_interpretation | YES
 
 
 ## Running the tests
@@ -76,7 +76,7 @@ At the head of each of test RT .spin2 files you want to run look for the debug o
 '}
 ```
 
-These lines when uncommented route the debug serial to PINs 57/58 which I connect to the a Raspberry Pi for logging as there is lot of output from the test runs.
+These lines when uncommented route the debug serial to PINs 56/57 which I connect to the a Raspberry Pi for logging as there is lot of output from the test runs.
 
 In their present for (commented out) the debug output just goes the debug window on windows where you are running the compiler.
 
@@ -94,6 +94,8 @@ This is a recap of the version history of these files:
 |  <PRE>2023-Sep-02</PRE> | More Tests `RT_write_append_tests.spin2`<br>Working Format, Mount, close(),<br>Focused tests for open(file, "A"), wr\_byte(), rd\_byte(), wr\_word(), rd\_word(), wr\_long(), rd\_long(), wr\_str(), and rd\_str() with additional tests for 2, 3 block span tests using longs |
 |  <PRE>2023-Sep-08</PRE> | More Tests `RT_mount_handle_basics_tests.spin2`<br>This tests all methods when filesystem is not mounted, when we are out of handles and when attempting to use an illegal handle<br>The point of this testing is to ensure that methods are returning the proper error code as documented under these conditions 
 |  <PRE>2023-Sep-08</PRE> | More Tests `RT_read_write_circular_tests.spin2`<br>This is the full test suite exercising the open_circular() for read and append methods. They ensure that blocks are added to and removed from the filesystem as they should be. They also ensure the reading from the circular file starts at the byte that they should be. These tests use 1KB records when id and checksum in each so that the reads can be certified to start at the exact byte they should be.
+|  <PRE>2023-Sep-12</PRE> | More Tests `RT_read_write_append_tests.spin2`<br>Added testing of flush() method when used with appends.
+|  <PRE>2023-Sep-12</PRE> | More Tests `RT_read_write_tests.spin2`<br>Added testing of unmount() and mount() methods
 
 ## Test files by Stephen
 

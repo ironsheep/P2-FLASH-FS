@@ -1,7 +1,7 @@
 '' =================================================================================================
 ''
 ''   File....... RT_read_seek_test.spin2
-''   Purpose.... This object exercises the
+''   Purpose.... This object exercises the multi-byte reads/writes (records or blocks) of the flash filesystem
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -86,6 +86,8 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
         'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
         status := Flash.write(handle, @record, RECORD_LEN)
         utils.evaluateStatus(status, @"write()", Flash.SUCCESS)
+        if status <> Flash.SUCCESS
+            quit ' abort on first failure
 
     utils.startTest(@"ensure no errors on Record writes")
     utils.evaluate(status, Flash.SUCCESS)

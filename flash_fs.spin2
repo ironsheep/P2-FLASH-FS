@@ -9,7 +9,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 11 SEP 2023
+''   Updated.... 12 SEP 2023
 ''
 '' =================================================================================================
 '' v1.2.0 - initial release of flash_fs with full API
@@ -176,34 +176,35 @@ pub version() : result
   return LIB_VERSION
 
 
-pub serial_number() : snHi, snLo
+pub serial_number() : sn_hi, sn_lo
 
 '' Returns 64-bit unique id of flash chip
 ''
-'' @returns snHi - high 32 bits of 64-bit unique id of flash chip (E_NOT_MOUNTED if filesystem has not been mounted)
-'' @returns snLo - low 32 bits of 64-bit unique id of flash chip (0 when error return)
+'' @returns sn_hi - high 32 bits of 64-bit unique id of flash chip (0 when error return)
+'' @returns sn_lo - low 32 bits of 64-bit unique id of flash chip (0 when error return)
+'' (sets error() to E_NOT_MOUNTED and returns 0,0 if filesystem has not been mounted)
 
   if fsMounted == false
-    snHi := (errorCode := E_NOT_MOUNTED)
+    errorCode := E_NOT_MOUNTED
   else
 
-    repeat while locktry(fsLock) == 0                  ' lock for exlusive use
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
     errorCode := SUCCESS
 
     flash_command($4B, 1)
     flash_send($00, 4)
-    flash_receive(@snHi, 8)
+    flash_receive(@sn_hi, 8)
 
     ' UID values are stored Big Endian
     ' -- swap ends to correct LE reads from flash
 
     org
-                movbyts     snHi, #%%0123
-                movbyts     snLo, #%%0123
+                movbyts     sn_hi, #%%0123
+                movbyts     sn_lo, #%%0123
     end
 
-    lockrel(fsLock)                                    ' release the lock, we're done with it
+    lockrel(fsLock)                                                             ' release the lock, we're done with it
 
 pub mount() : status | block_address, blockTypeBits, signature
 
@@ -224,7 +225,7 @@ pub mount() : status | block_address, blockTypeBits, signature
         if setup_semaphore() < 0
             return errorCode
 
-    debug("* mount()")
+    'debug("* mount()")
     errorCode := SUCCESS                                                        ' preset to success
 
     'debug("- have lock, trying...")
@@ -244,19 +245,20 @@ pub mount() : status | block_address, blockTypeBits, signature
     IDValid    := ^@IDValids.[0]
     BlockState := ^@BlockStates.[1..0]
 
-    'debug("- fixing power-out leftovers...")
+    'debug("mnt: - fixing power-out leftovers...")
     repeat block_address from 0 to BLOCKS - 1                                   'check each block and fix any duplicate IDs
         check_block_fix_dupe_id(block_address)                                  '(recovers from incomplete block switchover due to power loss)
 
-    'debug("- locating files...")
+    'debug("mnt: - locating files...")
     repeat block_address from 0 to BLOCKS - 1                                   'trace head blocks and cancel any broken files
         if field[BlockState][block_address] == B_TEMP                           'is this a valid block?
-            flash_read_block(block_address, @blockTypeBits, $000, $000)             'yes, read first byte of block
-            ifnot blockTypeBits.[1]                                                 'is this also a head block?
+            flash_read_block(block_address, @blockTypeBits, $000, $000)         'yes, read first byte of block
+            ifnot blockTypeBits.[1]                                             'is this a head block?
+                'debug("mnt: - head block ", uhex_word(block_address))
                 ifnot trace_file_set_flags(block_address, true)                 'yes, trace file, set block states to B_HEAD/B_BODY
-                trace_file_set_flags(block_address, false)                      'if error, retrace file, return block states to B_TEMP
+                    trace_file_set_flags(block_address, false)                  'if error, retrace file, return block states to B_TEMP
 
-    'debug("- clearing dead blocks...")
+    'debug("mnt: - clearing dead blocks...")
     repeat block_address from 0 to BLOCKS - 1                                   'cancel B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
         if field[BlockState][block_address] == B_TEMP                           'is this an B_TEMP block?
             flash_read_block(block_address, @signature, $000, $003)             'if so, read first long of block to get ID
@@ -266,7 +268,7 @@ pub mount() : status | block_address, blockTypeBits, signature
             'debug(" -- found dead block...")
             status :=  (errorCode := E_BAD_BLOCKS_REMOVED)
 
-    'debug("- mount done")
+    'debug("mnt: - mount done")
 
     lockrel(fsLock)              ' release the lock, we're done with it
     'debug("- lock released")
@@ -285,21 +287,21 @@ pub unmount() : status | handle, tmpFsLock
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                    ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   errorCode := SUCCESS
 
 ' Local Variables:
 ' @local handle - temporary handle to check for open files
-  debug("* unmount()")
-  repeat handle from 0 to MAX_FILES_OPEN - 1            ' for each handle
-    if hStatus[handle]                                  ' if handle is open...
-        close(handle)                                   ' ..close it!
+  'debug("* unmount()")
+  repeat handle from 0 to MAX_FILES_OPEN - 1                                    ' for each handle
+    if hStatus[handle]                                                          ' if handle is open...
+        close(handle)                                                           ' ..close it!
 
   tmpFsLock := fsLock
   fsLock := -1
-  fsMounted := false                                    ' clear "mounted" indication
-  lockrel(tmpFsLock)                                    ' release the lock, we're done with it
+  fsMounted := false                                                            ' clear "mounted" indication
+  lockrel(tmpFsLock)                                                            ' release the lock, we're done with it
   lockret(tmpFsLock)
 
 
@@ -323,15 +325,15 @@ pub format() : status | block_address, cycleBits
         if setup_semaphore() < 0
             return errorCode
 
-    debug("* format()")
+    'debug("* format()")
 
     'debug("- have lock, trying...")
-    repeat while locktry(fsLock) == 0                                            ' try to get the lock
+    repeat while locktry(fsLock) == 0                                           ' try to get the lock
 
     errorCode := SUCCESS
 
     'debug("- formatting...")
-    repeat block_address from 0 to BLOCKS - 1                                     'cancel all active blocks
+    repeat block_address from 0 to BLOCKS - 1                                   'cancel all active blocks
         flash_read_block(block_address, @cycleBits, $000, $000)
         'if block_address // 128 == 0
         '  debug(" -- block ", uhex_word_(block_address),", cycle...", ubin_byte(cycleBits))
@@ -340,11 +342,11 @@ pub format() : status | block_address, cycleBits
             cancel_block(block_address)
 
     'debug("- formatting done")
-    fsMounted := false                                                           ' clear "mounted" indcation so it will mount the scan structures
+    fsMounted := false                                                          ' clear "mounted" indcation so it will mount the scan structures
 
-    lockrel(fsLock)                                                              ' release the lock, we're done with it
+    lockrel(fsLock)                                                             ' release the lock, we're done with it
     'debug("- lock released")
-    return Mount()                                                                '(re)mount flash
+    return Mount()                                                              '(re)mount flash
 
 
 pub error() : result
@@ -398,10 +400,9 @@ pub open(p_filename, mode) : handle
   ' mode-specific checks
   case mode
     "r", "R":
-    "w", "W":
-    "a", "A":
+    "a", "A", "w", "W":
     '"r+", "R+": handle := finish_open_modify(p_filename)
-      ifnot blocks_free()                                          'if no free block exists, abort with error
+      ifnot blocks_free()                                                       'if no free block exists, abort with error
         return (errorCode := E_DRIVE_FULL)
     other: return (errorCode := E_FILE_MODE)
 
@@ -609,24 +610,24 @@ pub rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
   else
     ' a file rename consists of replacing the current head block of the file with a new head block containing the new filename
     ' then cancelling the old head block
-    new_block_address := next_block_address()                                     'get a new block to use for renaming (may move head block)
-    cur_block_address := field[IDToBlock][signature.[19..8]]                      'get head block of file to rename (AddressOfNextBlock may have changed lookup)
+    new_block_address := next_block_address()                                   'get a new block to use for renaming (may move head block)
+    cur_block_address := field[IDToBlock][signature.[19..8]]                    'get head block of file to rename (AddressOfNextBlock may have changed lookup)
 
-    flash_read_block(cur_block_address, @tmpBlockBuffer, $000, $FFF)              'read head block of file to rename
-    bytefill(@tmpBlockBuffer + $008, $FF, FILENAME_SIZE)                          'clear filename space to prevent old trailing chrs
-    strcopy(@tmpBlockBuffer + $008, p_new_filename, FILENAME_SIZE - 1)            'copy new filename into filename space
+    flash_read_block(cur_block_address, @tmpBlockBuffer, $000, $FFF)            'read head block of file to rename
+    bytefill(@tmpBlockBuffer + $008, $FF, FILENAME_SIZE)                        'clear filename space to prevent old trailing chrs
+    strcopy(@tmpBlockBuffer + $008, p_new_filename, FILENAME_SIZE - 1)          'copy new filename into filename space
     LONG[@tmpBlockBuffer + $004] := calc_crc32(@tmpBlockBuffer + $008, strsize(@tmpBlockBuffer + $008)+1)             'set filename CRC
-    next_cycle_bits := next_active_cycle(tmpBlockBuffer.[7..5])                   'get next lifecycle
+    next_cycle_bits := next_active_cycle(tmpBlockBuffer.[7..5])                 'get next lifecycle
     ' replace the head block
-    program_block(new_block_address, @tmpBlockBuffer, next_cycle_bits)            'program first block of renamed file
-    activate_block(new_block_address, next_cycle_bits)                            'activate new block
-    cancel_block(cur_block_address)                                               'cancel old block
+    program_block(new_block_address, @tmpBlockBuffer, next_cycle_bits)          'program first block of renamed file
+    activate_block(new_block_address, next_cycle_bits)                          'activate new block
+    cancel_block(cur_block_address)                                             'cancel old block
 
-    field[IDToBlock][signature.[19..8]] := new_block_address                      'update IDToBlock
-    field[BlockState][new_block_address] := B_HEAD                                'make new block HEAD
-    field[BlockState][cur_block_address] := B_FREE                                'make old block FREE
+    field[IDToBlock][signature.[19..8]] := new_block_address                    'update IDToBlock
+    field[BlockState][new_block_address] := B_HEAD                              'make new block HEAD
+    field[BlockState][cur_block_address] := B_FREE                              'make old block FREE
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pub delete(p_filename) : status | signature
@@ -645,14 +646,14 @@ pub delete(p_filename) : status | signature
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                  ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+  errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
   if is_file_open(p_filename, H_READ_WRITE)                                     'if file open in any mode, abort
         status := (errorCode := E_FILE_OPEN)
 
-  elseifnot signature := get_file_head_signature(p_filename)                        'if file doesn't exist, abort
+  elseifnot signature := get_file_head_signature(p_filename)                    'if file doesn't exist, abort
         status := (errorCode := E_FILE_NOT_FOUND)
 
   else
@@ -660,7 +661,7 @@ pub delete(p_filename) : status | signature
 
     delete_chain_at_block_id(signature.[19..8])
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pub exists(p_filename) : bool
@@ -675,13 +676,13 @@ pub exists(p_filename) : bool
   if fsMounted == false
     errorCode := E_NOT_MOUNTED
   else
-    repeat while locktry(fsLock) == 0                  ' lock for exlusive use
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
-    errorCode := SUCCESS                                  ' new operation clear any prior error code
+    errorCode := SUCCESS                                                        ' new operation clear any prior error code
 
     bool := get_file_head_signature(p_filename) ? true : false
 
-    lockrel(fsLock)                                    ' release the lock, we're done with it
+    lockrel(fsLock)                                                             ' release the lock, we're done with it
 
 
 pub file_size(p_filename) : size_in_bytes | signature
@@ -699,16 +700,16 @@ pub file_size(p_filename) : size_in_bytes | signature
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                  ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+  errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
   if signature := get_file_head_signature(p_filename)                           'does file exist?
     size_in_bytes, _, _ := count_file_bytes(field[IDToBlock][signature.[19..8]])
   else
     size_in_bytes := (errorCode := E_FILE_NOT_FOUND)
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pub file_size_unused(p_filename) : size_in_bytes_unused | signature
@@ -726,9 +727,9 @@ pub file_size_unused(p_filename) : size_in_bytes_unused | signature
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                  ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+  errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
   if signature := get_file_head_signature(p_filename)                           'does file exist?
     _, size_in_bytes_unused, _ := count_file_bytes(field[IDToBlock][signature.[19..8]])
@@ -737,7 +738,7 @@ pub file_size_unused(p_filename) : size_in_bytes_unused | signature
 
   'debug("file_size_unused(", zstr_(p_filename), ") = (", sdec_(size_in_bytes_unused), ")")
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pub seek(handle, position) : status | file_length, block_address, signature
@@ -758,7 +759,7 @@ pub seek(handle, position) : status | file_length, block_address, signature
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
   elseif handle < 0 or handle > MAX_FILES_OPEN - 1
-     return (errorCode := E_BAD_HANDLE)
+    return (errorCode := E_BAD_HANDLE)
 
   case hStatus[handle]                                                          'get handle
     H_READ:                                                                     'READ?
@@ -811,7 +812,7 @@ pub write(handle, p_buffer, count) : status | checkValue, byteIndex, wr_value, w
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
@@ -820,14 +821,14 @@ pub write(handle, p_buffer, count) : status | checkValue, byteIndex, wr_value, w
   if (checkValue := ensure_handle_mode(handle, H_WRITE | H_REPLACE)) < 0        ' is handle valid and open for writing?
      status := (errorCode := checkValue)                                        ' no, return error code
   else
-  'debug("write() [",zstr_(p_buffer),"](",udec_(count),")")
-  repeat byteIndex from 0 to count - 1                                          ' for the max length of the buffer
-    wr_value := BYTE[p_buffer][byteIndex]
-    if (wr_status := wr_byte_no_locks(handle, wr_value)) < 0                    ' write a byte to the file (or to seek location in file)
-      status := (errorCode := wr_status)                                        ' an error occured, return the error code
-      quit
+    'debug("write() [",zstr_(p_buffer),"](",udec_(count),")")
+    repeat byteIndex from 0 to count - 1                                        ' for the max length of the buffer
+        wr_value := BYTE[p_buffer][byteIndex]
+        if (wr_status := wr_byte_no_locks(handle, wr_value)) < 0                ' write a byte to the file (or to seek location in file)
+            status := (errorCode := wr_status)                                  ' an error occured, return the error code
+            quit
 
-  lockrel(fsLock)                                                              ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pub wr_byte(handle, byteValue) : status | checkValue
@@ -847,7 +848,7 @@ pub wr_byte(handle, byteValue) : status | checkValue
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
@@ -856,7 +857,7 @@ pub wr_byte(handle, byteValue) : status | checkValue
   else
     status := wr_byte_no_locks(handle, byteValue)
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pri wr_byte_no_locks(handle, byteValue) : status | ptr, nextBlockID, isSeeking, endPtr
@@ -908,13 +909,13 @@ pri wr_byte_no_locks(handle, byteValue) : status | ptr, nextBlockID, isSeeking, 
     'debug("wr_byte() [",uhex_byte_(byteValue),"]")
     BYTE[ptr][endPtr++] := byteValue                                            'write byte into block buffer, post-increment pointer
     if isSeeking
-        hSeekPtr[handle] := endPtr                                                ' point to start of data in body block
+        hSeekPtr[handle] := endPtr                                              ' point to start of data in body block
         ' if writing in tail record never let seekPtr go past endPtr
         'if LONG[ptr].[0] == 0 and endPtr > hEndPtr[handle]
         '    hEndPtr[handle] := endPtr
         '    debug("+ wr_byte() seek ", uhex_word(hEndPtr[handle], handle))
     else
-        hEndPtr[handle] := endPtr                                                ' point to start of data in body block
+        hEndPtr[handle] := endPtr                                               ' point to start of data in body block
         'if (hEndPtr[handle] +// 32) == 8
         '    debug("+ wr_byte() ", uhex_word(hEndPtr[handle], handle))
 
@@ -991,9 +992,9 @@ pub read(handle, p_buffer, count) : bytes_read | byteIndex, readValue, checkValu
     errorCode := E_NOT_MOUNTED
     return
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+  errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
   if (checkValue := ensure_handle_mode(handle, H_READ)) < 0                     ' is handle valid and open for reading?
      errorCode := checkValue                                                    ' no, set system error
@@ -1007,7 +1008,7 @@ pub read(handle, p_buffer, count) : bytes_read | byteIndex, readValue, checkValu
       else
         BYTE[p_buffer][byteIndex] := readValue                                  ' no error, place byte in the users buffer
     if errorCode == SUCCESS                                                     ' if no error, return bytes read
-        bytes_read := byteIndex + 1                                                 ' return bytes read so far
+        bytes_read := byteIndex + 1                                             ' return bytes read so far
 
   'debug("read(", udec_(count),") = (", sdec_(bytes_read),")")
 
@@ -1034,7 +1035,7 @@ pub rd_byte(handle) : value | ptr, signature, checkValue
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
@@ -1043,7 +1044,7 @@ pub rd_byte(handle) : value | ptr, signature, checkValue
   else
     value := rd_byte_no_locks(handle)                                           ' read a byte from the file (or seek location)
 
-  lockrel(fsLock)                                                              ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pri rd_byte_no_locks(handle) : value | ptr, signature, isSeeking, endPtr
@@ -1141,20 +1142,20 @@ pub rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
     errorCode := E_NOT_MOUNTED
     return
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+  errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
   bytefill(p_str, 0, count)                                                     ' clear the users buffer
 
   if (checkValue := ensure_handle_mode(handle, H_READ)) < 0                     ' is handle valid and open for reading?
-     errorCode := checkValue                                           ' no, set error code
+     errorCode := checkValue                                                    ' no, set error code
   else
-    repeat byteIndex from 0 to count - 1                                          ' for the max length of the buffer
-      if (readValue := rd_byte(handle)) < 0                                       ' read a byte from the file, have error?
+    repeat byteIndex from 0 to count - 1                                        ' for the max length of the buffer
+      if (readValue := rd_byte(handle)) < 0                                     ' read a byte from the file, have error?
         'debug("EEE: ", sdec(readValue))
-        if readValue == E_END_OF_FILE                                             ' yes, if we've reached end of file return the number of bytes read
-          if byteIndex == 0                                                       ' if we've not read any bytes
+        if readValue == E_END_OF_FILE                                           ' yes, if we've reached end of file return the number of bytes read
+          if byteIndex == 0                                                     ' if we've not read any bytes
             errorCode := readValue                                              ' ..abort with end of file
             bytes_read := byteIndex                                             ' ..abort with no bytes read
           else                                                                  ' else
@@ -1162,20 +1163,20 @@ pub rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
             errorCode := E_INCOMPLETE_STRING                                    ' return error saying file ended without string terminator
             bytes_read := byteIndex                                             ' ..abort with end of file
         else
-          errorCode := readValue                                                      ' another error occured, return the error code
-          bytes_read := byteIndex                                             ' ..abort with end of file
+          errorCode := readValue                                                ' another error occured, return the error code
+          bytes_read := byteIndex                                               ' ..abort with end of file
         quit  ' have one of the above errors, end loop
       else
         'debug("ok: ", uhex_byte(readValue))
-        if byteIndex == count - 1 and readValue <> 0                              ' no error, if we've reached the end of the buffer and the byte read is not a 0 terminator
-          BYTE[p_str][byteIndex] := 0                                             ' ..place a 0 terminator in the users buffer
-          errorCode := E_TRUNCATED_STRING                               ' ..abort with error
-          bytes_read := byteIndex                                             ' ..abort with end of file
+        if byteIndex == count - 1 and readValue <> 0                            ' no error, if we've reached the end of the buffer and the byte read is not a 0 terminator
+          BYTE[p_str][byteIndex] := 0                                           ' ..place a 0 terminator in the users buffer
+          errorCode := E_TRUNCATED_STRING                                       ' ..abort with error
+          bytes_read := byteIndex                                               ' ..abort with end of file
           quit  ' have error end loop
         else
-            BYTE[p_str][byteIndex] := readValue                                     ' no error, place byte in the users buffer (could be terminator)
-            if readValue == 0                                                       ' if this is a string terminator...
-              bytes_read :=  byteIndex                                                      ' ..return the number of bytes placed into the buffer
+            BYTE[p_str][byteIndex] := readValue                                 ' no error, place byte in the users buffer (could be terminator)
+            if readValue == 0                                                   ' if this is a string terminator...
+              bytes_read :=  byteIndex                                          ' ..return the number of bytes placed into the buffer
               quit  ' found terminator end loop
 
   lockrel(fsLock)                                    ' release the lock, we're done with it
@@ -1202,7 +1203,7 @@ pub directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
 
   repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+  errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
   BYTE[p_filename][0] := 0                                                      'reset filename
 
@@ -1211,42 +1212,42 @@ pub directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
         if field[IDValid][blockID]                                              'block ID valid?
           block_address := field[IDToBlock][blockID]                            'yes, get block addr from block ID
           if field[BlockState][block_address] == B_HEAD                         'is this a HEAD block?
-                flash_read_block(block_address, p_filename, $008, $088)         'yes, read filename
-                LONG[p_file_size], _, _ := count_file_bytes(block_address)            'get file size
-                quit
+            flash_read_block(block_address, p_filename, $008, $088)             'yes, read filename
+            LONG[p_file_size], _, _ := count_file_bytes(block_address)          'get file size
+            quit
 
   lockrel(fsLock)                                    ' release the lock, we're done with it
 
-pub stats() : usedBlocks, freeBlocks, fileCount | block_address
+pub stats() : used_blocks, free_blocks, file_count | block_address
 
 '' Get filesystem stats: used/free block counts and file count
 ''
-'' @returns usedBlocks - the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
-'' @returns freeBlocks - the number of free blocks (or 0 if there is an error)
-'' @returns fileCount - the number of files recorded in filesystem (or 0 if there is an error)
+'' @returns used_blocks - the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
+'' @returns free_blocks - the number of free blocks (or 0 if there is an error)
+'' @returns file_count - the number of files recorded in filesystem (or 0 if there is an error)
 
 ' Local Variables:
 ' @local block_address - the block offset within the file system
   if fsMounted == false
     return (errorCode := E_NOT_MOUNTED), 0, 0
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  errorCode := SUCCESS                                  ' new operation clear any prior error code
+  errorCode := SUCCESS                                                          ' new operation clear any prior error code
 
-  usedBlocks := 0
-  freeBlocks := 0
-  fileCount := 0
+  used_blocks := 0
+  free_blocks := 0
+  file_count := 0
 
   repeat block_address from 0 to BLOCKS - 1
     case field[BlockState][block_address]
-      B_FREE: freeBlocks++
-      B_TEMP: usedBlocks++
-      B_HEAD: usedBlocks++
-              fileCount++
-      B_BODY: usedBlocks++
+      B_FREE: free_blocks++
+      B_TEMP: used_blocks++
+      B_HEAD: used_blocks++
+              file_count++
+      B_BODY: used_blocks++
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 pub string_for_error(error_code) : p_interpretation
@@ -1669,21 +1670,29 @@ pri trace_file_set_flags(block_address, set) : valid | signature, block_id
 ' Local Variables:
 ' @local signature - block state bits of block being checked
 ' @local block_id - the blockID of the block being checked
-
+  valid := false
+  'if set
+  '    debug("tfsf() - ENTRY set")
+  'else
+  '    debug("tfsf() - ENTRY clear")
   flash_read_block(block_address, @signature, $000, $003)                       'read first long of initial block
-  field[BlockState][block_address] := set ? B_HEAD : B_TEMP                     'set first block state to B_HEAD or B_TEMP
+  field[BlockState][block_address] := set ? B_HEAD : B_TEMP                     'set first block state to (set-pass: B_HEAD or clear-pass: B_TEMP)
 
   repeat BLOCKS                                                                 'limit repeat to BLOCKS in order to return false on endless loop
     ifnot signature.[0]                                                         'if last block, file is complete, return true
+      'debug("tfsf() - OK complete file")
       return true
-    block_id := signature.[31..20]                                               'get "next" ID from this full block
-    ifnot field[IDValid][block_id]                                               'if ID invalid (bit == 0), error!, return false
+    block_id := signature.[31..20]                                              'get "next" ID from this full block
+    ifnot field[IDValid][block_id]                                              'if ID invalid (bit == 0), error!, return false
+      'debug("tfsf() - BAD next ID is bad")
       return
     block_address := field[IDToBlock][block_id]                                 'get address of block having this ID
     flash_read_block(block_address, @signature, $000, $003)                     'read first long of "next" block
     ifnot signature.[1]                                                         'if "next" is head block, error!, return false
+      'debug("tfsf() - BAD head within file")
       return
-    field[BlockState][block_address] := set ? B_BODY : B_TEMP                   'set block state to B_BODY or B_TEMP
+    field[BlockState][block_address] := set ? B_BODY : B_TEMP                   'set block state to (set-pass: B_BODY or clear-pass: B_TEMP)
+  'debug("tfsf() - EXIT at end: out of blocks?!")
 
 
 pri buffer_pointer(handle) : p_buffer
@@ -1731,6 +1740,7 @@ pri buld_head_and_activate(handle, block_address, bAllocNewBlock) : headBlockID,
     ' now active the head of our commit chain (write/write-replace() this is head, append() this is head/body last block)
     activate_block(hdBlockAddress, head_life_cycle)        'activate head block, replaces file if rewrite
     'debug("buld_head_and_activate() = ", udec(headBlockID), uhex_word_(hdBlockAddress))
+
 
 dat ' data for final commit operation
 
@@ -2131,8 +2141,8 @@ pri blocks_free() : count | block_address
 ' @local block_address - the block offset within the file system
 
   repeat block_address from 0 to BLOCKS - 1                                     ' count free blocks
-        ifnot field[BlockState][block_address]                                  'if the block is B_FREE
-          count++
+    ifnot field[BlockState][block_address]                                  'if the block is B_FREE
+        count++
 
 
 pri next_available_block_id() : block_id | possible_block_id
@@ -2201,7 +2211,7 @@ pri next_block_address() : block_address | blockFreeCount, freeBlockAddress, fre
   repeat freeBlockAddress from 0 to BLOCKS - 1
         ifnot field[BlockState][freeBlockAddress]                               'if the block is B_FREE
           ifnot freeIndex--
-                quit
+            quit
 
   ' evict this block!
   flash_read_block(block_address, @tmpBlockBuffer, $000, $FFF)                  'read the B_HEAD/B_BODY block
@@ -2311,7 +2321,7 @@ pri cancel_block(block_address)
 '
 ' @param block_address - the block offset within the file system
 
-  'debug("* cancel block")
+  'debug("* cancel block ", uhex_word(block_address))
   program_bit(block_address, %00011111)                                         'clear all cycle bits to cancel block
 
 

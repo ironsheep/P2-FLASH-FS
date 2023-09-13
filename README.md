@@ -5,6 +5,14 @@ Flash FS - a filesystem for the FLASH chip on the P2 Edge Module.
 
 [![License][license-shield]](LICENSE)
 
+The following files can be found at the top level of this repository:
+
+| Key Files | Description |
+| --- | --- |
+| [`cgsm_flash_file_demo.zip`](./cgsm_flash_file_demo.zip) | Jon McPhalens Interactive Filesystem Demo
+| [`flash_fs.spin2`](./flash_fs.spin2) | The complete FLASH driver object
+| [`flash_fs.txt`](./flash_fs.txt) | Object Interface Document for the FLASH driver
+
 ## Table of Contents
 
 On this Page:
@@ -103,7 +111,7 @@ This is a project supporting our P2 Development Community. Please feel free to c
 
 Thank you to **Chip Gracey** for the excellent **Flash File System 16MB** written for the P2 which is the core of this fileysystem.
 
-Thank you to **Jon McPhalen** for helping to specify the customer facing API for this filesystem and for guidance in our future directions for the upcoming dual filesystem driver as well.
+Thank you to **Jon McPhalen** for helping to specify the customer facing API for this filesystem and for guidance in our future directions for the upcoming dual filesystem driver as well.  Jon also contributed his interactive filesystem demo.
 
 Thank you also to members of the [forum thread - "On-Board Flash File System"](https://forums.parallax.com/discussion/175470/on-board-flash-file-system#latest) for also contributing ideas and guidance for implementation of this driver.
 

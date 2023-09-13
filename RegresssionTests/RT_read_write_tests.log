@@ -1,7 +1,5 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_AF14 jump
-Cog0  * format()
-Cog0  * mount()
+Cog0  INIT $0000_0EB8 $0000_B048 jump
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
 Cog0    All Files:
@@ -56,7 +54,7 @@ Cog0
 Cog0  * Test #9: Ensure expected file stats
 Cog0    File: [rw10bytes.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$00D7] HEAD/last, thisID=0, endPtr=$008D, lifeCycle [ACTIVE-3], sig=[$08D0_007C]
+Cog0      1: [$0306] HEAD/last, thisID=0, endPtr=$008D, lifeCycle [ACTIVE-3], sig=[$08D0_007C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 5
 Cog0     -> pass
@@ -118,7 +116,7 @@ Cog0
 Cog0  * Test #20: Ensure expected file stats
 Cog0    File: [rw10bytes.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0127] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-5], sig=[$0920_00BC]
+Cog0      1: [$0F26] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-5], sig=[$0920_00BC]
 Cog0    # blocks: 1
 Cog0    # bytes used: 10
 Cog0     -> pass
@@ -180,7 +178,7 @@ Cog0
 Cog0  * Test #31: Ensure expected file stats
 Cog0    File: [rw9words.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$03CE] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
+Cog0      1: [$0BB0] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 18
 Cog0     -> pass
@@ -246,7 +244,7 @@ Cog0
 Cog0  * Test #43: Ensure expected file stats
 Cog0    File: [rw12longs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$06B8] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
+Cog0      1: [$00A2] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 48
 Cog0     -> pass
@@ -295,13 +293,13 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw10strings.zstr] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0000] HEAD/last, thisID=3, endPtr=$0181, lifeCycle [erased], sig=[$1810_03FC]
+Cog0      1: [$0000] HEAD/last, thisID=3, endPtr=$013E, lifeCycle [erased], sig=[$13E0_03FC]
 Cog0
 Cog0  * Test #53: Close written file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [rw10strings.zstr], bytesUsed = 249, bytes_free = 3_707, block_count = 1
+Cog0    File: [rw10strings.zstr], bytesUsed = 182, bytes_free = 3_774, block_count = 1
 Cog0
 Cog0  * Test #54: Ensure expected file system changes
 Cog0  * post file write
@@ -313,9 +311,9 @@ Cog0
 Cog0  * Test #55: Ensure expected file stats
 Cog0    File: [rw10strings.zstr]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$04C1] HEAD/last, thisID=3, endPtr=$0181, lifeCycle [ACTIVE-3], sig=[$1810_037C]
+Cog0      1: [$04C8] HEAD/last, thisID=3, endPtr=$013E, lifeCycle [ACTIVE-3], sig=[$13E0_037C]
 Cog0    # blocks: 1
-Cog0    # bytes used: 249
+Cog0    # bytes used: 182
 Cog0     -> pass
 Cog0
 Cog0  * Test #56: Open File for read
@@ -341,7 +339,7 @@ Cog0    All Files:
 Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
 Cog0  rw9words.bin, Bytes = 18, ID = 2, @Buff={binary data}
 Cog0  rw12longs.bin, Bytes = 48, ID = 3, @Buff={binary data}
-Cog0  rw10strings.zstr, Bytes = 249, ID = 4, @Buff={binary data}
+Cog0  rw10strings.zstr, Bytes = 182, ID = 4, @Buff={binary data}
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
@@ -378,7 +376,7 @@ Cog0
 Cog0  * Test #66: Ensure expected file stats
 Cog0    File: [fullHeadLongs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$030A] HEAD/last, thisID=4, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_047C]
+Cog0      1: [$08AB] HEAD/last, thisID=4, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_047C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_956
 Cog0     -> pass
@@ -419,7 +417,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [moreThanHeadLongs.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$065E] HEAD/more, thisID=5, nextId=6, lifeCycle [erased], sig=[$0060_05FD]
+Cog0      1: [$0B96] HEAD/more, thisID=5, nextId=6, lifeCycle [erased], sig=[$0060_05FD]
 Cog0      2: [$0000] BODY/last, thisID=6, endPtr=$000C, lifeCycle [erased], sig=[$00C0_06FE]
 Cog0
 Cog0  * Test #75: Close written file
@@ -438,8 +436,8 @@ Cog0
 Cog0  * Test #77: Ensure expected file stats
 Cog0    File: [moreThanHeadLongs.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$065E] HEAD/more, thisID=5, nextId=6, lifeCycle [ACTIVE-3], sig=[$0060_057D]
-Cog0      2: [$02C9] BODY/last, thisID=6, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_067E]
+Cog0      1: [$0B96] HEAD/more, thisID=5, nextId=6, lifeCycle [ACTIVE-3], sig=[$0060_057D]
+Cog0      2: [$0907] BODY/last, thisID=6, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_067E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_964
 Cog0     -> pass
@@ -480,8 +478,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [moreThanHeadBodyLongs.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$01B3] HEAD/more, thisID=7, nextId=8, lifeCycle [erased], sig=[$0080_07FD]
-Cog0      2: [$0174] BODY/more, thisID=8, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_087F]
+Cog0      1: [$081A] HEAD/more, thisID=7, nextId=8, lifeCycle [erased], sig=[$0080_07FD]
+Cog0      2: [$0771] BODY/more, thisID=8, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_087F]
 Cog0      3: [$0000] BODY/last, thisID=9, endPtr=$000C, lifeCycle [erased], sig=[$00C0_09FE]
 Cog0
 Cog0  * Test #86: Close written file
@@ -500,9 +498,9 @@ Cog0
 Cog0  * Test #88: Ensure expected file stats
 Cog0    File: [moreThanHeadBodyLongs.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$01B3] HEAD/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077D]
-Cog0      2: [$0174] BODY/more, thisID=8, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_087F]
-Cog0      3: [$00A5] BODY/last, thisID=9, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_097E]
+Cog0      1: [$081A] HEAD/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077D]
+Cog0      2: [$0771] BODY/more, thisID=8, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_087F]
+Cog0      3: [$0454] BODY/last, thisID=9, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_097E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_052
 Cog0     -> pass
@@ -530,10 +528,38 @@ Cog0    All Files:
 Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
 Cog0  rw9words.bin, Bytes = 18, ID = 2, @Buff={binary data}
 Cog0  rw12longs.bin, Bytes = 48, ID = 3, @Buff={binary data}
-Cog0  rw10strings.zstr, Bytes = 249, ID = 4, @Buff={binary data}
+Cog0  rw10strings.zstr, Bytes = 182, ID = 4, @Buff={binary data}
 Cog0  fullHeadLongs.bin, Bytes = 3_956, ID = 5, @Buff={binary data}
 Cog0  moreThanHeadLongs.bin, Bytes = 3_964, ID = 6, @Buff={binary data}
 Cog0  moreThanHeadBodyLongs.bin, Bytes = 8_052, ID = 8, @Buff={binary data}
 Cog0
-Cog0  * 93 Tests: , Pass: 93, Fail: 0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: unmount(), mount() - ensure files survive
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #94: serial_number()  while FS not mounted
+Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0
+Cog0  * Test #95: serial_number() valid not mounted status
+Cog0     ECode: E_NOT_MOUNTED: Filesystem NOT yet accessible
+Cog0     -> pass
+Cog0
+Cog0  * Test #96: open()  while FS not mounted
+Cog0     ECode: E_NOT_MOUNTED: Filesystem NOT yet accessible
+Cog0     -> pass
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  rw10bytes.bin, Bytes = 10, ID = 1, @Buff={binary data}
+Cog0  rw9words.bin, Bytes = 18, ID = 2, @Buff={binary data}
+Cog0  rw12longs.bin, Bytes = 48, ID = 3, @Buff={binary data}
+Cog0  rw10strings.zstr, Bytes = 182, ID = 4, @Buff={binary data}
+Cog0  fullHeadLongs.bin, Bytes = 3_956, ID = 5, @Buff={binary data}
+Cog0  moreThanHeadLongs.bin, Bytes = 3_964, ID = 6, @Buff={binary data}
+Cog0  moreThanHeadBodyLongs.bin, Bytes = 8_052, ID = 8, @Buff={binary data}
+Cog0
+Cog0  * 96 Tests: , Pass: 98, Fail: 0
 Cog0  * Test Complete

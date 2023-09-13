@@ -1,7 +1,7 @@
 '' =================================================================================================
 ''
 ''   File....... RT_read_seek_test.spin2
-''   Purpose.... This object exercises the filesystem basic out-of-order-op detection
+''   Purpose.... This object exercises the flash filesystem basic out-of-order-op detection
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -56,7 +56,10 @@ PUB go()
 
     utils.startTest(@"serial_number()")
     snHi, snLo := Flash.serial_number()
-    utils.evaluateValue(snHi, @"serial_number()", Flash.E_NOT_MOUNTED)
+    utils.evaluateValue(snHi, @"serial_number() hi", 0)
+    utils.evaluateValue(snLo, @"serial_number() lo", 0)
+
+    utils.startTest(@"serial_number() check for error")
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
@@ -78,7 +81,7 @@ PUB go()
 
     utils.startTest(@"exists()")
     status := Flash.exists(@testfile)
-    utils.evaluateValue(status, @"exists()", false)
+    utils.evaluate(status, false)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
@@ -96,7 +99,7 @@ PUB go()
 
     utils.startTest(@"stats()")
     usedBlocks, freeBlocks, fileCount := Flash.stats()
-    utils.evaluateValue(usedBlocks, @"stats()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(usedBlocks,Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
@@ -104,79 +107,79 @@ PUB go()
 
     utils.startTest(@"flush()")
     status := Flash.flush(badHandle)
-    utils.evaluateValue(status, @"flush()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"close()")
     status := Flash.close(badHandle)
-    utils.evaluateValue(status, @"close()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"seek()")
     status := Flash.seek(badHandle, 25)
-    utils.evaluateValue(status, @"seek()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"write()")
     status := Flash.write(badHandle, @"TEST", 4)
-    utils.evaluateValue(status, @"write()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"wr_byte()")
     status := Flash.wr_byte(badHandle, 4)
-    utils.evaluateValue(status, @"wr_byte()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"wr_word()")
     status := Flash.wr_word(badHandle, $fc0)
-    utils.evaluateValue(status, @"wr_word()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"wr_long()")
     status := Flash.wr_long(badHandle, $ffff_ece0)
-    utils.evaluateValue(status, @"wr_long()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"wr_str()")
     status := Flash.wr_str(badHandle, @"dummy string")
-    utils.evaluateValue(status, @"wr_str()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"read()")
     rdCount := Flash.read(badHandle, @filename, 6)
-    utils.evaluateValue(rdCount, @"read()", 0)
+    utils.evaluate(rdCount, 0)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"rd_byte()")
     rdValue := Flash.rd_byte(badHandle)
-    utils.evaluateValue(rdValue, @"rd_byte()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(rdValue, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"rd_word()")
     rdValue := Flash.rd_word(badHandle)
-    utils.evaluateValue(rdValue, @"rd_word()", Flash.E_NOT_MOUNTED)
+    utils.evaluate(rdValue, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"rd_long()")
     rdValue := Flash.rd_long(badHandle)
-    utils.evaluateValue(rdValue, @"rd_long()", 0)
+    utils.evaluate(rdValue, 0)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"rd_str()")
     rdCount := Flash.rd_str(badHandle, @filename, 127+1)
-    utils.evaluateValue(rdCount, @"rd_str()", 0)
+    utils.evaluate(rdCount, 0)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
@@ -195,45 +198,45 @@ PUB go()
     utils.startTest(@"open() OK")
     handle := Flash.open(@testfile, "A")
     status := Flash.error()
-    utils.evaluateValue(handle, @"open()", 0)
+    utils.evaluate(handle, 0)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.startTest(@"open_circular() OK")
     handle1 := Flash.open_circular(@testfile2, "A", 8192)
     status := Flash.error()
-    utils.evaluateValue(handle1, @"open_circular()", 1)
+    utils.evaluate(handle1, 1)
     utils.evaluate(status, Flash.SUCCESS)
 
     ' all opens should fail from here
     utils.startTest(@"open() No handles")
     handle := Flash.open(@testfile3, "R")
     status := Flash.error()
-    utils.evaluateValue(handle, @"open()", Flash.E_NO_HANDLE)
+    utils.evaluate(handle, Flash.E_NO_HANDLE)
     utils.evaluate(status, Flash.E_NO_HANDLE)
 
     utils.startTest(@"open_circular() No handles")
     handle := Flash.open_circular(@testfile3, "R", 8192)
     status := Flash.error()
-    utils.evaluateValue(handle, @"open_circular()", Flash.E_NO_HANDLE)
+    utils.evaluate(handle, Flash.E_NO_HANDLE)
     utils.evaluate(status, Flash.E_NO_HANDLE)
 
     utils.startTest(@"close() without writing should leave no file")
     handle := Flash.close(0)                            ' first file opened is 0
     status := Flash.error()
-    utils.evaluateValue(handle, @"close()", Flash.SUCCESS)
+    utils.evaluate(handle, Flash.SUCCESS)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.startTest(@"close() (circular) without writing should leave no file")
     handle := Flash.close(1)                            ' second file opened is 1
     status := Flash.error()
-    utils.evaluateValue(handle, @"close()", Flash.SUCCESS)
+    utils.evaluate(handle, Flash.SUCCESS)
     utils.evaluate(status, Flash.SUCCESS)
 
     utils.startTest(@"directory() should be empty if no files")
     desiredId := 0                                      ' get first file found
     status := Flash.directory(@desiredId, @filename, @fileSize)
     rdCount := strsize(@filename)                       ' should be zero if no file found!
-    utils.evaluateValue(rdCount, @"empty directory()", 0)
+    utils.evaluate(rdCount, 0)
     utils.evaluate(status, Flash.SUCCESS)
     status := Flash.error()                             ' make sure errorcode is same!
     utils.evaluate(status, Flash.SUCCESS)
@@ -244,79 +247,79 @@ PUB go()
 
     utils.startTest(@"flush()")
     status := Flash.flush(badHandle)
-    utils.evaluateValue(status, @"flush()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"close()")
     status := Flash.close(badHandle)
-    utils.evaluateValue(status, @"close()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"seek()")
     status := Flash.seek(badHandle, 25)
-    utils.evaluateValue(status, @"seek()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"write()")
     status := Flash.write(badHandle, @"TEST", 4)
-    utils.evaluateValue(status, @"write()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"wr_byte()")
     status := Flash.wr_byte(badHandle, 4)
-    utils.evaluateValue(status, @"wr_byte()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"wr_word()")
     status := Flash.wr_word(badHandle, $fc0)
-    utils.evaluateValue(status, @"wr_word()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"wr_long()")
     status := Flash.wr_long(badHandle, $ffff_ece0)
-    utils.evaluateValue(status, @"wr_long()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"wr_str()")
     status := Flash.wr_str(badHandle, @"dummy string")
-    utils.evaluateValue(status, @"wr_str()", Flash.E_BAD_HANDLE)
+    utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"read()")
     rdCount := Flash.read(badHandle, @filename, 6)
-    utils.evaluateValue(rdCount, @"read()", 0)
+    utils.evaluate(rdCount, 0)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"rd_byte()")
     rdValue := Flash.rd_byte(badHandle)
-    utils.evaluateValue(rdValue, @"rd_byte()", Flash.E_BAD_HANDLE)
+    utils.evaluate(rdValue, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"rd_word()")
     rdValue := Flash.rd_word(badHandle)
-    utils.evaluateValue(rdValue, @"rd_word()", Flash.E_BAD_HANDLE)
+    utils.evaluate(rdValue, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"rd_long()")
     rdValue := Flash.rd_long(badHandle)
-    utils.evaluateValue(rdValue, @"rd_long()", 0)
+    utils.evaluate(rdValue, 0)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"rd_str()")
     rdCount := Flash.rd_str(badHandle, @filename, 127+1)
-    utils.evaluateValue(rdCount, @"rd_str()", 0)
+    utils.evaluate(rdCount, 0)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 

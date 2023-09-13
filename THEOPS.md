@@ -353,6 +353,8 @@ The first step in the mount process is to locate all valid active blocks (active
  
 This step in the mount process effectively finishes the work that didn't complete due to a power failure.
 
+A side effect of this step is that any blocks that have an active lifecycle but an invalid CRC are marked as canceled. Thus inhibiting future CRC checks for these blocks.
+
 ### [M2] Locating complete files and canceling incomplete
 
 This next step uses the product of the first step. The first step left indications of which blocks are valid within the entire space allocated to the flash filesystem.  This step then iterates over the known good blocks identifying which are file head blocks [HEAD/last block or HEAD/more block] and then locating all remaining blocks in the file chain.
