@@ -8,17 +8,19 @@
                -- see below for terms of use
    E-mail.....stephen@ironsheep.biz
    Started.... AUG 2023
-   Updated.... 12 SEP 2023
+   Updated.... 13 SEP 2023
  =================================================================================================
  v1.2.0 - initial release of flash_fs with full API
+ v1.2.1 - revised seek() method parameters - can now seek relative to current position in file
  -------------------------------------------------------------------------------------------------
 
-Object "Draft_flash_fs" Interface:
+Object "flash_fs" Interface:
 
 pub null()
 pub version() : result
 pub serial_number() : sn_hi, sn_lo
 pub mount() : status
+pub mounted() : bool
 pub unmount() : status
 pub format() : status
 pub error() : result
@@ -31,7 +33,7 @@ pub delete(p_filename) : status
 pub exists(p_filename) : bool
 pub file_size(p_filename) : size_in_bytes
 pub file_size_unused(p_filename) : size_in_bytes_unused
-pub seek(handle, position) : status
+pub seek(handle, position, whence) : status
 pub write(handle, p_buffer, count) : status
 pub wr_byte(handle, byteValue) : status
 pub wr_word(handle, word_value) : status
@@ -72,6 +74,13 @@ pub mount() : status
  Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
  @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
  .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
+
+____________________
+pub mounted() : bool
+
+ Returns the mounted status of the filesystem
+  (saves us from having to find creative ways to get an error code telling us this)
+ @returns bool - True/False where True means the filesystem has already been successfully mounted
 
 ______________________
 pub unmount() : status
@@ -197,18 +206,22 @@ pub file_size_unused(p_filename) : size_in_bytes_unused
  .. E_NOT_MOUNTED if filesystem has not been mounted,
  .. E_FILE_NOT_FOUND if the file doesn't exist
 
-___________________________________
-pub seek(handle, position) : status
+___________________________________________
+pub seek(handle, position, whence) : status
 
  Postion seek file pointer to position within the file or at the end of the file
  -- use 0 for position to seek to the start of the file
  -- use "size of file" to seek to the end of the file for append
  @param handle - a handle to an open file
  @param position - position (in bytes) within the file (0 to length-1)
+  use  seek(handle, POSX, SK_SET)  to seek to end of the file
+ @param whence - meaning of position: [SK_FILE_START, SK_CURRENT_POSN]
  @returns status - 0 (SUCCESS) if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
  .. E_BAD_HANDLE if the handle is not valid
+ .. E_BAD_SEEK_ARG if invalid whence value,
  .. E_FILE_MODE if the file is not open in a mode supporting seeks
+ .. E_FILE_SEEK if attempted seek past either end of file
 
 ___________________________________________
 pub write(handle, p_buffer, count) : status

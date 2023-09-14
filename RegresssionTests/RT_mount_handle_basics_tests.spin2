@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 08 SEP 2023
+''   Updated.... 13 SEP 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-'{
+{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -118,7 +118,7 @@ PUB go()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
 
     utils.startTest(@"seek()")
-    status := Flash.seek(badHandle, 25)
+    status := Flash.seek(badHandle, 25, Flash.SK_FILE_START)
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
     status := Flash.error()
     utils.evaluate(status, Flash.E_NOT_MOUNTED)
@@ -258,7 +258,7 @@ PUB go()
     utils.evaluate(status, Flash.E_BAD_HANDLE)
 
     utils.startTest(@"seek()")
-    status := Flash.seek(badHandle, 25)
+    status := Flash.seek(badHandle, 25, Flash.SK_FILE_START)
     utils.evaluate(status, Flash.E_BAD_HANDLE)
     status := Flash.error()
     utils.evaluate(status, Flash.E_BAD_HANDLE)

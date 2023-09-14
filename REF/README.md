@@ -26,25 +26,20 @@ This is the latest files from the [Forum Thread](https://forums.parallax.com/dis
 
 ## Files for Review by Stephen
 
-This is my work in preogress as I'm working toward customer facing release of the FileSystem code
+This is my work in progress as I'm working toward customer facing release of the FileSystem code. This step happens just before final integration with the live flash driver.
 
 | File | Purpose |
 | --- | --- |
 | [Draft\_FlashFileSystem_16MB_Demo.spin2](Draft_FlashFileSystem_16MB_Demo.spin2) | A Demo of the filesystem code reworked for publication |
 | [Draft\_FlashFilesystem_16MB.spin2](Draft_FlashFilesystem_16MB.spin2) | A draft of the filesystem code reworked for publication |
 | [Draft\_FlashFilesystem_16MB.txt](Draft_FlashFilesystem_16MB.txt) | The Object Interface document generated from the new draft |
-| [Draft\_flash\_fs_Demo.spin2](Draft_flash_fs_Demo.spin2) | A Demo of the filesystem code  with Jon's API changes reworked for publication |
-| [Draft\_flash_fs.spin2](Draft__flash_fs.spin2) | A draft of the filesystem code  with Jon's API changes reworked for publication |
-| [Draft\_flash_fs.txt](Draft_flash_fs.txt) | The Object Interface document generated from the new draft |
+
 
 ### Next Steps:
 
-- Finish regression tests for untested methods:
-  - File append using flush()
-  - Certify life-cycle changes for blocks of files created/modified (this is visuall checked for now...)
-  - Do 8 cog regression test for file reads/writes
+- Keep up with Chip's changes:
+  - Integrate read/write/modify version from Chip when it arrives
 - ... more I'm sure ...
-- Publish for API review and testing
 
 ---
 

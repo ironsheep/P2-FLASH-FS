@@ -12,6 +12,7 @@ The following files can be found at the top level of this repository:
 | [`cgsm_flash_file_demo.zip`](./cgsm_flash_file_demo.zip) | Jon McPhalens Interactive Filesystem Demo
 | [`flash_fs.spin2`](./flash_fs.spin2) | The complete FLASH driver object
 | [`flash_fs.txt`](./flash_fs.txt) | Object Interface Document for the FLASH driver
+| [`flash_fs_demo.spin2`](./flash_fs_demo.spin2) | Chip's original light-weight non-interactive demo
 
 ## Table of Contents
 

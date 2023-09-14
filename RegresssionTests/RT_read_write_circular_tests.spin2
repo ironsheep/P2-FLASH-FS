@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 11 SEP 2023
+''   Updated.... 13 SEP 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-'{
+{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -393,7 +393,7 @@ pri testVerifySeekRecords(pFilename, totalRecordsWritten) | recordCount, lenByte
     ' seek to 3
     utils.startTest(@"seek to 3 then read expected RECORD")
     recordNbr := startRcdNbr + 2
-    status := Flash.seek(handle, RECORD_LEN * 2)
+    status := Flash.seek(handle, RECORD_LEN * 2, Flash.SK_FILE_START)
     utils.evaluate(handle, Flash.SUCCESS)
     rdLength := Flash.read(handle, @record, RECORD_LEN)
     verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
@@ -401,7 +401,7 @@ pri testVerifySeekRecords(pFilename, totalRecordsWritten) | recordCount, lenByte
    ' seek to zero
     utils.startTest(@"seek to zero then read expected RECORD")
     recordNbr := startRcdNbr
-    status := Flash.seek(handle, 0)
+    status := Flash.seek(handle, 0, Flash.SK_FILE_START)
     utils.evaluate(handle, Flash.SUCCESS)
     rdLength := Flash.read(handle, @record, RECORD_LEN)
     verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
@@ -409,7 +409,7 @@ pri testVerifySeekRecords(pFilename, totalRecordsWritten) | recordCount, lenByte
    ' seek to n-1
     utils.startTest(@"seek to N-1 then read expected RECORD")
     recordNbr := totalRecordsWritten
-    status := Flash.seek(handle, (totalRecordsWritten - startRcdNbr) * RECORD_LEN)
+    status := Flash.seek(handle, (totalRecordsWritten - startRcdNbr) * RECORD_LEN, Flash.SK_FILE_START)
     utils.evaluate(handle, Flash.SUCCESS)
     rdLength := Flash.read(handle, @record, RECORD_LEN)
     verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)

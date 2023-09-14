@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 12 SEP 2023
+''   Updated.... 13 SEP 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-'{
+{
     ' debug via serial to RPi (using RPi gateway pins)
     DEBUG_PIN_TX = 57
     DEBUG_PIN_RX = 56
@@ -75,7 +75,7 @@ pub goTest()
     utils.dumpDirEnts(@dirEntr1)
 '}
 
-PUB go() | hundreds, tens, units, snHi, snLo
+PUB go() | hundreds, tens, units, snHi, snLo, version
 
     status := Flash.format()      ' Comment out this line to NOT erase all files
     if status < 0
@@ -106,16 +106,16 @@ PUB go() | hundreds, tens, units, snHi, snLo
     snHi, snLo := Flash.serial_number()
     debug("CHIP Serial Number: ", uhex_long_(snHi), "-", uhex_long_(snLo))
 
-    utils.startTest(@"Get and parse out Driver version")
-    status := Flash.version()
-    utils.evaluateSingleValue(status, @"version()", 120)
+    debug(" ")
+    debug(" - get and parse out Driver version")
+    version := Flash.version()
 
    ' brute force... (someone didn't import a string formatter, I wonder who that was?)
-    hundreds := status / 100
+    hundreds := version / 100
     BYTE[@vDigits][0] := "0" + hundreds
-    tens := (status - (hundreds * 100)) / 10
+    tens := (version - (hundreds * 100)) / 10
     BYTE[@vDigits][2] := "0" + tens
-    units := status - (hundreds * 100) - (tens * 10)
+    units := version - (hundreds * 100) - (tens * 10)
     BYTE[@vDigits][4] := "0" + units
     debug ("Driver: ", zstr_(@versionString))
 
