@@ -185,7 +185,7 @@ pub version() : result
 
 {$flexspin
 var
-   long m_sn_hi, m_sn_lo
+   long m_sn_hi, m_sn_lo		' temporary storage for serial number read
 }
 
 pub serial_number() : sn_hi, sn_lo
@@ -208,6 +208,9 @@ pub serial_number() : sn_hi, sn_lo
     flash_send($00, 4)
 {$flexspin
 #ifdef __FLEXSPIN__
+    ' flexspin does not like using HUB variables (@) in inline assembly
+    ' so do the read into a class member in HUB, then copy to the local
+    ' variables in registers
     flash_receive(@m_sn_hi, 8)
     sn_hi := m_sn_hi
     sn_lo := m_sn_lo
