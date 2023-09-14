@@ -2388,12 +2388,19 @@ pri flash_wait()| statusBits
     flash_receive(@statusBits, 1)
   while statusBits.[0]                                                          'loop until BUSY bit clear
 
+{$flexspin
+' flexspin stores local variables in registers, rather than HUB, so for flash commands we need HUB space for temporary storage
+var
+   LONG m_command					' HUB storage for flash_command use
+}
 
 pri flash_command(command, count)
 ' Send flash command to FLASH Chip via SPI
 '
 ' @param command - the command for the chip to execute
-' @param count - number of bytes to send
+' @param count - number of bytes to send: must be between 1 and 4
+'
+' uses the member variable m_command as temporary storage
 
               org
 
@@ -2410,9 +2417,16 @@ pri flash_command(command, count)
               movbyts command,#%%1230                   'reverse order of post-command address bytes for sending
 
               end
-
-  flash_send(@command, count)             'send command
-
+{$flexspin
+#ifdef __FLEXSPIN__
+  ' in flexspin we have to copy the register to HUB explicitly (otherwise @command will force command
+  ' into HUB, which will conflict with using `command` in the inline assembly code)
+  m_command := command                      'copy command from register to HUB memory
+  flash_send(@m_command, count)             'send command
+#else
+}
+  flash_send(@command, count)
+{$flexspin #endif}
 
 pri flash_send(p_buffer, count) | tx_byte
 
