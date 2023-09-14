@@ -289,6 +289,7 @@ pub ShowStats() | blocksUsed, blocksFree, fileCount
 pub showFiles() | ID, Bytes, byte Filename[128], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
+    ID := 0
     repeat
         Flash.directory(@ID, @Filename, @Bytes)                     'get next file
         if Filename[0]                                              'is there a filename?
