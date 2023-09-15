@@ -873,15 +873,17 @@ pub write(handle, p_buffer, count) : bytes_written | checkValue, byteIndex, wr_v
      bytes_written := (errorCode := checkValue)                                 ' no, return error code
   else
     'debug("write() [",zstr_(p_buffer),"](",udec_(count),")")
+    bytes_written := 0
     repeat byteIndex from 0 to count - 1                                        ' for the max length of the buffer
         wr_value := BYTE[p_buffer][byteIndex]
         if (wr_status := wr_byte_no_locks(handle, wr_value)) < 0                ' write a byte to the file (or to seek location in file)
-            bytes_written := (errorCode := wr_status)                           ' an error occured, return the error code
+            errorCode := wr_status                                              ' an error occured, set the error code
+	    if bytes_written == 0                                               ' if no bytes written, return error
+	      bytes_written := errorCode
             quit
-
-  if errorCode == SUCCESS                                                       ' if no error reported
-    bytes_written := count                                                      ' return count of bytes written
-
+        else
+	    bytes_written++                                                     ' keep track of bytes written
+	    
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
