@@ -878,12 +878,12 @@ pub write(handle, p_buffer, count) : bytes_written | checkValue, byteIndex, wr_v
         wr_value := BYTE[p_buffer][byteIndex]
         if (wr_status := wr_byte_no_locks(handle, wr_value)) < 0                ' write a byte to the file (or to seek location in file)
             errorCode := wr_status                                              ' an error occured, set the error code
-	    if bytes_written == 0                                               ' if no bytes written, return error
-	      bytes_written := errorCode
+            if bytes_written == 0                                               ' if no bytes written, return error
+                bytes_written := errorCode
             quit
         else
-	    bytes_written++                                                     ' keep track of bytes written
-	    
+            bytes_written++                                                     ' keep track of bytes written
+
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
