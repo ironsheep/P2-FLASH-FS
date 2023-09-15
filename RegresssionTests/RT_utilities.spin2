@@ -289,6 +289,7 @@ pub ShowStats() | blocksUsed, blocksFree, fileCount
 pub showFiles() | ID, Bytes, byte Filename[128], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
+    ID := 0                                                         'strictly speaking only needed for flexspin, but it helps to remind us that ID must be initialized to 0
     repeat
         flash.directory(@ID, @Filename, @Bytes)                     'get next file
         if Filename[0]                                              'is there a filename?
@@ -405,6 +406,7 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
     pCurrRefDir := pDirEntries
     refFileCount := 0
     foundFileCount := 0
+    ID := 0                                             ' start seach at beginning
     repeat
         pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
         refByteCount := LONG[pCurrRefDir][1]            ' get byte count
