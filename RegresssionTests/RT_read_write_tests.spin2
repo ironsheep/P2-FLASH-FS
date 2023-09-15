@@ -1,6 +1,6 @@
 '' =================================================================================================
 ''
-''   File....... RT_read_seek_test.spin2
+''   File....... RT_read_write_tests.spin2
 ''   Purpose.... This object exercises the read/write and mount/unmount functions of the flash filesystem
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
@@ -177,6 +177,10 @@ PUB go() | hundreds, tens, units, snHi, snLo, version
     utils.startTestGroup(@"Head block + body block * 2 - filled with LONGs full head, full body, + 2")
     testWriteLongs(@testfile7, flash.LONGS_IN_HEAD_BLOCK + flash.LONGS_IN_BODY_BLOCK+2, 6, 7)
     testVerifyLongs(@testfile7, flash.LONGS_IN_HEAD_BLOCK + flash.LONGS_IN_BODY_BLOCK+2)
+
+    utils.startTestGroup(@"Various odd size reads for Issue (#2)")
+    ' REF https://github.com/ironsheep/P2-FLASH-FS/issues/2
+    testVerifyReads(@testfile7)
 
     utils.showFiles()
 
@@ -531,6 +535,50 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
     status := flash.close(handle)
     utils.evaluate(status, flash.SUCCESS)
 
+CON
+
+   MAX_READ_BYTES = 32
+
+DAT
+
+    readBuffer      BYTE    0[MAX_READ_BYTES]
+
+pri testVerifyReads(pFilename) | fileSizeInBytes, accumulatedReadLength, readLen, bytesReadCount, rdNbr, pStatus
+
+    utils.startTest(@"Determine size of file in bytes")
+    fileSizeInBytes := flash.file_size(pFilename)
+    status := flash.error()
+    utils.evaluate(handle, flash.SUCCESS)
+    debug("* working with ", udec_(fileSizeInBytes), " byte file")
+
+    '  open file for read
+    utils.startTest(@"Open File for read")
+    handle := flash.open(pFilename,"r")
+    utils.evaluate(handle, flash.SUCCESS)
+
+    '  read various sizes from the file
+    utils.startTest(@"read 20 N-length groups of bytes")
+    accumulatedReadLength := 0
+    repeat rdNbr from 1 to 20
+        readLen := (GETRND() +// MAX_READ_BYTES)
+        accumulatedReadLength += readLen
+        if accumulatedReadLength > fileSizeInBytes
+            debug("- done, past end of file")
+                quit
+        bytesReadCount := flash.read(handle, @readBuffer, readLen)
+        status := flash.error()
+        pStatus := (status == flash.SUCCESS and bytesReadCount == readLen) ? @"pass" : @"FAIL"
+        debug("  -- Read #", udec_(rdNbr), " ", udec_(readLen), " byte(s) - ", zstr_(pStatus))
+        utils.evaluateSubValue(bytesReadCount, @"read()", readLen)
+        utils.evaluateSubStatus(status, @"read()", flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on reads")
+    utils.evaluate(status, flash.SUCCESS)
+
+    '  close file
+    utils.startTest(@"Close read file")
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
 con { license }
 

@@ -1,5 +1,5 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_A2D0 jump
+Cog0  INIT $0000_0EB8 $0000_A31C jump
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
 Cog0    All Files:
@@ -9,7 +9,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #2: Write Records
-Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0    Sub-Test Results: Pass: 20, Fail: 0
 Cog0
 Cog0  * Test #3: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
@@ -33,7 +33,7 @@ Cog0
 Cog0  * Test #6: Ensure expected file stats
 Cog0    File: [rwblocks.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0F2D] HEAD/last, thisID=0, endPtr=$03F8, lifeCycle [ACTIVE-3], sig=[$3F80_007C]
+Cog0      1: [$09C9] HEAD/last, thisID=0, endPtr=$03F8, lifeCycle [ACTIVE-3], sig=[$3F80_007C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 880
 Cog0     -> pass
@@ -75,7 +75,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #15: Write Records
-Cog0    Sub-Test Results: Pass: 45, Fail: 0
+Cog0    Sub-Test Results: Pass: 90, Fail: 0
 Cog0
 Cog0  * Test #16: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
@@ -83,7 +83,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw2blocks.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$03BC] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
+Cog0      1: [$0526] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
 Cog0      2: [$0000] BODY/last, thisID=2, endPtr=$0008, lifeCycle [erased], sig=[$0080_02FE]
 Cog0
 Cog0  * Test #17: Close written file
@@ -100,8 +100,8 @@ Cog0
 Cog0  * Test #19: Ensure expected file stats
 Cog0    File: [rw2blocks.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$03BC] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
-Cog0      2: [$09E8] BODY/last, thisID=2, endPtr=$0008, lifeCycle [ACTIVE-3], sig=[$0080_027E]
+Cog0      1: [$0526] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
+Cog0      2: [$0BA2] BODY/last, thisID=2, endPtr=$0008, lifeCycle [ACTIVE-3], sig=[$0080_027E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_960
 Cog0     -> pass
@@ -144,7 +144,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #28: Write Records
-Cog0    Sub-Test Results: Pass: 92, Fail: 0
+Cog0    Sub-Test Results: Pass: 184, Fail: 0
 Cog0
 Cog0  * Test #29: ensure no errors on Record writes
 Cog0     ECode: SUCCESS: No error
@@ -152,8 +152,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw3blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0486] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
-Cog0      2: [$06B0] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      1: [$0803] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
+Cog0      2: [$04FC] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
 Cog0      3: [$0000] BODY/last, thisID=5, endPtr=$0038, lifeCycle [erased], sig=[$0380_05FE]
 Cog0
 Cog0  * Test #30: Close written file
@@ -170,9 +170,9 @@ Cog0
 Cog0  * Test #32: Ensure expected file stats
 Cog0    File: [rw3blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0486] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
-Cog0      2: [$06B0] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
-Cog0      3: [$075B] BODY/last, thisID=5, endPtr=$0038, lifeCycle [ACTIVE-3], sig=[$0380_057E]
+Cog0      1: [$0803] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
+Cog0      2: [$04FC] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      3: [$07B8] BODY/last, thisID=5, endPtr=$0038, lifeCycle [ACTIVE-3], sig=[$0380_057E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_096
 Cog0     -> pass
