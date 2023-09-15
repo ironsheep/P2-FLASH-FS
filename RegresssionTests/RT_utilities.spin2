@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 07 SEP 2023
+''   Updated.... 14 SEP 2023
 ''
 '' =================================================================================================
 
@@ -14,7 +14,7 @@ CON
 
 
 OBJ
-    Flash : "Draft_flash_fs"
+    flash : "flash_fs"
 
 
 DAT
@@ -80,7 +80,7 @@ pub evaluate(result, expectedResult) | ecGot, ecExpected
     if result > 0
         if result <> expectedResult
             if expectedResult < 0
-                ecExpected := Flash.string_for_error(expectedResult)
+                ecExpected := flash.string_for_error(expectedResult)
                 debug("  Result: ", sdec_(result), " (expected ", zstr_(ecExpected), ")")
             else
                 debug("  Result: ", udec_(result), " (expected ", udec_(expectedResult), ")")
@@ -89,8 +89,8 @@ pub evaluate(result, expectedResult) | ecGot, ecExpected
             debug("  Result: ", udec_(result))
             passCount++
     else
-        ecGot := Flash.string_for_error(result)
-        ecExpected := Flash.string_for_error(expectedResult)
+        ecGot := flash.string_for_error(result)
+        ecExpected := flash.string_for_error(expectedResult)
         if result <> expectedResult
             debug("   ECode: ", zstr_(ecGot), " (expected ", zstr_(ecExpected), ")")
             failCount++
@@ -100,9 +100,9 @@ pub evaluate(result, expectedResult) | ecGot, ecExpected
     pPassFail := result <> expectedResult ? @"FAIL" : @"pass"
     debug("   -> ", zstr_(pPassFail))
 
-pub evaluateStatus(result, pMessage, expectedResult) | ecGot, ecExpected
-    ecGot := Flash.string_for_error(result)
-    ecExpected := Flash.string_for_error(expectedResult)
+pub evaluateSubStatus(result, pMessage, expectedResult) | ecGot, ecExpected
+    ecGot := flash.string_for_error(result)
+    ecExpected := flash.string_for_error(expectedResult)
     bPassed := result == expectedResult
     if result <> expectedResult
         failCountSub++
@@ -116,7 +116,7 @@ pub evaluateStatus(result, pMessage, expectedResult) | ecGot, ecExpected
             debug("  Status: ", zstr_(result), "(", sdec_(result), ")")
         debug("   -> ", zstr_(pPassFail))
 
-pub evaluateValue(result, pMessage, expectedResult)
+pub evaluateSubValue(result, pMessage, expectedResult)
     bPassed := result == expectedResult
     if result <> expectedResult
         failCountSub++
@@ -146,19 +146,19 @@ pub evaluateSingleValue(result, pMessage, expectedResult)
 pub showFileDetails(pFilename) | bytesUsed, bytes_free, block_count
     debug(" ")  ' blank line
     'debug("* showFileDetails()...ENTRY")
-    bytesUsed, bytes_free, block_count := Flash.test_count_file_bytes(pFilename)
+    bytesUsed, bytes_free, block_count := flash.test_count_file_bytes(pFilename)
     if bytesUsed < 0
         debug("  File: [", zstr_(pFilename), "]")
-        debug("  # Error: ", zstr_(Flash.string_for_error(bytesUsed)))
+        debug("  # Error: ", zstr_(flash.string_for_error(bytesUsed)))
     else
         debug("  File: [", zstr_(pFilename), "], ", udec(bytesUsed, bytes_free, block_count))
     'debug("* showFileDetails()...EXIT")
 
 pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount
-    pFilename := Flash.TEST_filename_for_handle(handle)
+    pFilename := flash.TEST_filename_for_handle(handle)
     debug(" ")  ' blank line
     debug("  File: [", zstr_(pFilename), "] pending commit")
-    pSignatureAr, signatureCount := Flash.TEST_getCommitBlockSignatures(handle)
+    pSignatureAr, signatureCount := flash.TEST_getCommitBlockSignatures(handle)
     if signatureCount > 0
         debug("  # ", udec_(signatureCount), " Blocks in chain:")
         showSignatureChain(pSignatureAr, signatureCount, handle)
@@ -166,7 +166,7 @@ pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount
         debug("  # ", udec_(signatureCount), " Blocks in commit")
 
 pub showFileSignatures(pFilename) | pSignatureAr, signatureCount
-    pSignatureAr, signatureCount := Flash.TEST_getFileBlockSignatures(pFilename)
+    pSignatureAr, signatureCount := flash.TEST_getFileBlockSignatures(pFilename)
     if signatureCount > 0
         debug("  # ", udec_(signatureCount), " Blocks in file:")
         showSignatureChain(pSignatureAr, signatureCount, -1)
@@ -177,7 +177,7 @@ pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, si
             signature := LONG[pSignatureAr][signatureIdx]
             nextIdOrEndPtr := signature.[31..20]
             blockID := signature.[19..8]
-            blockAddr := Flash.TEST_getBlockAddressForId(blockID, possHandle)
+            blockAddr := flash.TEST_getBlockAddressForId(blockID, possHandle)
             case signature.[7..5]
                 %000:
                   pLifeCycle := @"canceled-0"
@@ -209,7 +209,7 @@ pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, si
 
 pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount
     debug("* ", zstr_(pMessage))
-    blocksUsed, blocksFree, fileCount := Flash.stats()
+    blocksUsed, blocksFree, fileCount := flash.stats()
     debug("  # FileSystem: ", udec_(blocksUsed, blocksFree, fileCount))
     bPassed := expectedFileCount == fileCount and expectedBlocksUsed == blocksUsed
     if fileCount <> expectedFileCount
@@ -230,9 +230,9 @@ pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUse
 pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount
     debug("  File: [", zstr_(pFilename), "]")
     showFileSignatures(pFilename)
-    bytesUsed, bytesFree, blockCount := Flash.test_count_file_bytes(pFilename)
+    bytesUsed, bytesFree, blockCount := flash.test_count_file_bytes(pFilename)
     if bytesUsed < 0
-        debug("  # Error: ", zstr_(Flash.string_for_error(bytesUsed)))
+        debug("  # Error: ", zstr_(flash.string_for_error(bytesUsed)))
         bPassed := false
     else
         bPassed := expectedBlockCount == blockCount and expectedBytesUsed == bytesUsed
@@ -254,11 +254,11 @@ pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesU
 pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, maxBytesUsed
     debug("  File: [", zstr_(pFilename), "]")
     showFileSignatures(pFilename)
-    bytesUsed, bytesFree, blockCount := Flash.test_count_file_bytes(pFilename)
-    maxBytesUsed := Flash.BYTES_IN_HEAD_BLOCK
-    maxBytesUsed += (Flash.BYTES_IN_BODY_BLOCK * (expectedBlockCount - 1))
+    bytesUsed, bytesFree, blockCount := flash.test_count_file_bytes(pFilename)
+    maxBytesUsed := flash.BYTES_IN_HEAD_BLOCK
+    maxBytesUsed += (flash.BYTES_IN_BODY_BLOCK * (expectedBlockCount - 1))
     if bytesUsed < 0
-        debug("  # Error: ", zstr_(Flash.string_for_error(bytesUsed)))
+        debug("  # Error: ", zstr_(flash.string_for_error(bytesUsed)))
         bPassed := false
     else
         bPassed := expectedBlockCount == blockCount and bytesUsed >= exptecedMinBytesUsed and bytesUsed <= maxBytesUsed
@@ -278,20 +278,19 @@ pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, 
     debug("   -> ", zstr_(pPassFail))
 
 pub showError(pCaller, errorCode)
-    debug("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
+    debug("EEEE ", zstr_(pCaller), " error: ", zstr_(flash.string_for_error(errorCode)))
 
 pub ShowStats() | blocksUsed, blocksFree, fileCount
 
-    blocksUsed, blocksFree, fileCount := Flash.stats()
+    blocksUsed, blocksFree, fileCount := flash.stats()
     debug(udec(blocksUsed, blocksFree, fileCount))
 
 
 pub showFiles() | ID, Bytes, byte Filename[128], byte Buff[30]
     debug(" ")  ' blank line
     debug("  All Files:")
-    ID := 0
     repeat
-        Flash.directory(@ID, @Filename, @Bytes)                     'get next file
+        flash.directory(@ID, @Filename, @Bytes)                     'get next file
         if Filename[0]                                              'is there a filename?
             ReadFile(@Filename, @Buff, 30)                            'read file
             if isZstr(@Buff, 30)
@@ -324,20 +323,20 @@ pub isZstr(pBffr, count) : bIsStringStatus | bytIdx
 
 pub ReadFile(pFilename, pStr, maxlen) | handle, byteCount
     if isStringsFile(pFilename)
-        handle := Flash.open(pFilename,"R")                          'open file for reading
+        handle := flash.open(pFilename,"R")                          'open file for reading
         if handle >= 0
-                byteCount := Flash.rd_str(handle, pStr, maxlen)             'read bytes of zstring
+                byteCount := flash.rd_str(handle, pStr, maxlen)             'read bytes of zstring
                 if byteCount < 0
                     showError(@"rd_str()", byteCount)
             'debug("- read str(", udec_(byteCount), ")=[", zstr_(pStr), "]")      'show filename, bytes, ID, and file contents
 
-            Flash.close(handle)                                         'close file
+            flash.close(handle)                                         'close file
     else
         bytefill(pStr, $ff, maxlen)
 
 pub ensureEmptyDirectory() | ID, Bytes, byte Filename[128], byte Buff[30]
 '' validate that directory is empty!
-    Flash.directory(@ID, @Filename, @Bytes)                     'get first file
+    flash.directory(@ID, @Filename, @Bytes)                     'get first file
     bPassed := true
     if Filename[0]                                              'is there a filename?
         bPassed := false
@@ -354,10 +353,10 @@ pub ensureEmptyDirectory() | ID, Bytes, byte Filename[128], byte Buff[30]
 pub blockCountForFileSize(fileSizeInBytes) : blockCount | remainingSize, overflowBodyCount
     ' return number of blocks for given file size
     blockCount := 1 ' head block
-    if fileSizeInBytes > Flash.BYTES_IN_HEAD_BLOCK
-        remainingSize := fileSizeInBytes - Flash.BYTES_IN_HEAD_BLOCK
-        blockCount += remainingSize / Flash.BYTES_IN_BODY_BLOCK                 ' body blocks
-        overflowBodyCount := remainingSize +// Flash.BYTES_IN_BODY_BLOCK ' final bytes in tail block
+    if fileSizeInBytes > flash.BYTES_IN_HEAD_BLOCK
+        remainingSize := fileSizeInBytes - flash.BYTES_IN_HEAD_BLOCK
+        blockCount += remainingSize / flash.BYTES_IN_BODY_BLOCK                 ' body blocks
+        overflowBodyCount := remainingSize +// flash.BYTES_IN_BODY_BLOCK ' final bytes in tail block
         'debug("blockCountForFileSize()  # remainByt: ", udec_(remainingSize), ", ovflwByt: ", udec_(overflowBodyCount))
         if overflowBodyCount > 0
             blockCount++
@@ -365,16 +364,16 @@ pub blockCountForFileSize(fileSizeInBytes) : blockCount | remainingSize, overflo
 
 pub bytesAllocatedFor(sizeInBytes) : maxAllocationBytes | bodyBlocks
     ' return max allocation size for circular file
-    maxAllocationBytes := Flash.BYTES_IN_HEAD_BLOCK
-    if sizeInBytes > Flash.BYTES_IN_HEAD_BLOCK
-        bodyBlocks := ((sizeInBytes - Flash.BYTES_IN_HEAD_BLOCK) + (Flash.BYTES_IN_BODY_BLOCK - 1)) / Flash.BYTES_IN_BODY_BLOCK
-        maxAllocationBytes += bodyBlocks * Flash.BYTES_IN_BODY_BLOCK
+    maxAllocationBytes := flash.BYTES_IN_HEAD_BLOCK
+    if sizeInBytes > flash.BYTES_IN_HEAD_BLOCK
+        bodyBlocks := ((sizeInBytes - flash.BYTES_IN_HEAD_BLOCK) + (flash.BYTES_IN_BODY_BLOCK - 1)) / flash.BYTES_IN_BODY_BLOCK
+        maxAllocationBytes += bodyBlocks * flash.BYTES_IN_BODY_BLOCK
 
 pub blocksAllocatedFor(sizeInBytes) : maxAllocationBlocks | bodyBlocks
     ' return max allocation size for circular file
     maxAllocationBlocks := 1
-    if sizeInBytes > Flash.BYTES_IN_HEAD_BLOCK
-        bodyBlocks := ((sizeInBytes - Flash.BYTES_IN_HEAD_BLOCK) + (Flash.BYTES_IN_BODY_BLOCK - 1)) / Flash.BYTES_IN_BODY_BLOCK
+    if sizeInBytes > flash.BYTES_IN_HEAD_BLOCK
+        bodyBlocks := ((sizeInBytes - flash.BYTES_IN_HEAD_BLOCK) + (flash.BYTES_IN_BODY_BLOCK - 1)) / flash.BYTES_IN_BODY_BLOCK
         maxAllocationBlocks += bodyBlocks
 
 dat
@@ -406,12 +405,11 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
     pCurrRefDir := pDirEntries
     refFileCount := 0
     foundFileCount := 0
-    ID := 0
     repeat
         pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
         refByteCount := LONG[pCurrRefDir][1]            ' get byte count
         refblocks    := LONG[pCurrRefDir][2]            ' get block count
-        Flash.directory(@ID, @Filename, @Bytes)         'get next file
+        flash.directory(@ID, @Filename, @Bytes)         'get next file
         if pRefFilename == 0                            ' if not beyond last REF entry
             'debug(" - end of table entries!")
         else
@@ -525,9 +523,9 @@ pub dumpFileHeads() | ID, Bytes, byte Filename[128], byte Buff[30], pBlock
     debug(" ")  ' blank line
     debug("  All Files:")
     repeat
-        Flash.directory(@ID, @Filename, @Bytes)                     'get next file
+        flash.directory(@ID, @Filename, @Bytes)                     'get next file
         if Filename[0]                                              'is there a filename?
-            pBlock := Flash.TEST_getHead4kBlock(@Filename)
+            pBlock := flash.TEST_getHead4kBlock(@Filename)
             dbgMemDump(@Filename, pBlock, 64)
             debug(" ")  ' blank line
         else

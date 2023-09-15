@@ -22,7 +22,7 @@ CON
 '}
 
 OBJ
-    Flash : "Draft_flash_fs"
+    flash : "flash_fs"
     utils : "RT_utilities"
 
 DAT
@@ -43,12 +43,12 @@ expectedValue   LONG    0
 
 PUB go() | hundreds, tens, units, snHi, snLo
 
-    status := Flash.format()      ' Comment out this line to NOT erase all files
+    status := flash.format()      ' Comment out this line to NOT erase all files
     if status < 0
         utils.showError(@"format()", status)
         return
 
-    status := Flash.mount()
+    status := flash.mount()
     if status < 0
         utils.showError(@"mount()", status)
         return
@@ -64,12 +64,12 @@ PUB go() | hundreds, tens, units, snHi, snLo
     '  open file for read
     '  ensure returns error (doesn't exist)
     utils.startTest(@"BAD: Read when file doesn't exist")
-    handle := Flash.open(@testfile1,"r")
-    utils.evaluate(handle, Flash.E_FILE_NOT_FOUND)
+    handle := flash.open(@testfile1,"r")
+    utils.evaluate(handle, flash.E_FILE_NOT_FOUND)
 
     debug(" ")
     debug(" - report on chip S/N and Driver version")
-    snHi, snLo := Flash.serial_number()
+    snHi, snLo := flash.serial_number()
     debug("CHIP Serial Number: ", uhex_long_(snHi), "-", uhex_long_(snLo))
 
     ' FIXME: add free block checks after each file write/append
@@ -105,15 +105,15 @@ PUB go() | hundreds, tens, units, snHi, snLo
     utils.showFiles()
 
     utils.startTestGroup(@"Head block + body block - filled with LONGs full HEAD, 2 in BODY, append 8 more")
-    testWriteLongs(@testfile5, Flash.LONGS_IN_HEAD_BLOCK +2, 4, 4)
+    testWriteLongs(@testfile5, flash.LONGS_IN_HEAD_BLOCK +2, 4, 4)
     testAppendLongs(@testfile5, 8)
 
     utils.startTestGroup(@"Head block + 2 x body block - filled with LONGs full HEAD & BODY, 2 in 2nd BODY, append 8 more")
-    testWriteLongs(@testfile6, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK +2, 5, 6)
+    testWriteLongs(@testfile6, flash.LONGS_IN_HEAD_BLOCK + flash.LONGS_IN_BODY_BLOCK +2, 5, 6)
     testAppendLongs(@testfile6, 8)
 
     utils.startTestGroup(@"Head block + 2 x body block - filled with LONGsfull HEAD & 2 BODY (-3), append 9 more append causes add of new body")
-    testWriteLongs(@testfile7, Flash.LONGS_IN_HEAD_BLOCK + Flash.LONGS_IN_BODY_BLOCK + (Flash.LONGS_IN_BODY_BLOCK - 3), 6, 9)
+    testWriteLongs(@testfile7, flash.LONGS_IN_HEAD_BLOCK + flash.LONGS_IN_BODY_BLOCK + (flash.LONGS_IN_BODY_BLOCK - 3), 6, 9)
     testAppendLongs(@testfile7, 9)
 
     utils.startTestGroup(@"Certifying Flush - appends to existing file with flush() for each")
@@ -121,16 +121,16 @@ PUB go() | hundreds, tens, units, snHi, snLo
     ' --- special case - flush() testing
     ' open file
     utils.startTest(@"Open File for append")
-    handle := Flash.open(@testfile7,"a")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(@testfile7,"a")
+    utils.evaluate(handle, flash.SUCCESS)
 
     testFlushAppendLongs(handle, @testfile7, 6) ' leaves file open after flush
     testFlushAppendLongs(handle, @testfile7, 22) ' leaves file open after flush
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.showFileDetails(@testfile7)
 
@@ -144,34 +144,34 @@ PUB go() | hundreds, tens, units, snHi, snLo
 pri testNewAppendBytes(pFilename, count, startingFileCount, startingBlockCount) | bExists, startLength, endLength, pBlock
 
     utils.startTest(@"Ensure file doesn't exist")
-    bExists := Flash.exists(@testfile1)
-    status := Flash.error()
-    utils.evaluateStatus(bExists, @"exists()", false)
+    bExists := flash.exists(@testfile1)
+    status := flash.error()
+    utils.evaluateSubStatus(bExists, @"exists()", false)
 
     utils.startTest(@"ensure no errors for exists() call ")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.startTest(@"Open File for append")
-    handle := Flash.open(pFilename,"a")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"a")
+    utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write N BYTEs")
     testValue := 0
     repeat count
         testValue++
-        status := Flash.wr_byte(handle, testValue)
-        utils.evaluateStatus(status, @"wr_byte()", Flash.SUCCESS)
+        status := flash.wr_byte(handle, testValue)
+        utils.evaluateSubStatus(status, @"wr_byte()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -188,26 +188,26 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
-    handle := Flash.open(pFilename,"w")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"w")
+    utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write N BYTEs")
     testValue := 0
     repeat 10
         testValue++
-        status := Flash.wr_byte(handle, testValue)
-        utils.evaluateStatus(status, @"wr_byte()", Flash.SUCCESS)
+        status := flash.wr_byte(handle, testValue)
+        utils.evaluateSubStatus(status, @"wr_byte()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -223,43 +223,43 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
 pri testAppendBytes(pFilename, count) | startLength, endLength, pBlock
 
     utils.startTest(@"Get starting length before append of BYTEs")
-    startLength := Flash.file_size(pFilename)
-    status := Flash.error()
-    utils.evaluate(handle, Flash.SUCCESS)
+    startLength := flash.file_size(pFilename)
+    status := flash.error()
+    utils.evaluate(handle, flash.SUCCESS)
     utils.evaluateSingleValue(startLength, @"file_size()", 10)
 
     '  open file for append
     utils.startTest(@"Open File for append")
-    handle := Flash.open(pFilename,"a")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"a")
+    utils.evaluate(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"Append count BYTEs")
     testValue := $40
     repeat count
         testValue++
-        status := Flash.wr_byte(handle, testValue)
-        utils.evaluateStatus(status, @"wr_byte()", Flash.SUCCESS)
+        status := flash.wr_byte(handle, testValue)
+        utils.evaluateSubStatus(status, @"wr_byte()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
 {
     ' AUGH dump head block to see if content is correct
-    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    pBlock := flash.TEST_getHead4kBlock(pFilename)
     if pBlock < 0
-        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
+        utils.evaluateSubStatus(pBlock, @"TEST_getHead4kBlock()", flash.SUCCESS)
     else
         utils.dbgMemDump(@"Append BYTEs file Head block", pBlock, 4096)
-        status := Flash.SUCCESS ' clear our temp use
+        status := flash.SUCCESS ' clear our temp use
 '}
 
     utils.showFileDetails(pFilename)
@@ -273,25 +273,25 @@ pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
-    handle := Flash.open(pFilename,"w")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"w")
+    utils.evaluate(handle, flash.SUCCESS)
     utils.startTest(@"Write N WORDs")
     testValue := 0
     repeat count
         testValue++
-        status := Flash.wr_word(handle, testValue)
-        utils.evaluateStatus(status, @"wr_word()", Flash.SUCCESS)
+        status := flash.wr_word(handle, testValue)
+        utils.evaluateSubStatus(status, @"wr_word()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -307,43 +307,43 @@ pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
 pri testAppendWords(pFilename, count) | startLength, endLength, pBlock
 
     utils.startTest(@"Get starting length before append of WORDs")
-    startLength := Flash.file_size(pFilename)
-    status := Flash.error()
-    utils.evaluate(handle, Flash.SUCCESS)
+    startLength := flash.file_size(pFilename)
+    status := flash.error()
+    utils.evaluate(handle, flash.SUCCESS)
     utils.evaluateSingleValue(startLength, @"file_size()", count * 2)
 
     '  open file for append
     utils.startTest(@"Open File for append")
-    handle := Flash.open(pFilename,"a")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"a")
+    utils.evaluate(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"Append count WORDs")
     testValue := $40
     repeat count
         testValue++
-        status := Flash.wr_word(handle, testValue)
-        utils.evaluateStatus(status, @"wr_word()", Flash.SUCCESS)
+        status := flash.wr_word(handle, testValue)
+        utils.evaluateSubStatus(status, @"wr_word()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
 {
     ' AUGH dump head block to see if content is correct
-    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    pBlock := flash.TEST_getHead4kBlock(pFilename)
     if pBlock < 0
-        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
+        utils.evaluateSubStatus(pBlock, @"TEST_getHead4kBlock()", flash.SUCCESS)
     else
         utils.dbgMemDump(@"Append WORDs file Head block", pBlock, 4096)
-        status := Flash.SUCCESS ' clear our temp use
+        status := flash.SUCCESS ' clear our temp use
 '}
 
     utils.showFileDetails(pFilename)
@@ -358,25 +358,25 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | bl
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
-    handle := Flash.open(pFilename,"w")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"w")
+    utils.evaluate(handle, flash.SUCCESS)
     utils.startTest(@"Write N LONGs")
     testValue := 0
     repeat count
         testValue++
-        status := Flash.wr_long(handle, testValue)
-        utils.evaluateStatus(status, @"wr_long()", Flash.SUCCESS)
+        status := flash.wr_long(handle, testValue)
+        utils.evaluateSubStatus(status, @"wr_long()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -393,59 +393,59 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | bl
 pri testAppendLongs(pFilename, count) | startLength, blocksUsed
 
     utils.startTest(@"Get starting length before append of LONGs")
-    startLength := Flash.file_size(pFilename)
-    status := Flash.error()
-    utils.evaluateStatus(status, @"file_size()", Flash.SUCCESS)
+    startLength := flash.file_size(pFilename)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"file_size()", flash.SUCCESS)
 
     '  open file for append
     utils.startTest(@"Open File for append")
-    handle := Flash.open(pFilename,"a")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"a")
+    utils.evaluate(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"Append count LONGs")
     testValue := $40
     repeat count
         testValue++
-        status := Flash.wr_long(handle, testValue)
-        utils.evaluateStatus(status, @"wr_long()", Flash.SUCCESS)
+        status := flash.wr_long(handle, testValue)
+        utils.evaluateSubStatus(status, @"wr_long()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
 
 pri testFlushAppendLongs(appendHandle, pFilename, count) | startLength, blocksUsed
 
     utils.startTest(@"Get starting length before append of LONGs")
-    startLength := Flash.file_size(pFilename)
-    status := Flash.error()
-    utils.evaluateStatus(status, @"file_size()", Flash.SUCCESS)
+    startLength := flash.file_size(pFilename)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"file_size()", flash.SUCCESS)
 
     utils.startTest(@"Append count LONGs")
     testValue := $40
     repeat count
         testValue++
-        status := Flash.wr_long(appendHandle, testValue)
-        utils.evaluateStatus(status, @"wr_long()", Flash.SUCCESS)
+        status := flash.wr_long(appendHandle, testValue)
+        utils.evaluateSubStatus(status, @"wr_long()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(appendHandle)
 
     '  flush changes to file
     utils.startTest(@"Flush append file")
-    status := Flash.flush(appendHandle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.flush(appendHandle)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -500,8 +500,8 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
     '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
-    handle := Flash.open(pFilename,"w")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"w")
+    utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write N STRINGs")
     expectedStrFileSize := 0
@@ -510,27 +510,27 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
         BYTE[@idxStringWritten][readWriteIdx] := strIdx
         expectedStrFileSize += strsize(pString) + 1
-        status := Flash.wr_str(handle, pString)
-        utils.evaluateStatus(status, @"wr_str()", Flash.SUCCESS)
+        status := flash.wr_str(handle, pString)
+        utils.evaluateSubStatus(status, @"wr_str()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
     {
     ' AUGH dump head block to see if content is correct
-    pBlock := Flash.getHead4kBlock(pFilename)
+    pBlock := flash.getHead4kBlock(pFilename)
     ' reuse status for a minute
     status := ((expectedFileSize + 64) + 32) & $FFFF_FFF0            ' ensure muiple of 16 bytes
     utils.dbgMemDump(@"String file Head block", pBlock, status)
-    status := Flash.SUCCESS ' clear our temp use
+    status := flash.SUCCESS ' clear our temp use
     '}
 
     utils.showFileDetails(pFilename)
@@ -547,14 +547,14 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
 pri testAppendStrings(pFilename, count, initialSize) | startLength, readWriteIdx, strIdx, pString, pBlock
 
     utils.startTest(@"Get starting length before append of STRINGs")
-    startLength := Flash.file_size(pFilename)
-    status := Flash.error()
-    utils.evaluateStatus(handle, @"file_size()", Flash.SUCCESS)
+    startLength := flash.file_size(pFilename)
+    status := flash.error()
+    utils.evaluateSubStatus(handle, @"file_size()", flash.SUCCESS)
 
     '  open file for append
     utils.startTest(@"Open File for append")
-    handle := Flash.open(pFilename,"a")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"a")
+    utils.evaluate(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"Append N STRINGs")
@@ -563,28 +563,28 @@ pri testAppendStrings(pFilename, count, initialSize) | startLength, readWriteIdx
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
         BYTE[@idxStringWritten][readWriteIdx] := strIdx
         expectedStrFileSize += strsize(pString) + 1
-        status := Flash.wr_str(handle, pString)
-        utils.evaluateStatus(status, @"wr_str()", Flash.SUCCESS)
+        status := flash.wr_str(handle, pString)
+        utils.evaluateSubStatus(status, @"wr_str()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on append writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close append file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
 {
     ' AUGH dump head block to see if content is correct
-    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    pBlock := flash.TEST_getHead4kBlock(pFilename)
     if pBlock < 0
-        utils.evaluateStatus(pBlock, @"TEST_getHead4kBlock()", Flash.SUCCESS)
+        utils.evaluateSubStatus(pBlock, @"TEST_getHead4kBlock()", flash.SUCCESS)
     else
         utils.dbgMemDump(@"Append WORDs file Head block", pBlock, 4096)
-        status := Flash.SUCCESS ' clear our temp use
+        status := flash.SUCCESS ' clear our temp use
 '}
 
     utils.showFileDetails(pFilename)
@@ -600,8 +600,8 @@ pri testAppendStrings(pFilename, count, initialSize) | startLength, readWriteIdx
 pri testVerifyAllStrings(pFilename, count) | foundFileSize,  strIdx, pString, readWriteIdx, expectedLength, rdLength, compareResult
     '  open file for read
     utils.startTest(@"Open File for read")
-    handle := Flash.open(pFilename,"r")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"r")
+    utils.evaluate(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected 10 STRINGs")
@@ -611,29 +611,29 @@ pri testVerifyAllStrings(pFilename, count) | foundFileSize,  strIdx, pString, re
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
         ' the read call doesn't count terminator in length
         expectedLength := strsize(pString)
-        rdLength := Flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
+        rdLength := flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
         if rdLength < 0
             status := rdLength
             quit
         ' ensure length is same as expected
-        utils.evaluateValue(rdLength, @"rd_str()", expectedLength)
+        utils.evaluateSubValue(rdLength, @"rd_str()", expectedLength)
         ' ensure string is same as expected
         compareResult := strcomp(@testStrBuffer, pString)
-        utils.evaluateValue(compareResult, @"rd_str()", true)
+        utils.evaluateSubValue(compareResult, @"rd_str()", true)
 
     utils.startTest(@"ensure no errors on reads")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more STRING than written")
-    Flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
-    status := Flash.error()
-    utils.evaluate(status, Flash.E_END_OF_FILE)
+    flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
+    status := flash.error()
+    utils.evaluate(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
 
 con { license }

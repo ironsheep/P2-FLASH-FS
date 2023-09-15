@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 02 SEP 2023
+''   Updated.... 14 SEP 2023
 ''
 '' =================================================================================================
 
@@ -22,7 +22,7 @@ CON
 '}
 
 OBJ
-    Flash : "Draft_flash_fs"
+    flash : "flash_fs"
     utils : "RT_utilities"
 
 CON
@@ -43,14 +43,17 @@ recordData       LONG    0[RECORD_DATA_LEN/4]
 recordCRC        LONG    0
 recordEnd
 
+writeLength     LONG    0
+
+
 PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern
 
-    status := Flash.format()      ' Comment out this line to not erase all files
+    status := flash.format()      ' Comment out this line to not erase all files
     if status < 0
         utils.showError(@"format()", status)
         return
 
-    status := Flash.mount()
+    status := flash.mount()
     if status < 0
         utils.showError(@"mount()", status)
         return
@@ -72,11 +75,11 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
         '  open file for write
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
-    handle := Flash.open(pFilename,"w")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"w")
+    utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write Records")
-    status := Flash.SUCCESS
+    status := flash.SUCCESS
     repeat recordNbr from 1 to recordCount
         testValue := $40 + recordNbr                    ' A, B, C, etc.
         recordId := recordNbr
@@ -84,29 +87,31 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
         recordCRC := utils.record_crc(@record, RECORD_LEN)
         'debug("* write rcd #", udec_(recordNbr), " of 10")
         'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
-        status := Flash.write(handle, @record, RECORD_LEN)
-        utils.evaluateStatus(status, @"write()", Flash.SUCCESS)
-        if status <> Flash.SUCCESS
+        writeLength := flash.write(handle, @record, RECORD_LEN)
+        utils.evaluateSubValue(writeLength, @"write()", RECORD_LEN)
+        status := flash.error()
+        utils.evaluateSubStatus(status, @"write()", flash.SUCCESS)
+        if status <> flash.SUCCESS
             quit ' abort on first failure
 
     utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
 {
     ' AUGH dump head block to see if content is correct
-    pBlock := Flash.TEST_getHead4kBlock(pFilename)
+    pBlock := flash.TEST_getHead4kBlock(pFilename)
     ' reuse status for a minute
     status := ((4 * RECORD_LEN + 64) + 32) & $FFFF_FFF0            ' ensure multiple of 16 bytes
     utils.dbgMemDump(@"Records file Head block", pBlock, status)
-    status := Flash.SUCCESS ' clear our temp use
+    status := flash.SUCCESS ' clear our temp use
 '}
     expectedFileSize := recordCount * RECORD_LEN
 
@@ -121,57 +126,57 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedFileSize)
 
     utils.startTest(@"Ensure expected unused bytes stats")
-    sizeUnused := Flash.file_size_unused(pFilename)
+    sizeUnused := flash.file_size_unused(pFilename)
 
     expectedFileSize := recordCount * RECORD_LEN
-    allocatedFileSize := Flash.BYTES_IN_HEAD_BLOCK
+    allocatedFileSize := flash.BYTES_IN_HEAD_BLOCK
     if expectedFileBlocks > 2
-        allocatedFileSize += (Flash.BYTES_IN_BODY_BLOCK * 2)
+        allocatedFileSize += (flash.BYTES_IN_BODY_BLOCK * 2)
     elseif expectedFileBlocks > 1
-        allocatedFileSize += Flash.BYTES_IN_BODY_BLOCK
+        allocatedFileSize += flash.BYTES_IN_BODY_BLOCK
     utils.evaluateSingleValue(sizeUnused, @"file_size_unused()", allocatedFileSize - expectedFileSize)
 
     utils.startTest(@"Ensure no error on size unused call")
-    status := Flash.error()
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.error()
+    utils.evaluate(status, flash.SUCCESS)
 
     'debug("* holding...")
     'repeat ' hold here
 
     '  open file for read
     utils.startTest(@"Open File for read")
-    handle := Flash.open(pFilename,"r")
-    utils.evaluate(handle, Flash.SUCCESS)
+    handle := flash.open(pFilename,"r")
+    utils.evaluate(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
     repeat recordNbr from 1 to recordCount
-        rdLength := Flash.read(handle, @record, RECORD_LEN)
+        rdLength := flash.read(handle, @record, RECORD_LEN)
         if rdLength <> RECORD_LEN
-            status := Flash.error()
+            status := flash.error()
             quit
         ' ensure length is same as expected
-        utils.evaluateValue(rdLength, @"read()", RECORD_LEN)
+        utils.evaluateSubValue(rdLength, @"read()", RECORD_LEN)
         ' ensure record ID is same as expected
-        utils.evaluateValue(recordId, @"recordId", recordNbr)
+        utils.evaluateSubValue(recordId, @"recordId", recordNbr)
         ' ensure record CRC is same as expected
         calcCRC := utils.record_crc(@record, RECORD_LEN)
-        utils.evaluateValue(calcCRC, @"recordCRC", recordCRC)
+        utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
 
     utils.startTest(@"ensure no errors on reads")
-    utils.evaluate(status, Flash.SUCCESS)
+    utils.evaluate(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more Record than written")
-    rdLength := Flash.read(handle, @record, RECORD_LEN)
+    rdLength := flash.read(handle, @record, RECORD_LEN)
     utils.evaluateSingleValue(rdLength, @"read()", 0)
-    status := Flash.error()
-    utils.evaluate(status, Flash.E_END_OF_FILE)
+    status := flash.error()
+    utils.evaluate(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
-    status := Flash.close(handle)
-    utils.evaluate(status, Flash.SUCCESS)
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
 
     utils.showFiles()
 
