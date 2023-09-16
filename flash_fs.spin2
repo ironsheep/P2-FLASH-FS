@@ -1058,15 +1058,14 @@ pub read(handle, p_buffer, count) : bytes_read | byteIndex, readValue, checkValu
      errorCode := checkValue                                                    ' no, set system error
      bytes_read := 0                                                            ' no, 0 bytes read
   else
+    bytes_read := 0
     repeat byteIndex from 0 to count - 1                                        ' for the max length of the buffer
       if (readValue := rd_byte_no_locks(handle)) < 0                            ' read a byte from the file (or seek location)
           errorCode := readValue                                                ' another error occured, set system error
-          bytes_read := byteIndex                                               ' return bytes read so far
           quit
       else
         BYTE[p_buffer][byteIndex] := readValue                                  ' no error, place byte in the users buffer
-    if errorCode == SUCCESS                                                     ' if no error, return bytes read
-        bytes_read := byteIndex + 1                                             ' return bytes read so far
+        bytes_read++		                                                ' update count of bytes read
 
   'debug("read(", udec_(count),") = (", sdec_(bytes_read),")")
 
