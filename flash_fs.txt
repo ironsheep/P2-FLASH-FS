@@ -222,8 +222,8 @@ _________________________________________________
 pub seek(handle, position, whence) : end_position
 
  Postion seek file pointer to position within the file or at the end of the file
- -- use 0 for position to seek to the start of the file
- -- use "size of file" to seek to the end of the file for append
+ -- use 0, SK_FILE_START for position to seek to the start of the file
+ -- use POSX, SK_FILE_START (largest positive LONG value) for position to seek to the current end of the file
  @param handle - a handle to an open file
  @param position - position (in bytes) within the file (0 to length-1)
   use  seek(handle, POSX, SK_FILE_START) to seek to end of the file
@@ -233,7 +233,7 @@ pub seek(handle, position, whence) : end_position
  .. E_BAD_HANDLE if the handle is not valid,
  .. E_BAD_SEEK_ARG if invalid whence value,
  .. E_FILE_MODE if the file is not open in a mode supporting seeks,
- .. E_FILE_SEEK if attempted seek past either end of file
+ .. E_FILE_SEEK if attempted seek past either end of file (and didn't use POSX for tail)
 
 __________________________________________________
 pub write(handle, p_buffer, count) : bytes_written
@@ -394,6 +394,8 @@ pub string_for_error(error_code) : p_interpretation
   =================================================================================================
 
   Terms of Use: MIT License
+
+  Copyright (c) 2023 Iron Sheep Productions, LLC
 
   Permission is hereby granted, free of charge, to any person obtaining a copy of this
   software and associated documentation files (the "Software"), to deal in the Software
