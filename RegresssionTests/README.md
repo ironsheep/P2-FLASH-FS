@@ -107,15 +107,15 @@ This is my work in progress as I'm working toward customer facing release of the
 | --- | --- |
 | [RT\_utilities.spin2](RT_utilities.spin2) | Utility methods common to all Test Files |
 | [RT\_mount\_handle\_basics_tests.spin2](RT_mount_handle_basics_tests.spin2) | The read/write basic types test suite |
-| [RT\_mount\_handle\_basics_tests.log](RT_mount_handle_basics_tests.log) | Log of the read/write basic types tests [83 passes, 0 fails] |
+| [RT\_mount\_handle\_basics_tests.log](RT_mount_handle_basics_tests.log) | Log of the read/write basic types tests [85 passes, 0 fails] |
 | [RT\_read\_seek_tests.spin2](RT_read_seek_tests.spin2) | The open for read seek test suite |
-| [RT\_read\_seek_tests.log](RT_read_seek_tests.log) | Log of the open for read seek tests [75 passes, 0 fails] |
+| [RT\_read\_seek_tests.log](RT_read_seek_tests.log) | Log of the open for read seek tests [97 passes, 0 fails] |
 | [RT\_read\_write\_block_tests.spin2](RT_read_write_block_tests.spin2) | The read/write records(blocks) test suite  |
 | [RT\_read\_write\_block_tests.log](RT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [42 passes, 0 fails] |
-| [RT\_read\_write\_circular_tests.spin2](RT_read_write_circular_tests.spin2) | The read/write basic types test suite |
-| [RT\_read\_write\_circular_tests.log](RT_read_write_circular_tests.log) | Log of the read/write basic types tests [247 passes, 0 fails] |
+| [RT\_read\_write\_circular_tests.spin2](RT_read_write_circular_tests.spin2) | The read/write circular test suite |
+| [RT\_read\_write\_circular_tests.log](RT_read_write_circular_tests.log) | Log of the read/write circular tests [247 passes, 0 fails] |
 | [RT\_read\_write_tests.spin2](RT_read_write_tests.spin2) | The read/write basic types test suite |
-| [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [97 passes, 0 fails] |
+| [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [102 passes, 0 fails] |
 | [RT\_write\_append_tests.spin2](RT_write_append_tests.spin2) | The open for append test suite |
 | [RT\_write\_append_tests.log](RT_write_append_tests.log) | Log of the open for append tests [102 passes, 0 fails] |
 

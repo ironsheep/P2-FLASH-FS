@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 14 SEP 2023
+''   Updated.... 15 SEP 2023
 ''
 '' =================================================================================================
 
@@ -86,6 +86,9 @@ PUB go() | nbrLongs
 
     utils.startTestGroup(@"Seek position-relative tests")
     verifyRelativeSeekLongs(@testfile4, nbrLongs)
+
+    utils.startTestGroup(@"New file_size for handle and max seek tests")
+    verifyMaxSeek(@testfile4)
 
     utils.showFiles()
 
@@ -169,6 +172,8 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
+    utils.evaluate(handle, 0)
+    status := flash.error()
     utils.evaluate(handle, flash.SUCCESS)
 
     '    seek to various locations and read longs validating for correct value
@@ -225,9 +230,12 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
 
 
 pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, relativeOfs
+
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluate(handle, 0)
+    status := flash.error()
+    utils.evaluate(status, flash.SUCCESS)
 
     '    seek to various locations and read longs validating for correct value
     utils.startTest(@"read 1st LONG")
@@ -292,6 +300,40 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
     utils.startTest(@"Close file we were reading")
     status := flash.close(handle)
     utils.evaluate(status, flash.SUCCESS)
+
+
+pri verifyMaxSeek(pFilename) | lenBytes, hLenBytes
+
+    utils.startTest(@"Open File for read")
+    handle := flash.open(pFilename,"r")
+    status := flash.error()
+    utils.evaluate(handle, 0)
+    utils.evaluate(status, flash.SUCCESS)
+
+    utils.startTest(@"Determine size of file (by handle) in bytes ")
+    hLenBytes := flash.file_size_for_handle(handle)
+    status := flash.error()
+    utils.evaluate(status, flash.SUCCESS)
+
+    utils.startTest(@"Determine size of file (by name) in bytes")
+    lenBytes := flash.file_size(pFilename)
+    status := flash.error()
+    utils.evaluate(handle, flash.SUCCESS)
+
+    utils.startTest(@"Ensure the sizes match")
+    utils.evaluate(hLenBytes, lenBytes)
+
+    utils.startTest(@"Seek to end of file returning position and ckeck length returned is file size")
+    endPosition := flash.seek(handle, POSX, flash.SK_FILE_START)
+    status := flash.error()
+    utils.evaluate(endPosition, lenBytes)
+    utils.evaluate(status, flash.SUCCESS)
+
+    '  close file
+    utils.startTest(@"Close file we were reading")
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
+
 
 con { license }
 

@@ -1,5 +1,5 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_A8A4 jump
+Cog0  INIT $0000_0EB8 $0000_AB08 jump
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
 Cog0    All Files:
@@ -48,12 +48,14 @@ Cog0
 Cog0  * Test #8: Ensure expected file stats
 Cog0    File: [seekLongs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$05CC] HEAD/last, thisID=0, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_007C]
+Cog0      1: [$0845] HEAD/last, thisID=0, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_007C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_956
 Cog0     -> pass
 Cog0
 Cog0  * Test #9: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -109,7 +111,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs2blk.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$0E9E] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
+Cog0      1: [$0794] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
 Cog0      2: [$0000] BODY/last, thisID=2, endPtr=$000C, lifeCycle [erased], sig=[$00C0_02FE]
 Cog0
 Cog0  * Test #22: Close written file
@@ -128,13 +130,15 @@ Cog0
 Cog0  * Test #24: Ensure expected file stats
 Cog0    File: [seekLongs2blk.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$0E9E] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
-Cog0      2: [$054B] BODY/last, thisID=2, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_027E]
+Cog0      1: [$0794] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
+Cog0      2: [$0743] BODY/last, thisID=2, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_027E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_964
 Cog0     -> pass
 Cog0
 Cog0  * Test #25: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -190,8 +194,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs3blk.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$027D] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
-Cog0      2: [$084E] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      1: [$0645] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
+Cog0      2: [$0E10] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
 Cog0      3: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05FE]
 Cog0
 Cog0  * Test #38: Close written file
@@ -210,14 +214,16 @@ Cog0
 Cog0  * Test #40: Ensure expected file stats
 Cog0    File: [seekLongs3blk.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$027D] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
-Cog0      2: [$084E] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
-Cog0      3: [$0094] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
+Cog0      1: [$0645] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
+Cog0      2: [$0E10] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      3: [$07C9] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_052
 Cog0     -> pass
 Cog0
 Cog0  * Test #41: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -273,8 +279,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs3blkFull.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0189] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
-Cog0      2: [$0793] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      1: [$00EC] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
+Cog0      2: [$0637] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
 Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [erased], sig=[$FFC0_08FE]
 Cog0
 Cog0  * Test #54: Close written file
@@ -293,14 +299,16 @@ Cog0
 Cog0  * Test #56: Ensure expected file stats
 Cog0    File: [seekLongs3blkFull.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0189] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
-Cog0      2: [$0793] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$01A5] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_087E]
+Cog0      1: [$00EC] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
+Cog0      2: [$0637] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$048F] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_087E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 12_132
 Cog0     -> pass
 Cog0
 Cog0  * Test #57: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -341,6 +349,8 @@ Cog0
 Cog0  * Test #66: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
 Cog0
 Cog0  * Test #67: read 1st LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
@@ -374,11 +384,43 @@ Cog0  * Test #74: Close file we were reading
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: New file_size for handle and max seek tests
+Cog0
+Cog0  * Test #75: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #76: Determine size of file (by handle) in bytes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #77: Determine size of file (by name) in bytes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #78: Ensure the sizes match
+Cog0    Result: 12_132
+Cog0     -> pass
+Cog0
+Cog0  * Test #79: Seek to end of file returning position and ckeck length returned is file size
+Cog0    Result: 12_132
+Cog0     -> pass
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #80: Close file we were reading
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
 Cog0    All Files:
 Cog0  seekLongs.bin, Bytes = 3_956, ID = 1, @Buff={binary data}
 Cog0  seekLongs2blk.bin, Bytes = 3_964, ID = 2, @Buff={binary data}
 Cog0  seekLongs3blk.bin, Bytes = 8_052, ID = 4, @Buff={binary data}
 Cog0  seekLongs3blkFull.bin, Bytes = 12_132, ID = 7, @Buff={binary data}
 Cog0
-Cog0  * 74 Tests: , Pass: 84, Fail: 0
+Cog0  * 80 Tests: , Pass: 97, Fail: 0
 Cog0  * Test Complete

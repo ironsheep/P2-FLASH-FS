@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 14 SEP 2023
+''   Updated.... 15 SEP 2023
 ''
 '' =================================================================================================
 
@@ -560,7 +560,9 @@ pri testVerifyReads(pFilename) | fileSizeInBytes, accumulatedReadLength, readLen
     utils.startTest(@"read 20 N-length groups of bytes")
     accumulatedReadLength := 0
     repeat rdNbr from 1 to 20
-        readLen := (GETRND() +// MAX_READ_BYTES)
+        repeat
+            readLen := (GETRND() +// MAX_READ_BYTES)
+        while readLen == 0  'heh, don't allow zero length reads
         accumulatedReadLength += readLen
         if accumulatedReadLength > fileSizeInBytes
             debug("- done, past end of file")
