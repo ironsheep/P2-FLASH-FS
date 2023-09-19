@@ -9,9 +9,9 @@ The following files can be found at the top level of this repository:
 
 | Key Files | Description |
 | --- | --- |
-| [`cgsm_flash_file_demo.zip`](./cgsm_flash_file_demo.zip) | Jon McPhalens Interactive Filesystem Demo
 | [`flash_fs.spin2`](./flash_fs.spin2) | The complete FLASH driver object
 | [`flash_fs.txt`](./flash_fs.txt) | Object Interface Document for the FLASH driver
+| [`cgsm_flash_file_demo.zip`](./cgsm_flash_file_demo.zip) | Jon McPhalens latest Interactive Filesystem Demo
 | [`flash_fs_demo.spin2`](./flash_fs_demo.spin2) | Chip's original light-weight non-interactive demo
 
 ## Table of Contents
@@ -40,7 +40,7 @@ Key features of this Flash Filesystem for the P2 Edge Flash chip:
 - Seeks supported
 - File Append supported
 - Circular file writes supported 
-- **Coming Soon** Can be accessed from all cogs (first cog to call mount() mounts the filesystem for all cogs to use.)
+- Supports multi-cog use (first cog to call mount() mounts the filesystem for all cogs to use.)
 - **Coming soon** *Directory Support* 
 
 ## Adding the Flash FS to your own project
@@ -92,7 +92,7 @@ PRI main()
 ```
 
 
-### work with files on flash as you would normally
+### Work with files on flash as you would normally
 
 Now that your filesystem is mounted you are free to do normal file operations. The filesystem API is very similar to the ANSI-C file handling API so this all should feel pretty natural to you.
 
@@ -136,9 +136,7 @@ Thank you also to members of the [forum thread - "On-Board Flash File System"](h
 
 ## License
 
-Copyright © 2023 Iron Sheep Productions, LLC. All rights reserved.
-
-Licensed under the MIT License.
+Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
 
 Follow these links for more information:
 

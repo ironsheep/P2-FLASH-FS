@@ -1,5 +1,5 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_AB08 jump
+Cog0  INIT $0000_0EB8 $0000_AD3C jump
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
 Cog0    All Files:
@@ -20,9 +20,11 @@ Cog0  * Test #3: BAD: seek on write-only file
 Cog0     ECode: E_FILE_MODE: file not opened in desired mode
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #4: Write N of longs
 Cog0    Sub-Test Results: Pass: 989, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #5: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
@@ -48,7 +50,7 @@ Cog0
 Cog0  * Test #8: Ensure expected file stats
 Cog0    File: [seekLongs.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0845] HEAD/last, thisID=0, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_007C]
+Cog0      1: [$0D9B] HEAD/last, thisID=0, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_007C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 3_956
 Cog0     -> pass
@@ -61,6 +63,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #10: read 1st LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #11: ensure no errors on read 1st
 Cog0     ECode: SUCCESS: No error
@@ -68,6 +71,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #12: read 20 longs randomly ensure offset is value of LONG
 Cog0    Sub-Test Results: Pass: 40, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #13: ensure no errors on read
 Cog0     ECode: SUCCESS: No error
@@ -75,6 +79,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #14: read last LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #15: ensure no errors on read last
 Cog0     ECode: SUCCESS: No error
@@ -84,6 +89,7 @@ Cog0  * Test #16: BAD: see beyond end of file
 Cog0     ECode: E_FILE_SEEK: Attempted seek past either end of file
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #17: Close file we were reading
 Cog0     ECode: SUCCESS: No error
@@ -101,9 +107,11 @@ Cog0  * Test #19: BAD: seek on write-only file
 Cog0     ECode: E_FILE_MODE: file not opened in desired mode
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #20: Write N of longs
 Cog0    Sub-Test Results: Pass: 991, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #21: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
@@ -111,7 +119,7 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs2blk.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$0794] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
+Cog0      1: [$0DDE] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
 Cog0      2: [$0000] BODY/last, thisID=2, endPtr=$000C, lifeCycle [erased], sig=[$00C0_02FE]
 Cog0
 Cog0  * Test #22: Close written file
@@ -130,8 +138,8 @@ Cog0
 Cog0  * Test #24: Ensure expected file stats
 Cog0    File: [seekLongs2blk.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$0794] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
-Cog0      2: [$0743] BODY/last, thisID=2, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_027E]
+Cog0      1: [$0DDE] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
+Cog0      2: [$0EB2] BODY/last, thisID=2, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_027E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_964
 Cog0     -> pass
@@ -144,6 +152,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #26: read 1st LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #27: ensure no errors on read 1st
 Cog0     ECode: SUCCESS: No error
@@ -151,6 +160,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #28: read 20 longs randomly ensure offset is value of LONG
 Cog0    Sub-Test Results: Pass: 40, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #29: ensure no errors on read
 Cog0     ECode: SUCCESS: No error
@@ -158,6 +168,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #30: read last LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #31: ensure no errors on read last
 Cog0     ECode: SUCCESS: No error
@@ -167,6 +178,7 @@ Cog0  * Test #32: BAD: see beyond end of file
 Cog0     ECode: E_FILE_SEEK: Attempted seek past either end of file
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #33: Close file we were reading
 Cog0     ECode: SUCCESS: No error
@@ -184,9 +196,11 @@ Cog0  * Test #35: BAD: seek on write-only file
 Cog0     ECode: E_FILE_MODE: file not opened in desired mode
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #36: Write N of longs
 Cog0    Sub-Test Results: Pass: 2_013, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #37: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
@@ -194,8 +208,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs3blk.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0645] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
-Cog0      2: [$0E10] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      1: [$0EBA] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
+Cog0      2: [$0AE5] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
 Cog0      3: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05FE]
 Cog0
 Cog0  * Test #38: Close written file
@@ -214,9 +228,9 @@ Cog0
 Cog0  * Test #40: Ensure expected file stats
 Cog0    File: [seekLongs3blk.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0645] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
-Cog0      2: [$0E10] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
-Cog0      3: [$07C9] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
+Cog0      1: [$0EBA] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
+Cog0      2: [$0AE5] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      3: [$03F0] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_052
 Cog0     -> pass
@@ -229,6 +243,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #42: read 1st LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #43: ensure no errors on read 1st
 Cog0     ECode: SUCCESS: No error
@@ -236,6 +251,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #44: read 20 longs randomly ensure offset is value of LONG
 Cog0    Sub-Test Results: Pass: 40, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #45: ensure no errors on read
 Cog0     ECode: SUCCESS: No error
@@ -243,6 +259,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #46: read last LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #47: ensure no errors on read last
 Cog0     ECode: SUCCESS: No error
@@ -252,6 +269,7 @@ Cog0  * Test #48: BAD: see beyond end of file
 Cog0     ECode: E_FILE_SEEK: Attempted seek past either end of file
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #49: Close file we were reading
 Cog0     ECode: SUCCESS: No error
@@ -269,9 +287,11 @@ Cog0  * Test #51: BAD: seek on write-only file
 Cog0     ECode: E_FILE_MODE: file not opened in desired mode
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #52: Write N of longs
 Cog0    Sub-Test Results: Pass: 3_033, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #53: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
@@ -279,8 +299,8 @@ Cog0     -> pass
 Cog0
 Cog0    File: [seekLongs3blkFull.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$00EC] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
-Cog0      2: [$0637] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      1: [$03A8] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
+Cog0      2: [$0BE5] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
 Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [erased], sig=[$FFC0_08FE]
 Cog0
 Cog0  * Test #54: Close written file
@@ -299,9 +319,9 @@ Cog0
 Cog0  * Test #56: Ensure expected file stats
 Cog0    File: [seekLongs3blkFull.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$00EC] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
-Cog0      2: [$0637] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$048F] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_087E]
+Cog0      1: [$03A8] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
+Cog0      2: [$0BE5] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$0884] BODY/last, thisID=8, endPtr=$0FFC, lifeCycle [ACTIVE-3], sig=[$FFC0_087E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 12_132
 Cog0     -> pass
@@ -314,6 +334,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #58: read 1st LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #59: ensure no errors on read 1st
 Cog0     ECode: SUCCESS: No error
@@ -321,6 +342,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #60: read 20 longs randomly ensure offset is value of LONG
 Cog0    Sub-Test Results: Pass: 40, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #61: ensure no errors on read
 Cog0     ECode: SUCCESS: No error
@@ -328,6 +350,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #62: read last LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #63: ensure no errors on read last
 Cog0     ECode: SUCCESS: No error
@@ -337,6 +360,7 @@ Cog0  * Test #64: BAD: see beyond end of file
 Cog0     ECode: E_FILE_SEEK: Attempted seek past either end of file
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #65: Close file we were reading
 Cog0     ECode: SUCCESS: No error
@@ -354,6 +378,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #67: read 1st LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #68: ensure no errors on read 1st
 Cog0     ECode: SUCCESS: No error
@@ -363,6 +388,7 @@ Cog0  * Test #69: read 10 longs seeking relative to current location
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 11, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #70: ensure no errors on read
 Cog0     ECode: SUCCESS: No error
@@ -370,6 +396,7 @@ Cog0     -> pass
 Cog0
 Cog0  * Test #71: read last LONG
 Cog0    Sub-Test Results: Pass: 2, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #72: ensure no errors on read last
 Cog0     ECode: SUCCESS: No error
@@ -379,6 +406,7 @@ Cog0  * Test #73: BAD: seek beyond end of file
 Cog0     ECode: E_FILE_SEEK: Attempted seek past either end of file
 Cog0     -> pass
 Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0     -> pass
 Cog0
 Cog0  * Test #74: Close file we were reading
 Cog0     ECode: SUCCESS: No error

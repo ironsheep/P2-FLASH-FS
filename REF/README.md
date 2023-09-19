@@ -61,9 +61,7 @@ This is my work in progress as I'm working toward customer facing release of the
 
 ## License
 
-Copyright © 2022 Iron Sheep Productions, LLC. All rights reserved.
-
-Licensed under the MIT License.
+Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
 
 Follow these links for more information:
 

@@ -97,6 +97,7 @@ This is a recap of the version history of these files:
 |  <PRE>2023-Sep-12</PRE> | More Tests `RT_read_write_append_tests.spin2`<br>Added testing of flush() method when used with appends.
 |  <PRE>2023-Sep-12</PRE> | More Tests `RT_read_write_tests.spin2`<br>Added testing of unmount() and mount() methods
 |  <PRE>2023-Sep-13</PRE> | More Tests `RT_read_seek_tests.spin2`<br>Added testing of seek()'s new "current position relative" feature
+|  <PRE>2023-Sep-19</PRE> | More Tests `RT_read_write_8cog_tests.spin2`<br>Added testing of multi-cog support
 
 ## Test files by Stephen
 
@@ -110,6 +111,9 @@ This is my work in progress as I'm working toward customer facing release of the
 | [RT\_mount\_handle\_basics_tests.log](RT_mount_handle_basics_tests.log) | Log of the read/write basic types tests [85 passes, 0 fails] |
 | [RT\_read\_seek_tests.spin2](RT_read_seek_tests.spin2) | The open for read seek test suite |
 | [RT\_read\_seek_tests.log](RT_read_seek_tests.log) | Log of the open for read seek tests [97 passes, 0 fails] |
+| [RT\_read\_write\_8cog_tests.spin2](RT_read_write_8cog_tests.spin2) | The multi-cog testing suite |
+| [RT\_read\_write\_8cog_tests.log](RT_read_write_8cog_tests.log) | Log of the multi-cog tests [231 passes, 0 fails] |
+| [RT\_read\_write\_8cog\_tests_byCog.log](RT_read_write_8cog_tests_byCog.log) | Log of the multi-cog tests - **Sorted by COG** [231 passes, 0 fails] |
 | [RT\_read\_write\_block_tests.spin2](RT_read_write_block_tests.spin2) | The read/write records(blocks) test suite  |
 | [RT\_read\_write\_block_tests.log](RT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [42 passes, 0 fails] |
 | [RT\_read\_write\_circular_tests.spin2](RT_read_write_circular_tests.spin2) | The read/write circular test suite |
@@ -121,7 +125,6 @@ This is my work in progress as I'm working toward customer facing release of the
 
 ### Next Steps:
 
-- finish tests for multi-cog reads/writes 
 - certify life-cycle changes for blocks of files created/modified (this is visuall checked for now...)
 - finish tests for read-modify write modes (*When this feature arrives, soonish*)
 - ...
@@ -146,9 +149,7 @@ This is my work in progress as I'm working toward customer facing release of the
 
 ## License
 
-Copyright © 2023 Iron Sheep Productions, LLC. All rights reserved.
-
-Licensed under the MIT License.
+Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
 
 Follow these links for more information:
 

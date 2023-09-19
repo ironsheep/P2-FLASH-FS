@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 14 SEP 2023
+''   Updated.... 19 SEP 2023
 ''
 '' =================================================================================================
 
@@ -30,6 +30,18 @@ VAR { test stats vars }
     LONG    failCountSub
 
     LONG    varSignature
+
+    LONG    pCurrRefDir
+    LONG    refFileCount
+    LONG    foundFileCount
+    LONG    refByteCount
+    LONG    calcBlocks
+    LONG    refBlocks
+    LONG    pRefFilename
+    LONG    bPassed
+    LONG    bBadEntry
+    LONG    pPassFail
+
 
 pub null()
 
@@ -64,6 +76,8 @@ pub startTest(pDesciption) | ecGot, ecExpected
             failCount++
         else
             passCount++
+        pPassFail := failCountSub <> 0 ? @"FAIL" : @"pass"
+        debug("   -> ", zstr_(pPassFail))
         passCountSub := 0
         failCountSub := 0
     numberTests++
@@ -143,6 +157,18 @@ pub evaluateSingleValue(result, pMessage, expectedResult)
     debug("   -> ", zstr_(pPassFail))
 
 
+pub evaluateHandle(resultHandle, pMessage)
+    bPassed := resultHandle >= 0
+    pPassFail := !bPassed ? @"FAIL" : @"pass"
+    ifnot bPassed
+        debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle), " (expected >= 0)")
+        failCount++
+    else
+        debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle))
+        passCount++
+    debug("   -> ", zstr_(pPassFail))
+
+
 pub showFileDetails(pFilename) | bytesUsed, bytes_free, block_count
     debug(" ")  ' blank line
     'debug("* showFileDetails()...ENTRY")
@@ -154,8 +180,11 @@ pub showFileDetails(pFilename) | bytesUsed, bytes_free, block_count
         debug("  File: [", zstr_(pFilename), "], ", udec(bytesUsed, bytes_free, block_count))
     'debug("* showFileDetails()...EXIT")
 
-pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount
+pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount, status
     pFilename := flash.TEST_filename_for_handle(handle)
+    status := flash.error()
+    if pFilename == 0
+        debug("  # getFnFmHndl Error: ", zstr_(flash.string_for_error(status)))
     debug(" ")  ' blank line
     debug("  File: [", zstr_(pFilename), "] pending commit")
     pSignatureAr, signatureCount := flash.TEST_getCommitBlockSignatures(handle)
@@ -377,19 +406,6 @@ pub blocksAllocatedFor(sizeInBytes) : maxAllocationBlocks | bodyBlocks
         bodyBlocks := ((sizeInBytes - flash.BYTES_IN_HEAD_BLOCK) + (flash.BYTES_IN_BODY_BLOCK - 1)) / flash.BYTES_IN_BODY_BLOCK
         maxAllocationBlocks += bodyBlocks
 
-dat
-    pCurrRefDir     long    0
-    refFileCount    long    0
-    foundFileCount  long    0
-    refByteCount    long    0
-    calcBlocks      long    0
-    refBlocks       long    0
-    pRefFilename    long    0
-    bStop           long    0
-    bPassed         long    0
-    bBadEntry       long    0
-    pPassFail       long    0
-
 pub checkMatchingEntries(pDirEntries) | ID, Bytes, byte Filename[128], byte Buff[30]
 {
         ' structure for directory checking
@@ -410,7 +426,7 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
     repeat
         pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
         refByteCount := LONG[pCurrRefDir][1]            ' get byte count
-        refblocks    := LONG[pCurrRefDir][2]            ' get block count
+        refBlocks    := LONG[pCurrRefDir][2]            ' get block count
         flash.directory(@ID, @Filename, @Bytes)         'get next file
         if pRefFilename == 0                            ' if not beyond last REF entry
             'debug(" - end of table entries!")
@@ -540,6 +556,8 @@ con { license }
   =================================================================================================
 
   Terms of Use: MIT License
+
+  Copyright (c) 2023 Iron Sheep Productions, LLC
 
   Permission is hereby granted, free of charge, to any person obtaining a copy of this
   software and associated documentation files (the "Software"), to deal in the Software
