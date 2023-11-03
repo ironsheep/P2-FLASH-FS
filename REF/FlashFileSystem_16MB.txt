@@ -3,16 +3,33 @@ Object "FlashFileSystem_16MB" Interface:
 
 PUB Format()
 PUB Mount()
-PUB OpenRead(pFilename) : handle
-PUB SeekRead(handle, pointer)
-PUB ByteRead(handle) : b
-PUB OpenWrite(pFilename) : handle
-PUB OpenAppend(pFilename) : handle
-PUB ByteWrite(handle, b)
-PUB Close(handle)
+PUB Unmount()
+PUB OpenRead(pFilename) : Handle
+PUB OpenWrite(pFilename) : Handle
+PUB OpenAppend(pFilename) : Handle
+PUB OpenAppendFroncate(pFilename, SizeLimit) : Handle
+PUB OpenModify(pFilename) : Handle
+PUB SeekRel(Handle, Rel)
+PUB Seek(Handle, Location)
+PUB Tell(Handle) : Location
+PUB ReadStr(Handle, pBuff, MaxLength, EndChr) : ChrCount
+PUB ReadBytes(Handle, pBuff, MaxLength) : ByteCount
+PUB ReadLong(Handle) : DataLong
+PUB ReadWord(Handle) : DataWord
+PUB ReadByte(Handle) : DataByte
+PUB WriteStr(Handle, pStr, MaxLength)
+PUB WriteBytes(Handle, pBytes, Length)
+PUB WriteLong(Handle, DataLong)
+PUB WriteWord(Handle, DataWord)
+PUB WriteByte(Handle, DataByte)
+PUB Flush(Handle)
+PUB Close(Handle)
+PUB MakeFile(pFilename, Size)
+PUB Froncate(pFilename, SizeLimit)
+PUB Truncate(pFilename, SizeLimit)
 PUB Delete(pFilename)
 PUB Rename(pOldFilename, pNewFilename)
-PUB Exists(pFilename) : result
+PUB Exists(pFilename) : DoesExist
 PUB SizeOf(pFilename) : ByteCount
 PUB Directory(pID, pFilename, pSize)
 PUB Stats() : UsedBlocks, FreeBlocks, FileCount
@@ -27,42 +44,165 @@ PUB Mount()
 
  Mount file system so it is ready to use
 
+_____________
+PUB Unmount()
+
+ Unmount file system by closing all open handles
+
 ________________________________
-PUB OpenRead(pFilename) : handle
+PUB OpenRead(pFilename) : Handle
 
  Open a file for reading, returns handle
-
-_____________________________
-PUB SeekRead(handle, pointer)
-
- Go to location in file opened for reading
- if pointer exceeds size of file, ByteRead() will return -1
-
-________________________
-PUB ByteRead(handle) : b
-
- Read next byte from file opened for reading
+ Subsequent calls are allowed to:
+   SeekRel(), Seek(), Tell()
+   ReadByte(), ReadWord(), ReadLong(), ReadBytes(), ReadStr()
+   Close() - releases handle
 
 _________________________________
-PUB OpenWrite(pFilename) : handle
+PUB OpenWrite(pFilename) : Handle
 
- Open a file for (re)writing, returns handle
+ Open a file for writing or rewriting, returns handle
+ Subsequent calls are allowed to:
+   Tell()
+   WriteByte(), WriteWord(), WriteLong(), WriteBytes(), WriteStr()
+   Flush()
+   Close() - releases handle
 
 __________________________________
-PUB OpenAppend(pFilename) : handle
+PUB OpenAppend(pFilename) : Handle
 
- Open a file for appending, returns handle
- if file doesn't exist, it will be created
+ Open a file for appending or writing, returns handle
+ Subsequent calls are allowed to:
+   Tell()
+   WriteByte(), WriteWord(), WriteLong(), WriteBytes(), WriteStr()
+   Flush()
+   Close() - releases handle
+
+_____________________________________________________
+PUB OpenAppendFroncate(pFilename, SizeLimit) : Handle
+
+ Open a file for appending or writing with a froncating file size limit, returns handle
+ Subsequent calls are allowed to:
+   Tell()
+   WriteByte(), WriteWord(), WriteLong(), WriteBytes(), WriteStr()
+   Flush()
+   Close() - releases handle
+
+__________________________________
+PUB OpenModify(pFilename) : Handle
+
+ Open an existing file for reading and writing within current file boundaries, returns handle
+ Subsequent calls are allowed to:
+   SeekRel(), Seek(), Tell()
+   ReadByte(), ReadWord(), ReadLong(), ReadBytes(), ReadStr()
+   WriteByte(), WriteWord(), WriteLong(), WriteBytes(), WriteStr()
+   Flush()
+   Close() - releases handle
 
 ________________________
-PUB ByteWrite(handle, b)
+PUB SeekRel(Handle, Rel)
 
- Write next byte to file opened for (re)writing
+ Go to relative location in file opened for reading or modifying
+ if Location >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
+
+__________________________
+PUB Seek(Handle, Location)
+
+ Go to location in file opened for reading or modifying
+ if Location >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
+
+___________________________
+PUB Tell(Handle) : Location
+
+ Return current location in file
+
+________________________________________________________
+PUB ReadStr(Handle, pBuff, MaxLength, EndChr) : ChrCount
+
+ Read a string from a file opened for reading/modifying
+ - pBuff must point to a buffer which will receive the string plus a zero terminator
+ - MaxLength is the maximum number of characters to read into the buffer, not including the zero terminator
+ - EndChr is the character which will signify the end of the input string (ie $00/$09/$0D/$0A/$20)
+ - ChrCount returns the number of characters read, not including the zero terminator
+
+___________________________________________________
+PUB ReadBytes(Handle, pBuff, MaxLength) : ByteCount
+
+ Read bytes from a file opened for reading/modifying
+ - pBuff must point to a buffer which will receive the bytes
+ - MaxLength is the maximum number of bytes to read into the buffer
+ - ByteCount returns the number of bytes read, in case the end of file was reached
+
+_______________________________
+PUB ReadLong(Handle) : DataLong
+
+ Read the next long from a file opened for reading/modifying
+
+_______________________________
+PUB ReadWord(Handle) : DataWord
+
+ Read the next word from a file opened for reading/modifying
+
+_______________________________
+PUB ReadByte(Handle) : DataByte
+
+ Read the next byte from a file opened for reading/modifying
+ - returns -1 if at end of file, cannot advance
+
+_____________________________________
+PUB WriteStr(Handle, pStr, MaxLength)
+
+ Write a string to a file opened for writing/appending/modifying
+ - pStr must point to a zero-terminated string
+ - MaxLength is the maximum number of characters to write
+ - The zero terminator will not be written to the file
+
+______________________________________
+PUB WriteBytes(Handle, pBytes, Length)
+
+ Write bytes to a file opened for writing/appending/modifying
+ - pBytes must point to the bytes
+ - Length must contain the number of bytes to be written
+
+_______________________________
+PUB WriteLong(Handle, DataLong)
+
+ Write a long to a file opened for writing/appending/modifying
+
+_______________________________
+PUB WriteWord(Handle, DataWord)
+
+ Write a word to a file opened for writing/appending/modifying
+
+_______________________________
+PUB WriteByte(Handle, DataByte)
+
+ Write a byte to a file opened for writing/appending/modifying
 
 _________________
-PUB Close(handle)
+PUB Flush(Handle)
 
- Close an open file, completes file (re)write, frees handle
+ Flush write buffer, completes any write operation, but leaves file open
+
+_________________
+PUB Close(Handle)
+
+ Close an open file, completes any write operation, frees handle
+
+_____________________________
+PUB MakeFile(pFilename, Size)
+
+ Make a file of a certain size filled with $FF bytes - use OpenModify() to read and write contents
+
+__________________________________
+PUB Froncate(pFilename, SizeLimit)
+
+ Froncate a file - limits file size, measured from end of file, by trimming the front of the file
+
+__________________________________
+PUB Truncate(pFilename, SizeLimit)
+
+ Truncate a file - limits file size, measured from start of file, by trimming the end of the file
 
 _____________________
 PUB Delete(pFilename)
@@ -74,24 +214,24 @@ PUB Rename(pOldFilename, pNewFilename)
 
  Rename a file
 
-______________________________
-PUB Exists(pFilename) : result
+_________________________________
+PUB Exists(pFilename) : DoesExist
 
  Check if a file exists
 
 _________________________________
 PUB SizeOf(pFilename) : ByteCount
 
- Get size of file in bytes
+ Get the size of a file
 
 ____________________________________
 PUB Directory(pID, pFilename, pSize)
 
- Get next file's filename and size in bytes via current ID
- - Initialize ID to 0, will be auto-advanced by each call to this method
- - When filename returns empty, no more files
+ Get the next file's filename and size, in bytes, via the current ID
+ - Initialize ID to 0, then ID will be advanced by each call to this method
+ - When filename returns empty, there are no more files
 
 _______________________________________________
 PUB Stats() : UsedBlocks, FreeBlocks, FileCount
 
- Get stats on used/free blocks and file count
+ Get stats on used blocks, free blocks, and number of files

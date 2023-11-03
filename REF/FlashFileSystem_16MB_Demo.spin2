@@ -1,17 +1,21 @@
 CON	_CLKFREQ	= 320_000_000
 
+  debug_top = 20
+  debug_height = 2400
+
 OBJ     Flash : "FlashFileSystem_16MB"
 
 
+VAR byte fbuff[10000]
 PUB gox()
 
   debug("Abort", sdec(\go()))
 
-PUB go()
+PUB go() | i
 
   Flash.Format()		'Comment out this line to not erase all files
   Flash.Mount()
-
+  
   ShowStats()			'Do a bunch of file stuff while reporting status, along the way
   ShowFiles()
 
@@ -19,8 +23,8 @@ PUB go()
   WriteFile(@"file2", @file2)
   WriteFile(@"file3", @file3)
 
-
-  AppendFile(@"file2", @" Appended.")
+  AppendFile(@"file2", @"Appended.")
+  AppendFile(@"file3", @"Appended.")
 
   ShowStats()
   ShowFiles()
@@ -28,7 +32,17 @@ PUB go()
   if Flash.Exists(@"file3") and not Flash.Exists(@"Apples")
     Flash.Rename(@"file3",@"Apples")
 
-  Flash.Delete(@"file1")
+  repeat i from 1 to 10'366+20
+    AppendFile2(@"file1")
+    ReadFile2(@"file1", @fbuff)
+    debug(udec(i), zstr_(@fbuff))
+
+  flash.MakeFile(@"AAA", 12000)
+
+  flash.MakeFile(@"Made", 10000)
+  'Flash.Delete(@"file1")
+
+  ModifyFile(@"file1", 1, @"abc")
 
   ShowStats()
   ShowFiles()
@@ -40,12 +54,13 @@ PRI ShowStats() | BlocksUsed, BlocksFree, Files
   debug(udec(BlocksUsed, BlocksFree, Files))
 
 
-PRI ShowFiles() | ID, Bytes, Handle, Ptr, x, byte Filename[60], byte Buff[30]
+PRI ShowFiles() | ID, Bytes, Handle, Ptr, x, byte Filename[$80], byte Buff[15000]
   repeat
     Flash.Directory(@ID, @Filename, @Bytes)			'get next file
-    if Filename[0]						'is there a filename?
+    if Filename[0]						'is there a filename?	
+      bytefill(@Buff, 0, 100)
       ReadFile(@Filename, @Buff)				'read file
-      debug(zstr(@Filename), udec(Bytes, ID), zstr(@Buff))	'show filename, bytes, ID, and file contents
+      debug(zstr(@Filename), udec(Bytes, ID), zstr_(@Buff), zstr_(@Buff + strsize(@Buff) + 1))	'show filename, bytes, ID, and file contents
     else
       quit							'no more files, quit
 
@@ -54,7 +69,7 @@ PRI ReadFile(pFilename, pBuff) | Handle, x
 
   Handle := Flash.OpenRead(pFilename)				'open file for reading
   repeat Flash.SizeOf(pFilename)
-    byte[pBuff++] := Flash.ByteRead(Handle)			'read bytes
+    byte[pBuff++] := Flash.ReadByte(Handle)			'read bytes
 
   Flash.Close(Handle)						'close file
 
@@ -66,7 +81,7 @@ PRI WriteFile(pFilename, pBuff) | Handle
   Handle := Flash.OpenWrite(pFilename)				'open file for writing
 
   repeat							'write bytes until 0 written
-    Flash.ByteWrite(Handle, byte[pBuff])
+    Flash.WriteByte(Handle, byte[pBuff])
   while byte[pBuff++]
 
   Flash.Close(Handle)						'close file
@@ -76,12 +91,45 @@ PRI AppendFile(pFilename, pBuff) | Handle
 
   debug("Appending: ", zstr_(pFilename))
 
-  Handle := Flash.OpenAppend(pFilename)				'open file for appending
+  Handle := Flash.OpenAppendFroncate(pFilename, 9)			'open file for appending
 
   repeat							'write bytes until 0 written
-    Flash.ByteWrite(Handle, byte[pBuff])
+    Flash.WriteByte(Handle, byte[pBuff])
   while byte[pBuff++]
 
+  Flash.Close(Handle)						'close file
+
+
+PRI AppendFile2(pFilename) | Handle
+
+  Handle := Flash.OpenAppendFroncate(pFilename, 10)			'open file for appending
+  repeat 11
+    Flash.WriteByte(Handle, chr1)
+    if chr1 == "9"
+      chr1 := "0"
+    else
+      chr1++
+  Flash.Close(Handle)						'close file
+
+  'Flash.Truncate(pFilename, 0)
+
+
+PRI ReadFile2(pFilename, pBuff) | Handle, x
+
+  Handle := Flash.OpenRead(pFilename)				'open file for reading
+  repeat Flash.SizeOf(pFilename)
+    byte[pBuff++] := Flash.ReadByte(Handle)			'read bytes
+  byte[pBuff] := 0
+
+  Flash.Close(Handle)						'close file
+
+
+PRI ModifyFile(pFilename, Location, pData) | Handle
+
+  Handle := Flash.OpenModify(pFilename)				'open file for appending
+  Flash.Seek(Handle, Location)
+  repeat strsize(pData)
+    Flash.WriteByte(Handle, byte[pData++])
   Flash.Close(Handle)						'close file
 
 
@@ -90,3 +138,5 @@ DAT
 file1   byte    "The car goes.",0
 file2   byte    "His cat meows.",0
 file3   byte    "My boat floats.",0
+chr1	byte	"0"
+
