@@ -297,18 +297,21 @@ PUB OpenModify(pFilename) : handle | signature
   StartModify(handle, sWRITE | sMODIFY, signature.[19..8], 0)  'go to start of file
 
 
-PUB SeekRel(handle, Rel)
+PUB SeekRel(handle, Rel): status
 
 '' Go to relative location in file opened for reading or modifying
 '' if Location >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
 
-  Seek(handle, hLocation[handle] + Rel)
+  return Seek(handle, hLocation[handle] + Rel)
 
 
 PUB Seek(handle, Location): status | blockID, pBuff
 
 '' Go to location in file opened for reading or modifying
 '' if Location >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
 
   pBuff := BlockBuffPtr(handle)             'get block buffer pointer
 
@@ -331,6 +334,9 @@ PUB Tell(handle) : Location
 
 '' Return current location in file
 
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
   return hLocation[handle]
 
 
@@ -341,6 +347,9 @@ PUB ReadStr(handle, pBuff, MaxLength, EndChr) : ChrCount | DataByte
 '' - MaxLength is the maximum number of characters to read into the buffer, not including the zero terminator
 '' - EndChr is the character which will signify the end of the input string (ie $00/$09/$0D/$0A/$20)
 '' - ChrCount returns the number of characters read, not including the zero terminator
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
 
   repeat while MaxLength--              'while within maximum length..
     if (DataByte := ReadByte(handle)) < 0       '..get next byte, check for end of file
@@ -359,6 +368,9 @@ PUB ReadBytes(handle, pBuff, MaxLength) : byteCount | DataByte
 '' - MaxLength is the maximum number of bytes to read into the buffer
 '' - byteCount returns the number of bytes read, in case the end of file was reached
 
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
   repeat while MaxLength--              'while within maximum length..
     if (DataByte := ReadByte(handle)) < 0       '..get next byte, check for end of file
       quit                      '..quit if end of file
@@ -369,6 +381,9 @@ PUB ReadLong(handle) : DataLong
 
 '' Read the next long from a file opened for reading/modifying
 
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
   DataLong.Word[0] := ReadWord(handle)
   DataLong.Word[1] := ReadWord(handle)
 
@@ -376,6 +391,9 @@ PUB ReadLong(handle) : DataLong
 PUB ReadWord(handle) : DataWord
 
 '' Read the next word from a file opened for reading/modifying
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
 
   DataWord.Byte[0] := ReadByte(handle)
   DataWord.Byte[1] := ReadByte(handle)
@@ -386,6 +404,9 @@ PUB ReadByte(handle) : DataByte | pBuff, signature
 '' Read the next byte from a file opened for reading/modifying
 '' - returns -1 if at end of file, cannot advance, or
 ''           eNotAllowed is not a legal operation for the open file
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
 
   pBuff := BlockBuffPtr(handle)             'get block buffer pointer
   signature := long[pBuff]                 'get header long
@@ -418,6 +439,9 @@ PUB WriteStr(handle, pStr, MaxLength) | Chr
 '' - MaxLength is the maximum number of characters to write
 '' - The zero terminator will not be written to the file
 
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
   repeat MaxLength
     ifnot (Chr := byte[pStr++])
       quit
@@ -430,6 +454,9 @@ PUB WriteBytes(handle, pBytes, Length)
 '' - pBytes must point to the bytes
 '' - Length must contain the number of bytes to be written
 
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
   repeat Length
     WriteByte(handle, byte[pBytes++])
 
@@ -437,6 +464,9 @@ PUB WriteBytes(handle, pBytes, Length)
 PUB WriteLong(handle, DataLong)
 
 '' Write a long to a file opened for writing/appending/modifying
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
 
   WriteWord(handle, DataLong.word[0])
   WriteWord(handle, DataLong.word[1])
@@ -446,6 +476,9 @@ PUB WriteWord(handle, DataWord)
 
 '' Write a word to a file opened for writing/appending/modifying
 
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
   WriteByte(handle, DataWord.byte[0])
   WriteByte(handle, DataWord.byte[1])
 
@@ -453,6 +486,9 @@ PUB WriteWord(handle, DataWord)
 PUB WriteByte(handle, DataByte): status | pBuff, NextID
 
 '' Write a byte to a file opened for writing/appending/modifying
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
 
   pBuff := BlockBuffPtr(handle)             'get block buffer pointer
 
@@ -489,6 +525,9 @@ PUB WriteByte(handle, DataByte): status | pBuff, NextID
 
 PUB Flush(handle): status
 
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
+
 '' Flush write buffer, completes any write operation, but leaves file open
 
   case hStatus[handle]
@@ -508,6 +547,9 @@ PUB Flush(handle): status
 PUB Close(handle) | Status, SizeLimit, headBlockID, forkBlockID, forkBlockAddress, forkState
 
 '' Close an open file, completes any write operation, frees handle
+
+  if handle < 0 or handle > MAX_FILES_OPEN - 1
+     return eInvalidHandle
 
   case Status := hStatus[handle]~           'get handle and post-clear it
 
@@ -703,28 +745,26 @@ PUB Stats() : UsedBlocks, FreeBlocks, FileCount | blockAddress
       sBODY: UsedBlocks++
 
 
-'*******************
-'* Private Methods *
-'*******************
+CON ' --- Private Methods ---
 
-PRI CheckBlockAndFixAnyDuplicateID(ThisBlock) | otherBlockAddress, cycleBits, otherCycleBits, blockID
+PRI CheckBlockAndFixAnyDuplicateID(blockAddress) | otherBlockAddress, cycleBits, otherCycleBits, blockID
 
-  ReadBlock(ThisBlock, @cycleBits, $000, $000)                  'read first byte of block
+  ReadBlock(blockAddress, @cycleBits, $000, $000)                  'read first byte of block
 
   ifnot lookdown(cycleBits.[7..5]: %011, %101, %110)                'if block is canceled or inactive..
     return                              '..block status remains sFREE, done
 
-  ReadBlock(ThisBlock, @tmpBlockBuffer, $000, $FFF)              'read entire block
+  ReadBlock(blockAddress, @tmpBlockBuffer, $000, $FFF)              'read entire block
 
   if long[@tmpBlockBuffer + $FFC] <> getBlockCRC(@tmpBlockBuffer)            'if CRC is bad..
-    CancelBlock(ThisBlock)                      '..cancel block to inhibit future CRC checks
+    CancelBlock(blockAddress)                      '..cancel block to inhibit future CRC checks
     return                              '..block status remains sFREE, done
 
   blockID := tmpBlockBuffer.long.[19..8]                      'this block is good, get its block ID
 
   ifnot field[IDValid][blockID]~~                        'set block ID flag and if it wasn't already set..
-    field[IDToBlock][blockID] := ThisBlock                   '..set IDToBlock to this block
-    field[BlockState][ThisBlock] := sTEMP               '..set sTEMP status for this block
+    field[IDToBlock][blockID] := blockAddress                   '..set IDToBlock to this block
+    field[BlockState][blockAddress] := sTEMP               '..set sTEMP status for this block
     return                              '..done
 
   otherBlockAddress := field[IDToBlock][blockID]                    'block ID flag was already set, get other block with same block ID
@@ -732,12 +772,12 @@ PRI CheckBlockAndFixAnyDuplicateID(ThisBlock) | otherBlockAddress, cycleBits, ot
   ReadBlock(otherBlockAddress, @otherCycleBits, $000, $000)                 'read first byte of other block
 
   if lookdown(cycleBits.[7..5] << 3 | otherCycleBits.[7..5]: %011_110, %101_011, %110_101)   'if this block is newer..
-    field[IDToBlock][blockID] := ThisBlock                   '..set IDToBlock to this block
-    field[BlockState][ThisBlock] := sTEMP               '..set sTEMP status for this block
+    field[IDToBlock][blockID] := blockAddress                   '..set IDToBlock to this block
+    field[BlockState][blockAddress] := sTEMP               '..set sTEMP status for this block
     field[BlockState][otherBlockAddress] := sFREE              '..set sFREE status for other block
     CancelBlock(otherBlockAddress)                     '..cancel other block
   else
-    CancelBlock(ThisBlock)                      'else, cancel this block, block status remains sFREE
+    CancelBlock(blockAddress)                      'else, cancel this block, block status remains sFREE
 
 
 PRI TraceFileAndSetFlags(blockAddress, Set) : Valid | signature, blockID
