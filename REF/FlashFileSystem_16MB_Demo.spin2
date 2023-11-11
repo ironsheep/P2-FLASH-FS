@@ -15,7 +15,7 @@ PUB go() | i
 
   Flash.Format()		'Comment out this line to not erase all files
   Flash.Mount()
-  
+
   ShowStats()			'Do a bunch of file stuff while reporting status, along the way
   ShowFiles()
 
@@ -57,7 +57,7 @@ PRI ShowStats() | BlocksUsed, BlocksFree, Files
 PRI ShowFiles() | ID, Bytes, Handle, Ptr, x, byte Filename[$80], byte Buff[15000]
   repeat
     Flash.Directory(@ID, @Filename, @Bytes)			'get next file
-    if Filename[0]						'is there a filename?	
+    if Filename[0]						'is there a filename?
       bytefill(@Buff, 0, 100)
       ReadFile(@Filename, @Buff)				'read file
       debug(zstr(@Filename), udec(Bytes, ID), zstr_(@Buff), zstr_(@Buff + strsize(@Buff) + 1))	'show filename, bytes, ID, and file contents
@@ -139,4 +139,3 @@ file1   byte    "The car goes.",0
 file2   byte    "His cat meows.",0
 file3   byte    "My boat floats.",0
 chr1	byte	"0"
-
