@@ -6,20 +6,20 @@ DST_SPIN_DIR="/Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Pr
 
 for FIL in `ls -1 "${DST_SPIN_DIR}" | egrep -v OLD | grep \.spin2`; do
         filename=`basename "${FIL}"`
-        RMTE_FIL=${SRC_SPIN_DIR}/${filename}
-        LOCL_FIL=${DST_SPIN_DIR}/${filename}
+        SRC_FIL=${SRC_SPIN_DIR}/${filename}
+        DST_FIL=${DST_SPIN_DIR}/${filename}
         #echo "Checking FILE: ${filename} <-> ${FIL}"
         #(set -x;md5 -q "${FIL}")
         #(set -x;md5 -q "${filename}")
         if [ -f "${filename}" ]; then
-                RMTE_SUM=`md5 -q "${RMTE_FIL}"`
-                LOCL_SUM=`md5 -q "${LOCL_FIL}"`
+                SRC_SUM=`md5 -q "${SRC_FIL}"`
+                DST_SUM=`md5 -q "${DST_FIL}"`
                 # compare the two sums
-                if [ "$LOCL_SUM" != "$RMTE_SUM" ]; then
-                        echo "- ${RMTE_SUM} : ${LOCL_SUM} : DIFFERENT  [${filename}]"
-                        (set -x; diff "$RMTE_FIL" "${LOCL_FIL}")
+                if [ "$DST_SUM" != "$SRC_SUM" ]; then
+                        echo "- ${SRC_SUM} : ${DST_SUM} : DIFFERENT  [${filename}]"
+                        (set -x; diff "$SRC_FIL" "${DST_FIL}")
                 else
-                        echo "* ${RMTE_SUM} : ${LOCL_SUM} : MATCH    [${filename}]"
+                        echo "* ${SRC_SUM} : ${DST_SUM} : MATCH    [${filename}]"
                 fi
         fi
 

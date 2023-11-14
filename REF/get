@@ -4,7 +4,7 @@
 SRC_SPIN_DIR="/Users/stephen/Library/CloudStorage/Dropbox/PropV2-Shared/FmToPeople/fmChip/NewFlashFS/driver-reWork-SMM"
 DST_SPIN_DIR="/Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/REF"
 
-for FIL in `ls -1 "${DST_SPIN_DIR}" | grep \.spin2`; do
+for FIL in `ls -1 "${DST_SPIN_DIR}" | egrep -v OLD | grep \.spin2`; do
         filename=`basename "${FIL}"`
         SRC_FIL=${SRC_SPIN_DIR}/${filename}
         DST_FIL=${DST_SPIN_DIR}/${filename}
