@@ -54,13 +54,13 @@ PRI ShowStats() | BlocksUsed, BlocksFree, Files
   debug(udec(BlocksUsed, BlocksFree, Files))
 
 
-PRI ShowFiles() | ID, Bytes, Handle, Ptr, x, byte Filename[$80], byte Buff[15000]
+PRI ShowFiles() | ID, ByteCount, Handle, Ptr, x, byte Filename[$80], byte Buff[15000]
   repeat
-    Flash.Directory(@ID, @Filename, @Bytes)			'get next file
+    Flash.Directory(@ID, @Filename, @ByteCount)			'get next file
     if Filename[0]						'is there a filename?
       bytefill(@Buff, 0, 100)
       ReadFile(@Filename, @Buff)				'read file
-      debug(zstr(@Filename), udec(Bytes, ID), zstr_(@Buff), zstr_(@Buff + strsize(@Buff) + 1))	'show filename, bytes, ID, and file contents
+      debug(zstr(@Filename), udec(ByteCount, ID), zstr_(@Buff), zstr_(@Buff + strsize(@Buff) + 1))	'show filename, bytes, ID, and file contents
     else
       quit							'no more files, quit
 

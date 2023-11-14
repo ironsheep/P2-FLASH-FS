@@ -297,7 +297,7 @@ PUB OpenModify(pFilename) : handle | signature
   StartModify(handle, sWRITE | sMODIFY, signature.[19..8], 0)  'go to start of file
 
 
-PUB SeekRel(handle, Rel): status
+PUB SeekRel(handle, Rel) : status
 
 '' Go to relative location in file opened for reading or modifying
 '' if Location >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
@@ -305,7 +305,7 @@ PUB SeekRel(handle, Rel): status
   return Seek(handle, hLocation[handle] + Rel)
 
 
-PUB Seek(handle, Location): status | blockID, pBuff
+PUB Seek(handle, Location) : status | blockID, pBuff
 
 '' Go to location in file opened for reading or modifying
 '' if Location >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
@@ -369,7 +369,7 @@ PUB ReadBytes(handle, pBuff, MaxLength) : byteCount | DataByte
 '' - byteCount returns the number of bytes read, in case the end of file was reached
 
   if handle < 0 or handle > MAX_FILES_OPEN - 1
-     return eInvalidHandle
+    return eInvalidHandle
 
   repeat while MaxLength--              'while within maximum length..
     if (DataByte := ReadByte(handle)) < 0       '..get next byte, check for end of file
@@ -382,7 +382,7 @@ PUB ReadLong(handle) : DataLong
 '' Read the next long from a file opened for reading/modifying
 
   if handle < 0 or handle > MAX_FILES_OPEN - 1
-     return eInvalidHandle
+    return eInvalidHandle
 
   DataLong.Word[0] := ReadWord(handle)
   DataLong.Word[1] := ReadWord(handle)
@@ -432,7 +432,7 @@ PUB ReadByte(handle) : DataByte | pBuff, signature
   return byte[pBuff][hBlockPtr[handle]++]       'return data byte and increment block pointer
 
 
-PUB WriteStr(handle, pStr, MaxLength) | Chr
+PUB WriteStr(handle, pStr, MaxLength) : status | Chr
 
 '' Write a string to a file opened for writing/appending/modifying
 '' - pStr must point to a zero-terminated string
@@ -448,7 +448,7 @@ PUB WriteStr(handle, pStr, MaxLength) | Chr
     WriteByte(handle, Chr)
 
 
-PUB WriteBytes(handle, pBytes, Length)
+PUB WriteBytes(handle, pBytes, Length) : status
 
 '' Write bytes to a file opened for writing/appending/modifying
 '' - pBytes must point to the bytes
@@ -461,7 +461,7 @@ PUB WriteBytes(handle, pBytes, Length)
     WriteByte(handle, byte[pBytes++])
 
 
-PUB WriteLong(handle, DataLong)
+PUB WriteLong(handle, DataLong) : status
 
 '' Write a long to a file opened for writing/appending/modifying
 
@@ -472,7 +472,7 @@ PUB WriteLong(handle, DataLong)
   WriteWord(handle, DataLong.word[1])
 
 
-PUB WriteWord(handle, DataWord)
+PUB WriteWord(handle, DataWord) : status
 
 '' Write a word to a file opened for writing/appending/modifying
 
@@ -483,7 +483,7 @@ PUB WriteWord(handle, DataWord)
   WriteByte(handle, DataWord.byte[1])
 
 
-PUB WriteByte(handle, DataByte): status | pBuff, NextID
+PUB WriteByte(handle, DataByte) : status | pBuff, NextID
 
 '' Write a byte to a file opened for writing/appending/modifying
 
@@ -523,7 +523,7 @@ PUB WriteByte(handle, DataByte): status | pBuff, NextID
   byte[pBuff][hBlockPtr[handle]++] := DataByte      'write byte into block buffer, post-increment pointer
 
 
-PUB Flush(handle): status
+PUB Flush(handle) : status
 
   if handle < 0 or handle > MAX_FILES_OPEN - 1
      return eInvalidHandle
@@ -544,14 +544,14 @@ PUB Flush(handle): status
       return eNotAllowed                 'flush not allowed, abort
 
 
-PUB Close(handle) | Status, SizeLimit, headBlockID, forkBlockID, forkBlockAddress, forkState
+PUB Close(handle) : status | FileMode, SizeLimit, headBlockID, forkBlockID, forkBlockAddress, forkState
 
 '' Close an open file, completes any write operation, frees handle
 
   if handle < 0 or handle > MAX_FILES_OPEN - 1
      return eInvalidHandle
 
-  case Status := hStatus[handle]~           'get handle and post-clear it
+  case FileMode := hStatus[handle]~           'get handle and post-clear it
 
     sWRITE, sWRITE | sFORK:             'write/rewrite/append mode?
       WriteBlock(handle, hBlockPtr[handle])     'write last block with EndPtr
@@ -578,7 +578,7 @@ PUB Close(handle) | Status, SizeLimit, headBlockID, forkBlockID, forkBlockAddres
         RewriteBlock(handle)                '..rewrite block
 
 
-PUB MakeFile(pFilename, Size) : status| headBlockID, ID, blockAddress, NotFirst, DataStart, Last, Pos, NextID_EndPtr
+PUB MakeFile(pFilename, Size) : status | headBlockID, ID, blockAddress, NotFirst, DataStart, Last, Pos, NextID_EndPtr
 
 '' Make a file of a certain size filled with $FF bytes - use OpenModify() to read and write contents
 
@@ -616,7 +616,7 @@ PUB MakeFile(pFilename, Size) : status| headBlockID, ID, blockAddress, NotFirst,
   ActivateBlock(field[IDToBlock][headBlockID], %011)         'now activate head block to activate file
 
 
-PUB Froncate(pFilename, SizeLimit): status | signature
+PUB Froncate(pFilename, SizeLimit) : status | signature
 
 '' Froncate a file - limits file size, measured from end of file, by trimming the front of the file
 
@@ -629,7 +629,7 @@ PUB Froncate(pFilename, SizeLimit): status | signature
   FroncateFile(signature.[19..8], SizeLimit)           'froncate file
 
 
-PUB Truncate(pFilename, SizeLimit): status | signature
+PUB Truncate(pFilename, SizeLimit) : status | signature
 
 '' Truncate a file - limits file size, measured from start of file, by trimming the end of the file
 
@@ -642,7 +642,7 @@ PUB Truncate(pFilename, SizeLimit): status | signature
   TruncateFile(signature.[19..8], SizeLimit)           'truncate file
 
 
-PUB Delete(pFilename): status | signature
+PUB Delete(pFilename) : status | signature
 
 '' Delete a file
 
@@ -679,7 +679,8 @@ PUB Rename(pOldFilename, pNewFilename) : status | signature, blockID, blockAddre
   if GetFileHeadSignature(pNewFilename)                    'if new file exists, abort
     return eFileExists
 
-  isFileOpen(pNewFilename, sREAD | sWRITE, eFileExists) 'if new file open, abort
+  if isFileOpen(pNewFilename, sREAD | sWRITE) 'if new file open, abort
+    return eFileExists
 
   blockAddress := NewBlock()                    'get a new block (may alter tmpBlockBuffer and IDToBlock)
 
@@ -981,7 +982,7 @@ PRI DeleteChainFromID(blockID, EndID, Mode, KeepFirstIDValid) | blockAddress, si
               blockID <> EndID)          'mode 2: delete to NextID = EndID
 
 
-PRI isFileOpen(pFilename, openModeBits): sattus | handle
+PRI isFileOpen(pFilename, openModeBits) : sattus | handle
 
  ' Return true if named file is open
 '
