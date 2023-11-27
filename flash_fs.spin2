@@ -2375,6 +2375,11 @@ pri next_block_address() : block_address | blockFreeCount, freeBlockAddress, fre
 
 
 pri setup_semaphore() : status
+
+' first called allocates lock if avail, subsequent just wait for allocation to complete
+'
+' @returns status - returns E_NO_LOCK_AVAIL if can't acquire semaphore, otherwise SUCCESS
+
     if fsLock == -1
         'debug("setupSemaphore() ENTRY")
         ifnot can_acquire_lock()
@@ -2396,6 +2401,17 @@ pri setup_semaphore() : status
     '   debug("setupLock() abort, already set up")
 
 pri can_acquire_lock() : bItsMe | myCogId, tmpCogId, lowestValue, lowestID
+
+' determine if first or subsequent caller
+'
+' @returns bItsMe - T/F where True means is first caller and therefore should acquire lock
+
+' Local Variables:
+' @local myCogId - hold codID of caller
+' @local tmpCogId - tmep cogID for iteration
+' @local lowestValue - lowest tic count
+' @local lowestID - cogID with lowest tic count
+
     lowestValue := $7fff_ffff   ' max signed long value
     bItsMe := false
     if fsLock == -1
