@@ -52,6 +52,8 @@ PUB go() : status
   ShowFiles()
 
   Flash.unmount()
+  debug("Done")
+  repeat
 
 PRI showError(pCaller, errorCode)
     debug("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
@@ -62,12 +64,12 @@ PRI ShowStats() | BlocksUsed, BlocksFree, Files
   debug(udec(BlocksUsed, BlocksFree, Files))
 
 
-PRI ShowFiles() | ID, Bytes, handle, Ptr, x, byte Filename[60], byte Buff[30]
+PRI ShowFiles() | ID, ByteCount, handle, Ptr, x, byte Filename[127+1], byte Buff[30]
   repeat
-    Flash.Directory(@ID, @Filename, @Bytes)                     'get next file
+    Flash.Directory(@ID, @Filename, @ByteCount)                 'get next file
     if Filename[0]                                              'is there a filename?
       ReadFile(@Filename, @Buff, 30)                            'read file
-      debug(zstr(@Filename), udec(Bytes, ID), zstr(@Buff))      'show filename, bytes, ID, and file contents
+      debug(zstr(@Filename), udec(ByteCount, ID), zstr(@Buff))  'show filename, bytes, ID, and file contents
     else
       quit                                                      'no more files, quit
 
