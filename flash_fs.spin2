@@ -1401,7 +1401,7 @@ pub string_for_error(error_code) : p_interpretation
 
     case error_code
         SUCCESS:                p_interpretation := @"SUCCESS: No error"
-        E_BAD_HANDLE:           p_interpretation := @"E_BAD_HANDLE: Handle in invalid"
+        E_BAD_HANDLE:           p_interpretation := @"E_BAD_HANDLE: Handle is invalid"
         E_NO_HANDLE:            p_interpretation := @"E_NO_HANDLE: Out of available handles"
         E_FILE_NOT_FOUND:       p_interpretation := @"E_FILE_NOT_FOUND: File not present"
         E_DRIVE_FULL:           p_interpretation := @"E_DRIVE_FULL: Out of space on flash chip"
@@ -1915,7 +1915,7 @@ pri finish_pending_writes(handle): status | ptr, signature, head_block_address
 '   hChainBlockID[handle] - blockID of first block being replaced (head block of file if write() or write_replace() or body block if append()
 
     if handle < 0 or handle > MAX_FILES_OPEN - 1
-        return (LONG[@errorCode][cogid()] := E_BAD_HANDLE)
+      return (LONG[@errorCode][cogid()] := E_BAD_HANDLE)
 
     status := SUCCESS
     case hStatus[handle]                                                          'get handle (don't clear)
