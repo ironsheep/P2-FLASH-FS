@@ -1,0 +1,99 @@
+CON
+  _CLKFREQ  = 320_000_000
+
+  debug_top = 20
+  'debug_height = 2400
+  debug_height = 1000
+
+  BUFFER_SIZE = 1024
+
+OBJ
+    Flash : "flash_0_fs"
+
+VAR
+
+  LONG  byteCount
+  BYTE  filename[127+1]
+  BYTE  rdBuffer[BUFFER_SIZE]
+
+PUB go() | moreFiles, currId, newCRC, errorCode
+
+  debug("* test compatibility: shipping FLASH F/S")
+  Flash.Mount()
+
+  ShowStats()           'Do a bunch of file stuff while reporting status, along the way
+  ShowFiles()
+  debug(" ")
+
+  moreFiles:=true
+  currId := 0
+  repeat
+    Flash.Directory(@currId, @filename, @byteCount)
+    if filename[0]
+      bytefill(@rdBuffer,0,BUFFER_SIZE)
+      errorCode := ReadFile(@filename, @rdBuffer)                'read file
+      if errorCode == Flash.SUCCESS
+        newCRC := calc_crc32(@rdBuffer, byteCount)
+        debug(zstr(@filename), udec(byteCount, currId), udec_long(newCRC))  'show file-unique details
+    else
+      moreFiles:= false
+  until !moreFiles
+
+  debug("* Done")
+  repeat
+
+PRI ShowStats() | BlocksUsed, BlocksFree, Files
+  'debug("ShowStats()")
+
+  BlocksUsed, BlocksFree, Files := Flash.Stats()
+  debug(udec(BlocksUsed, BlocksFree, Files))
+
+PRI ShowFiles() | ID, cntBytes, handle, Ptr, x, byte tmpFilename[127+1], byte Buff[15000]
+  'debug("ShowFiles()")
+  repeat
+    Flash.Directory(@ID, @tmpFilename, @cntBytes)         'get next file
+    if tmpFilename[0]                      'is there a filename?
+      bytefill(@Buff, 0, 120)
+      ReadFile(@tmpFilename, @Buff)                'read file
+      debug(zstr(@tmpFilename), udec(cntBytes, ID), " [", zstr_(@Buff), "](", udec_(strsize(@Buff) + 1), ")")
+      'debug(zstr(@tmpFilename), udec(cntBytes, ID))  'show filename, bytes, ID, and file contents
+    else
+      quit                          'no more files, quit
+
+PRI ReadFile(pFilename, pBuff) : errorCode | handle, x, len, bytesRead
+  'debug("ReadFile()")
+  errorCode := Flash.SUCCESS
+  len := Flash.file_size(pFilename)
+  if len < 0
+    errorCode := len
+    showError(@"file_size", pFilename, errorCode)
+  else
+    handle := Flash.open(pFilename,"R")               'open file for reading
+    if handle < 0
+      errorCode := handle
+      showError(@"open", pFilename, errorCode)
+    else
+      'debug(zstr(pFilename), udec(len, handle))
+      bytesRead := flash.read(handle, pBuff, BUFFER_SIZE)         'read bytes
+      errorCode := flash.error()
+      if errorCode <> flash.SUCCESS && errorCode <> flash.E_END_OF_FILE
+        showError(@"read", pFilename, errorCode)
+
+      errorCode := Flash.Close(handle)                       'close file
+      if errorCode <> flash.SUCCESS
+        showError(@"close", pFilename, errorCode)
+
+  'debug("ReadFile() EXIT")
+
+PRI showError(pCallerId, pFilename, errorCode)
+  if errorCode < 0
+    debug(zstr_(pCallerId), "(",zstr_(pFilename),") ERROR: ", zstr_(Flash.string_for_error(errorCode)))
+
+pri calc_crc32(p_buffer, length) : crc
+
+' Calculate and return the CRC for this buffer of length bytes
+'
+' @param p_buffer - the address of the buffer
+' @returns crc - the calculated CRC for the buffer of length bytes
+
+  return getcrc(p_buffer, $AD0424F3 rev 31, length)  'compute CRC of a buffered block

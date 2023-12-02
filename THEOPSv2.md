@@ -1,8 +1,8 @@
-# P2 FLASH Filesystem - Theory of Operations - v1.x.x
+# P2 FLASH Filesystem - Theory of Operations - v2.x.x+
 
-This page presents the theory behind our Flash FS a filesystem for the FLASH chip on the P2 Edge Module.
+This page presents the theory behind our Flash FS a filesystem for the FLASH chip on the P2 Edge Module.  
 
-This page applies to v1.x.x versions. For the most recent versions see [Theory of Operation v2.x.x](./THEOPSv2.md)
+This page applies to v2 and above. For earlier versions see [Theory of Operation v1.x.x](./THEOPS.md)
 
 ![Project Maintenance][maintenance-shield]
 
@@ -134,13 +134,15 @@ Blocks written to our flash filesystem are of the following formats:
 | --- | --- | --- |
 | **Head/Last block** 
 | 000..003 | long {EndPtr[11:0], ThisID[11:0], %vvv11100} | vvv = lifecycle, 00 = head/last
-| 004..007 | long {Filename crc32} | crc32 of filename + terminator
+| 004..007 | long {DataOffset[11:0]} | offset to data in block (in bytes[4:5])
+| 004..007 | long {FilenameCRC19[31:12]} | crc19 of filename + terminator (in bytes[5:7])
 | 008..087 | byte filename[127+1] | filename + terminator
 | 088..FFB | byte data[3956] | data
 | FFC..FFF | long crc32	 | crc32 of 000..FFB
 | **Head/More block** |
 | 000..003 | long {NextID[11:0], ThisID[11:0], %vvv11101} | vvv = lifecycle, 01 = head/more
-| 004..007 | long {Filename crc32} | crc32 of filename + terminator
+| 004..007 | long {DataOffset[11:0]} | offset to data in block (in bytes[4:5])
+| 004..007 | long {FilenameCRC19[31:12]} | crc19 of filename + terminator (in bytes[5:7])
 | 008..087 | byte filename[127+1] | filename + terminator
 | 088..FFB | byte data[3956] | data
 | FFC..FFF | long crc32	 | crc32 of 000..FFB
