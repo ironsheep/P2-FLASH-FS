@@ -904,6 +904,7 @@ PUB seek(handle, position, whence) : end_position | file_length, file_position, 
   elseif whence <> SK_FILE_START and whence <> SK_CURRENT_POSN
     return (LONG[@errorCode][cogid()] := E_BAD_SEEK_ARG)
   elseif whence == SK_FILE_START and position < 0
+    'debug("seek() early out")
     return (LONG[@errorCode][cogid()] := E_FILE_SEEK)
 
   case hStatus[handle]                                                          'get handle
@@ -926,23 +927,24 @@ PUB seek(handle, position, whence) : end_position | file_length, file_position, 
     file_position += position                                                   ' calculate the adjusted position
 
   file_length, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]]) ' get the file length
-  'debug("seek(", udec_(position), "), FSize=(", udec_(file_length), ")")
 
   if file_length > 0 and position == POSX                                       ' if have file length and attempting to seek beyond, limit to end of file
     file_position := file_length
 
+  'debug("seek(", sdec_(position), "), ", sdec(file_position), udec(file_length))
+
   if file_length < 0
     end_position := (LONG[@errorCode][cogid()] := file_length)                  ' error, return the error code instead of a SUCCESS status
-
   elseif hCircularLength[handle] > 0 and (file_position < 0 or file_position > hCircularLength[handle]) ' if circular file and position is out of range
-    end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                  ' abort with error
-
+   'debug("seek() circular out")
+   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                  ' abort with error
   elseif file_position >= 0 and file_position <= file_length                    ' is position within file? ( allow length + 1 for append )
     'debug("seek(", udec_(file_position), "), FSize=(", udec_(file_length), ") going to location, offset=(", sdec_(position), ")")
     seek_no_locks(handle, file_position)
     end_position := file_position                                               ' no, return SUCCESS
   else
-    end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                  ' no, abort with error
+   'debug("seek() file-range out")
+   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                  ' no, abort with error
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
@@ -1379,10 +1381,8 @@ PRI rd_byte_no_locks(handle) : byteValue | pBuff, signature, isSeeking, endPtr
 ' @local isSeeking - temporary variable T/F where T we use hSeekPtr vs hEndPtr
 ' @local endPtr - temporary variable value of whichever Ptr we are using
 
-  'isSeeking := (hSeekPtr[handle] <> NOT_ENABLED) ? true : false                 ' is seek pointer in use?
-  'endPtr := isSeeking ? hSeekPtr[handle] : hEndPtr[handle]
-  isSeeking := false                 ' is seek pointer in use?
-  endPtr := hEndPtr[handle]
+  isSeeking := (hSeekPtr[handle] <> NOT_ENABLED) ? true : false                 ' is seek pointer in use?
+  endPtr := isSeeking ? hSeekPtr[handle] : hEndPtr[handle]
 
   pBuff := buffer_pointer(handle)                                                 ' get buffer pointer
   signature := LONG[pBuff]                                                        ' get first long
@@ -1482,11 +1482,13 @@ PRI seek_no_locks(handle, file_position) | pBuff, block_id
 
     pBuff := buffer_pointer(handle)                                             'get block buffer pointer
     block_id, hEndPtr[handle], hSeekFileOffset[handle] := locate_file_byte(hHeadBlockID[handle], file_position) 'locate byte in file
+    'debug("seek_no_locks() ", udec(file_position, hSeekFileOffset[handle]))
     if hStatus[handle] & H_MODIFY                                               'if modify mode..
       if block_id <> long[pBuff].[19..8]                                        '..and if different block block ID
         if hModified[handle]~                                                   '..and if block was modified (post-clears)
           rewrite_block(handle)                                                 '..then rewrite block (might move a block)
 
+    hSeekPtr[handle] := hEndPtr[handle]                                         ' point to start of data in body block
     flash_read_block_id(block_id, pBuff, $000, $FFF)          'read new block into buffer
 
 PRI close_no_lock(handle) : status | fileMode, sizeLimit, chain_block_address, head_block_id, chain_block_id, chainState
@@ -1528,6 +1530,15 @@ PRI close_no_lock(handle) : status | fileMode, sizeLimit, chain_block_address, h
         rewrite_block(handle)                '..rewrite block
 
   fsFreeHndlCt++
+  hSeekPtr[handle] := NOT_ENABLED                                               ' Ensure seek mode is disabled for this handle
+  hSeekFileOffset[handle] := 0                                                  ' reset user requested postion within file
+  hChainBlockID[handle] := 0                                                    ' Clear commit-chain info
+  hChainBlockAddr[handle] := 0
+  hChainLifeCycle[handle] := 0
+  hWriteCount[handle] := 0                                                      ' reset write count, all written
+  hCircularLength[handle] := 0                                                  ' Ensure circular mode is disabled for this handle
+  hHeadBlockID[handle] := NOT_VALID                                             ' clear association with external file
+
 
 PRI finish_open_read(p_filename, max_file_length) : handle | signature, lenInBytes, offsetInBytes, endPtr, block_address
 

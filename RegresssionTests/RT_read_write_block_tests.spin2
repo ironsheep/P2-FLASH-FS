@@ -14,11 +14,13 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
-    DEBUG_PIN_TX = 57
-    DEBUG_PIN_RX = 56
-    DEBUG_BAUD = 2_000_000
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
 '}
 
 OBJ
@@ -27,11 +29,9 @@ OBJ
 
 CON
     RECORD_LEN = 88 ' just for fun, tiny but even number of longs
-'---+---+-------+---+-----------+-----------+-----------+-----------+-----------+
     RECORD_DATA_LEN = RECORD_LEN - 12
 DAT
 
-'---+-----------+---+---+---+-------------------+---+---+---+---+---+-----------+
 testfile        BYTE    "rwblocks.bin", 0
 testfile2        BYTE    "rw2blocks.bin", 0
 testfile3        BYTE    "rw3blocks.bin", 0
