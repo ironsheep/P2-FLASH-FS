@@ -1455,7 +1455,7 @@ PRI wr_byte_no_locks(handle, byteValue) : status | pBuff, nextBlockID, isSeeking
           ' FIXME: TODO: should this return an ERROR?!!
       else                                                                      'if not last block..
         if hEndPtr[handle] == $FFC                                              '..and if block full
-          if hModified[handle]                                                  '..and if block was modified
+          if hModified[handle]~                                                  '..and if block was modified
             rewrite_block(handle)                                               '..then rewrite block (might move a block)
           flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)          '..read next block
           hEndPtr[handle] := $004                                               '..point to start of data in next block
@@ -1500,31 +1500,31 @@ PRI close_no_lock(handle) : status | fileMode, sizeLimit, chain_block_address, h
 ' .. E_BAD_HANDLE if the handle is not valid
 
   LONG[@errorCode][cogid()] := SUCCESS                                                          'new operation clear any prior error code
+  fileMode := hStatus[handle]~           'get handle and post-clear it
 
-  case fileMode := hStatus[handle]~           'get handle and post-clear it
+  if hModified[handle]~         ' if modified (post-clear)
+    case fileMode
+      H_WRITE, H_APPEND:             'write/rewrite/append mode?
+        write_block(handle, hEndPtr[handle])     'write last block with EndPtr
 
-    H_WRITE, H_APPEND:             'write/rewrite/append mode?
-      write_block(handle, hEndPtr[handle])     'write last block with EndPtr
+        sizeLimit := hCircularLength[handle]           'get size limit
+        head_block_id := hHeadBlockID[handle]             'get head ID
+        chain_block_id := hChainBlockID[handle]             'get fork ID
+        chain_block_address := hChainBlockAddr[handle]           'get fork block
+        chainState := chain_block_id == head_block_id ? B_HEAD : B_BODY 'get fork block state
 
-      sizeLimit := hCircularLength[handle]           'get size limit
-      head_block_id := hHeadBlockID[handle]             'get head ID
-      chain_block_id := hChainBlockID[handle]             'get fork ID
-      chain_block_address := hChainBlockAddr[handle]           'get fork block
-      chainState := chain_block_id == head_block_id ? B_HEAD : B_BODY 'get fork block state
+        flash_activate_block(chain_block_address, hChainLifeCycle[handle])  'replace old head block if rewrite or old last block if append
 
-      flash_activate_block(chain_block_address, hChainLifeCycle[handle])  'replace old head block if rewrite or old last block if append
+        if Status & H_FORK                 'if rewrite/append..
+          delete_chain_from_id(chain_block_id, 0, 0, True)       '..delete old fork block through end of file, keeping first ID valid
 
-      if Status & H_FORK                 'if rewrite/append..
-        delete_chain_from_id(chain_block_id, 0, 0, True)       '..delete old fork block through end of file, keeping first ID valid
+        field[BlockState][chain_block_address] := chainState     'change new fork block status from sTEMP to sHEAD/sBODY
+        field[IDToBlock][chain_block_id] := chain_block_address     'update IDToBlock to point to new fork block
 
-      field[BlockState][chain_block_address] := chainState     'change new fork block status from sTEMP to sHEAD/sBODY
-      field[IDToBlock][chain_block_id] := chain_block_address     'update IDToBlock to point to new fork block
+        if sizeLimit                  'if size limit non-zero..
+          froncate_file(head_block_id, sizeLimit)         '..froncate file to size limit
 
-      if sizeLimit                  'if size limit non-zero..
-        froncate_file(head_block_id, sizeLimit)         '..froncate file to size limit
-
-    H_OVERWRITE:                   'modify mode?
-      if hModified[handle]              'if block was modified..
+      H_OVERWRITE:                   'modify mode?
         rewrite_block(handle)                '..rewrite block
 
   fsFreeHndlCt++
@@ -1574,8 +1574,9 @@ PRI finish_open_write(p_filename, max_file_length) : handle | signature, ptr
     start_write(handle, H_APPEND, signature.[19..8], next_active_cycle(signature.[7..5]))
   else                          'else, write it
     start_write(handle, H_WRITE, next_available_block_id(), %011)
-    hModified[handle]~~                 'force first block to be written in case no data
-        'debug("open() WRITE ", uhex_word(hEndPtr[handle], handle))
+    ' NO, we don't write empty files!
+    ' hModified[handle]~~                 'force first block to be written in case no data
+    'debug("open() WRITE ", uhex_word(hEndPtr[handle], handle))
 
   'debug(" -- open_write() freed sem #", udec_(fsLock))
   lockrel(fsLock)                                                             ' release the lock, we're done with it
@@ -1602,7 +1603,8 @@ PRI finish_open_append(p_filename, max_file_length) : handle | signature, end_bl
       start_modify(handle, H_APPEND, signature.[19..8], $FFFFFF)
     else                          'else, write it
       start_write(handle, H_WRITE, next_available_block_id(), %011)
-      hModified[handle]~~                 'force first block to be written in case no data
+      ' NO, we don't write empty files!
+      'hModified[handle]~~                 'force first block to be written in case no data
 
     lockrel(fsLock)                                    ' release the lock, we're done with it
 
@@ -2651,7 +2653,7 @@ PRI flash_receive(p_buffer, count) | rx_byte
               end
 
 
-{   ' REMOVE BEFORE FLIGHT: uncomment this line before commit to git, and release!!!
+'{   ' REMOVE BEFORE FLIGHT: uncomment this line before commit to git, and release!!!
 
 ' ----------------------------------------------------------------------------------------------
 '   these methods are for regression testing only - they are not used in production code
