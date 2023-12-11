@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 14 SEP 2023
+''   Updated.... 10 DEC 2023
 ''
 '' =================================================================================================
 
@@ -61,6 +61,8 @@ PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern
     utils.ShowStats()                                   ' should have empty filesystem
     utils.showFiles()
 
+    utils.showChipAndDriverVersion()
+
     testWriteRecords(@testfile, 10, 1, 0)
     testWriteRecords(@testfile2, 45, 2, 1)                 ' tail last record in 2nd block
     testWriteRecords(@testfile3, 92, 3, 3)                 ' tail of last record in 3rd block
@@ -79,6 +81,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write Records")
+    utils.setCheckCountPerTest(2)
     status := flash.SUCCESS
     repeat recordNbr from 1 to recordCount
         testValue := $40 + recordNbr                    ' A, B, C, etc.
@@ -150,6 +153,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
+    utils.setCheckCountPerTest(3)
     repeat recordNbr from 1 to recordCount
         rdLength := flash.read(handle, @record, RECORD_LEN)
         if rdLength <> RECORD_LEN

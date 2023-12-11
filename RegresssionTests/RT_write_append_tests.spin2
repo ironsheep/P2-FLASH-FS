@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 12 SEP 2023
+''   Updated.... 10 DEC 2023
 ''
 '' =================================================================================================
 
@@ -57,6 +57,8 @@ PUB go() | hundreds, tens, units, snHi, snLo, nbrLongs
 
     utils.ShowStats()                   ' should have empty filesystem
     utils.showFiles()
+
+    utils.showChipAndDriverVersion()
 
     utils.startTest(@"Ensure we have no files at start")
     utils.ensureEmptyDirectory()
@@ -186,6 +188,7 @@ pri testAppendWithIntermedFlush(initialLongsCount, startingFileCount, startingBl
 pri testNewAppendBytes(pFilename, count, startingFileCount, startingBlockCount) | bExists, startLength, bytesUsed, blocksUsed, blocksAdded, pBlock
 
     utils.startTest(@"Ensure file doesn't exist")
+    utils.setCheckCountPerTest(1)
     bExists := flash.exists(@testfile1)
     status := flash.error()
     utils.evaluateSubStatus(bExists, @"exists()", false)
@@ -198,6 +201,7 @@ pri testNewAppendBytes(pFilename, count, startingFileCount, startingBlockCount) 
     utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write N BYTEs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -234,6 +238,7 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | by
     utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write N BYTEs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -280,6 +285,7 @@ pri testAppendBytes(pFilename, initialCount, count, startingFileCount, startingB
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"Append count BYTEs")
+    utils.setCheckCountPerTest(1)
     testValue := $40
     repeat count
         testValue++
@@ -330,7 +336,9 @@ pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount) | bl
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
     utils.evaluate(handle, flash.SUCCESS)
+
     utils.startTest(@"Write N WORDs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -377,6 +385,7 @@ pri testAppendWords(pFilename, initialCount, count, startingFileCount, startingB
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"Append count WORDs")
+    utils.setCheckCountPerTest(1)
     testValue := $40
     repeat count
         testValue++
@@ -427,7 +436,9 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | by
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
     utils.evaluate(handle, flash.SUCCESS)
+
     utils.startTest(@"Write N LONGs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -474,6 +485,7 @@ pri testAppendLongs(pFilename, initialCount, count, startingFileCount, startingB
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"Append count LONGs")
+    utils.setCheckCountPerTest(1)
     testValue := $40
     repeat count
         testValue++
@@ -521,6 +533,7 @@ pri testFlushAppendLongs(appendHandle, pFilename, initialLongCount, count) | sta
     utils.evaluateSingleValue(startLength, @"file_size()", initialLongCount * 4)
 
     utils.startTest(@"Append count LONGs")
+    utils.setCheckCountPerTest(1)
     testValue := $40
     repeat count
         testValue++
@@ -599,6 +612,7 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount): s
     utils.evaluate(handle, flash.SUCCESS)
 
     utils.startTest(@"Write N STRINGs")
+    utils.setCheckCountPerTest(1)
     strFileSize := 0
     repeat count with readWriteIdx                                                    'program 16 pages within 4KB block
         strIdx := (GETRND() +// stringIdCt)
@@ -657,6 +671,7 @@ pri testAppendStrings(pFilename, count, initialFileSize, startingFileCount, star
 
     strFileSize := initialFileSize
     utils.startTest(@"Append N STRINGs")
+    utils.setCheckCountPerTest(1)
     repeat readWriteIdx from 10 to 10 + count - 1
         strIdx := (GETRND() +// stringIdCt)
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
@@ -709,6 +724,7 @@ pri testVerifyAllStrings(pFilename, stringCount) | foundFileSize, strIdx, pStrin
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected N STRINGs")
+    utils.setCheckCountPerTest(2)
     foundFileSize := 0
     repeat stringCount with readWriteIdx                                                    'program 16 pages within 4KB block
         strIdx := BYTE[@idxStringWritten][readWriteIdx]

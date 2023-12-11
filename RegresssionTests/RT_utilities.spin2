@@ -43,6 +43,10 @@ VAR { test stats vars }
     LONG    bBadEntry
     LONG    pPassFail
 
+DAT
+
+versionString   BYTE    "flash_fs v"
+vDigits         BYTE    "x.x.x", 0
 
 pub null()
 
@@ -59,6 +63,23 @@ pri initIfNotAlready()
         failCountSub := 0
         varSignature := testSignature
         flash.TEST_enableRTdebug()                      ' turn on extra debug output
+
+pub showChipAndDriverVersion() | snHi, snLo, version, hundreds, tens, units
+    debug(" ")
+    debug("* Environment: Chip S/N and Driver Version")
+    snHi, snLo := flash.serial_number()
+    debug("   CHIP Serial Number: ", uhex_long_(snHi), "-", uhex_long_(snLo))
+    version := flash.version()
+
+   ' brute force... (someone didn't import a string formatter, I wonder who that was?)
+    hundreds := version / 100
+    BYTE[@vDigits][0] := "0" + hundreds
+    tens := (version - (hundreds * 100)) / 10
+    BYTE[@vDigits][2] := "0" + tens
+    units := version - (hundreds * 100) - (tens * 10)
+    BYTE[@vDigits][4] := "0" + units
+    debug ("   Driver: ", zstr_(@versionString))
+
 
 pub startTestGroup(pDesciption)
     ' show test-group heading

@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 14 SEP 2023
+''   Updated.... 10 DEC 2023
 ''
 '' =================================================================================================
 
@@ -51,7 +51,6 @@ writeLength         LONG    0
 filename            BYTE    0[127+1]
 
 PUB go()
-
     ' Ensure all handle calls fail before mounted
     utils.startTestGroup(@"Attempting things while not mounted")
     utils.startTest(@"Unmount()")
@@ -59,6 +58,7 @@ PUB go()
     utils.evaluate(status, flash.E_NOT_MOUNTED)
 
     utils.startTest(@"serial_number()")
+    utils.setCheckCountPerTest(2)
     snHi, snLo := flash.serial_number()
     utils.evaluateSubValue(snHi, @"serial_number() hi", 0)
     utils.evaluateSubValue(snLo, @"serial_number() lo", 0)
@@ -200,6 +200,8 @@ PUB go()
     utils.startTest(@"mount()")
     status := flash.mount()
     utils.evaluate(handle, flash.SUCCESS)
+
+    utils.showChipAndDriverVersion()
 
     utils.startTest(@"open() OK")
     handle := flash.open(@testfile, "A")

@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 19 SEP 2023
+''   Updated.... 10 DEC 2023
 ''
 '' =================================================================================================
 
@@ -14,11 +14,13 @@ CON
 
      _CLKFREQ        = 320_000_000
 
-{
+'{
     ' debug via serial to RPi (using RPi gateway pins)
-    DEBUG_PIN_TX = 57
-    DEBUG_PIN_RX = 56
-    DEBUG_BAUD = 2_000_000
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
 '}
 
 OBJ
@@ -59,6 +61,8 @@ PUB go() | cogIdx, totalFiles,  status
     utils.startTest(@"Format the FLASH")
     status := flash.format()      ' Comment out this line to not erase all files
     utils.evaluate(status, flash.SUCCESS)
+
+    utils.showChipAndDriverVersion()
 
     ' Ensure our test methods work
     {
@@ -243,6 +247,7 @@ pri testWriteBytes(pFilename, count) | blocksUsed, handle, status, testValue
         return
 
     utils.startTest(@"Write N BYTEs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -286,6 +291,7 @@ pri testVerifyBytes(pFilename, count) | handle, status, expectedValue, testValue
         return
 
     utils.startTest(@"read expected N BYTEs")
+    utils.setCheckCountPerTest(1)
     expectedValue := 0
     repeat count
         expectedValue++
@@ -323,6 +329,7 @@ pri testWriteWords(pFilename, count) | handle, status, testValue
         return
 
     utils.startTest(@"Write N WORDs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -364,6 +371,7 @@ pri testVerifyWords(pFilename, count) | handle, status, expectedValue, testValue
         return
 
     utils.startTest(@"read expected N WORDs")
+    utils.setCheckCountPerTest(1)
     expectedValue := 0
     repeat count
         expectedValue++
@@ -401,6 +409,7 @@ pri testWriteLongs(pFilename, count) | handle, status, testValue, blocksUsed
         return
 
     utils.startTest(@"Write N LONGs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -443,6 +452,7 @@ pri testVerifyLongs(pFilename, count) | handle, status, expectedValue, testValue
         return
 
     utils.startTest(@"read expected LONGs")
+    utils.setCheckCountPerTest(1)
     expectedValue := 0
     repeat count
         expectedValue++
@@ -521,6 +531,7 @@ pri testWriteStrings(pFilename, count) | handle, status, strIdx, maxStringIdx, p
 
     maxStringIdx := (count - 1 < MAX_STRINGS_WRITTEN - 1) ? count - 1 : MAX_STRINGS_WRITTEN - 1
     utils.startTest(@"Write 10 STRINGs")
+    utils.setCheckCountPerTest(1)
     expectedFileSize := 0
     repeat readWriteIdx from 0 to maxStringIdx
         strIdx := (GETRND() +// stringIdCt)
@@ -575,6 +586,7 @@ pri testVerifyStrings(pFilename, count) | handle, status, maxStringIdx, readWrit
 
     maxStringIdx := (count - 1 < MAX_STRINGS_WRITTEN - 1) ? count - 1 : MAX_STRINGS_WRITTEN - 1
     utils.startTest(@"read expected N STRINGs")
+    utils.setCheckCountPerTest(2)
     repeat readWriteIdx from 0 to maxStringIdx
          strIdx := BYTE[@idxStringWritten][readWriteIdx]
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
@@ -620,6 +632,7 @@ pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeL
         return
 
     utils.startTest(@"Write N Records")
+    utils.setCheckCountPerTest(2)
     status := flash.SUCCESS
     repeat recordNbr from 1 to recordCount
         testValue := $40 + recordNbr                    ' A, B, C, etc.
@@ -696,6 +709,7 @@ pri testVerifyRecords(pFilename, recordCount) | handle, status, recordNbr, rdLen
         return
 
     utils.startTest(@"read expected N RECORDs")
+    utils.setCheckCountPerTest(3)
     repeat recordNbr from 1 to recordCount
         rdLength := flash.read(handle, @record, RECORD_LEN)
         if rdLength <> RECORD_LEN

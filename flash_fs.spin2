@@ -569,7 +569,7 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
   case mode
     "r", "R"  : handle := finish_open_read(p_filename, 0)                       ' read
     "w", "W"  : handle := finish_open_write(p_filename, 0)                      ' replace
-    "r+", "R+": handle := finish_open_readwrite(p_filename)                        ' read/write/modify
+    "r+", "R+": handle := finish_open_readwrite(p_filename)                     ' read/write/modify
     "a", "A"  :
       if bFileExists
           handle := finish_open_append(p_filename, 0)                           ' append
@@ -1510,8 +1510,9 @@ PRI finish_open_write(p_filename, max_file_length) : handle | signature, ptr
   handle := new_handle(p_filename)            'get new handle, abort if no handle available
   hCircularLength[handle] := max_file_length           'set size limit if non-zero
 
-  if signature := get_file_head_signature(p_filename)         'if file already exists, rewrite it
-    start_write(handle, H_WRITE, signature.[19..8], next_active_cycle(signature.[7..5]))
+  if signature := get_file_head_signature(p_filename)
+    'file already exists, overwrite it
+    start_write(handle, H_APPEND, signature.[19..8], next_active_cycle(signature.[7..5]))
   else                          'else, write it
     start_write(handle, H_WRITE, next_available_block_id(), %011)
     ' NO, we don't write empty files!
