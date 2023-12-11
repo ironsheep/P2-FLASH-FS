@@ -24,6 +24,7 @@ DAT
 VAR { test stats vars }
 
     LONG    numberTests
+    LONG    subTestPer
     LONG    passCount
     LONG    failCount
     LONG    passCountSub
@@ -51,12 +52,13 @@ pub null()
 pri initIfNotAlready()
     if varSignature <> testSignature
         numberTests := 0
+        subTestPer := 1
         passCount := 0
         failCount := 0
         passCountSub := 0
         failCountSub := 0
         varSignature := testSignature
-        'flash.TEST_enableRTdebug()                      ' turn on extra debug output
+        flash.TEST_enableRTdebug()                      ' turn on extra debug output
 
 pub startTestGroup(pDesciption)
     ' show test-group heading
@@ -67,17 +69,20 @@ pub startTestGroup(pDesciption)
     debug(" ------------------------------------------------------------")  ' blank line
     debug("* Test Group: ", zstr_(pDesciption))
 
-pub startTest(pDesciption) | ecGot, ecExpected
+pub startTest(pDesciption) | ecGot, ecExpected, passScaled, failScaled, total
     ' if prior sub tests show sub tests results
 
     initIfNotAlready()
     if failCountSub <> 0 or passCountSub <> 0
-        debug("  Sub-Test Results: Pass: ", udec_(passCountSub), ", Fail: ", udec_(failCountSub))
+        total := (passCountSub + failCountSub) / subTestPer
+        passScaled := passCountSub / subTestPer
+        failScaled := total - passScaled
+        debug("  Sub-Test Results: Pass: ", udec_(passScaled), ", Fail: ", udec_(failScaled))
         if failCountSub <> 0
             failCount++
         else
             passCount++
-        pPassFail := failCountSub <> 0 ? @"FAIL" : @"pass"
+        pPassFail := failCountSub <> 0 ? @"sub-failed" : @"pass"
         debug("   -> ", zstr_(pPassFail))
         passCountSub := 0
         failCountSub := 0
@@ -90,6 +95,14 @@ pub ShowTestEndCounts()
     ' show summary of all tests
     debug(" ")  ' blank line
     debug("* ", udec_(numberTests), " Tests: , Pass: ", udec_(passCount), ", Fail: ", udec_(failCount))
+
+pub setCheckCountPerTest(countTests)
+
+'' set the number of subtests per record/group
+''
+'' @param countTests - the number of checks per item tested
+
+  subTestPer := countTests
 
 pub evaluate(result, expectedResult) | ecGot, ecExpected
     if result > 0
@@ -139,6 +152,7 @@ pub evaluateSubValue(result, pMessage, expectedResult)
         passCountSub++
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     if !bPassed
+        debug("  Sub-Test: ", zstr_(pMessage))
         if result <> expectedResult
             debug("  Value: ", uhex_long_(result), " (expected ", uhex_long_(expectedResult), ")")
         else
@@ -173,7 +187,7 @@ pub evaluateHandle(resultHandle, pMessage)
 pub showFileDetails(pFilename) | bytesUsed, bytes_free, block_count
     debug(" ")  ' blank line
     'debug("* showFileDetails()...ENTRY")
-    bytesUsed, bytes_free, block_count := flash.test_count_file_bytes(pFilename)
+    bytesUsed, bytes_free, block_count := flash.TEST_count_file_bytes(pFilename)
     if bytesUsed < 0
         debug("  File: [", zstr_(pFilename), "]")
         debug("  # Error: ", zstr_(flash.string_for_error(bytesUsed)))
@@ -190,21 +204,24 @@ pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount, st
     debug("  File: [", zstr_(pFilename), "] pending commit")
     pSignatureAr, signatureCount := flash.TEST_getCommitBlockSignatures(handle)
     if signatureCount > 0
-        debug("  # ", udec_(signatureCount), " Blocks in chain:")
+        debug("  # ", udec_(signatureCount / 2), " Blocks in chain:")
         showSignatureChain(pSignatureAr, signatureCount, handle)
     else
-        debug("  # ", udec_(signatureCount), " Blocks in commit")
+        debug("  # 0 Blocks in commit")
 
 pub showFileSignatures(pFilename) | pSignatureAr, signatureCount
     pSignatureAr, signatureCount := flash.TEST_getFileBlockSignatures(pFilename)
     if signatureCount > 0
-        debug("  # ", udec_(signatureCount), " Blocks in file:")
+        debug("  # ", udec_(signatureCount / 2), " Blocks in file:")
         showSignatureChain(pSignatureAr, signatureCount, -1)
+    else
+        debug("  # 0 Blocks in file ???")
 
-pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, signatureIdx, pBlockType, pLifeCycle, nextIdOrEndPtr, blockID, blockAddr
+pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, signatureIdx, pBlockType, pLifeCycle, nextIdOrEndPtr, blockID, blockAddr, dataOfs
     if signatureCount > 0
-        repeat signatureIdx from 0 to signatureCount -1
+        repeat signatureIdx from 0 to signatureCount -1 step 2
             signature := LONG[pSignatureAr][signatureIdx]
+            dataOfs := LONG[pSignatureAr][signatureIdx+1].[11..0]
             nextIdOrEndPtr := signature.[31..20]
             blockID := signature.[19..8]
             blockAddr := flash.TEST_getBlockAddressForId(blockID, possHandle)
@@ -225,17 +242,27 @@ pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, si
                   pLifeCycle := @"ACTIVE-6"
                 %111:
                   pLifeCycle := @"erased"
+
             case signature.[1..0]
                 %00: pBlockType := @"HEAD/last"
                 %01: pBlockType := @"HEAD/more"
                 %10: pBlockType := @"BODY/last"
                 %11: pBlockType := @"BODY/more"
-            if signature.[0]
-                ' show more block
-                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
+            if signature.[1]
+              if signature.[0]
+                ' show body more block
+                debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
+              else
+                ' show body last block
+                debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
             else
-                ' show last block
-                debug("    ", udec_(signatureIdx+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
+              if signature.[0]
+                ' show head more block
+                debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", dataOfs=", udec_(dataOfs), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
+              else
+                ' show head last block
+                debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", dataOfs=", uhex_word_(dataOfs), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "]")
+
 
 pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount
 
@@ -282,7 +309,7 @@ pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesU
 ' @local blockCount -
     debug("  File: [", zstr_(pFilename), "]")
     showFileSignatures(pFilename)
-    bytesUsed, bytesFree, blockCount := flash.test_count_file_bytes(pFilename)
+    bytesUsed, bytesFree, blockCount := flash.TEST_count_file_bytes(pFilename)
     if bytesUsed < 0
         debug("  # Error: ", zstr_(flash.string_for_error(bytesUsed)))
         bPassed := false
@@ -304,9 +331,23 @@ pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesU
     debug("   -> ", zstr_(pPassFail))
 
 pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, maxBytesUsed
+
+'' Report file stistics against expectation
+''
+'' @param pfilename - address of filename zstring
+'' @param expectedBlockCount - expected size of file in blocks
+'' @param exptecedMinBytesUsed - minimum size of file in bytes
+'' @param expectedBytesUsed - expected size of file in bytes
+
+' Local Variables:
+' @local bytesUsed -
+' @local bytesFree -
+' @local blockCount -
+' @local maxBytesUsed -
+
     debug("  File: [", zstr_(pFilename), "]")
     showFileSignatures(pFilename)
-    bytesUsed, bytesFree, blockCount := flash.test_count_file_bytes(pFilename)
+    bytesUsed, bytesFree, blockCount := flash.TEST_count_file_bytes(pFilename)
     maxBytesUsed := flash.BYTES_IN_HEAD_BLOCK
     maxBytesUsed += (flash.BYTES_IN_BODY_BLOCK * (expectedBlockCount - 1))
     if bytesUsed < 0
