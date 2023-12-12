@@ -28,6 +28,12 @@ CON { version }
   #true,  ON, OFF
   #false, NO, YES
 
+  ' file open mode equivalents
+  MODE_READ = $72
+  MODE_WRITE = $77
+  MODE_APPEND = $61
+  FILEMODE_READ_EXTENDED = $722B
+  FILEMODE_WRITE_EXTENDED = $772B
 
 CON { fixed io pins }
 
@@ -500,6 +506,8 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
 '' -- mode "r", "R" to read from an existing file
 '' -- mode "w", "W" to write to a new file (or overwrites existing file)
 '' -- mode "a", "A" to append to the end of an existing file (file is created if doesn't exist)
+'' -- mode "r+", "R+" to read/modify/write within an existing file
+'' -- mode "w+", "W+" to read/modify/write within a new file (or overwrites existing file)
 '' @returns handle - handle to open file if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_NO_HANDLE if no handle is available,
@@ -507,8 +515,6 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
 '' .. E_DRIVE_FULL if flash filesystem is full (write/append mode),
 '' .. E_FILE_OPEN if file is already open,
 '' .. E_FILE_NOT_FOUND if file does not exist (read mode)
-
-' PENDING -- mode "r+", "R+" to read from or / write to anywhere within an existing file
 
 {
     ANSI C file info
@@ -525,6 +531,7 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
         "a+" (read-write) Opens a text file for both reading and writing. It creates the file if it does not exist.
              The reading will start from the beginning but writing can only be appended.
 }
+
   if fsMounted == false
     return (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
   elseif fsFreeHndlCt == 0
@@ -533,7 +540,7 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
   ' mode-specific checks
   case mode
     "r", "R":
-    "a", "A", "w", "W", "r+", "R+":
+    "a", "A", "w", "W", FILEMODE_READ_EXTENDED, FILEMODE_WRITE_EXTENDED:
       ifnot blocks_free()                                                       'if no free block exists, abort with error
         return (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
     other: return (LONG[@errorCode][cogid()] := E_FILE_MODE)
@@ -549,7 +556,7 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
 
   ' do checks that require the lock
   case mode
-    "r", "R", "r+", "R+":
+    "r", "R", FILEMODE_READ_EXTENDED:
       ifnot bFileExists                                                  'if no free block exists, abort with error
         'debug("open(", sdec_(handle), ") filename=[", zstr_(p_filename), "]")
         handle := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
@@ -569,12 +576,13 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
   case mode
     "r", "R"  : handle := finish_open_read(p_filename, 0)                       ' read
     "w", "W"  : handle := finish_open_write(p_filename, 0)                      ' replace
-    "r+", "R+": handle := finish_open_readwrite(p_filename)                     ' read/write/modify
     "a", "A"  :
       if bFileExists
           handle := finish_open_append(p_filename, 0)                           ' append
       else
           handle := finish_open_write(p_filename, 0)                            ' create new
+    FILEMODE_READ_EXTENDED : handle := finish_open_readwrite(p_filename)        ' read/write/modify
+    FILEMODE_WRITE_EXTENDED: handle := finish_open_readwrite(p_filename)        ' read/write/modify
 
   if handle < 0
     LONG[@errorCode][cogid()] := handle
@@ -611,7 +619,6 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
   case mode
     "r", "R":
     "a", "A":
-    '"r+", "R+": ????
     other: return (LONG[@errorCode][cogid()] := E_FILE_MODE)
 
   ' acquire lock
@@ -629,7 +636,6 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
       ifnot bFileExists                                                  'if no free block exists, abort with error
         handle := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
     "a", "A":
-    '"r+", "R+": ????
       ifnot blocks_free()                                                       'if no free block exists, abort with error
         handle := (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
 
@@ -648,7 +654,6 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
       else
         handle := finish_open_write(p_filename, max_file_length)                ' write CIRC
     "r", "R": handle := finish_open_read(p_filename, max_file_length)           ' read CIRC
-    '"r+", "R+": handle := finish_open_readwrite(p_filename)                       ' ??? MODIFY
 
   if handle < 0
     LONG[@errorCode][cogid()] := handle
@@ -679,7 +684,7 @@ PUB flush(handle) : status
 
     H_WRITE, H_APPEND:                                                          'write/rewrite/append mode?
       close_no_lock(handle)                                                     'close file
-      start_modify(handle, H_APPEND, hHeadBlockID[handle], $FFFFFF)             'reopen file in append mode
+      start_modify(handle, H_APPEND, hHeadBlockID[handle], $FFFFFF, true)             'reopen file in append mode
 
     H_READWRITE:                                                                'modify mode?
       if hModified[handle]                                                      'if block was modified...
@@ -1541,7 +1546,7 @@ PRI finish_open_append(p_filename, max_file_length) : handle | signature, end_bl
     hCircularLength[handle] := max_file_length           'set size limit if non-zero
 
     if signature := get_file_head_signature(p_filename)         'if file already exists, append it
-      start_modify(handle, H_APPEND, signature.[19..8], $FFFFFF)
+      start_modify(handle, H_APPEND, signature.[19..8], $FFFFFF, true)
     else                          'else, write it
       start_write(handle, H_WRITE, next_available_block_id(), %011)
       ' NO, we don't write empty files!
@@ -1550,7 +1555,7 @@ PRI finish_open_append(p_filename, max_file_length) : handle | signature, end_bl
     lockrel(fsLock)                                    ' release the lock, we're done with it
 
 
-PRI finish_open_readwrite(p_filename) : handle | signature
+PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id
 
 ' Open an existing file for reading and writing within current file boundaries, returns handle
 '
@@ -1567,10 +1572,16 @@ PRI finish_open_readwrite(p_filename) : handle | signature
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
 
-  signature := get_file_head_signature(p_filename)
-  handle := new_handle(p_filename)            'get new handle, abort if no handle available
-
-  start_modify(handle, H_READWRITE, signature.[19..8], 0)  'go to start of file
+handle := new_handle(p_filename)            'get new handle, abort if no handle available
+if signature := get_file_head_signature(p_filename)         'if file already exists
+  ' file exists, allow modification and append-only extension (no gaps)
+  start_modify(handle, H_READWRITE, signature.[19..8], 0, true)
+else
+  ' file DOES NOT exist, create it, allow modification after append-only extension (no gaps)
+  ' no starting block-id means create new head!
+  head_block_id := next_available_block_id()                        'get initial ID
+  build_head_block(buffer_pointer(handle), filename_pointer(handle), head_block_id) 'build head block in buffer
+  start_modify(handle, H_READWRITE, head_block_id, 0, false)  'go to start of file
 
   lockrel(fsLock)                                                             ' release the lock, we're done with it
 
@@ -1725,7 +1736,7 @@ PRI start_write(handle, open_mode, head_block_id, head_cycle) | block_address
   hEndPtr[handle] := $088                                                       'point to first byte in head block
 
 
-PRI start_modify(handle, open_mode, head_block_id, file_position) | block_id, pBuff
+PRI start_modify(handle, open_mode, head_block_id, file_position, bFileExists) | block_id, pBuff
 
 ' configure file for H_APPEND or H_READWRITE
 '
@@ -1733,23 +1744,29 @@ PRI start_modify(handle, open_mode, head_block_id, file_position) | block_id, pB
 ' @param open_mode -
 ' @param head_block_id -
 ' @param file_position -
+' @param bFileExists -
 
 ' Local Variables:
 ' @local block_id -
 ' @local pBuff -
 
-  'debug("* start_modify() ", udec(handle, head_block_id, file_position))
+    'debug("* srt_modify() ", udec(handle, head_block_id, file_position))
 
-  block_id, hEndPtr[handle], hSeekFileOffset[handle] := locate_file_byte(head_block_id, file_position)    'locate block and block pointer by file_position
+    pBuff := buffer_pointer(handle)                                             'get block buffer pointer
+    if bFileExists                                                              'if file exists... (new file block is already in buffer)
+      block_id, hEndPtr[handle], hSeekFileOffset[handle] := locate_file_byte(head_block_id, file_position)    'locate block and block pointer by file_position
+      flash_read_block_id(block_id, pBuff, $000, $FFF)                          '.. read located block into buffer
+      if open_mode == H_READWRITE                                               '.. if read/modify/write
+        hSeekPtr[handle] := hEndPtr[handle]                                     '.... enable seek
+    else
+      hSeekPtr[handle] := hEndPtr[handle] := $088                               'new file, seek is enabled and
+      hSeekFileOffset[handle] := 0                                              'file offset starts at zero
 
-  pBuff := buffer_pointer(handle)                                               'get block buffer pointer
-  flash_read_block_id(block_id, pBuff, $000, $FFF)                              'read located block into buffer
-
-  hStatus[handle] := open_mode                                                  'set status
-  hHeadBlockID[handle] := head_block_id                                         'set head block ID
-  hChainBlockID[handle] := block_id                                             'set fork block ID to located block ID
-  hChainLifeCycle[handle] := next_active_cycle(long[pBuff].[7..5])              'set fork cycle to next cycle of located block
-  'debug(" -- ", uhex_word(hChainBlockAddr[handle]), udec(block_id), uhex_word(hEndPtr[handle]), udec(hSeekFileOffset[handle]))
+    hStatus[handle] := open_mode                                                'set status
+    hHeadBlockID[handle] := head_block_id                                       'set head block ID
+    hChainBlockID[handle] := block_id                                           'set fork block ID to located block ID
+    hChainLifeCycle[handle] := next_active_cycle(long[pBuff].[7..5])            'set fork cycle to next cycle of located block
+    'debug(" -- ", uhex_word(hChainBlockAddr[handle]), udec(block_id), uhex_word(hEndPtr[handle]), udec(hSeekFileOffset[handle]))
 
 
 PRI rd_byte_no_locks(handle) : byteValue | pBuff, signature, isSeeking, endPtr

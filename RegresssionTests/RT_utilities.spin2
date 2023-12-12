@@ -485,12 +485,11 @@ pub bytesAllocatedFor(sizeInBytes) : maxAllocationBytes | bodyBlocks
         bodyBlocks := ((sizeInBytes - flash.BYTES_IN_HEAD_BLOCK) + (flash.BYTES_IN_BODY_BLOCK - 1)) / flash.BYTES_IN_BODY_BLOCK
         maxAllocationBytes += bodyBlocks * flash.BYTES_IN_BODY_BLOCK
 
-pub blocksAllocatedFor(sizeInBytes) : maxAllocationBlocks | bodyBlocks
-    ' return max allocation size for circular file
-    maxAllocationBlocks := 1
-    if sizeInBytes > flash.BYTES_IN_HEAD_BLOCK
-        bodyBlocks := ((sizeInBytes - flash.BYTES_IN_HEAD_BLOCK) + (flash.BYTES_IN_BODY_BLOCK - 1)) / flash.BYTES_IN_BODY_BLOCK
-        maxAllocationBlocks += bodyBlocks
+pub bytesAllocatedInBlocks(numberBlocks) : sizeInBytes
+  ' return max number of bytes stored in given amount of blocks
+  sizeInBytes := flash.BYTES_IN_HEAD_BLOCK
+  if numberBlocks > 1
+    sizeInBytes += (numberBlocks - 1) * flash.BYTES_IN_BODY_BLOCK
 
 pub checkMatchingEntries(pDirEntries) | ID, ByteCount, byte Filename[128], byte Buff[30]
 {

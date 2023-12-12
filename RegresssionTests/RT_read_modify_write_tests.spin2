@@ -1,0 +1,360 @@
+'' =================================================================================================
+''
+''   File....... RT_read_modify_write_tests.spin2
+''   Purpose.... This object exercises the read/modify/write capabilites of the flash filesystem
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... DEC 2023
+''   Updated.... 11 DEC 2023
+''
+'' =================================================================================================
+
+CON
+
+     _CLKFREQ        = 320_000_000
+
+'{
+    ' debug via serial to RPi (using RPi gateway pins)
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
+'}
+
+OBJ
+    flash : "flash_fs"
+    utils : "RT_utilities"
+
+CON
+    RECORD_LEN = 1024 ' just for fun, tiny but even number of longs
+    RECORD_DATA_LEN = RECORD_LEN - 12
+DAT
+
+testfile         BYTE    "rwblocks.bin", 0
+testfile2        BYTE    "rw2blocks.bin", 0
+testfile3        BYTE    "rw3blocks.bin", 0
+
+record
+recordMARK       LONG    $beadfeed              ' visual start of record marker
+recordID         LONG    0
+recordData       LONG    0[RECORD_DATA_LEN/4]
+recordCRC        LONG    0
+recordEnd
+
+writeLength     LONG    0
+recordsThisTest LONG    0
+
+
+PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern, endPosn, recordOffset
+
+    status := flash.format()      ' Comment out this line to not erase all files
+    if status < 0
+        utils.showError(@"format()", status)
+        return
+
+    status := flash.mount()
+    if status < 0
+        utils.showError(@"mount()", status)
+        return
+
+    utils.ShowStats()                                   ' should have empty filesystem
+    utils.showFiles()
+
+    utils.showChipAndDriverVersion()
+
+    ' test specs
+    ' TEST #1  R+ (file exists)
+    utils.startTestGroup(@"TEST #1  R+ (file exists)")
+    recordsThisTest := 15
+    '  open for modify replace record that spans blocks
+    testWriteRecords(@testfile, recordsThisTest, 0, 0)
+    ' verify that file is correct
+    testVerifyRecords(@testfile, recordsThisTest)
+    '  replace 1st record
+    handle := testReplaceWithinFile(@testfile, recordsThisTest)
+    '  seek away from location so block is written
+    utils.startTest(@"seek away from write location (should update block)")
+    recordOffset := (10 - 1) * RECORD_LEN
+    endPosn := flash.seek(handle, recordOffset, flash.SK_FILE_START)
+    utils.evaluateSingleValue(endPosn, @"seek()", recordOffset)
+    status := flash.error()
+    utils.evaluate(status, flash.SUCCESS)
+    '  ensure close does NOT write again
+    utils.startTest(@"Close written file (no further block updates)")
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
+    '  re-open for read and verify all records
+    testVerifyRecordsAfterReplace(@testfile, recordsThisTest, 1, 4)
+
+    ' TEST #2  R+ (file exists)
+    '  create file open/create/close
+    '  open for modify
+    '  replace 1st record
+    '  replace record that spans blocks
+    '  replace Last record
+    '  close file ensure that change gets written
+    '  re-open for read and verify all records
+
+    ' TEST #3  R+ (file exists)
+    '  open for modify replace record that spans blocks
+    '  seek away from location so block is written
+    '  ensure close does NOT write again
+    '  re-open for read and verify all records
+
+    ' TEST #3  W+ (new file)
+
+
+    'testWriteRecords(@testfile2, 45, 2, 1)                 ' tail last record in 2nd block
+    'testWriteRecords(@testfile3, 92, 3, 3)                 ' tail of last record in 3rd block
+
+    utils.ShowStats()
+    utils.showFiles()
+
+    utils.ShowTestEndCounts()
+
+    debug("* Test Complete")
+    repeat
+
+PRI buildRecord(recordNbr) | testValue
+    ' fill in buffer with well formatted buffer
+    testValue := $40 + recordNbr                    ' A, B, C, etc.
+    recordId := recordNbr
+    bytefill(@recordData, testValue, RECORD_DATA_LEN)
+    recordCRC := utils.record_crc(@record, RECORD_LEN)
+
+pri testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | status, handle, testValue, expectedValue, recordNbr, wrLength, rdLength, pBlock, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
+    ' ----------------------------------
+    ' TEST
+        '  open file for write
+    debug("  ")
+    debug(" ---------- Write Records ------------ ")
+    '  ensure returns SUCCESS
+    utils.startTest(@"Open File for write")
+    handle := flash.open(pFilename,"w")
+    utils.evaluate(handle, flash.SUCCESS)
+
+    utils.startTest(@"Write Records")
+    utils.setCheckCountPerTest(2)
+    status := flash.SUCCESS
+    repeat recordNbr from 1 to recordCount
+        buildRecord(recordNbr)
+        'debug("* write rcd #", udec_(recordNbr), " of 10")
+        'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
+        writeLength := flash.write(handle, @record, RECORD_LEN)
+        utils.evaluateSubValue(writeLength, @"write()", RECORD_LEN)
+        status := flash.error()
+        utils.evaluateSubStatus(status, @"write()", flash.SUCCESS)
+        if status <> flash.SUCCESS
+            quit ' abort on first failure
+
+    utils.startTest(@"ensure no errors on Record writes")
+    utils.evaluate(status, flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
+
+    '  close file
+    utils.startTest(@"Close written file")
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
+
+    expectedFileSize := recordCount * RECORD_LEN
+    expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
+    allocatedFileSize := utils.bytesAllocatedInBlocks(expectedFileBlocks)
+
+    '  get filesystem stats and verify against expectation
+    utils.startTest(@"Ensure expected file system changes")
+    utils.evaluateFSStats(@"post file write", initialFiles + 1, initialBlocks + expectedFileBlocks)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats")
+    utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedFileSize)
+
+    utils.startTest(@"Ensure expected unused bytes stats")
+    sizeUnused := flash.file_size_unused(pFilename)
+
+    utils.evaluateSingleValue(sizeUnused, @"file_size_unused()", allocatedFileSize - expectedFileSize)
+
+    utils.startTest(@"Ensure no error on size unused call")
+    status := flash.error()
+    utils.evaluate(status, flash.SUCCESS)
+
+
+pri testVerifyRecords(pFilename, recordCount) | status, handle, testValue, expectedValue, recordNbr, wrLength, rdLength, pBlock, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
+
+    debug("  ")
+    debug(" ------------ Verify Original Records ---------------- ")
+    '  open file for read
+    utils.startTest(@"Open File for read")
+    handle := flash.open(pFilename,"r")
+    utils.evaluate(handle, flash.SUCCESS)
+    '    seek to various locations and read longs validating for correct value
+
+    utils.startTest(@"read expected RECORDs")
+    utils.setCheckCountPerTest(3)
+    repeat recordNbr from 1 to recordCount
+        rdLength := flash.read(handle, @record, RECORD_LEN)
+        if rdLength <> RECORD_LEN
+            status := flash.error()
+            quit
+        ' ensure length is same as expected
+        utils.evaluateSubValue(rdLength, @"read()", RECORD_LEN)
+        ' ensure record ID is same as expected
+        utils.evaluateSubValue(recordId, @"recordId", recordNbr)
+        ' ensure record CRC is same as expected
+        calcCRC := utils.record_crc(@record, RECORD_LEN)
+        utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
+
+    utils.startTest(@"ensure no errors on reads")
+    utils.evaluate(status, flash.SUCCESS)
+
+    '  read past end of file to verify read returns error
+    utils.startTest(@"BAD: read one more Record than written")
+    rdLength := flash.read(handle, @record, RECORD_LEN)
+    utils.evaluateSingleValue(rdLength, @"read()", 0)
+    status := flash.error()
+    utils.evaluate(status, flash.E_END_OF_FILE)
+
+    '  close file
+    utils.startTest(@"Close read file")
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
+
+
+PRI testReplaceWithinFile(pFilename, maxRecords) : handle | status, recordNbr, recordOffset, newRecordNbr
+
+    debug("  ")
+    debug(" ----------- Overwrite some Records ----------- ")
+    '  open file for modify writes
+    utils.startTest(@"Open File for modify write")
+    handle := flash.open(pFilename, flash.FILEMODE_READ_EXTENDED)
+    status := flash.error()
+    utils.evaluate(status, flash.SUCCESS)
+    if status <> flash.SUCCESS
+      handle := flash.E_NO_HANDLE
+      debug("* ERROR filed to open file for modify")
+      return
+
+    utils.startTest(@"Write Records")
+    utils.setCheckCountPerTest(4)
+
+    ' replace first, random middle and last records
+    ' - FIRST
+    recordNbr := 1
+    newRecordNbr := recordNbr + maxRecords
+    buildRecord(newRecordNbr)
+    replaceRecord(handle, recordNbr, newRecordNbr)
+
+    ' - MID-somewhere
+    recordNbr := maxRecords / 2
+    newRecordNbr := recordNbr + maxRecords
+    buildRecord(newRecordNbr)
+    replaceRecord(handle, recordNbr, newRecordNbr)
+
+    ' - LAST
+    recordNbr := maxRecords
+    newRecordNbr := recordNbr + maxRecords
+    buildRecord(newRecordNbr)
+    replaceRecord(handle, recordNbr, newRecordNbr)
+
+    status := flash.error()
+    utils.startTest(@"ensure no errors on Record writes")
+    utils.evaluate(status, flash.SUCCESS)
+
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
+
+
+PRI replaceRecord(handle, rcdNumber, newNumber) | endPosn, recordOffset, status
+    'debug("* write rcd #", udec_(recordNbr), " of 10")
+    'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
+    recordOffset := (rcdNumber - 1) * RECORD_LEN
+    endPosn := flash.seek(handle, recordOffset, flash.SK_FILE_START)
+    utils.evaluateSubValue(endPosn, @"seek()", recordOffset)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"seek()", flash.SUCCESS)
+    writeLength := flash.write(handle, @record, RECORD_LEN)
+    utils.evaluateSubValue(writeLength, @"write()", RECORD_LEN)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"write()", flash.SUCCESS)
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
+
+
+PRI testVerifyRecordsAfterReplace(pFilename, recordCount, initialFiles, initialBlocks) | handle, recordNbr, rdLength, status, calcCRC, testRecordNbr, expectedFileSize, expectedFileBlocks
+
+    debug("  ")
+    debug(" ------------ Verify Replaced Records ------------- ")
+    '  open file for read
+    utils.startTest(@"Open File for read")
+    handle := flash.open(pFilename,"r")
+    utils.evaluate(handle, flash.SUCCESS)
+    '    seek to various locations and read longs validating for correct value
+
+    utils.startTest(@"read expected RECORDs")
+    utils.setCheckCountPerTest(3)
+    repeat recordNbr from 1 to recordCount
+        rdLength := flash.read(handle, @record, RECORD_LEN)
+        if rdLength <> RECORD_LEN
+            status := flash.error()
+            quit
+        ' ensure length is same as expected
+        utils.evaluateSubValue(rdLength, @"read()", RECORD_LEN)
+        ' ensure record ID is same as expected
+        testRecordNbr := (recordId <> recordNbr) ? recordNbr + recordCount : recordNbr
+        utils.evaluateSubValue(recordId, @"recordId", testRecordNbr)
+        ' ensure record CRC is same as expected
+        calcCRC := utils.record_crc(@record, RECORD_LEN)
+        utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
+
+    utils.startTest(@"ensure no errors on reads")
+    utils.evaluate(status, flash.SUCCESS)
+
+    '  close file
+    utils.startTest(@"Close read file")
+    status := flash.close(handle)
+    utils.evaluate(status, flash.SUCCESS)
+
+    '  get filesystem stats and verify against expectation
+    utils.startTest(@"Ensure expected file system changes")
+    utils.evaluateFSStats(@"post file write", initialFiles, initialBlocks)
+
+    expectedFileSize := recordCount * RECORD_LEN
+    expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
+
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats")
+    utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedFileSize)
+
+
+
+con { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Copyright (c) 2023 Iron Sheep Productions, LLC
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}
