@@ -2049,7 +2049,7 @@ PRI ensure_handle_mode(handle, open_mode_bits) : status
 
 CON ' >>>  block_id  <<<
 
-PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address, new_head_block_id, block_offset, body_signature, delete_mode
+PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address, new_head_block_id, block_offset, body_signature, delete_mode, prior_block_id, data_offset
 
 ' Remove leading block(s) from file that exceeds the circular size limit
 '
@@ -2067,32 +2067,54 @@ PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address,
   size_in_bytes := count_file_bytes_id(head_block_id)                                                   'get size of file
 
   ' if have extra blocks beyond limit requested at open, then remove them
-  if size_in_bytes > limit_in_bytes + 128 + 8                                                           'if file is oversize..
+  if size_in_bytes > limit_in_bytes                                                                     'if file is oversize..
 
-    block_address := next_block_address()                                                               'get a new block now (may alter tmpBlockBuffer and IDToBlock)
+      block_address := next_block_address()                                                             'get a new block now (may alter tmpBlockBuffer and IDToBlock)
 
-    new_head_block_id, block_offset, _ := locate_file_byte(head_block_id, size_in_bytes - limit_in_bytes)        'find block with start of data (might be head block)
+      new_head_block_id, block_offset, _ := locate_file_byte(head_block_id, size_in_bytes - limit_in_bytes) 'find block with start of data (might be head block)
+      debug("* froncate(id=", udec_(head_block_id), ", ", udec_(limit_in_bytes), ") ", udec(size_in_bytes, new_head_block_id), uhex_word(block_offset), "(", udec_word_(block_offset), ")")
 
-    debug("* froncate(id=", udec_(head_block_id), ", ", udec_(limit_in_bytes), ") ", udec(size_in_bytes, new_head_block_id), uhex_word(block_offset))
-    flash_read_block_id(new_head_block_id, @body_signature, $000, $003)                                 'get data block signature
-    flash_read_block_id(new_head_block_id, @tmpBlockBuffer + $88, $088, $FFF)                          'load data bytes into head block buffer
-    flash_read_block_id(head_block_id, @tmpBlockBuffer, $000, $087)                                     'overlay file-head data
+      if block_offset > $88
+        ' make this block the new head
+        flash_read_block_id(new_head_block_id, @body_signature, $000, $003)                             'get data block signature
+        flash_read_block_id(new_head_block_id, @tmpBlockBuffer + $88, $088, $FFF)                       'load data bytes into head block buffer
+        data_offset := block_offset - $088                                                              '..set data offset to point within head block
 
-    LONG[@tmpBlockBuffer].[0] := body_signature.[0]                                                   '..copy more/last bit from data block
-    LONG[@tmpBlockBuffer].[31..20] := body_signature.[31..20]                                         '..copy NextID/EndPtr from data block
-    LONG[@tmpBlockBuffer][1].[11..0] := block_offset - $088                                           '..set data offset to point within head block
-    if body_signature.[0]
-      debug("- header [", uhex_word_(block_address), "] thisID=", udec_(LONG[@tmpBlockBuffer].[19..8]), ", nextID=", udec_(LONG[@tmpBlockBuffer].[31..20]), ", sig=[", uhex_long_(LONG[@tmpBlockBuffer]), "]")
-    else
-      debug("- header [", uhex_word_(block_address), "] thisID=", udec_(LONG[@tmpBlockBuffer].[19..8]), ", endPtr=", uhex_word_(LONG[@tmpBlockBuffer].[31..20]), ", sig=[", uhex_long_(LONG[@tmpBlockBuffer]), "]")
-    delete_mode := 1                                                                                  '..delete old head block through data block
+      else
+      ' locate prior block in chain to make it the new head with calc offset
+        ' locate prior block
+        prior_block_id := head_block_id
+        repeat
+          flash_read_block_id(prior_block_id, @body_signature, $000, $003)                              'get head block signature
+          if body_signature.[0] == 1                                                                    ' if more block
+            if body_signature.[31..20] <> new_head_block_id                                             ' ..if this block does NOT immediately preceed our data block
+              prior_block_id := body_signature.[31..20]                                                 ' ....get block id of next block
+            else
+              quit
+          else
+            quit
+        ' prior block is our new head
+        debug("* froncate(id=", udec_(head_block_id), ", ", udec_(limit_in_bytes), ") ", udec(size_in_bytes), ", AWAKEN PRIOR HEAD ", udec(prior_block_id))
+        flash_read_block_id(prior_block_id, @body_signature, $000, $003)                                'get data block signature
+        flash_read_block_id(prior_block_id, @tmpBlockBuffer + $88, $088, $FFF)                          'load data bytes into head block buffer
+        data_offset := block_offset + 3956 - 4                                                              '..set data offset to point within next data block
 
-    flash_activate_updated_block(block_address, @tmpBlockBuffer)                                        'program updated block
+      flash_read_block_id(head_block_id, @tmpBlockBuffer, $000, $087)                                   'overlay file-head data
+      LONG[@tmpBlockBuffer].[0] := body_signature.[0]                                                   '..copy more/last bit from data block
+      LONG[@tmpBlockBuffer].[31..20] := body_signature.[31..20]                                         '..copy NextID/EndPtr from data block
+      LONG[@tmpBlockBuffer][1].[11..0] := data_offset                                                   '..set data offset to point within next data block
+      if body_signature.[0]
+        debug("- header [", uhex_word_(block_address), "] thisID=", udec_(LONG[@tmpBlockBuffer].[19..8]), ", nextID=", udec_(LONG[@tmpBlockBuffer].[31..20]), ", sig=[", uhex_long_(LONG[@tmpBlockBuffer]), "]")
+      else
+        debug("- header [", uhex_word_(block_address), "] thisID=", udec_(LONG[@tmpBlockBuffer].[19..8]), ", endPtr=", uhex_word_(LONG[@tmpBlockBuffer].[31..20]), ", sig=[", uhex_long_(LONG[@tmpBlockBuffer]), "]")
+      delete_mode := 1                                                                                  '..delete old head block through data block
 
-    delete_chain_from_id(head_block_id, body_signature.[19..8], delete_mode, True)                      'delete old head block through or before data block, keep first block ID valid
+      flash_activate_updated_block(block_address, @tmpBlockBuffer)                                        'program updated block
 
-    field[IDToBlock][head_block_id] := block_address                                                    'point IDToBlock to new head block
-    field[BlockState][block_address] := B_HEAD                                                          'change state of new head block from sTEMP to sHEAD
+      delete_chain_from_id(head_block_id, body_signature.[19..8], delete_mode, True)                      'delete old head block through or before data block, keep first block ID valid
+
+      field[IDToBlock][head_block_id] := block_address                                                    'point IDToBlock to new head block
+      field[BlockState][block_address] := B_HEAD                                                          'change state of new head block from sTEMP to sHEAD
 
 {
 PRI truncate_file(head_block_id, limit_in_bytes) | block_address, block_id, block_offset

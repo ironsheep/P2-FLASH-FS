@@ -78,7 +78,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
 
     utils.startTest(@"Write Records")
     utils.setCheckCountPerTest(2)
@@ -98,7 +98,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
             quit ' abort on first failure
 
     utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -106,7 +106,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 {
     ' AUGH dump head block to see if content is correct
@@ -141,7 +141,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     utils.startTest(@"Ensure no error on size unused call")
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     'debug("* holding...")
     'repeat ' hold here
@@ -149,7 +149,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
@@ -168,19 +168,19 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
         utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
 
     utils.startTest(@"ensure no errors on reads")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more Record than written")
     rdLength := flash.read(handle, @record, RECORD_LEN)
     utils.evaluateSingleValue(rdLength, @"read()", 0)
     status := flash.error()
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateResultNegError(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFiles()
 

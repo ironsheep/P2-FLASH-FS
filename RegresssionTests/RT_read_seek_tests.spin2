@@ -62,7 +62,7 @@ PUB go() | nbrLongs
 
     utils.startTest(@"BAD: Read when file doesn't exist")
     handle := flash.open(@testfile,"r")
-    utils.evaluate(handle, flash.E_FILE_NOT_FOUND)
+    utils.evaluateResultNegError(handle, flash.E_FILE_NOT_FOUND)
 
     ' fill head block with longs (only block file)
     utils.startTestGroup(@"Head block only - filled with longs")
@@ -112,7 +112,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
 
     '  attempt seek and verify that seek on write-only file returns error
     utils.startTest(@"BAD: seek on write-only file")
@@ -120,7 +120,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
     endPosition := flash.seek(handle, 0, flash.SK_FILE_START)
     utils.evaluateSubValue(endPosition, @"seek()", flash.E_FILE_MODE)
     status := flash.error()
-    utils.evaluate(status, flash.E_FILE_MODE)
+    utils.evaluateResultNegError(status, flash.E_FILE_MODE)
 
     '  write a fixed length file of longs where value of LONG is offset into file
     expectedFileSize := 0
@@ -132,7 +132,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
         utils.evaluateSubStatus(status, @"wr_long()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -140,7 +140,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -178,9 +178,9 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluate(handle, 0)
+    utils.evaluateResultNegError(handle, 0)
     status := flash.error()
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
 
     '    seek to various locations and read longs validating for correct value
     utils.startTest(@"read 1st LONG")
@@ -193,7 +193,7 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
         status := flash.error()
         utils.evaluateSubValue(longValue, @"rd_long", 0)
     utils.startTest(@"ensure no errors on read 1st")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"read 20 longs randomly ensure offset is value of LONG")
     utils.setCheckCountPerTest(2)
@@ -211,7 +211,7 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
             quit
         utils.evaluateSubValue(longValue, @"rd_long", byteOffset / 4)
     utils.startTest(@"ensure no errors on read mid")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"read last LONG")
     utils.setCheckCountPerTest(2)
@@ -223,28 +223,28 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
         status := flash.error()
         utils.evaluateSubValue(longValue, @"rd_long", count - 1)
     utils.startTest(@"ensure no errors on read last")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  seek past end of file to verify seek returns error
     utils.startTest(@"BAD: see beyond end of file")
     endPosition := flash.seek(handle, (count + 2) * 4, flash.SK_FILE_START)
     utils.evaluateSubValue(endPosition, @"seek()", flash.E_FILE_SEEK)
     status := flash.error()
-    utils.evaluate(status, flash.E_FILE_SEEK)
+    utils.evaluateResultNegError(status, flash.E_FILE_SEEK)
 
     '  close file
     utils.startTest(@"Close file we were reading")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, relativeOfs
 
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluate(handle, 0)
+    utils.evaluateResultNegError(handle, 0)
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '    seek to various locations and read longs validating for correct value
     utils.startTest(@"read 1st LONG")
@@ -258,7 +258,7 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
         utils.evaluateSubValue(longValue, @"rd_long", 0)
 
     utils.startTest(@"ensure no errors on read rel 1st")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"read 10 longs seeking relative to current location")
     priorByteOfs := (GETRND() +// longsInFile) * 4
@@ -266,7 +266,7 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
     endPosition := flash.seek(handle, priorByteOfs, flash.SK_FILE_START)
     utils.evaluateSubValue(endPosition, @"seek()", priorByteOfs)
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.setCheckCountPerTest(1)
     repeat 10
@@ -287,7 +287,7 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
         utils.evaluateSubValue(longValue, @"rd_long", newByteOfs / 4)
         priorByteOfs := newByteOfs + 4
     utils.startTest(@"ensure no errors on read rel mid")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"read last LONG")
     utils.setCheckCountPerTest(2)
@@ -300,7 +300,7 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
         utils.evaluateSubValue(longValue, @"rd_long", longsInFile - 1)
 
     utils.startTest(@"ensure no errors on read rel last")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  seek past end of file to verify seek returns error
     utils.startTest(@"BAD: seek beyond end of file")
@@ -308,12 +308,12 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
     endPosition := flash.seek(handle, (longsInFile + 2) * 4, flash.SK_FILE_START)
     utils.evaluateSubValue(endPosition, @"seek()", flash.E_FILE_SEEK)
     status := flash.error()
-    utils.evaluate(status, flash.E_FILE_SEEK)
+    utils.evaluateResultNegError(status, flash.E_FILE_SEEK)
 
     '  close file
     utils.startTest(@"Close file we were reading")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri verifyMaxSeek(pFilename) | lenBytes, hLenBytes
@@ -321,32 +321,32 @@ pri verifyMaxSeek(pFilename) | lenBytes, hLenBytes
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
     status := flash.error()
-    utils.evaluate(handle, 0)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, 0)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"Determine size of file (by handle) in bytes ")
     hLenBytes := flash.file_size_for_handle(handle)
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"Determine size of file (by name) in bytes")
     lenBytes := flash.file_size(pFilename)
     status := flash.error()
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
 
     utils.startTest(@"Ensure the sizes match")
-    utils.evaluate(hLenBytes, lenBytes)
+    utils.evaluateResultNegError(hLenBytes, lenBytes)
 
     utils.startTest(@"Seek to end of file returning position and ckeck length returned is file size")
     endPosition := flash.seek(handle, POSX, flash.SK_FILE_START)
     status := flash.error()
-    utils.evaluate(endPosition, lenBytes)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(endPosition, lenBytes)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  close file
     utils.startTest(@"Close file we were reading")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 con { license }

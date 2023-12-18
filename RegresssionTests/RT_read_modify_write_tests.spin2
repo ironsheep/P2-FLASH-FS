@@ -80,11 +80,11 @@ PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern, end
     endPosn := flash.seek(handle, recordOffset, flash.SK_FILE_START)
     utils.evaluateSingleValue(endPosn, @"seek()", recordOffset)
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     '  ensure close does NOT write again
     utils.startTest(@"Close written file (no further block updates)")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     '  re-open for read and verify all records
     testVerifyRecordsAfterReplace(@testfile, recordsThisTest, 1, 4)
 
@@ -133,7 +133,7 @@ pri testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | stat
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
 
     utils.startTest(@"Write Records")
     utils.setCheckCountPerTest(2)
@@ -150,7 +150,7 @@ pri testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | stat
             quit ' abort on first failure
 
     utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -158,7 +158,7 @@ pri testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | stat
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     expectedFileSize := recordCount * RECORD_LEN
     expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
@@ -179,7 +179,7 @@ pri testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | stat
 
     utils.startTest(@"Ensure no error on size unused call")
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri testVerifyRecords(pFilename, recordCount) | status, handle, testValue, expectedValue, recordNbr, wrLength, rdLength, pBlock, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
@@ -189,7 +189,7 @@ pri testVerifyRecords(pFilename, recordCount) | status, handle, testValue, expec
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
@@ -208,19 +208,19 @@ pri testVerifyRecords(pFilename, recordCount) | status, handle, testValue, expec
         utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
 
     utils.startTest(@"ensure no errors on reads")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more Record than written")
     rdLength := flash.read(handle, @record, RECORD_LEN)
     utils.evaluateSingleValue(rdLength, @"read()", 0)
     status := flash.error()
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateResultNegError(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 PRI testReplaceWithinFile(pFilename, maxRecords) : handle | status, recordNbr, recordOffset, newRecordNbr
@@ -231,7 +231,7 @@ PRI testReplaceWithinFile(pFilename, maxRecords) : handle | status, recordNbr, r
     utils.startTest(@"Open File for modify write")
     handle := flash.open(pFilename, flash.FILEMODE_READ_EXTENDED)
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     if status <> flash.SUCCESS
       handle := flash.E_NO_HANDLE
       debug("* ERROR filed to open file for modify")
@@ -261,7 +261,7 @@ PRI testReplaceWithinFile(pFilename, maxRecords) : handle | status, recordNbr, r
 
     status := flash.error()
     utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -290,7 +290,7 @@ PRI testVerifyRecordsAfterReplace(pFilename, recordCount, initialFiles, initialB
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
@@ -310,12 +310,12 @@ PRI testVerifyRecordsAfterReplace(pFilename, recordCount, initialFiles, initialB
         utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
 
     utils.startTest(@"ensure no errors on reads")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  get filesystem stats and verify against expectation
     utils.startTest(@"Ensure expected file system changes")
