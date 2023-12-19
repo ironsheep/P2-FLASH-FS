@@ -9,7 +9,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 19 SEP 2023
+''   Updated.... 18 DEC 2023
 ''
 '' =================================================================================================
 '' v1.2.0 - initial release of flash_fs with full API
@@ -196,6 +196,7 @@ PUB version() : result
 '' Returns flash file system library version as integer
 '' -- e.g., version 120 is 1.2.0 (major, minor, bugfix)
 
+  LONG[@errorCode][cogid()] := SUCCESS
   return LIB_VERSION
 
 {$flexspin
@@ -504,10 +505,10 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
 '' @param p_filename - address of a zstring containing the filename
 '' @param mode - the mode in which to open the file:
 '' -- mode "r", "R" to read from an existing file
-'' -- mode "w", "W" to write to a new file (or overwrites existing file)
+'' -- mode "w", "W" to write to a new file (overwrites existing file)
 '' -- mode "a", "A" to append to the end of an existing file (file is created if doesn't exist)
 '' -- mode "r+", "R+" to read/modify/write within an existing file
-'' -- mode "w+", "W+" to read/modify/write within a new file (or overwrites existing file)
+'' -- mode "w+", "W+" to read/modify/write within a new file (overwrites existing file)
 '' @returns handle - handle to open file if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_NO_HANDLE if no handle is available,
@@ -1820,7 +1821,7 @@ PRI rd_byte_no_locks(handle) : byteValue | pBuff, signature, isSeeking, endPtr
   'debug("rd_byte() [",uhex_byte_(byteValue),"]")
 
 
-PRI wr_byte_no_locks(handle, byteValue) : status | pBuff, nextBlockID, isSeeking, endPtr, shouldWrite
+PRI wr_byte_no_locks(handle, byteValue) : status | pBuff, nextBlockID, isSeeking, endPtr
 
 ' Write a byte to a file that is open for write or rewrite
 '
@@ -1839,9 +1840,8 @@ PRI wr_byte_no_locks(handle, byteValue) : status | pBuff, nextBlockID, isSeeking
   pBuff := buffer_pointer(handle)                                               'get buffer pointer
   hWriteCount[handle]++                                                         'increment byte count
   status:= SUCCESS
-  shouldWrite := true
-  case hStatus[handle]
 
+  case hStatus[handle]
     H_WRITE, H_APPEND:                                                          'write/rewrite/append mode?
       if endPtr == $FFC                                                         'if current block full..
         long[pBuff].[0]~~                                                       '..make more block
@@ -1853,21 +1853,16 @@ PRI wr_byte_no_locks(handle, byteValue) : status | pBuff, nextBlockID, isSeeking
         endPtr := $004                                                          '..point to start of data in new block
 
     H_READWRITE:                                                                'modify mode?
-      ifnot long[pBuff].[0]                                                     'if last block..
-        if endPtr == long[pBuff].[31..20]                                       '..and if end of data
-          shouldWrite := false                                                  '..then return without writing
-          ' FIXME: TODO: should this return an ERROR?!!
-      else                                                                      'if not last block..
-        if endPtr == $FFC                                                       '..and if block full
-          if hModified[handle]~                                                  '..and if block was modified
-            rewrite_block(handle)                                               '..then rewrite block (might move a block)
-          flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)          '..read next block
-          hendPtr := $004                                                       '..point to start of data in next block
+      if endPtr == $FFC                                                       '..and if block full
+        if hModified[handle]~                                                  '..and if block was modified
+          rewrite_block(handle)                                               '..then rewrite block (might move a block)
+        flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)          '..read next block
+        endPtr := $004                                                       '..point to start of data in next block
 
     other:                                                                      'other mode?
       status := E_FILE_MODE                                                     'write not allowed, abort
 
-  if status == SUCCESS and shouldWrite == true
+  if status == SUCCESS
     hModified[handle]~~                                                         'set modified flag
     byte[pBuff][endPtr++] := byteValue                                          'write byte into block buffer, post-increment pointer
     if isSeeking
@@ -1940,7 +1935,8 @@ PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_
           froncate_file(head_block_id, hCircularLength[handle])                 '..froncate file to size limit
 
       H_READWRITE:                                                              'modify mode?
-        rewrite_block(handle)                                                   '..rewrite block
+        if hModified[handle]~                                                   '..and if block was modified (post-clears)
+          rewrite_block(handle)                                                 '..rewrite block
 
   hEndPtr[handle] := 0                                                          ' no valid end pointer any more
   hSeekPtr[handle] := NOT_ENABLED                                               ' Ensure seek mode is disabled for this handle
@@ -2934,7 +2930,7 @@ PUB TEST_getHead4kBlock(p_filename) : p_buffer | signature
     lockrel(fsLock)                                                             ' release the lock, we're done with it
 
 
-PUB TEST_get4kBlockAndNextAtOffset(p_filename, file_position) : p_buffer, p_buffer2 | signature, block_id
+PUB TEST_get4kBlockAndNextAtOffset(p_filename, file_position) : p_buffer, p_buffer2, blkAddr1, blkAddr2 | signature, block_id
 
 '' TEST METHOD: Return the named file's head block
 ''
@@ -2952,11 +2948,15 @@ PUB TEST_get4kBlockAndNextAtOffset(p_filename, file_position) : p_buffer, p_buff
       p_buffer2 := @block2ForUser
 
       block_id, _, _ := locate_file_byte(signature.[19..8], file_position)      'locate byte in file
+      blkAddr1 := field[IDToBlock][block_id]
       flash_read_block_id(block_id, p_buffer, $000, $FFF)                       'read lead block into buffer
       if LONG[p_buffer].[0]                                                     'if NOT last block
-        flash_read_block_id(LONG[p_buffer].[31..20], p_buffer2, $000, $FFF)     '..read next block into buffer
+        block_id := LONG[p_buffer].[31..20]
+        blkAddr2 := field[IDToBlock][block_id]
+        flash_read_block_id(block_id, p_buffer2, $000, $FFF)     '..read next block into buffer
       else
         p_buffer2 := 0
+        blkAddr2 := 0
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
 
@@ -3052,6 +3052,7 @@ PUB TEST_getCommitBlockSignatures(handle) : p_sigLong, sigCount  | pBuff, endPtr
         ' no commit chain (must be single block write)
         ' in this case return signature from in-memory buffer[handle]
         signature[0] := LONG[pBuff]
+        signature[0].[3] := hModified[handle] ? 0 : 1                           ' special FLAG for this routine (block is modified)
         signature[1] := LONG[pBuff][1]
         ifnot signature.[0]                                                     ' if is tail block
             signature[0].[31..20] := endPtr
@@ -3060,6 +3061,7 @@ PUB TEST_getCommitBlockSignatures(handle) : p_sigLong, sigCount  | pBuff, endPtr
         'debug("TEST_gtCommitBlockSignatures() head block")
         ' NOTE: hChainBlockAddr[handle] ' has block address of head of commit chain
         lastSignature[0] := LONG[pBuff]
+        lastSignature[0].[3] := hModified[handle] ? 0 : 1                       ' special FLAG for this routine (block is modified)
         lastSignature[1] := LONG[pBuff][1]
         ifnot lastSignature.[0]  ' if is tail block
             lastSignature[0].[31..20] := endPtr

@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 10 DEC 2023
+''   Updated.... 18 DEC 2023
 ''
 '' =================================================================================================
 
@@ -146,10 +146,11 @@ pri testAppendWithIntermedFlush(initialLongsCount, startingFileCount, startingBl
 
 
     utils.startTest(@"Get starting length before append of BYTEs")
+    utils.setCheckCountPerTest(2)
     startLength := flash.file_size(@testfile7)
     status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    utils.evaluateSingleValue(startLength, @"file_size()", initialLongsCount * 4)
+    utils.evaluateSubValue(startLength, @"file_size()", initialLongsCount * 4)
+    utils.evaluateSubStatus(handle, @"file_size()", flash.SUCCESS)
 
     bytesUsed := startLength
 
@@ -189,10 +190,11 @@ pri testAppendWithIntermedFlush(initialLongsCount, startingFileCount, startingBl
 pri testNewAppendBytes(pFilename, count, startingFileCount, startingBlockCount) | bExists, startLength, bytesUsed, blocksUsed, blocksAdded, pBlock
 
     utils.startTest(@"Ensure file doesn't exist")
-    utils.setCheckCountPerTest(1)
+    utils.setCheckCountPerTest(2)
     bExists := flash.exists(@testfile1)
     status := flash.error()
-    utils.evaluateSubStatus(bExists, @"exists()", false)
+    utils.evaluateSubValue(bExists, @"exists()", false)
+    utils.evaluateSubStatus(status, @"exists()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors for exists() call ")
     utils.evaluateResultNegError(status, flash.SUCCESS)
@@ -274,10 +276,11 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | by
 pri testAppendBytes(pFilename, initialCount, count, startingFileCount, startingBlockCount) | startLength, bytesUsed, blocksUsed, pBlock, blocksAdded
 
     utils.startTest(@"Get starting length before append of BYTEs")
+    utils.setCheckCountPerTest(2)
     startLength := flash.file_size(pFilename)
     status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    utils.evaluateSingleValue(startLength, @"file_size()", initialCount)
+    utils.evaluateSubValue(startLength, @"file_size()", initialCount)
+    utils.evaluateSubStatus(handle, @"file_size()",flash.SUCCESS)
 
     '  open file for append
     utils.startTest(@"Open File for append")
@@ -374,10 +377,11 @@ pri testWriteWords(pFilename, count, startingFileCount, startingBlockCount) | bl
 pri testAppendWords(pFilename, initialCount, count, startingFileCount, startingBlockCount) | startLength, bytesUsed, pBlock, blocksAdded, blocksUsed
 
     utils.startTest(@"Get starting length before append of WORDs")
+    utils.setCheckCountPerTest(2)
     startLength := flash.file_size(pFilename)
     status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    utils.evaluateSingleValue(startLength, @"file_size()", initialCount * 2)
+    utils.evaluateSubValue(startLength, @"file_size()", initialCount * 2)
+    utils.evaluateSubStatus(handle, @"file_size()", flash.SUCCESS)
 
     '  open file for append
     utils.startTest(@"Open File for append")
@@ -436,7 +440,7 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | by
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, 0)
 
     utils.startTest(@"Write N LONGs")
     utils.setCheckCountPerTest(1)
@@ -474,10 +478,11 @@ pri testWriteLongs(pFilename, count, startingFileCount, startingBlockCount) | by
 pri testAppendLongs(pFilename, initialCount, count, startingFileCount, startingBlockCount) | startLength, bytesUsed, blocksUsed, blocksAdded
 
     utils.startTest(@"Get starting length before append of LONGs")
+    utils.setCheckCountPerTest(2)
     startLength := flash.file_size(pFilename)
     status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    utils.evaluateSingleValue(startLength, @"file_size()", initialCount * 4)
+    utils.evaluateSubValue(startLength, @"file_size()", initialCount * 4)
+    utils.evaluateSubStatus(handle, @"file_size()", flash.SUCCESS)
 
     '  open file for append
     utils.startTest(@"Open File for append")
@@ -524,14 +529,14 @@ pri testAppendLongs(pFilename, initialCount, count, startingFileCount, startingB
 
 pri testFlushAppendLongs(appendHandle, pFilename, initialLongCount, count) | startLength, bytesUsed, blocksUsed, blocksAdded
 
-    utils.startTest(@"START: append to, then flush file")
     utils.showFileDetails(pFilename)
 
     utils.startTest(@"Get starting length before append of LONGs")
+    utils.setCheckCountPerTest(2)
     startLength := flash.file_size(pFilename)
     status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    utils.evaluateSingleValue(startLength, @"file_size()", initialLongCount * 4)
+    utils.evaluateSubValue(startLength, @"file_size()", initialLongCount * 4)
+    utils.evaluateSubStatus(handle, @"file_size()", flash.SUCCESS)
 
     utils.startTest(@"Append count LONGs")
     utils.setCheckCountPerTest(1)
@@ -659,10 +664,11 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount): s
 pri testAppendStrings(pFilename, count, initialFileSize, startingFileCount, startingBlockCount) : strFileSize | startLength, readWriteIdx, strIdx, pString, pBlock, blocksAdded, blocksUsed
 
     utils.startTest(@"Get starting length before append of STRINGs")
+    utils.setCheckCountPerTest(2)
     startLength := flash.file_size(pFilename)
     status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    utils.evaluateSingleValue(startLength, @"file_size()", initialFileSize)
+    utils.evaluateSubValue(startLength, @"file_size()", initialFileSize)
+    utils.evaluateSubStatus(handle, @"file_size()", flash.SUCCESS)
 
     '  open file for append
     utils.startTest(@"Open File for append")
