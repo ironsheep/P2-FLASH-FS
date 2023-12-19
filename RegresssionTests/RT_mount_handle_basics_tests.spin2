@@ -123,6 +123,12 @@ PUB go()
     status := flash.error()
     utils.evaluateSubStatus(status, @"close()", flash.E_NOT_MOUNTED)
 
+    utils.startTest(@"create_file()")
+    status := flash.create_file(@"emptyFile", $00, 123)
+    utils.evaluateSubStatus(status, @"create_file()", flash.E_NOT_MOUNTED)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"create_file()", flash.E_NOT_MOUNTED)
+
     utils.startTest(@"seek()")
     endPosition := flash.seek(badHandle, 25, flash.SK_FILE_START)
     utils.evaluateSubStatus(endPosition, @"seek()", flash.E_NOT_MOUNTED)

@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 16 DEC 2023
+''   Updated.... 19 DEC 2023
 ''
 '' =================================================================================================
 
@@ -172,10 +172,11 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more Record than written")
+    utils.setCheckCountPerTest(2)
     rdLength := flash.read(handle, @record, RECORD_LEN)
-    utils.evaluateSingleValue(rdLength, @"read()", 0)
+    utils.evaluateSubValue(rdLength, @"read()", 0)
     status := flash.error()
-    utils.evaluateResultNegError(status, flash.E_END_OF_FILE)
+    utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")

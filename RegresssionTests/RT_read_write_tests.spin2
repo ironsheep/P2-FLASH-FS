@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 16 DEC 2023
+''   Updated.... 19 DEC 2023
 ''
 '' =================================================================================================
 
@@ -169,6 +169,7 @@ PUB go() | snHi, snLo
 
     ' --- special case - Mount() testing do files survive unmount()/mount()?
     utils.startTestGroup(@"unmount(), mount() - ensure files survive")
+    utils.startTest(@"unmount()")
     status := flash.unmount()
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
@@ -186,6 +187,7 @@ PUB go() | snHi, snLo
     status := flash.open(@testfile7, "r")
     utils.evaluateResultNegError(status, flash.E_NOT_MOUNTED)
 
+    utils.startTest(@"mount() FS")
     status := flash.mount()
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
@@ -202,6 +204,7 @@ pri testWriteBytes(pFilename, count, startingFileCount, startingBlockCount) | bl
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
     utils.evaluateResultNegError(handle, flash.SUCCESS)
+
     utils.startTest(@"Write N BYTEs")
     utils.setCheckCountPerTest(1)
     testValue := 0
@@ -497,7 +500,7 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected 10 STRINGs")
-    utils.setCheckCountPerTest(2)
+    utils.setCheckCountPerTest(3)
     foundFileSize := 0
     repeat readWriteIdx from 0 to MAX_STRINGS_WRITTEN - 1
          strIdx := BYTE[@idxStringWritten][readWriteIdx]
@@ -505,9 +508,8 @@ pri testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) | 
         ' the read call doesn't count terminator in length
         expectedLength := strsize(pString)
         rdLength := flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
-        if rdLength < 0
-            status := rdLength
-            quit
+        status := flash.error()
+        utils.evaluateSubStatus(status, @"rd_str()", flash.SUCCESS)
         ' ensure length is same as expected
         utils.evaluateSubValue(rdLength, @"rd_str()", expectedLength)
         ' ensure string is same as expected
@@ -542,6 +544,7 @@ pri testVerifyReads(pFilename) | fileSizeInBytes, accumulatedReadLength, readLen
     fileSizeInBytes := flash.file_size(pFilename)
     status := flash.error()
     utils.evaluateResultNegError(handle, flash.SUCCESS)
+
     debug("* working with ", udec_(fileSizeInBytes), " byte file")
 
     '  open file for read
@@ -560,7 +563,7 @@ pri testVerifyReads(pFilename) | fileSizeInBytes, accumulatedReadLength, readLen
         accumulatedReadLength += readLen
         if accumulatedReadLength > fileSizeInBytes
             debug("- done, past end of file")
-                quit
+              quit
         bytesReadCount := flash.read(handle, @readBuffer, readLen)
         status := flash.error()
         pStatus := (status == flash.SUCCESS and bytesReadCount == readLen) ? @"pass" : @"FAIL"
