@@ -378,14 +378,13 @@ PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCou
 '' @returns bool - Returns T/F where T means no blocks would be changed by mount
 
 ' Local Variables:
-' @local block_address -
-' @local signature -
-' @local BYTE -
-' @local blockTypeBits -
-' @local dupeIdCount -
-' @local fileCount -
-' @local badBlockCount -
-' @local bad_count -
+' @local block_address - the block offset within the file system
+' @local signature - temporary block state bits
+' @local blockTypeBits - temporary block type bits
+' @local dupeIdCount - count of duplicate ID blocks found
+' @local fileCount - count of files found
+' @local badBlockCount - count of bad blocks found
+' @local bad_count - count of bad blocks found
 
     if fsMounted
         return (LONG[@errorCode][cogid()] := SUCCESS)                           ' return T if already mounted
@@ -815,7 +814,7 @@ PUB delete(p_filename) : status | signature
 
   else
     ' a file delete consists of cancelling all blocks in the file chain
-    delete_chain_from_id(signature.[19..8], 0, 0, False)        'cancel and free all blocks in file, don't keep first ID valid
+    delete_chain_from_id(signature.[19..8], 0, 0, False)                        'cancel and free all blocks in file, don't keep first ID valid
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
@@ -827,18 +826,22 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
 '' @param p_filename - address of zstring containing name for new file
 '' @param fill_value - initial value for all bytes in file
 '' @param byte_count - desired length of file in bytes
-'' @returns status -
+'' @returns status - 0 (SUCCESS) if successful,
+'' .. E_NOT_MOUNTED if filesystem has not been mounted,
+'' .. E_FILE_OPEN if file is open,
+'' .. E_DRIVE_FULL if no available space left in filesystem,
+'' .. E_FILE_EXISTS if the file already exists
 
 ' Local Variables:
-' @local signature -
-' @local head_block_id -
-' @local block_id -
-' @local block_address -
-' @local NotFirst -
-' @local dataOffset -
-' @local isLast -
-' @local currOffset -
-' @local NextID_EndPtr -
+' @local signature - temporary block state bits
+' @local head_block_id - the head block id for this new file
+' @local block_id - temporary block id
+' @local block_address - the block offset within the file system
+' @local NotFirst - T/F where T means is not first block in file
+' @local dataOffset - temp integer containing the initial data offset
+' @local isLast - T/F where T means this is last block
+' @local currOffset - temporary block offset
+' @local NextID_EndPtr - temporary nextID/EndPtr value
 
   ifnot fsMounted
     return (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
@@ -1612,16 +1615,16 @@ PRI get_file_head_signature(p_filename) : foundSignature | tmpFilenameCRC, block
 ' @local signature[2] - a temp buffer for the block's signature and filename CRC
 ' @local bIsOldFmt - a temp boolean indicating we have an old format header block (filename CRC is CRC32)
 
-  tmpFilenameCRC := filename_crc(p_filename)             'get CRC of filename
+  tmpFilenameCRC := filename_crc(p_filename)                                    'get CRC of filename
 
-  repeat BLOCKS with block_address              'scan head blocks for filename
-    if field[BlockState][block_address] == B_HEAD        'if this is a head block..
-      flash_read_block_addr(block_address, @signature, $000, $007)         '..read first two longs of block
-      if signature[1].[31..12] == tmpFilenameCRC          'if the filename CRC matches..
+  repeat BLOCKS with block_address                                              'scan head blocks for filename
+    if field[BlockState][block_address] == B_HEAD                               'if this is a head block..
+      flash_read_block_addr(block_address, @signature, $000, $007)              '..read first two longs of block
+      if signature[1].[31..12] == tmpFilenameCRC                                'if the filename CRC matches..
         ' have new format file head
-        flash_read_block_addr(block_address, @tmpBlockBuffer, $008, $087)        '..read whole filename for comparison
-        if strcomp(p_filename, @tmpBlockBuffer)       'if filename matches..
-          foundSignature := signature                     '..return first long of block (always non-zero or logically TRUE)
+        flash_read_block_addr(block_address, @tmpBlockBuffer, $008, $087)       '..read whole filename for comparison
+        if strcomp(p_filename, @tmpBlockBuffer)                                 'if filename matches..
+          foundSignature := signature                                           '..return first long of block (always non-zero or logically TRUE)
           'debug("- GOOD crc19 and strcomp!")
           quit
         else
@@ -1631,8 +1634,8 @@ PRI get_file_head_signature(p_filename) : foundSignature | tmpFilenameCRC, block
         'debug("- bad CRC19 is CRC32? ", uhex_word(block_address))
         bIsOldFmt := is_old_format_file_head(block_address, @tmpBlockBuffer)
         if bIsOldFmt
-          if strcomp(p_filename, @tmpBlockBuffer)       'if filename matches..
-            foundSignature := signature                     '..return first long of block (always non-zero or logically TRUE)
+          if strcomp(p_filename, @tmpBlockBuffer)                               'if filename matches..
+            foundSignature := signature                                         '..return first long of block (always non-zero or logically TRUE)
             debug("- GOOD crc32 and strcomp!")
             quit
           else
@@ -1724,9 +1727,9 @@ PRI start_write(handle, open_mode, head_block_id, head_cycle) | block_address
 
 ' configure file for H_WRITE or H_APPEND
 '
-' @param handle -
-' @param open_mode -
-' @param head_block_id -
+' @param handle - a handle to an open file
+' @param open_mode - desired open mode
+' @param head_block_id - the head block id for this new file
 ' @param head_cycle -
 
   build_head_block(buffer_pointer(handle), filename_pointer(handle), head_block_id) 'build head block in buffer
@@ -1742,15 +1745,15 @@ PRI start_modify(handle, open_mode, head_block_id, file_position, bFileExists) |
 
 ' configure file for H_APPEND or H_READWRITE
 '
-' @param handle -
-' @param open_mode -
-' @param head_block_id -
+' @param handle - a handle to an open file
+' @param open_mode - desired open mode
+' @param head_block_id - the head block id for this new file
 ' @param file_position -
 ' @param bFileExists -
 
 ' Local Variables:
-' @local block_id -
-' @local pBuff -
+' @local block_id - temporary block id
+' @local pBuff - a temporary pointer to the handles block buffer
 
     'debug("* srt_modify() ", udec(handle, head_block_id, file_position))
 
@@ -1812,7 +1815,7 @@ PRI rd_byte_no_locks(handle) : byte_value | pBuff, signature, isSeeking, endPtr
       'debug("* rdByte FILE MODE ERR")
       return (LONG[@errorCode][cogid()] := E_FILE_MODE)                         'read not allowed, abort
 
-  byte_value := BYTE[pBuff][endPtr++]                                            ' get data byte to return and increment pointer
+  byte_value := BYTE[pBuff][endPtr++]                                           ' get data byte to return and increment pointer
   if isSeeking
     hSeekPtr[handle] := endPtr                                                  ' point to start of data in body block
     hSeekFileOffset[handle]++                                                   ' we moved keep track
@@ -1853,18 +1856,18 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
         endPtr := $004                                                          '..point to start of data in new block
 
     H_READWRITE:                                                                'modify mode?
-      if endPtr == $FFC                                                       '..and if block full
-        if hModified[handle]~                                                  '..and if block was modified
-          rewrite_block(handle)                                               '..then rewrite block (might move a block)
-        flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)          '..read next block
-        endPtr := $004                                                       '..point to start of data in next block
+      if endPtr == $FFC                                                         '..and if block full
+        if hModified[handle]~                                                   '..and if block was modified
+          rewrite_block(handle)                                                 '..then rewrite block (might move a block)
+        flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)            '..read next block
+        endPtr := $004                                                          '..point to start of data in next block
 
     other:                                                                      'other mode?
       status := E_FILE_MODE                                                     'write not allowed, abort
 
   if status == SUCCESS
     hModified[handle]~~                                                         'set modified flag
-    byte[pBuff][endPtr++] := byte_value                                          'write byte into block buffer, post-increment pointer
+    byte[pBuff][endPtr++] := byte_value                                         'write byte into block buffer, post-increment pointer
     if isSeeking
         hSeekPtr[handle] := endPtr                                              ' point to start of data in body block
         hSeekFileOffset[handle]++                                               ' we moved keep track
@@ -1883,7 +1886,7 @@ PRI seek_no_locks(handle, file_position) | pBuff, block_id, endPtr, fileOffset
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
-' @local block_id - temp block id
+' @local block_id - temporary block id
 
   ' FIXME: TODO:  understand why hEndPtr[handle] is in play here!!!
 
@@ -1954,15 +1957,15 @@ PRI write_block(handle, NextID_EndPtr) | pBuff, block_id, block_address
 ' @param NextID_EndPtr - the next block id, -OR- the pointer to end of data in last block
 
 ' Local Variables:
-' @local pBuff -
-' @local block_id -
-' @local block_address -
+' @local pBuff - a temporary pointer to the handles block buffer
+' @local block_id - temporary block id
+' @local block_address - the block offset within the file system
 
   pBuff := buffer_pointer(handle)                                               'get block buffer pointer
   long[pBuff].[31..20] := NextID_EndPtr                                         'set NextID/EndPtr
   block_id := long[pBuff].[19..8]                                               'get block ID of block
 
-  block_address := next_block_address()                                       'get a new block (may alter IDToBlock)
+  block_address := next_block_address()                                         'get a new block (may alter IDToBlock)
 
   'if block_id == hHeadBlockID[handle]
     ' FIXME: TODO: should this also mark B_HEAD?
@@ -1977,7 +1980,7 @@ PRI write_block(handle, NextID_EndPtr) | pBuff, block_id, block_address
     flash_program_block(block_address, pBuff, %011)                             '..program body block with new cycle
     flash_activate_block(block_address, %011)                                   '..activate block
     field[BlockState][block_address] := B_BODY                                  '..change block state from sTEMP to sBODY
-    field[IDToBlock][block_id] := block_address                                   '..set IDToBlock
+    field[IDToBlock][block_id] := block_address                                 '..set IDToBlock
 
 
 PRI rewrite_block(handle) | pBuff, block_id, block_address, oldBlockAddress
@@ -1987,16 +1990,16 @@ PRI rewrite_block(handle) | pBuff, block_id, block_address, oldBlockAddress
 ' @param handle - a reference to a file open for read/modify/write
 
 ' Local Variables:
-' @local pBuff -
-' @local block_id -
-' @local block_address -
-' @local oldBlockAddress -
+' @local pBuff - a temporary pointer to the handles block buffer
+' @local block_id - temporary block id
+' @local block_address - the block offset within the file system
+' @local oldBlockAddress - original block address for this block
 
   pBuff := buffer_pointer(handle)                                               'get block buffer pointer
   block_id := long[pBuff].[19..8]                                               'get block ID
 
   block_address := next_block_address()                                         'get a new block (may alter IDToBlock)
-  flash_activate_updated_block(block_address, pBuff)                             'program updated block
+  flash_activate_updated_block(block_address, pBuff)                            'program updated block
 
   oldBlockAddress := field[IDToBlock][block_id]\block_address                   'get the old block -AND- update IDToBlock to new block
   flash_cancel_block(oldBlockAddress)                                           'cancel the old block
@@ -2052,12 +2055,14 @@ PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address,
 ' @param limit_in_bytes - the file size limit in bytes
 
 ' Local Variables:
-' @local size_in_bytes -
-' @local block_address -
-' @local new_head_block_id -
-' @local block_offset -
-' @local signature -
-' @local delete_mode -
+' @local size_in_bytes - current length of file in bytes
+' @local block_address - the block offset within the file system
+' @local new_head_block_id - id of block about to become the file head
+' @local block_offset - temporary offset into block
+' @local body_signature - temporary signature bits for body block
+' @local delete_mode - desired delete mode for prior-file chain
+' @local prior_block_id - former head block id
+' @local data_offset - temporary offset in block
 
   size_in_bytes := count_file_bytes_id(head_block_id)                                                   'get size of file
 
@@ -2104,25 +2109,25 @@ PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address,
         debug("- header [", uhex_word_(block_address), "] thisID=", udec_(LONG[@tmpBlockBuffer].[19..8]), ", endPtr=", uhex_word_(LONG[@tmpBlockBuffer].[31..20]), ", sig=[", uhex_long_(LONG[@tmpBlockBuffer]), "]")
       delete_mode := 1                                                                                  '..delete old head block through data block
 
-      flash_activate_updated_block(block_address, @tmpBlockBuffer)                                        'program updated block
+      flash_activate_updated_block(block_address, @tmpBlockBuffer)                                      'program updated block
 
-      delete_chain_from_id(head_block_id, body_signature.[19..8], delete_mode, True)                      'delete old head block through or before data block, keep first block ID valid
+      delete_chain_from_id(head_block_id, body_signature.[19..8], delete_mode, True)                    'delete old head block through or before data block, keep first block ID valid
 
-      field[IDToBlock][head_block_id] := block_address                                                    'point IDToBlock to new head block
-      field[BlockState][block_address] := B_HEAD                                                          'change state of new head block from sTEMP to sHEAD
+      field[IDToBlock][head_block_id] := block_address                                                  'point IDToBlock to new head block
+      field[BlockState][block_address] := B_HEAD                                                        'change state of new head block from sTEMP to sHEAD
 
 {
 PRI truncate_file(head_block_id, limit_in_bytes) | block_address, block_id, block_offset
 
-' ...
+' Remove trailing block(s) of file leaving limit_in_bytes mstill in file
 '
-' @param head_block_id -
-' @param limit_in_bytes -
+' @param head_block_id - the head block id for this new file
+' @param limit_in_bytes - the file size limit in bytes
 
 ' Local Variables:
-' @local block_address -
-' @local block_id -
-' @local block_offset -
+' @local block_address - the block offset within the file system
+' @local block_id - temporary block id
+' @local block_offset - temporary offset into block
 
   if count_file_bytes_id(head_block_id) > limit_in_bytes                 'if file is oversize..
 
@@ -2141,6 +2146,7 @@ PRI truncate_file(head_block_id, limit_in_bytes) | block_address, block_id, bloc
     field[BlockState][block_address] := LONG[@tmpBlockBuffer].[1] ? B_BODY : B_HEAD    'change state of new last block from sTEMP to sHEAD/sBODY
 
 '}
+
 PRI count_file_bytes_id(block_id) : byteCount
 
   _, _, byteCount := locate_file_byte(block_id, $FFFFFF)    'locate end-of-file by using impossibly large location (16MB)
@@ -2234,8 +2240,8 @@ CON ' >>>  block_address  <<<
 PRI is_old_format_file_head(block_address, pBlockBuffer): oldFormatStatus | fnmCrc32, possOldCRC
   ' return T/F where T means we have an Old-Format crc32 file head block
   '  NOTE: leaves filename in [pBlockBuffer]
-  flash_read_block_addr(block_address, @possOldCRC, $004, $007)        '..read whole filename for comparison
-  flash_read_block_addr(block_address, pBlockBuffer, $008, $087)        '..read whole filename for comparison
+  flash_read_block_addr(block_address, @possOldCRC, $004, $007)                 '..read whole filename for comparison
+  flash_read_block_addr(block_address, pBlockBuffer, $008, $087)                '..read whole filename for comparison
   ' this is the prior version 32-bit crc for filenames
   fnmCrc32 := getcrc(pBlockBuffer, $AD0424F3 rev 31, strsize(pBlockBuffer)+1)   'compute CRC of filename
   oldFormatStatus := possOldCRC == fnmCrc32
@@ -2262,7 +2268,7 @@ PRI offset_head_block(start_block_address, offset_in_blocks) : head_block_addres
   head_block_address := start_block_address
   if offset_in_blocks > 0
     repeat
-        flash_read_block_addr(head_block_address, @signature, $000, $003)             'read the block into the buffer
+        flash_read_block_addr(head_block_address, @signature, $000, $003)       'read the block into the buffer
         ifnot signature.[0]                                                     ' if last block, exit loop
             quit
         nextBlockId := signature.[31..20]                                       '..no, get ID of next block
@@ -2342,7 +2348,7 @@ PRI check_block_fix_dupe_id(thisBlockAddress) | otherBlockAddress, thisCycleBits
     flash_cancel_block(thisBlockAddress)                                        '..if so, cancel block to inhibit future CRC checks
     return                                                                      '..block status remains B_FREE, done
 
-  thisBlockID := LONG[@tmpBlockBuffer].[19..8]                                    'this block is good, get its ID
+  thisBlockID := LONG[@tmpBlockBuffer].[19..8]                                  'this block is good, get its ID
 
   ' if first block with this ID
   ifnot field[IDValid][thisBlockID]~~                                           'set ID flag and if it wasn't already set.. (after test, bit := 1)
@@ -2363,7 +2369,7 @@ PRI check_block_fix_dupe_id(thisBlockAddress) | otherBlockAddress, thisCycleBits
     flash_cancel_block(otherBlockAddress)                                       '..cancel other block
   else
      ' keep other, cancel this one
-   flash_cancel_block(thisBlockAddress)                                        'else, cancel this block, block status remains B_FREE
+   flash_cancel_block(thisBlockAddress)                                         'else, cancel this block, block status remains B_FREE
 
 
 PRI count_file_bytes(block_address) : bytes_used, bytes_free, block_count | signature
@@ -2379,23 +2385,23 @@ PRI count_file_bytes(block_address) : bytes_used, bytes_free, block_count | sign
 ' @local signature - the block state bits of the block being counted
 
   if block_address <> NOT_VALID
-    repeat                                                                        'trace blocks to count file bytes
-        flash_read_block_addr(block_address, @signature, $000, $003)                     'read the first long of the head/body block
+    repeat                                                                      'trace blocks to count file bytes
+        flash_read_block_addr(block_address, @signature, $000, $003)            'read the first long of the head/body block
         block_count++
         case signature.[1..0]
-            %00:                                                                      'head/last
+            %00:                                                                'head/last
                 bytes_used := signature.[31..20] - $088
                 bytes_free := $FFC - signature.[31..20]
                 return
-            %01:                                                                      'head/more
+            %01:                                                                'head/more
                 bytes_used := $FFC - $088
-            %10:                                                                      'body/last
+            %10:                                                                'body/last
                 bytes_used += signature.[31..20] - $004
                 bytes_free := $FFC - signature.[31..20]
                 return
-            %11:                                                                      'body/more
+            %11:                                                                'body/more
                 bytes_used += $FFC - $004
-        block_address := field[IDToBlock][signature.[31..20]]                       'get next block to count
+        block_address := field[IDToBlock][signature.[31..20]]                   'get next block to count
 
 
 PRI trace_file_set_flags(block_address, set) : valid | signature, block_id
@@ -2414,7 +2420,7 @@ PRI trace_file_set_flags(block_address, set) : valid | signature, block_id
   '    debug("tfsf() - ENTRY set")
   'else
   '    debug("tfsf() - ENTRY clear")
-  flash_read_block_addr(block_address, @signature, $000, $003)                       'read first long of initial block
+  flash_read_block_addr(block_address, @signature, $000, $003)                  'read first long of initial block
   field[BlockState][block_address] := set ? B_HEAD : B_TEMP                     'set first block state to (set-pass: B_HEAD or clear-pass: B_TEMP)
 
   repeat BLOCKS                                                                 'limit repeat to BLOCKS in order to return false on endless loop
@@ -2426,7 +2432,7 @@ PRI trace_file_set_flags(block_address, set) : valid | signature, block_id
       'debug("tfsf() - BAD next ID is bad")
       return
     block_address := field[IDToBlock][block_id]                                 'get address of block having this ID
-    flash_read_block_addr(block_address, @signature, $000, $003)                     'read first long of "next" block
+    flash_read_block_addr(block_address, @signature, $000, $003)                'read first long of "next" block
     ifnot signature.[1]                                                         'if "next" is head block, error!, return false
       'debug("tfsf() - BAD head within file")
       return
@@ -2460,13 +2466,13 @@ PRI next_available_block_id() : block_id | possible_block_id
 ' Local Variables:
 ' @local possible_block_id - prospective blockID to check for availability
 
-  block_id := E_DRIVE_FULL                              ' preset error
-  repeat BLOCKS with possible_block_id                  ' pick the first free block ID
-    ifnot field[IDValid][possible_block_id]~~           ' set IDValid, was IDValid previously clear? (after test, bit := 1)
-        block_id := possible_block_id                   ' if IDValid was clear, return new ID
+  block_id := E_DRIVE_FULL                                                      ' preset error
+  repeat BLOCKS with possible_block_id                                          ' pick the first free block ID
+    ifnot field[IDValid][possible_block_id]~~                                   ' set IDValid, was IDValid previously clear? (after test, bit := 1)
+        block_id := possible_block_id                                           ' if IDValid was clear, return new ID
         quit
 
-  if block_id < 0                                       ' if error, set error code
+  if block_id < 0                                                               ' if error, set error code
     LONG[@errorCode][cogid()] := block_id
 
 
@@ -2653,7 +2659,7 @@ PRI flash_read_block_addr(block_address, p_buffer, firstByte, lastByte)
 
   'debug("* rb(", uhex_word_(block_address), ", ", uhex_word_(firstByte), ", ", uhex_word_(lastByte),")")
   flash_command($03 | (FIRST_BLOCK + block_address) << 20 | firstByte << 8, 4)  'read 4KB block
-  flash_receive(p_buffer, lastByte - firstByte + 1)                        'receive block data
+  flash_receive(p_buffer, lastByte - firstByte + 1)                             'receive block data
 
 
 PRI flash_activate_updated_block(block_address, pBuff) | nextCycleBits
@@ -2668,9 +2674,9 @@ PRI flash_activate_updated_block(block_address, pBuff) | nextCycleBits
   if showRTdebug
     debug("* program_updated_block() ", uhex_word(block_address))
 
-  nextCycleBits := next_active_cycle(long[pBuff].[7..5])         'get next cycle
-  flash_program_block(block_address, pBuff, nextCycleBits)           'program new block to replace old block
-  flash_activate_block(block_address, nextCycleBits)             'activate new block
+  nextCycleBits := next_active_cycle(long[pBuff].[7..5])                        'get next cycle
+  flash_program_block(block_address, pBuff, nextCycleBits)                      'program new block to replace old block
+  flash_activate_block(block_address, nextCycleBits)                            'activate new block
 
 
 PRI flash_program_block(block_address, p_buffer, cycle_bits) | pageIndex
@@ -2711,7 +2717,7 @@ PRI flash_activate_block(block_address, cycle_bits)
 
   if showRTdebug
     debug("- activate_block() ", uhex_word(block_address))
-  flash_program_bit(block_address, cycle_bits << 5 | %00011111)                       'clear one cycle bit to activate block
+  flash_program_bit(block_address, cycle_bits << 5 | %00011111)                 'clear one cycle bit to activate block
 
 
 PRI flash_cancel_block(block_address)
@@ -2723,7 +2729,7 @@ PRI flash_cancel_block(block_address)
   if showRTdebug
     debug("- cancel_block() ", uhex_word(block_address))
 
-  flash_program_bit(block_address, %00011111)                                         'clear all cycle bits to cancel block
+  flash_program_bit(block_address, %00011111)                                   'clear all cycle bits to cancel block
 
 
 PRI flash_program_bit(block_address, bit_pattern)
@@ -2873,7 +2879,7 @@ DAT { regression testing buffers and such }
 
    blockForUser         BYTE    0[4096]
    block2ForUser        BYTE    0[4096]
-   signatures           LONG    0[MAX_FILE_LEN_IN_BLOCKS*2] ' we now keep sig[0] and sig[1] in list
+   signatures           LONG    0[MAX_FILE_LEN_IN_BLOCKS*2]                     ' we now keep sig[0] and sig[1] in list
 
 
 CON { methods supporting regression testing }
@@ -2896,7 +2902,7 @@ PUB TEST_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count | si
   ifnot fsMounted
     return (LONG[@errorCode][cogid()] := E_NOT_MOUNTED), 0, 0
 
-  repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   LONG[@errorCode][cogid()] := SUCCESS
   if signature := get_file_head_signature(p_filename)                           'does file exist?
@@ -2906,7 +2912,7 @@ PUB TEST_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count | si
     bytes_used := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
   'debug("TEST_count_file_bytes() EXIT")
 
-  lockrel(fsLock)                                                             ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 PUB TEST_getHead4kBlock(p_filename) : p_buffer | signature
@@ -2922,7 +2928,7 @@ PUB TEST_getHead4kBlock(p_filename) : p_buffer | signature
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
     p_buffer := @blockForUser
-    if signature := get_file_head_signature(p_filename)                      'if file doesn't exist...
+    if signature := get_file_head_signature(p_filename)                         'if file doesn't exist...
       flash_read_block_addr(field[IDToBlock][signature.[19..8]], @blockForUser, $000, $FFF)   'read head block into buffer
     else
         p_buffer := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
@@ -2972,17 +2978,17 @@ PUB TEST_getTail4kBlock(p_filename) : p_buffer | signature, block_address
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
     p_buffer := @blockForUser
-    if signature := get_file_head_signature(p_filename)                      'if file doesn't exist...
+    if signature := get_file_head_signature(p_filename)                         'if file doesn't exist...
       ' locate tail
-      block_address := field[IDToBlock][signature.[19..8]]                        'get this block address
-      if signature.[0]                                                            ' if not last block, exit loop
+      block_address := field[IDToBlock][signature.[19..8]]                      'get this block address
+      if signature.[0]                                                          ' if not last block, exit loop
           repeat
-              ifnot signature.[0]                                                 ' if last block, exit loop
+              ifnot signature.[0]                                               ' if last block, exit loop
                 quit
-              block_address := field[IDToBlock][signature.[31..20]]               'get next block address
-              flash_read_block_addr(block_address, @signature, $000, $003)             'read the first long of the head/body block
+              block_address := field[IDToBlock][signature.[31..20]]             'get next block address
+              flash_read_block_addr(block_address, @signature, $000, $003)      'read the first long of the head/body block
 
-      flash_read_block_addr(block_address, @blockForUser, $000, $FFF)                  'read head block into buffer
+      flash_read_block_addr(block_address, @blockForUser, $000, $FFF)           'read head block into buffer
       debug("returning: id=", udec_word_(signature.[19..8]), " addr=", uhex_word(block_address))
     else
         p_buffer := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
@@ -3005,18 +3011,18 @@ PUB TEST_getFileBlockSignatures(p_filename) : p_sigLong, sigCount | signature[2]
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
     p_sigLong := @signatures
-    if signature := get_file_head_signature(p_filename)                      'if file doesn't exist...
+    if signature := get_file_head_signature(p_filename)                         'if file doesn't exist...
 
-      block_address := field[IDToBlock][signature.[19..8]]                        'get this block address
+      block_address := field[IDToBlock][signature.[19..8]]                      'get this block address
       repeat
-          flash_read_block_addr(block_address, @signature, $000, $007)                'read the first long of the head/body block
-          LONG[@signatures][sigCount++] := signature[0]                           ' place this signature in list
-          LONG[@signatures][sigCount++] := signature[1]                           ' place the dataOffset in list
-          ifnot signature.[0]                                                     ' if last block, exit loop
+          flash_read_block_addr(block_address, @signature, $000, $007)          'read the first long of the head/body block
+          LONG[@signatures][sigCount++] := signature[0]                         ' place this signature in list
+          LONG[@signatures][sigCount++] := signature[1]                         ' place the dataOffset in list
+          ifnot signature.[0]                                                   ' if last block, exit loop
               quit
-          if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                               ' if filled table, exit loop
+          if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                             ' if filled table, exit loop
               quit
-          block_address := field[IDToBlock][signature.[31..20]]                   'get next block address
+          block_address := field[IDToBlock][signature.[31..20]]                 'get next block address
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
 
@@ -3090,6 +3096,7 @@ PUB TEST_getBlockAddressForId(blockID, possHandle) : block_address
 '' TEST METHOD: Return block address associated with block ID
 ''
 '' @param blockID - the ID of the block
+'' @param possHandle - possible handle of file
 '' @returns block_address - the address the ID currently maps to, or 0 if block ID is not in use
 
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
@@ -3112,6 +3119,7 @@ PUB TEST_filename_for_handle(handle) : pStr
 '' @returns pStr - pointer to filename string or 0 in which case error() contains:
 '' .. E_NOT_MOUNTED if the file system is NOT mounted
 '' .. E_BAD_HANDLE if the handle is not valid
+
   'debug("* TST_fn_for_h() ", sdec(fsMounted))
   ifnot fsMounted
     LONG[@errorCode][cogid()] := E_NOT_MOUNTED
@@ -3122,6 +3130,7 @@ PUB TEST_filename_for_handle(handle) : pStr
 
   LONG[@errorCode][cogid()] := SUCCESS
   pStr := @hFilename + handle * FILENAME_SIZE
+
 
 PUB TEST_enableRTdebug()
 
