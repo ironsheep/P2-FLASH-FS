@@ -6,47 +6,33 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 18 DEC 2023
+''   Updated.... 20 DEC 2023
 ''
 '' =================================================================================================
 
 CON
 
+  MAX_FILES_OPEN = 8
+  TEST_SIGNATURE = $12345678
 
 OBJ
-    flash : "flash_fs"
+    flash : "flash_fs" | MAX_FILES_OPEN = MAX_FILES_OPEN
 
-
-DAT
-
-   testSignature  long    $12345678
 
 VAR { test stats vars }
 
-    LONG    numberTests
-    LONG    subTestPer
-    LONG    passCount
-    LONG    failCount
-    LONG    passCountSub
-    LONG    failCountSub
+    LONG    numberTests[8]
+    LONG    subTestPer[8]
+    LONG    passCount[8]
+    LONG    failCount[8]
+    LONG    passCountSub[8]
+    LONG    failCountSub[8]
 
-    LONG    varSignature
+    LONG    varSignature[8]
 
-    LONG    pCurrRefDir
-    LONG    refFileCount
-    LONG    foundFileCount
-    LONG    refByteCount
-    LONG    calcBlocks
-    LONG    refBlocks
-    LONG    pRefFilename
-    LONG    bPassed
-    LONG    bBadEntry
-    LONG    pPassFail
+    BYTE    versionString[10]  '  "flash_fs v"
+    BYTE    vDigits[5+1]       ' "x.x.x", 0
 
-DAT
-
-versionString   BYTE    "flash_fs v"
-vDigits         BYTE    "x.x.x", 0
 
 pub null()
 
@@ -54,14 +40,16 @@ pub null()
 ''  (invoke format() or mount() to use the flash file system)
 
 pri initIfNotAlready()
-    if varSignature <> testSignature
-        numberTests := 0
-        subTestPer := 1
-        passCount := 0
-        failCount := 0
-        passCountSub := 0
-        failCountSub := 0
-        varSignature := testSignature
+    if varSignature[cogId()] <> TEST_SIGNATURE
+        numberTests[cogId()] := 0
+        subTestPer[cogId()] := 1
+        passCount[cogId()] := 0
+        failCount[cogId()] := 0
+        passCountSub[cogId()] := 0
+        failCountSub[cogId()] := 0
+        strcopy(@versionString, @"flash_fs vx.x.x",15)
+        varSignature[cogId()] := TEST_SIGNATURE
+        debug("* init VAR")
         flash.TEST_enableRTdebug()                      ' turn on extra debug output
 
 pub showChipAndDriverVersion() | snHi, snLo, version, hundreds, tens, units
@@ -85,6 +73,8 @@ pub startTestGroup(pDesciption)
     ' show test-group heading
 
     initIfNotAlready()
+    showSubTestResults()
+
     debug(" ")  ' blank line
     debug(" ")  ' blank line
     debug(" ------------------------------------------------------------")  ' blank line
@@ -94,31 +84,40 @@ pub startTest(pDesciption) | ecGot, ecExpected, passScaled, failScaled, total
     ' if prior sub tests show sub tests results
 
     initIfNotAlready()
-    if failCountSub <> 0 or passCountSub <> 0
-        total := (passCountSub + failCountSub) / subTestPer
-        passScaled := passCountSub / subTestPer
-        failScaled := total - passScaled
-        debug("  Sub-Test Results: Pass: ", udec_(passScaled), ", Fail: ", udec_(failScaled))
-        if failCountSub <> 0
-            failCount++
-        else
-            passCount++
-        pPassFail := failCountSub <> 0 ? @"sub-failed" : @"pass"
-        debug("   -> ", zstr_(pPassFail))
-        passCountSub := 0
-        failCountSub := 0
-    numberTests++
+    showSubTestResults()
+
+    numberTests[cogId()]++
     '  now show new test info
     debug(" ")  ' blank line
-    debug("* Test #", udec_(numberTests), ": ", zstr_(pDesciption))
+    debug("* Test #", udec_(numberTests[cogId()]), ": ", zstr_(pDesciption))
+
+
+pub showSubTestResults() | passScaled, failScaled, total, pPassFail
+    if failCountSub[cogId()] <> 0 or passCountSub[cogId()] <> 0
+        total := (passCountSub[cogId()] + failCountSub[cogId()]) / subTestPer[cogId()]
+        passScaled := passCountSub[cogId()] / subTestPer[cogId()]
+        failScaled := total - passScaled ' >= 0 ? total - passScaled : 0
+        debug("  Sub-Test Results: count=", udec_(total), ", Pass: ", udec_(passScaled), ", Fail: ", udec_(failScaled))
+        if failScaled < 0
+          debug("  Sub-Test (", udec(passCountSub[cogId()], failCountSub[cogId()]), ")")
+
+        if failCountSub[cogId()] <> 0
+            failCount[cogId()]++
+        else
+            passCount[cogId()]++
+        pPassFail := failCountSub[cogId()] <> 0 ? @"sub-failed" : @"pass"
+        debug("   -> ", zstr_(pPassFail))
+        passCountSub[cogId()] := 0
+        failCountSub[cogId()] := 0
+
 
 pub ShowTestEndCounts() | pMsg
     ' show summary of all tests
     debug(" ")  ' blank line
-    debug("* ", udec_(numberTests), " Tests - Pass: ", udec_(passCount), ", Fail: ", udec_(failCount))
-    if numberTests <> passCount + failCount
-      pMsg := (numberTests > passCount + failCount) ? @"missing" : @"extra"
-      debug("*  BAD TEST COUNTS: ", udec_(numberTests), " <> ", udec_(passCount + failCount), " (", zstr_(pMsg), " ", udec_(abs(numberTests - (passCount + failCount))), " tests)")
+    debug("* ", udec_(numberTests[cogId()]), " Tests - Pass: ", udec_(passCount[cogId()]), ", Fail: ", udec_(failCount[cogId()]))
+    if numberTests[cogId()] <> passCount[cogId()] + failCount[cogId()]
+      pMsg := (numberTests[cogId()] > passCount[cogId()] + failCount[cogId()]) ? @"missing" : @"extra"
+      debug("*  BAD TEST COUNTS: ", udec_(numberTests[cogId()]), " <> ", udec_(passCount[cogId()] + failCount[cogId()]), " (", zstr_(pMsg), " ", udec_(abs(numberTests[cogId()] - (passCount[cogId()] + failCount[cogId()]))), " tests)")
 
 pub setCheckCountPerTest(countTests)
 
@@ -126,32 +125,32 @@ pub setCheckCountPerTest(countTests)
 ''
 '' @param countTests - the number of checks per item tested
 
-  subTestPer := countTests
+  subTestPer[cogId()] := countTests
 
-pub evaluateSubStatus(result, pMessage, expectedResult) | ecGot, ecExpected
+pub evaluateSubStatus(result, pMessage, expectedResult) | ecGot, ecExpected, bPassed, pPassFail
     ecGot := flash.string_for_error(result)
     ecExpected := flash.string_for_error(expectedResult)
     bPassed := result == expectedResult
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
-        failCountSub++
+        failCountSub[cogId()]++
     else
-        passCountSub++
-    ifnot bPassed
+        passCountSub[cogId()]++
+    ifnot bPassed               ' only shou result on failure
         ifnot bPassed
             debug("  Status: ", zstr_(ecGot), "(", sdec_(result), "),  (expected ", zstr_(ecExpected), "(", sdec_(expectedResult), "))")
         else
             debug("  Status: ", zstr_(ecGot), "(", sdec_(result), ")")
         debug("   -> ", zstr_(pPassFail))
 
-pub evaluateSubValue(result, pMessage, expectedResult)
+pub evaluateSubValue(result, pMessage, expectedResult) | bPassed, pPassFail
     bPassed := result == expectedResult
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
-        failCountSub++
+        failCountSub[cogId()]++
     else
-        passCountSub++
-    ifnot bPassed
+        passCountSub[cogId()]++
+    ifnot bPassed               ' only shou result on failure
         debug("  Sub-Test: ", zstr_(pMessage))
         ifnot bPassed
             debug("  Value: ", uhex_long_(result), " (expected ", uhex_long_(expectedResult), ")")
@@ -160,7 +159,7 @@ pub evaluateSubValue(result, pMessage, expectedResult)
         debug("   -> ", zstr_(pPassFail))
 
 
-pub evaluateResultNegError(result, expectedResult) | ecGot, ecExpected
+pub evaluateResultNegError(result, expectedResult) | ecGot, ecExpected, bPassed, pPassFail
     bPassed := result == expectedResult
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     if result > 0
@@ -170,47 +169,47 @@ pub evaluateResultNegError(result, expectedResult) | ecGot, ecExpected
                 debug("  Result: ", sdec_(result), " (expected ", zstr_(ecExpected), ")")
             else
                 debug("  Result: ", udec_(result), " (expected ", udec_(expectedResult), ")")
-            failCount++
+            failCount[cogId()]++
         else
             debug("  Result: ", udec_(result))
-            passCount++
+            passCount[cogId()]++
     else
         ecGot := flash.string_for_error(result)
         ecExpected := flash.string_for_error(expectedResult)
         ifnot bPassed
             debug("   ECode: ", zstr_(ecGot), " (expected ", zstr_(ecExpected), ")")
-            failCount++
+            failCount[cogId()]++
         else
             debug("   ECode: ", zstr_(ecGot))
-            passCount++
+            passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
-pub evaluateSingleValue(result, pMessage, expectedResult)
+pub evaluateSingleValue(result, pMessage, expectedResult) | bPassed, pPassFail
     bPassed := result == expectedResult
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
         debug("  ", zstr_(pMessage), ": ", sdec_long_(result), " (expected ", sdec_long_(expectedResult), ")")
-        failCount++
+        failCount[cogId()]++
     else
         debug("  ", zstr_(pMessage), ": ", sdec_long_(result))
-        passCount++
+        passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
-pub evaluateHandle(resultHandle, pMessage)
+pub evaluateHandle(resultHandle, pMessage) | bPassed, pPassFail
     bPassed := resultHandle >= 0
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
         debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle), " (expected >= 0)")
-        failCount++
+        failCount[cogId()]++
     else
         debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle))
-        passCount++
+        passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
-pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount
+pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount, bPassed, pPassFail
 
 '' Report on expected vs. actual filesystem stats
 ''
@@ -236,13 +235,13 @@ pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUse
         debug("  # blocks used: ", udec_(blocksUsed))
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
-        failCount++
+        failCount[cogId()]++
     else
-        passCount++
+        passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
-pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount
+pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, bPassed, pPassFail
 
 '' Report on expected vs. actual file stats
 ''
@@ -272,13 +271,13 @@ pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesU
             debug("  # bytes used: ", udec_(bytesUsed))
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
-        failCount++
+        failCount[cogId()]++
     else
-        passCount++
+        passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
-pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, maxBytesUsed
+pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, expectedBytesUsed) | bytesUsed, bytesFree, blockCount, maxBytesUsed, bPassed, pPassFail
 
 '' Report file stistics against expectation
 ''
@@ -313,9 +312,9 @@ pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, 
             debug("  # bytes used: ", udec_(bytesUsed), ", ", udec(expectedBytesUsed))
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
-        failCount++
+        failCount[cogId()]++
     else
-        passCount++
+        passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
@@ -464,7 +463,7 @@ pub ReadFile(pFilename, pStr, maxlen) | handle, byteCount
     else
         bytefill(pStr, $ff, maxlen)
 
-pub ensureEmptyDirectory() | ID, ByteCount, byte Filename[128], byte Buff[30]
+pub ensureEmptyDirectory() | ID, ByteCount, byte Filename[128], bPassed, pPassFail
 '' validate that directory is empty!
     flash.directory(@ID, @Filename, @ByteCount)                     'get first file
     bPassed := true
@@ -474,9 +473,9 @@ pub ensureEmptyDirectory() | ID, ByteCount, byte Filename[128], byte Buff[30]
 
     ifnot bPassed
         debug("  # Error Found file: [", zstr_(@Filename), "] (expected: no files)")
-        failCount++
+        failCount[cogId()]++
     else
-        passCount++
+        passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
@@ -513,7 +512,7 @@ pub bytesInLastBlock(totalBytes) : bytesInLast
   if bytesInLast > flash.BYTES_IN_BODY_BLOCK
     bytesInLast := bytesInLast +// flash.BYTES_IN_BODY_BLOCK
 
-pub checkMatchingEntries(pDirEntries) | ID, ByteCount, byte Filename[128], byte Buff[30]
+pub checkMatchingEntries(pDirEntries) | ID, ByteCount, byte Filename[128], bPassed, pPassFail, refFileCount, foundFileCount, pCurrRefDir, pRefFilename, refByteCount, refBlocks, calcBlocks, bBadEntry
 {
         ' structure for directory checking
         ' (pDirEntries := @dirEntr1)
@@ -574,9 +573,9 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
         bPassed := false
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
-        failCount++
+        failCount[cogId()]++
     else
-        passCount++
+        passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
 
 
@@ -644,7 +643,7 @@ pub record_crc(p_record_buffer, record_length) : crc
 
   return getcrc(p_record_buffer, $AD0424F3 rev 31, record_length - 4)  'compute CRC of a buffered block
 
-pub dumpFileHeads() | ID, ByteCount, byte Filename[128], byte Buff[30], pBlock
+pub dumpFileHeads() | ID, ByteCount, byte Filename[128], pBlock
     debug(" ")  ' blank line
     debug("  All File heads:")
     repeat

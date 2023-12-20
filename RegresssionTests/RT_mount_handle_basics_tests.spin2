@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 18 DEC 2023
+''   Updated.... 19 DEC 2023
 ''
 '' =================================================================================================
 
@@ -253,9 +253,6 @@ PUB go()
     utils.evaluateSubValue(rdCount, @"directory()", 0)
     utils.evaluateSubStatus(status, @"directory()", flash.SUCCESS)
 
-    utils.startTest(@"status after directory() ops")
-    status := flash.error()                             ' make sure errorcode is same!
-    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     ' all these ops should fail with illegal handle
     utils.startTestGroup(@"Attempting file ops with bad handle $1234")
@@ -339,11 +336,7 @@ PUB go()
     status := flash.error()
     utils.evaluateSubStatus(status, @"rd_str()", flash.E_BAD_HANDLE)
 
-    utils.startTest(@"status after BAD HANDLE ops")
-    status := flash.version()                           ' DUMMY just forcing prior status to be shown!
-    status := flash.error()                             ' make sure errorcode is same!
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
+    utils.showSubTestResults()
 
     utils.ShowStats()                   ' should have empty filesystem
     utils.showFiles()
