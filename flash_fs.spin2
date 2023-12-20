@@ -9,7 +9,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 18 DEC 2023
+''   Updated.... 20 DEC 2023
 ''
 '' =================================================================================================
 '' v1.2.0 - initial release of flash_fs with full API
@@ -137,17 +137,15 @@ CON { PRIVATE driver constants }
   NOT_ENABLED      = -1                                         ' this feature is NOT enabled (e.g., seeking)
   NOT_VALID        = -30                                        ' this value is not initialized
 
-  CHK_MARK_0      =  $DEADF00D
-  CHK_MARK_1      =  $FEED0BAD
-  CHK_MARK_2      =  $BEADCADE
-
 DAT { pre-initialized: driver state tracking tables }
 
-errorCode       LONG    0[8]                                                      'most recent error code
-fsLock          LONG    -1                                                        'flash lock semaphore for driver use
-fsFreeHndlCt    LONG    MAX_FILES_OPEN
-fsCogCts        LONG    $7fff_ffff[8]                                             'cog counts: one for each cog that is attempting to start the filesystem
-showRTdebug     LONG    false
+'-------+-----+---------+-------+---------------+-------+-----------------------+
+errorCode     LONG      0[8]                                                    'most recent error code
+fsLock        LONG      -1                                                      'flash lock semaphore for driver use
+fsFreeHndlCt  LONG      MAX_FILES_OPEN
+fsCogCts      LONG      $7fff_ffff[8]                                           'cog counts: one for each cog that is attempting to start the filesystem
+showRTdebug   LONG      false
+fsMounted     LONG      false                                                   ' T/F where T means the filesystem is mounted
 
 ' physically: 3/4 of a word (12 bits) for every valid block ID, 12 bits per ID
 ' logically: a "BLOCKS"-sized array of 12-bit variables, 1 for ea. block ID - indexed by block ID
@@ -169,25 +167,21 @@ BlockState    LONG      0                                                       
 
 ' handle-related variables and buffers
 '   handle is index into each of the arrays below
-fsMounted       LONG    false                                                     ' T/F where T means the filesystem is mounted
 
-hStatus         BYTE    0[MAX_FILES_OPEN]                                         'handle: status [H_READ, H_WRITE, H_REPLACE]
-hHeadBlockID    WORD    NOT_VALID[MAX_FILES_OPEN]                                 'handle: first blockID of file chain
-hChainBlockID   WORD    0[MAX_FILES_OPEN]                                         'handle: first blockID of commit chain
-hChainBlockAddr WORD    0[MAX_FILES_OPEN]                                         'handle: first block_address of commit chain
-hChainLifeCycle BYTE    0[MAX_FILES_OPEN]                                         'handle: first block lifecycle (cycle value for replacement first block of chain)
-hModified       BYTE    0[MAX_FILES_OPEN]                                         'handle: current block is modified
-hEndPtr         WORD    0[MAX_FILES_OPEN]                                         'handle: pointer to next byte in block
-hSeekPtr        LONG    NOT_ENABLED[MAX_FILES_OPEN]                               'handle: seek endptr within file
-hSeekFileOffset LONG    0[MAX_FILES_OPEN]                                         'handle: seek offset within entire file
-hCircularLength LONG    0[MAX_FILES_OPEN]                                         'handle: circular buffer length in byt
-hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                         'handle: 59+1 byte buffer for filename
-blockCare0      LONG    CHK_MARK_0
-hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                            'handle: 4KB buffer for file data
+hStatus         BYTE    0[MAX_FILES_OPEN]                                       'handle: status [H_READ, H_WRITE, H_REPLACE]
+hHeadBlockID    WORD    NOT_VALID[MAX_FILES_OPEN]                               'handle: first blockID of file chain
+hChainBlockID   WORD    0[MAX_FILES_OPEN]                                       'handle: first blockID of commit chain
+hChainBlockAddr WORD    0[MAX_FILES_OPEN]                                       'handle: first block_address of commit chain
+hChainLifeCycle BYTE    0[MAX_FILES_OPEN]                                       'handle: first block lifecycle (cycle value for replacement first block of chain)
+hModified       BYTE    0[MAX_FILES_OPEN]                                       'handle: current block is modified
+hEndPtr         WORD    0[MAX_FILES_OPEN]                                       'handle: pointer to next byte in block
+hSeekPtr        LONG    NOT_ENABLED[MAX_FILES_OPEN]                             'handle: seek endptr within file
+hSeekFileOffset LONG    0[MAX_FILES_OPEN]                                       'handle: seek offset within entire file
+hCircularLength LONG    0[MAX_FILES_OPEN]                                       'handle: circular buffer length in byt
+hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                       'handle: 59+1 byte buffer for filename
+hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                          'handle: 4KB buffer for file data
 
-blockCare1      LONG    CHK_MARK_1
-tmpBlockBuffer  BYTE     0[BLOCK_SIZE]                                            'buffer used for copying blocks
-blockCare2      LONG    CHK_MARK_2
+tmpBlockBuffer  BYTE     0[BLOCK_SIZE]                                          'buffer used for copying blocks
 
 
 CON ' --- Public Methods ---
@@ -196,18 +190,6 @@ PUB null()
 
 '' This is not an application
 ''  (invoke format() or mount() to use the flash file system)
-
-PRI checkOverruns()
-  if blockCare0 <> CHK_MARK_0 and blockCare1 <> CHK_MARK_1 or blockCare2 <> CHK_MARK_2
-    debug("ERROR: buffer overrun!")
-    if blockCare0 <> CHK_MARK_0
-       debug("ERROR: handle-filename ran into handle-block-buffer !")
-    if blockCare1 <> CHK_MARK_1
-       debug("ERROR: handle-block-buffer ran into tempBlockBuffer !")
-    if blockCare2 <> CHK_MARK_2
-       debug("ERROR: tempBlockBuffer overflowed !")
-    debug("hold for Analyze")
-    repeat
 
 PUB version() : result
 
@@ -378,9 +360,9 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
     repeat BLOCKS with block_address                                            'cancel B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
         if field[BlockState][block_address] <> B_FREE                           'is this an file block?
           blockCount++
-          if field[BlockState][block_address] == B_HEAD                           'is this an file block?
+          if field[BlockState][block_address] == B_HEAD                         'is this an file block?
             fileCount++
-          elseif field[BlockState][block_address] == B_TEMP                           'is this an file block?
+          elseif field[BlockState][block_address] == B_TEMP                     'is this an file block?
             debug("* MNT: ERR bad marking found B_TEMP at", uhex_word(block_address))
 
     debug("mnt: - mount ", udec(fileCount, blockCount))
@@ -567,9 +549,7 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
   'debug("open(", udec_(handle), ") ENTRY get sem #", udec_(fsLock))
   repeat while locktry(fsLock) == 0                                             'lock for exlusive use
 
-  checkOverruns()  ' see if buffer overun happened
-
-  LONG[@errorCode][cogid()] := SUCCESS                                                'new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          'new operation clear any prior error code
   handle := NOT_VALID
 
   ' determine if our file exists, once
@@ -578,14 +558,14 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
   ' do checks that require the lock
   case mode
     "r", "R", FILEMODE_READ_EXTENDED:
-      ifnot bFileExists                                                  'if no free block exists, abort with error
+      ifnot bFileExists                                                         'if no free block exists, abort with error
         'debug("open(", sdec_(handle), ") filename=[", zstr_(p_filename), "]")
         handle := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
 
-  if handle == NOT_VALID and is_file_open(p_filename, H_READ_WRITE)                                     'if file is already open, abort
+  if handle == NOT_VALID and is_file_open(p_filename, H_READ_WRITE)             'if file is already open, abort
     handle := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
 
-  elseif handle == NOT_VALID and fsFreeHndlCt == 0                                                          'yep, check this again since we have the lock
+  elseif handle == NOT_VALID and fsFreeHndlCt == 0                              'yep, check this again since we have the lock
     handle := (LONG[@errorCode][cogid()] := E_NO_HANDLE)
 
   if LONG[@errorCode][cogid()] <> SUCCESS
@@ -645,7 +625,7 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
   ' acquire lock
   repeat while locktry(fsLock) == 0                                             'lock for exlusive use
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          'new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          'new operation clear any prior error code
   handle := NOT_VALID
 
   ' determine if our file exists, once
@@ -654,13 +634,13 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
   ' do checks that require the lock
   case mode
     "r", "R":
-      ifnot bFileExists                                                  'if no free block exists, abort with error
+      ifnot bFileExists                                                         'if no free block exists, abort with error
         handle := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
     "a", "A":
       ifnot blocks_free()                                                       'if no free block exists, abort with error
         handle := (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
 
-  if handle == NOT_VALID and is_file_open(p_filename, H_READ_WRITE)                                     'if file is already open, abort
+  if handle == NOT_VALID and is_file_open(p_filename, H_READ_WRITE)             'if file is already open, abort
     handle := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
 
   if LONG[@errorCode][cogid()] <> SUCCESS
@@ -696,8 +676,6 @@ PUB flush(handle) : status
 
   repeat while locktry(fsLock) == 0                                             'lock for exlusive use
 
-  checkOverruns()  ' see if buffer overun happened
-
   LONG[@errorCode][cogid()] := SUCCESS                                          'new operation clear any prior error code
 
 '' Flush write buffer, completes any write operation, but leaves file open
@@ -707,7 +685,7 @@ PUB flush(handle) : status
 
     H_WRITE, H_APPEND:                                                          'write/rewrite/append mode?
       close_no_lock(handle)                                                     'close file
-      start_modify(handle, H_APPEND, hHeadBlockID[handle], $FFFFFF, true)             'reopen file in append mode
+      start_modify(handle, H_APPEND, hHeadBlockID[handle], $FFFFFF, true)       'reopen file in append mode
 
     H_READWRITE:                                                                'modify mode?
       if hModified[handle]                                                      'if block was modified...
@@ -736,8 +714,6 @@ PUB close(handle) : status
 
   'debug("close(", udec_(handle), ") ENTRY get sem #", udec_(fsLock))
   repeat while locktry(fsLock) == 0                                             'lock for exlusive use
-
-  checkOverruns()  ' see if buffer overun happened
 
   status := close_no_lock(handle)                                               'commit our file changes
   hCircularLength[handle] := 0                                                  'clear prior length
@@ -774,7 +750,7 @@ PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
 
   repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
   if is_file_open(p_cur_filename, H_READ_WRITE)                                 'if old file is open, abort
     status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
@@ -829,7 +805,7 @@ PUB delete(p_filename) : status | signature
 
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  status := LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  status := LONG[@errorCode][cogid()] := SUCCESS                                ' new operation clear any prior error code
 
   if is_file_open(p_filename, H_READ_WRITE)                                     'if file open in any mode, abort
     status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
@@ -882,7 +858,7 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
 
   else
 
-    block_id := head_block_id := next_available_block_id()                        'get initial ID
+    block_id := head_block_id := next_available_block_id()                      'get initial ID
 
     repeat
       block_address := next_block_address()                                     'get a new block now (may alter BlockBuff and IDToBlock)
@@ -890,15 +866,15 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
         build_head_block(@tmpBlockBuffer, p_filename, 0)                        '..build head block in buffer
         dataOffset := $088                                                      '..set data start for head block
       else                                                                      'if not first block..
-        bytefill(@tmpBlockBuffer, fill_value, BLOCK_SIZE)                        '..clear buffer for body block
+        bytefill(@tmpBlockBuffer, fill_value, BLOCK_SIZE)                       '..clear buffer for body block
         dataOffset := $004                                                      '..set data start for body block
-      if isLast := byte_count <= (currOffset += $FFC - dataOffset)               'if last block.. (update position and check if last block)
-        NextID_EndPtr := byte_count - currOffset + $FFC                          '..get EndPtr
+      if isLast := byte_count <= (currOffset += $FFC - dataOffset)              'if last block.. (update position and check if last block)
+        NextID_EndPtr := byte_count - currOffset + $FFC                         '..get EndPtr
       else                                                                      'if not last block..
         NextID_EndPtr := next_available_block_id()                              '..get NextID
-      LONG[@tmpBlockBuffer].[0] := !isLast                                             'set more/last bit
-      LONG[@tmpBlockBuffer].[19..8] := block_id                                   'set ThisID
-      LONG[@tmpBlockBuffer].[31..20] := NextID_EndPtr                             'set NextID or EndPtr
+      LONG[@tmpBlockBuffer].[0] := !isLast                                      'set more/last bit
+      LONG[@tmpBlockBuffer].[19..8] := block_id                                 'set ThisID
+      LONG[@tmpBlockBuffer].[31..20] := NextID_EndPtr                           'set NextID or EndPtr
       flash_program_block(block_address, @tmpBlockBuffer, %011)                 'program block
       if NotFirst                                                               'if not head block..
         flash_activate_block(block_address, %011)                               '..activate body block
@@ -907,7 +883,7 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
       block_id := NextID_EndPtr                                                 'switch to next ID
     until isLast                                                                'loop until last block done
 
-    flash_activate_block(field[IDToBlock][head_block_id], %011)                   'now activate head block to activate file
+    flash_activate_block(field[IDToBlock][head_block_id], %011)                 'now activate head block to activate file
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
@@ -926,7 +902,7 @@ PUB exists(p_filename) : bool
   else
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
-    LONG[@errorCode][cogid()] := SUCCESS                                                        ' new operation clear any prior error code
+    LONG[@errorCode][cogid()] := SUCCESS                                        ' new operation clear any prior error code
 
     bool := exists_no_lock(p_filename)
 
@@ -950,7 +926,7 @@ PUB file_size(p_filename) : size_in_bytes | signature
 
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
   if signature := get_file_head_signature(p_filename)                           'does file exist?
     size_in_bytes, _, _ := count_file_bytes(field[IDToBlock][signature.[19..8]])
@@ -1078,14 +1054,14 @@ PUB seek(handle, position, whence) : end_position | file_length, file_position, 
     end_position := (LONG[@errorCode][cogid()] := file_length)                  ' error, return the error code instead of a SUCCESS status
   elseif hCircularLength[handle] > 0 and (file_position < 0 or file_position > hCircularLength[handle]) ' if circular file and position is out of range
    'debug("seek() circular out")
-   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                  ' abort with error
+   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                   ' abort with error
   elseif file_position >= 0 and file_position <= file_length                    ' is position within file? ( allow length + 1 for append )
     'debug("seek(", udec_(file_position), "), FSize=(", udec_(file_length), ") going to location, offset=(", sdec_(position), ")")
     seek_no_locks(handle, file_position)
     end_position := file_position                                               ' no, return SUCCESS
   else
    'debug("seek() file-range out")
-   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                  ' no, abort with error
+   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                   ' no, abort with error
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
@@ -1113,8 +1089,6 @@ PUB write(handle, p_buffer, count) : bytes_written | checkValue, byteIndex, wr_v
 
   'debug("write(", udec_(handle), ") ENTRY get sem #", udec_(fsLock))
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
-
-  checkOverruns()  ' see if buffer overun happened
 
   LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
@@ -1159,10 +1133,10 @@ PUB wr_byte(handle, byte_value) : status | checkValue
   'debug("wr_byte(", udec_(handle), ") ENTRY get sem #", udec_(fsLock))
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
-  if (checkValue := ensure_handle_mode(handle, H_WRITE)) < 0        ' is handle valid and open for writing?
-    status := (LONG[@errorCode][cogid()] := checkValue)                                         ' no, return error code
+  if (checkValue := ensure_handle_mode(handle, H_WRITE)) < 0                    ' is handle valid and open for writing?
+    status := (LONG[@errorCode][cogid()] := checkValue)                         ' no, return error code
   else
     status := wr_byte_no_locks(handle, byte_value)
 
@@ -1247,22 +1221,20 @@ PUB read(handle, p_buffer, count) : bytes_read | byteIndex, readValue, checkValu
 
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  checkOverruns()  ' see if buffer overun happened
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
-
-  if (checkValue := ensure_handle_mode(handle, H_READ | H_MODIFY)) < 0                     ' is handle valid and open for reading?
-     LONG[@errorCode][cogid()] := checkValue                                                    ' no, set system error
+  if (checkValue := ensure_handle_mode(handle, H_READ | H_MODIFY)) < 0          ' is handle valid and open for reading?
+     LONG[@errorCode][cogid()] := checkValue                                    ' no, set system error
      bytes_read := 0                                                            ' no, 0 bytes read
   else
     bytes_read := 0
     repeat count with byteIndex                                                 ' for the max length of the buffer
       if (readValue := rd_byte_no_locks(handle)) < 0                            ' read a byte from the file (or seek location)
-          LONG[@errorCode][cogid()] := readValue                                                ' another error occured, set system error
+          LONG[@errorCode][cogid()] := readValue                                ' another error occured, set system error
           quit
       else
         BYTE[p_buffer][byteIndex] := readValue                                  ' no error, place byte in the users buffer
-        bytes_read++                                                        ' update count of bytes read
+        bytes_read++                                                            ' update count of bytes read
 
   'debug("read(", udec_(count),") = (", sdec_(bytes_read),")")
 
@@ -1291,12 +1263,12 @@ PUB rd_byte(handle) : byte_value | ptr, signature, checkValue
 
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
   if (checkValue := ensure_handle_mode(handle, H_READ)) < 0                     ' is handle valid and open for reading?
-    byte_value := (LONG[@errorCode][cogid()] := checkValue)                                          ' no, return error code
+    byte_value := (LONG[@errorCode][cogid()] := checkValue)                     ' no, return error code
   else
-    byte_value := rd_byte_no_locks(handle)                                           ' read a byte from the file (or seek location)
+    byte_value := rd_byte_no_locks(handle)                                      ' read a byte from the file (or seek location)
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
@@ -1360,32 +1332,30 @@ PUB rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
 
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  checkOverruns()  ' see if buffer overun happened
-
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
   bytefill(p_str, 0, count)                                                     ' clear the users buffer
   bytes_read := 0
   if (checkValue := ensure_handle_mode(handle, H_READ)) < 0                     ' is handle valid and open for reading?
-     LONG[@errorCode][cogid()] := checkValue                                                    ' no, set error code
+     LONG[@errorCode][cogid()] := checkValue                                    ' no, set error code
   else
     repeat count with byteIndex                                                 ' for the max length of the buffer
       if (readValue := rd_byte(handle)) < 0                                     ' read a byte from the file, have error?
         'debug("EEE: ", sdec(readValue))
         if readValue == E_END_OF_FILE                                           ' yes, if we've reached end of file return the number of bytes read
           if byteIndex == 0                                                     ' if we've not read any bytes
-            LONG[@errorCode][cogid()] := readValue                                              ' ..abort with end of file
+            LONG[@errorCode][cogid()] := readValue                              ' ..abort with end of file
           else                                                                  ' else
             BYTE[p_str][byteIndex] := 0                                         ' place a 0 terminator in the users buffer
-            LONG[@errorCode][cogid()] := E_INCOMPLETE_STRING                                    ' return error saying file ended without string terminator
+            LONG[@errorCode][cogid()] := E_INCOMPLETE_STRING                    ' return error saying file ended without string terminator
         else
-          LONG[@errorCode][cogid()] := readValue                                                ' another error occured, return the error code
+          LONG[@errorCode][cogid()] := readValue                                ' another error occured, return the error code
         quit  ' have one of the above errors, end loop
       else
         'debug("ok: ", uhex_byte(readValue))
         if byteIndex == count - 1 and readValue <> 0                            ' no error, if we've reached the end of the buffer and the byte read is not a 0 terminator
           BYTE[p_str][byteIndex] := 0                                           ' ..place a 0 terminator in the users buffer
-          LONG[@errorCode][cogid()] := E_TRUNCATED_STRING                                       ' ..abort with error
+          LONG[@errorCode][cogid()] := E_TRUNCATED_STRING                       ' ..abort with error
           quit  ' have error end loop
         else
             BYTE[p_str][byteIndex] := readValue                                 ' no error, place byte in the users buffer (could be terminator)
@@ -1394,7 +1364,7 @@ PUB rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
             else
               bytes_read++                                                      ' count this byte received
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_address, signature
@@ -1416,9 +1386,9 @@ PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
   ifnot fsMounted
     return (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
   BYTE[p_filename][0] := 0                                                      'reset filename
 
@@ -1427,11 +1397,11 @@ PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
         if field[IDValid][blockID]                                              'block ID valid?
           block_address := field[IDToBlock][blockID]                            'yes, get block addr from block ID
           if field[BlockState][block_address] == B_HEAD                         'is this a HEAD block?
-            flash_read_block_addr(block_address, p_filename, $008, $088)             'yes, read filename
+            flash_read_block_addr(block_address, p_filename, $008, $088)        'yes, read filename
             LONG[p_file_size], _, _ := count_file_bytes(block_address)          'get file size
             quit
 
-  lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 PUB stats() : used_blocks, free_blocks, file_count | block_address
@@ -1450,7 +1420,7 @@ PUB stats() : used_blocks, free_blocks, file_count | block_address
 
   repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
-  LONG[@errorCode][cogid()] := SUCCESS                                                          ' new operation clear any prior error code
+  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
 
   used_blocks := 0
   free_blocks := 0
