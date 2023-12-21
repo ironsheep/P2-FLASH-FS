@@ -1,0 +1,1467 @@
+Cog0  INIT $0000_0000 $0000_0000 load
+Cog0  INIT $0000_0EC0 $0001_4B9C jump
+Cog0  * init VAR
+Cog0
+Cog0  * Test #1: Format the FLASH
+Cog0  - cancel_block() block_address = $0111
+Cog0  - cancel_block() block_address = $01B8
+Cog0  - cancel_block() block_address = $0526
+Cog0  - cancel_block() block_address = $0560
+Cog0  - cancel_block() block_address = $0578
+Cog0  - cancel_block() block_address = $05F9
+Cog0  - cancel_block() block_address = $060C
+Cog0  - cancel_block() block_address = $0673
+Cog0  - cancel_block() block_address = $0876
+Cog0  - cancel_block() block_address = $0B50
+Cog0  - cancel_block() block_address = $0C53
+Cog0  - cancel_block() block_address = $0C9A
+Cog0  - cancel_block() block_address = $0D82
+Cog0  - cancel_block() block_address = $0E32
+Cog0  - cancel_block() block_address = $0E51
+Cog0  - cancel_block() block_address = $0EFD
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * starting COGs
+Cog1  INIT $0000_0EC0 $0000_1560 jump
+Cog2  INIT $0000_0EC0 $0000_1960 jump
+Cog3  INIT $0000_0EC0 $0000_1D60 jump
+Cog4  INIT $0000_0EC0 $0000_2160 jump
+Cog5  INIT $0000_0EC0 $0000_2560 jump
+Cog6  INIT $0000_0EC0 $0000_2960 jump
+Cog7  INIT $0000_0EC0 $0000_2D60 jump
+Cog0  * writing own files
+Cog1
+Cog2
+Cog3
+Cog4
+Cog5
+Cog6
+Cog7
+Cog0
+Cog1   -----------------------
+Cog2   -----------------------
+Cog3   -----------------------
+Cog4   -----------------------
+Cog5   -----------------------
+Cog6   -----------------------
+Cog7   -----------------------
+Cog0   -----------------------
+Cog1  * Cog #1 starting after delayMS = 23_312ms
+Cog2  * Cog #2 starting after delayMS = 9_660ms
+Cog3  * Cog #3 starting after delayMS = 3_148ms
+Cog4  * Cog #4 starting after delayMS = 8_614ms
+Cog5  * Cog #5 starting after delayMS = 2_203ms
+Cog6  * Cog #6 starting after delayMS = 15_054ms
+Cog7  * Cog #7 starting after delayMS = 951ms
+Cog0  * Cog #0 starting after delayMS = 739ms
+Cog1  * Mounting the FLASH
+Cog2  * Mounting the FLASH
+Cog4  * Mounting the FLASH
+Cog6  * Mounting the FLASH
+Cog1  * init VAR
+Cog2  * init VAR
+Cog4  * init VAR
+Cog6  * init VAR
+Cog1
+Cog2
+Cog4
+Cog6
+Cog1  * Test #1: Mount the filesystem
+Cog2  * Test #1: Mount the filesystem
+Cog4  * Test #1: Mount the filesystem
+Cog6  * Test #1: Mount the filesystem
+Cog1     ECode: SUCCESS: No error
+Cog2     ECode: SUCCESS: No error
+Cog4     ECode: SUCCESS: No error
+Cog6     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog2     -> pass
+Cog4     -> pass
+Cog6     -> pass
+Cog1
+Cog2
+Cog4
+Cog6
+Cog1
+Cog2
+Cog4
+Cog6
+Cog1   ------------------------------------------------------------
+Cog2   ------------------------------------------------------------
+Cog4   ------------------------------------------------------------
+Cog6   ------------------------------------------------------------
+Cog1  * Test Group: Cog write file #1
+Cog2  * Test Group: Cog write file #1
+Cog4  * Test Group: Cog write file #1
+Cog6  * Test Group: Cog write file #1
+Cog1  - testWriteBytes(by-101-file.bin, 5)
+Cog2  - testWriteLongs(ln-202-file.bin, 5)
+Cog4  - testWriteRecords(rc-403-file.bin, 5)
+Cog6  - testWriteLongs(ln-604-file.bin, 5)
+Cog1
+Cog2
+Cog4
+Cog6
+Cog1  * Test #2: Open File for write
+Cog2  * Test #2: Open File for write
+Cog4  * Test #2: Open File for write
+Cog6  * Test #2: Open File for write
+Cog1     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog1
+Cog1  * Test #3: validate handle
+Cog1    open(,'w'): 0
+Cog1     -> pass
+Cog1
+Cog1  * Test #4: Write N BYTEs
+Cog6     ECode: SUCCESS: No error
+Cog6     -> pass
+Cog6
+Cog6  * Test #3: validate handle
+Cog6    open(,'w'): 1
+Cog6     -> pass
+Cog6
+Cog6  * Test #4: Write N LONGs
+Cog2     ECode: SUCCESS: No error
+Cog2     -> pass
+Cog2
+Cog2  * Test #3: validate handle
+Cog2    open(,'w'): 2
+Cog2     -> pass
+Cog2
+Cog2  * Test #4: Write N LONGs
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog4
+Cog4  * Test #3: validate handle
+Cog6    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog1    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog2    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog4    open(,'w'): 3
+Cog6     -> pass
+Cog1     -> pass
+Cog2     -> pass
+Cog4     -> pass
+Cog6
+Cog1
+Cog2
+Cog4
+Cog6  * Test #5: ensure no errors on writes
+Cog1  * Test #5: ensure all bytes written
+Cog2  * Test #5: ensure no errors on writes
+Cog4  * Test #4: Write N Records
+Cog6     ECode: SUCCESS: No error
+Cog1    wr_byte(): 5
+Cog2     ECode: SUCCESS: No error
+Cog6     -> pass
+Cog1     -> pass
+Cog2     -> pass
+Cog6
+Cog1
+Cog2
+Cog6    File: [ln-604-file.bin] pending commit
+Cog1  * Test #6: ensure no errors on writes
+Cog2    File: [ln-202-file.bin] pending commit
+Cog6    # 1 Blocks in chain:
+Cog1     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog1
+Cog1    File: [by-101-file.bin] pending commit
+Cog2    # 1 Blocks in chain:
+Cog6      1: [$0000] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009C, lifeCycle [erased], sig=[$09C0_01F4]  MODIFIED
+Cog1    # 1 Blocks in chain:
+Cog2      1: [$0000] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$009C, lifeCycle [erased], sig=[$09C0_02F4]  MODIFIED
+Cog4    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog6
+Cog1      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$008D, lifeCycle [erased], sig=[$08D0_00F4]  MODIFIED
+Cog2
+Cog4     -> pass
+Cog6  * Test #6: Close written file
+Cog1
+Cog2  * Test #6: Close written file
+Cog4
+Cog1  * Test #7: Close written file
+Cog4  * Test #5: ensure no errors on Record writes
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog4
+Cog4    File: [rc-403-file.bin] pending commit
+Cog6  * wr_block() block_address = $0E41, block_id = 1, NextID_EndPtr = $009C
+Cog6  - program_block() block_address = $0E41
+Cog6  - activate_block() block_address = $0E41
+Cog6     ECode: SUCCESS: No error
+Cog6     -> pass
+Cog6
+Cog1  * wr_block() block_address = $00CE, block_id = 0, NextID_EndPtr = $008D
+Cog1  - program_block() block_address = $00CE
+Cog1  - activate_block() block_address = $00CE
+Cog1     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog1
+Cog2  * wr_block() block_address = $063E, block_id = 2, NextID_EndPtr = $009C
+Cog2  - program_block() block_address = $063E
+Cog2  - activate_block() block_address = $063E
+Cog2     ECode: SUCCESS: No error
+Cog2     -> pass
+Cog2
+Cog1    File: [by-101-file.bin], bytesUsed = 5, bytes_free = 3_951, block_count = 1
+Cog4    # 1 Blocks in chain:
+Cog1
+Cog1  * Test #8: Ensure expected file stats
+Cog1    File: [by-101-file.bin]
+Cog2    File: [ln-202-file.bin], bytesUsed = 20, bytes_free = 3_936, block_count = 1
+Cog4      1: [$0000] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0240, lifeCycle [erased], sig=[$2400_03F4]  MODIFIED
+Cog1    # 1 Blocks in file:
+Cog2
+Cog4
+Cog2  * Test #7: Ensure expected file stats
+Cog4  * Test #6: Close written file
+Cog2    File: [ln-202-file.bin]
+Cog6    File: [ln-604-file.bin], bytesUsed = 20, bytes_free = 3_936, block_count = 1
+Cog1      1: [$00CE] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$008D, lifeCycle [ACTIVE-3], sig=[$08D0_007C]
+Cog6
+Cog6  * Test #7: Ensure expected file stats
+Cog6    File: [ln-604-file.bin]
+Cog2    # 1 Blocks in file:
+Cog4  * wr_block() block_address = $0DFC, block_id = 3, NextID_EndPtr = $0240
+Cog4  - program_block() block_address = $0DFC
+Cog4  - activate_block() block_address = $0DFC
+Cog4     ECode: SUCCESS: No error
+Cog2      1: [$063E] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_027C]
+Cog4     -> pass
+Cog1    # blocks: 1
+Cog4
+Cog1    # bytes used: 5
+Cog4  * Test #7: Ensure expected file stats
+Cog1     -> pass
+Cog4    File: [rc-403-file.bin]
+Cog1
+Cog1  * Test #9: Open File for read
+Cog6    # 1 Blocks in file:
+Cog6      1: [$0E41] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_017C]
+Cog1     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog1
+Cog1  * Test #10: validate handle
+Cog1    open(,'r'): 0
+Cog1     -> pass
+Cog1
+Cog1  * Test #11: read expected N BYTEs
+Cog4    # 1 Blocks in file:
+Cog2    # blocks: 1
+Cog4      1: [$0DFC] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0240, lifeCycle [ACTIVE-3], sig=[$2400_037C]
+Cog2    # bytes used: 20
+Cog2     -> pass
+Cog2
+Cog2  * Test #8: Open File for read
+Cog6    # blocks: 1
+Cog6    # bytes used: 20
+Cog6     -> pass
+Cog6
+Cog6  * Test #8: Open File for read
+Cog4    # blocks: 1
+Cog4    # bytes used: 440
+Cog4     -> pass
+Cog4
+Cog4  * Test #8: Ensure expected unused bytes stats
+Cog6     ECode: SUCCESS: No error
+Cog6     -> pass
+Cog6
+Cog6  * Test #9: validate handle
+Cog6    open(,'r'): 1
+Cog6     -> pass
+Cog6
+Cog6  * Test #10: read expected LONGs
+Cog4    file_size_unused(): 3_516
+Cog4     -> pass
+Cog4
+Cog4  * Test #9: Ensure no error on size unused call
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog4
+Cog4  * Test #10: Open File for read
+Cog2     ECode: SUCCESS: No error
+Cog2     -> pass
+Cog2
+Cog2  * Test #9: validate handle
+Cog2    open(,'r'): 2
+Cog2     -> pass
+Cog2
+Cog2  * Test #10: read expected LONGs
+Cog4     ECode: SUCCESS: No error
+Cog1    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog2    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog4     -> pass
+Cog6    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog1     -> pass
+Cog2     -> pass
+Cog4
+Cog6     -> pass
+Cog1
+Cog2
+Cog4  * Test #11: validate handle
+Cog6
+Cog1  * Test #12: ensure no errors on read BYTEs
+Cog2  * Test #11: ensure no errors on read LONGs
+Cog4    open(,'r'): 3
+Cog6  * Test #11: ensure no errors on read LONGs
+Cog1     ECode: SUCCESS: No error
+Cog2     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog6     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog2     -> pass
+Cog6     -> pass
+Cog1
+Cog2
+Cog6
+Cog1  * Test #13: BAD: read one more BYTE than written
+Cog2  * Test #12: BAD: read one more LONG than written
+Cog6  * Test #12: BAD: read one more LONG than written
+Cog4
+Cog6     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog1     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog2     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog4  ** /----- dumping 5 records [contains 5 records]
+Cog6     -> pass
+Cog1     -> pass
+Cog2     -> pass
+Cog6
+Cog1
+Cog2
+Cog6  * Test #13: Close read file
+Cog1  * Test #14: Close read file
+Cog2  * Test #13: Close read file
+Cog4  ** Record #1:
+Cog6     ECode: SUCCESS: No error
+Cog1     ECode: SUCCESS: No error
+Cog2     ECode: SUCCESS: No error
+Cog4   $0000_0000: $ED $FE $AD $BE $01 $00 $00 $00 $41 $04 $41 $04 $41 $04 $41 $04
+Cog6     -> pass
+Cog1     -> pass
+Cog2     -> pass
+Cog4   $0000_0010: $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04
+Cog6
+Cog1
+Cog2
+Cog4   $0000_0020: $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04
+Cog6
+Cog1
+Cog2
+Cog4   $0000_0030: $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04
+Cog6   ------------------------------------------------------------
+Cog1   ------------------------------------------------------------
+Cog2   ------------------------------------------------------------
+Cog4   $0000_0040: $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04 $41 $04
+Cog6  * Test Group: Cog write file #2
+Cog1  * Test Group: Cog write file #2
+Cog2  * Test Group: Cog write file #2
+Cog4   $0000_0050: $41 $04 $41 $04 $E3 $13 $E7 $2E
+Cog6  - testWriteLongs(ln-605-file.bin, 5)
+Cog1  - testWriteWords(wd-106-file.bin, 5)
+Cog2  - testWriteBytes(by-207-file.bin, 5)
+Cog6
+Cog1
+Cog2
+Cog4  ** Record #2:
+Cog6  * Test #14: Open File for write
+Cog1  * Test #15: Open File for write
+Cog2  * Test #14: Open File for write
+Cog4   $0000_0000: $ED $FE $AD $BE $02 $00 $00 $00 $42 $04 $42 $04 $42 $04 $42 $04
+Cog4   $0000_0010: $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04
+Cog4   $0000_0020: $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04
+Cog4   $0000_0030: $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04
+Cog4   $0000_0040: $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04 $42 $04
+Cog4   $0000_0050: $42 $04 $42 $04 $64 $52 $51 $E9
+Cog4  ** Record #3:
+Cog4   $0000_0000: $ED $FE $AD $BE $03 $00 $00 $00 $43 $04 $43 $04 $43 $04 $43 $04
+Cog4   $0000_0010: $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04
+Cog4   $0000_0020: $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04
+Cog4   $0000_0030: $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04
+Cog4   $0000_0040: $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04 $43 $04
+Cog4   $0000_0050: $43 $04 $43 $04 $9E $2C $75 $6C
+Cog6     ECode: SUCCESS: No error
+Cog6     -> pass
+Cog6
+Cog6  * Test #15: validate handle
+Cog6    open(,'w'): 0
+Cog6     -> pass
+Cog6
+Cog6  * Test #16: Write N LONGs
+Cog1     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog1
+Cog1  * Test #16: validate handle
+Cog1    open(,'w'): 1
+Cog1     -> pass
+Cog1
+Cog1  * Test #17: Write N WORDs
+Cog4  ** Record #4:
+Cog4   $0000_0000: $ED $FE $AD $BE $04 $00 $00 $00 $44 $04 $44 $04 $44 $04 $44 $04
+Cog4   $0000_0010: $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04
+Cog4   $0000_0020: $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04
+Cog4   $0000_0030: $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04
+Cog4   $0000_0040: $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04 $44 $04
+Cog4   $0000_0050: $44 $04 $44 $04 $12 $52 $AE $45
+Cog2     ECode: SUCCESS: No error
+Cog2     -> pass
+Cog2
+Cog2  * Test #15: validate handle
+Cog2    open(,'w'): 2
+Cog2     -> pass
+Cog2
+Cog2  * Test #16: Write N BYTEs
+Cog4  ** Record #5:
+Cog6    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog1    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog2    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog4   $0000_0000: $ED $FE $AD $BE $05 $00 $00 $00 $45 $04 $45 $04 $45 $04 $45 $04
+Cog6     -> pass
+Cog1     -> pass
+Cog2     -> pass
+Cog4   $0000_0010: $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04
+Cog6
+Cog1
+Cog2
+Cog4   $0000_0020: $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04
+Cog6  * Test #17: ensure no errors on writes
+Cog1  * Test #18: ensure no errors on writes
+Cog2  * Test #17: ensure all bytes written
+Cog4   $0000_0030: $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04
+Cog6     ECode: SUCCESS: No error
+Cog1     ECode: SUCCESS: No error
+Cog2    wr_byte(): 5
+Cog4   $0000_0040: $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04 $45 $04
+Cog6     -> pass
+Cog1     -> pass
+Cog2     -> pass
+Cog4   $0000_0050: $45 $04 $45 $04 $E8 $2C $8A $C0
+Cog6
+Cog1
+Cog2
+Cog4  ** \----- ----- ----- ----- ----- ----- -----
+Cog6    File: [ln-605-file.bin] pending commit
+Cog1    File: [wd-106-file.bin] pending commit
+Cog2  * Test #18: ensure no errors on writes
+Cog4
+Cog6    # 1 Blocks in chain:
+Cog1    # 1 Blocks in chain:
+Cog2     ECode: SUCCESS: No error
+Cog2     -> pass
+Cog2
+Cog2    File: [by-207-file.bin] pending commit
+Cog4
+Cog6      1: [$0000] HEAD/last, thisID=5, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_05F4]  MODIFIED
+Cog1      1: [$0000] HEAD/last, thisID=5, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_05F4]  MODIFIED
+Cog2    # 1 Blocks in chain:
+Cog4  * Test #12: read expected N RECORDs
+Cog6
+Cog1
+Cog2      1: [$0000] HEAD/last, thisID=6, dataOfs=$0000, endPtr=$008D, lifeCycle [erased], sig=[$08D0_06F4]  MODIFIED
+Cog6  * Test #18: Close written file
+Cog1  * Test #19: Close written file
+Cog2
+Cog2  * Test #19: Close written file
+Cog1  * wr_block() block_address = $089E, block_id = 5, NextID_EndPtr = $0092
+Cog1  - program_block() block_address = $089E
+Cog1  - activate_block() block_address = $089E
+Cog1     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog1
+Cog2  * wr_block() block_address = $0E3E, block_id = 6, NextID_EndPtr = $008D
+Cog2  - program_block() block_address = $0E3E
+Cog2  - activate_block() block_address = $0E3E
+Cog2     ECode: SUCCESS: No error
+Cog2     -> pass
+Cog2
+Cog1    File: [wd-106-file.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
+Cog1
+Cog1  * Test #20: Ensure expected file stats
+Cog1    File: [wd-106-file.bin]
+Cog2    File: [by-207-file.bin], bytesUsed = 5, bytes_free = 3_951, block_count = 1
+Cog2
+Cog2  * Test #20: Ensure expected file stats
+Cog2    File: [by-207-file.bin]
+Cog1    # 1 Blocks in file:
+Cog2    # 1 Blocks in file:
+Cog1      1: [$089E] HEAD/last, thisID=5, dataOfs=$0000, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_057C]
+Cog2      1: [$0E3E] HEAD/last, thisID=6, dataOfs=$0000, endPtr=$008D, lifeCycle [ACTIVE-3], sig=[$08D0_067C]
+Cog1    # blocks: 1
+Cog1    # bytes used: 10
+Cog1     -> pass
+Cog1
+Cog1  * Test #21: Open File for read
+Cog4    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog4     -> pass
+Cog4
+Cog4  * Test #13: ensure no errors on read RECORDs
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog4
+Cog4  * Test #14: BAD: read one more Record than written
+Cog1     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog1
+Cog1  * Test #22: validate handle
+Cog1    open(,'r'): 1
+Cog1     -> pass
+Cog1
+Cog1  * Test #23: read expected N WORDs
+Cog6  * wr_block() block_address = $0D58, block_id = 4, NextID_EndPtr = $009C
+Cog6  - program_block() block_address = $0D58
+Cog6  - activate_block() block_address = $0D58
+Cog6     ECode: SUCCESS: No error
+Cog6     -> pass
+Cog6
+Cog2    # blocks: 1
+Cog4    Sub-Test Results: count=1, Pass: 1, Fail: 0
+Cog2    # bytes used: 5
+Cog4     -> pass
+Cog2     -> pass
+Cog4
+Cog2
+Cog4  * Test #15: Close read file
+Cog2  * Test #21: Open File for read
+Cog6    File: [ln-605-file.bin], bytesUsed = 20, bytes_free = 3_936, block_count = 1
+Cog4     ECode: SUCCESS: No error
+Cog6
+Cog4     -> pass
+Cog6  * Test #19: Ensure expected file stats
+Cog4
+Cog6    File: [ln-605-file.bin]
+Cog4    All Files:
+Cog2     ECode: SUCCESS: No error
+Cog4  by-101-file.bin, byteCount = 5, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog2     -> pass
+Cog2
+Cog2  * Test #22: validate handle
+Cog2    open(,'r'): 0
+Cog2     -> pass
+Cog2
+Cog2  * Test #23: read expected N BYTEs
+Cog6    # 1 Blocks in file:
+Cog4  ln-604-file.bin, byteCount = 20, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog6      1: [$0D58] HEAD/last, thisID=4, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_047C]
+Cog1    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog2    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog4  ln-202-file.bin, byteCount = 20, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+Cog1     -> pass
+Cog2     -> pass
+Cog1
+Cog2
+Cog1  * Test #24: ensure no errors on read WORDs
+Cog2  * Test #24: ensure no errors on read BYTEs
+Cog1     ECode: SUCCESS: No error
+Cog2     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog2     -> pass
+Cog1
+Cog2
+Cog1  * Test #25: BAD: read one more WORD than written
+Cog2  * Test #25: BAD: read one more BYTE than written
+Cog6    # blocks: 1
+Cog1     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog2     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog4  rc-403-file.bin, byteCount = 440, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+Cog6    # bytes used: 20
+Cog1     -> pass
+Cog2     -> pass
+Cog4  ln-605-file.bin, byteCount = 20, blockID = 5, BlocksUsed = 1, @Buff={binary data}
+Cog6     -> pass
+Cog1
+Cog2
+Cog4  wd-106-file.bin, byteCount = 10, blockID = 6, BlocksUsed = 1, @Buff={binary data}
+Cog6
+Cog1  * Test #26: Close read file
+Cog2  * Test #26: Close read file
+Cog4  by-207-file.bin, byteCount = 5, blockID = 7, BlocksUsed = 1, @Buff={binary data}
+Cog6  * Test #20: Open File for read
+Cog1     ECode: SUCCESS: No error
+Cog2     ECode: SUCCESS: No error
+Cog1     -> pass
+Cog2     -> pass
+Cog1
+Cog2
+Cog1  * 26 Tests - Pass: 26, Fail: 0
+Cog2  * 26 Tests - Pass: 26, Fail: 0
+Cog1
+Cog2
+Cog1  * Cog #1 DONE
+Cog2  * Cog #2 DONE
+Cog4
+Cog4
+Cog4   ------------------------------------------------------------
+Cog4  * Test Group: Cog write file #2
+Cog4  - testWriteLongs(ln-408-file.bin, 5)
+Cog4
+Cog4  * Test #16: Open File for write
+Cog6     ECode: SUCCESS: No error
+Cog6     -> pass
+Cog6
+Cog6  * Test #21: validate handle
+Cog6    open(,'r'): 0
+Cog6     -> pass
+Cog6
+Cog6  * Test #22: read expected LONGs
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog6    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog4
+Cog6     -> pass
+Cog4  * Test #17: validate handle
+Cog6
+Cog4    open(,'w'): 1
+Cog6  * Test #23: ensure no errors on read LONGs
+Cog4     -> pass
+Cog6     ECode: SUCCESS: No error
+Cog4
+Cog6     -> pass
+Cog4  * Test #18: Write N LONGs
+Cog6
+Cog6  * Test #24: BAD: read one more LONG than written
+Cog4    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog6     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog4     -> pass
+Cog6     -> pass
+Cog4
+Cog6
+Cog4  * Test #19: ensure no errors on writes
+Cog6  * Test #25: Close read file
+Cog4     ECode: SUCCESS: No error
+Cog6     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog6     -> pass
+Cog4
+Cog6
+Cog4    File: [ln-408-file.bin] pending commit
+Cog6  * 25 Tests - Pass: 25, Fail: 0
+Cog4    # 1 Blocks in chain:
+Cog6
+Cog4      1: [$0000] HEAD/last, thisID=7, dataOfs=$0000, endPtr=$009C, lifeCycle [erased], sig=[$09C0_07F4]  MODIFIED
+Cog6  * Cog #6 DONE
+Cog4
+Cog4  * Test #20: Close written file
+Cog4  * wr_block() block_address = $093C, block_id = 7, NextID_EndPtr = $009C
+Cog4  - program_block() block_address = $093C
+Cog0  * Mounting the FLASH
+Cog0
+Cog0  * Test #2: Mount the filesystem
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Cog write file #1
+Cog0  - testWriteStrings(zs-009-file.str, 5)
+Cog0
+Cog0  * Test #3: Open File for write
+Cog4  - activate_block() block_address = $093C
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog4
+Cog4    File: [ln-408-file.bin], bytesUsed = 20, bytes_free = 3_936, block_count = 1
+Cog4
+Cog4  * Test #21: Ensure expected file stats
+Cog4    File: [ln-408-file.bin]
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #4: validate handle
+Cog0    open(,'w'): 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #5: Write 10 STRINGs
+Cog4    # 1 Blocks in file:
+Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog4      1: [$093C] HEAD/last, thisID=7, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_077C]
+Cog0     -> pass
+Cog0
+Cog0  * Test #6: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [zs-009-file.str] pending commit
+Cog4    # blocks: 1
+Cog0    # 1 Blocks in chain:
+Cog4    # bytes used: 20
+Cog0      1: [$0000] HEAD/last, thisID=8, dataOfs=$0000, endPtr=$008D, lifeCycle [erased], sig=[$08D0_08F4]  MODIFIED
+Cog4     -> pass
+Cog0
+Cog4
+Cog0  * Test #7: Close written file
+Cog4  * Test #22: Open File for read
+Cog0  * wr_block() block_address = $0340, block_id = 8, NextID_EndPtr = $008D
+Cog0  - program_block() block_address = $0340
+Cog0  - activate_block() block_address = $0340
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog4
+Cog4  * Test #23: validate handle
+Cog4    open(,'r'): 0
+Cog4     -> pass
+Cog4
+Cog4  * Test #24: read expected LONGs
+Cog0    File: [zs-009-file.str], bytesUsed = 5, bytes_free = 3_951, block_count = 1
+Cog4    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog0
+Cog4     -> pass
+Cog0  * Test #8: Ensure expected file stats
+Cog4
+Cog0    File: [zs-009-file.str]
+Cog4  * Test #25: ensure no errors on read LONGs
+Cog4     ECode: SUCCESS: No error
+Cog4     -> pass
+Cog4
+Cog4  * Test #26: BAD: read one more LONG than written
+Cog0    # 1 Blocks in file:
+Cog4     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0      1: [$0340] HEAD/last, thisID=8, dataOfs=$0000, endPtr=$008D, lifeCycle [ACTIVE-3], sig=[$08D0_087C]
+Cog4     -> pass
+Cog4
+Cog4  * Test #27: Close read file
+Cog0    # blocks: 1
+Cog4     ECode: SUCCESS: No error
+Cog0    # bytes used: 5
+Cog4     -> pass
+Cog0     -> pass
+Cog4
+Cog0
+Cog4  * 27 Tests - Pass: 27, Fail: 0
+Cog0  * Test #9: Open File for read
+Cog4
+Cog4  * Cog #4 DONE
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #10: validate handle
+Cog0    open(,'r'): 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #11: read expected N STRINGs
+Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #12: ensure no errors on read STRINGs
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #13: BAD: read one more STRING than written
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #14: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Cog write file #2
+Cog0  - testWriteLongs(ln-010-file.bin, 5)
+Cog0
+Cog0  * Test #15: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #16: validate handle
+Cog0    open(,'w'): 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #17: Write N LONGs
+Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #18: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [ln-010-file.bin] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] HEAD/last, thisID=9, dataOfs=$0000, endPtr=$009C, lifeCycle [erased], sig=[$09C0_09F4]  MODIFIED
+Cog0
+Cog0  * Test #19: Close written file
+Cog0  * wr_block() block_address = $0807, block_id = 9, NextID_EndPtr = $009C
+Cog0  - program_block() block_address = $0807
+Cog0  - activate_block() block_address = $0807
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [ln-010-file.bin], bytesUsed = 20, bytes_free = 3_936, block_count = 1
+Cog0
+Cog0  * Test #20: Ensure expected file stats
+Cog0    File: [ln-010-file.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: [$0807] HEAD/last, thisID=9, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_097C]
+Cog0    # blocks: 1
+Cog0    # bytes used: 20
+Cog0     -> pass
+Cog0
+Cog0  * Test #21: Open File for read
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #22: validate handle
+Cog0    open(,'r'): 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #23: read expected LONGs
+Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #24: ensure no errors on read LONGs
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #25: BAD: read one more LONG than written
+Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0     -> pass
+Cog0
+Cog0  * Test #26: Close read file
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Cog #0 DONE
+Cog0
+Cog0  * ------ waiting... ------
+Cog7  * Mounting the FLASH
+Cog7  * init VAR
+Cog7
+Cog7  * Test #1: Mount the filesystem
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7
+Cog7   ------------------------------------------------------------
+Cog7  * Test Group: Cog write file #1
+Cog7  - testWriteWords(wd-711-file.bin, 5)
+Cog7
+Cog7  * Test #2: Open File for write
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7  * Test #3: validate handle
+Cog7    open(,'w'): 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #4: Write N WORDs
+Cog7    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #5: ensure no errors on writes
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7    File: [wd-711-file.bin] pending commit
+Cog7    # 1 Blocks in chain:
+Cog7      1: [$0000] HEAD/last, thisID=10, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_0AF4]  MODIFIED
+Cog7
+Cog7  * Test #6: Close written file
+Cog7  * wr_block() block_address = $0256, block_id = 10, NextID_EndPtr = $0092
+Cog7  - program_block() block_address = $0256
+Cog7  - activate_block() block_address = $0256
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7    File: [wd-711-file.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
+Cog7
+Cog7  * Test #7: Ensure expected file stats
+Cog7    File: [wd-711-file.bin]
+Cog7    # 1 Blocks in file:
+Cog7      1: [$0256] HEAD/last, thisID=10, dataOfs=$0000, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_0A7C]
+Cog7    # blocks: 1
+Cog7    # bytes used: 10
+Cog7     -> pass
+Cog7
+Cog7  * Test #8: Open File for read
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7  * Test #9: validate handle
+Cog7    open(,'r'): 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #10: read expected N WORDs
+Cog7    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #11: ensure no errors on read WORDs
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7  * Test #12: BAD: read one more WORD than written
+Cog7     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog7     -> pass
+Cog7
+Cog7  * Test #13: Close read file
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7
+Cog7   ------------------------------------------------------------
+Cog7  * Test Group: Cog write file #2
+Cog7  - testWriteWords(wd-712-file.bin, 5)
+Cog7
+Cog7  * Test #14: Open File for write
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7  * Test #15: validate handle
+Cog7    open(,'w'): 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #16: Write N WORDs
+Cog7    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #17: ensure no errors on writes
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7    File: [wd-712-file.bin] pending commit
+Cog7    # 1 Blocks in chain:
+Cog7      1: [$0000] HEAD/last, thisID=11, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_0BF4]  MODIFIED
+Cog7
+Cog7  * Test #18: Close written file
+Cog7  * wr_block() block_address = $0802, block_id = 11, NextID_EndPtr = $0092
+Cog7  - program_block() block_address = $0802
+Cog7  - activate_block() block_address = $0802
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7    File: [wd-712-file.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
+Cog7
+Cog7  * Test #19: Ensure expected file stats
+Cog7    File: [wd-712-file.bin]
+Cog7    # 1 Blocks in file:
+Cog7      1: [$0802] HEAD/last, thisID=11, dataOfs=$0000, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_0B7C]
+Cog7    # blocks: 1
+Cog7    # bytes used: 10
+Cog7     -> pass
+Cog7
+Cog7  * Test #20: Open File for read
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7  * Test #21: validate handle
+Cog7    open(,'r'): 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #22: read expected N WORDs
+Cog7    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog7     -> pass
+Cog7
+Cog7  * Test #23: ensure no errors on read WORDs
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7  * Test #24: BAD: read one more WORD than written
+Cog7     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog7     -> pass
+Cog7
+Cog7  * Test #25: Close read file
+Cog7     ECode: SUCCESS: No error
+Cog7     -> pass
+Cog7
+Cog7  * 25 Tests - Pass: 25, Fail: 0
+Cog7
+Cog7  * Cog #7 DONE
+Cog5  * Mounting the FLASH
+Cog5  * init VAR
+Cog5
+Cog5  * Test #1: Mount the filesystem
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5
+Cog5   ------------------------------------------------------------
+Cog5  * Test Group: Cog write file #1
+Cog5  - testWriteRecords(rc-513-file.bin, 5)
+Cog5
+Cog5  * Test #2: Open File for write
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #3: validate handle
+Cog5    open(,'w'): 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #4: Write N Records
+Cog5    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #5: ensure no errors on Record writes
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5    File: [rc-513-file.bin] pending commit
+Cog5    # 1 Blocks in chain:
+Cog5      1: [$0000] HEAD/last, thisID=12, dataOfs=$0000, endPtr=$0240, lifeCycle [erased], sig=[$2400_0CF4]  MODIFIED
+Cog5
+Cog5  * Test #6: Close written file
+Cog5  * wr_block() block_address = $0951, block_id = 12, NextID_EndPtr = $0240
+Cog5  - program_block() block_address = $0951
+Cog5  - activate_block() block_address = $0951
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #7: Ensure expected file stats
+Cog5    File: [rc-513-file.bin]
+Cog5    # 1 Blocks in file:
+Cog5      1: [$0951] HEAD/last, thisID=12, dataOfs=$0000, endPtr=$0240, lifeCycle [ACTIVE-3], sig=[$2400_0C7C]
+Cog5    # blocks: 1
+Cog5    # bytes used: 440
+Cog5     -> pass
+Cog5
+Cog5  * Test #8: Ensure expected unused bytes stats
+Cog5    file_size_unused(): 3_516
+Cog5     -> pass
+Cog5
+Cog5  * Test #9: Ensure no error on size unused call
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #10: Open File for read
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #11: validate handle
+Cog5    open(,'r'): 0
+Cog5     -> pass
+Cog5
+Cog5  ** /----- dumping 5 records [contains 5 records]
+Cog5  ** Record #1:
+Cog5   $0000_0000: $ED $FE $AD $BE $01 $00 $00 $00 $41 $05 $41 $05 $41 $05 $41 $05
+Cog5   $0000_0010: $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05
+Cog5   $0000_0020: $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05
+Cog5   $0000_0030: $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05
+Cog5   $0000_0040: $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05 $41 $05
+Cog5   $0000_0050: $41 $05 $41 $05 $28 $06 $B0 $7C
+Cog5  ** Record #2:
+Cog5   $0000_0000: $ED $FE $AD $BE $02 $00 $00 $00 $42 $05 $42 $05 $42 $05 $42 $05
+Cog5   $0000_0010: $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05
+Cog5   $0000_0020: $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05
+Cog5   $0000_0030: $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05
+Cog5   $0000_0040: $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05 $42 $05
+Cog5   $0000_0050: $42 $05 $42 $05 $AF $47 $06 $BB
+Cog5  ** Record #3:
+Cog5   $0000_0000: $ED $FE $AD $BE $03 $00 $00 $00 $43 $05 $43 $05 $43 $05 $43 $05
+Cog5   $0000_0010: $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05
+Cog5   $0000_0020: $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05
+Cog5   $0000_0030: $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05
+Cog5   $0000_0040: $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05 $43 $05
+Cog5   $0000_0050: $43 $05 $43 $05 $55 $39 $22 $3E
+Cog5  ** Record #4:
+Cog5   $0000_0000: $ED $FE $AD $BE $04 $00 $00 $00 $44 $05 $44 $05 $44 $05 $44 $05
+Cog5   $0000_0010: $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05
+Cog5   $0000_0020: $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05
+Cog5   $0000_0030: $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05
+Cog5   $0000_0040: $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05 $44 $05
+Cog5   $0000_0050: $44 $05 $44 $05 $D9 $47 $F9 $17
+Cog5  ** Record #5:
+Cog5   $0000_0000: $ED $FE $AD $BE $05 $00 $00 $00 $45 $05 $45 $05 $45 $05 $45 $05
+Cog5   $0000_0010: $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05
+Cog5   $0000_0020: $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05
+Cog5   $0000_0030: $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05
+Cog5   $0000_0040: $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05 $45 $05
+Cog5   $0000_0050: $45 $05 $45 $05 $23 $39 $DD $92
+Cog5  ** \----- ----- ----- ----- ----- ----- -----
+Cog5
+Cog5
+Cog5  * Test #12: read expected N RECORDs
+Cog5    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #13: ensure no errors on read RECORDs
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #14: BAD: read one more Record than written
+Cog5    Sub-Test Results: count=1, Pass: 1, Fail: 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #15: Close read file
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5    All Files:
+Cog5  by-101-file.bin, byteCount = 5, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog5  ln-604-file.bin, byteCount = 20, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog5  ln-202-file.bin, byteCount = 20, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+Cog5  rc-403-file.bin, byteCount = 440, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+Cog5  ln-605-file.bin, byteCount = 20, blockID = 5, BlocksUsed = 1, @Buff={binary data}
+Cog5  wd-106-file.bin, byteCount = 10, blockID = 6, BlocksUsed = 1, @Buff={binary data}
+Cog5  by-207-file.bin, byteCount = 5, blockID = 7, BlocksUsed = 1, @Buff={binary data}
+Cog5  ln-408-file.bin, byteCount = 20, blockID = 8, BlocksUsed = 1, @Buff={binary data}
+Cog5  zs-009-file.str, byteCount = 5, blockID = 9, BlocksUsed = 1, @Buff={binary data}
+Cog5  ln-010-file.bin, byteCount = 20, blockID = 10, BlocksUsed = 1, @Buff={binary data}
+Cog5  wd-711-file.bin, byteCount = 10, blockID = 11, BlocksUsed = 1, @Buff={binary data}
+Cog5  wd-712-file.bin, byteCount = 10, blockID = 12, BlocksUsed = 1, @Buff={binary data}
+Cog5  rc-513-file.bin, byteCount = 440, blockID = 13, BlocksUsed = 1, @Buff={binary data}
+Cog5
+Cog5
+Cog5   ------------------------------------------------------------
+Cog5  * Test Group: Cog write file #2
+Cog5  - testWriteWords(wd-514-file.bin, 5)
+Cog5
+Cog5  * Test #16: Open File for write
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #17: validate handle
+Cog5    open(,'w'): 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #18: Write N WORDs
+Cog5    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #19: ensure no errors on writes
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5    File: [wd-514-file.bin] pending commit
+Cog5    # 1 Blocks in chain:
+Cog5      1: [$0000] HEAD/last, thisID=13, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_0DF4]  MODIFIED
+Cog5
+Cog5  * Test #20: Close written file
+Cog5  * wr_block() block_address = $0DE4, block_id = 13, NextID_EndPtr = $0092
+Cog5  - program_block() block_address = $0DE4
+Cog5  - activate_block() block_address = $0DE4
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5    File: [wd-514-file.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
+Cog5
+Cog5  * Test #21: Ensure expected file stats
+Cog5    File: [wd-514-file.bin]
+Cog5    # 1 Blocks in file:
+Cog5      1: [$0DE4] HEAD/last, thisID=13, dataOfs=$0000, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_0D7C]
+Cog5    # blocks: 1
+Cog5    # bytes used: 10
+Cog5     -> pass
+Cog5
+Cog5  * Test #22: Open File for read
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #23: validate handle
+Cog5    open(,'r'): 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #24: read expected N WORDs
+Cog5    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog5     -> pass
+Cog5
+Cog5  * Test #25: ensure no errors on read WORDs
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * Test #26: BAD: read one more WORD than written
+Cog5     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog5     -> pass
+Cog5
+Cog5  * Test #27: Close read file
+Cog5     ECode: SUCCESS: No error
+Cog5     -> pass
+Cog5
+Cog5  * 27 Tests - Pass: 27, Fail: 0
+Cog5
+Cog5  * Cog #5 DONE
+Cog3  * Mounting the FLASH
+Cog3  * init VAR
+Cog3
+Cog3  * Test #1: Mount the filesystem
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3
+Cog3   ------------------------------------------------------------
+Cog3  * Test Group: Cog write file #1
+Cog3  - testWriteRecords(rc-315-file.bin, 5)
+Cog3
+Cog3  * Test #2: Open File for write
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #3: validate handle
+Cog3    open(,'w'): 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #4: Write N Records
+Cog3    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #5: ensure no errors on Record writes
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3    File: [rc-315-file.bin] pending commit
+Cog3    # 1 Blocks in chain:
+Cog3      1: [$0000] HEAD/last, thisID=14, dataOfs=$0000, endPtr=$0240, lifeCycle [erased], sig=[$2400_0EF4]  MODIFIED
+Cog3
+Cog3  * Test #6: Close written file
+Cog3  * wr_block() block_address = $0168, block_id = 14, NextID_EndPtr = $0240
+Cog3  - program_block() block_address = $0168
+Cog3  - activate_block() block_address = $0168
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #7: Ensure expected file stats
+Cog3    File: [rc-315-file.bin]
+Cog3    # 1 Blocks in file:
+Cog3      1: [$0168] HEAD/last, thisID=14, dataOfs=$0000, endPtr=$0240, lifeCycle [ACTIVE-3], sig=[$2400_0E7C]
+Cog3    # blocks: 1
+Cog3    # bytes used: 440
+Cog3     -> pass
+Cog3
+Cog3  * Test #8: Ensure expected unused bytes stats
+Cog3    file_size_unused(): 3_516
+Cog3     -> pass
+Cog3
+Cog3  * Test #9: Ensure no error on size unused call
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #10: Open File for read
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #11: validate handle
+Cog3    open(,'r'): 0
+Cog3     -> pass
+Cog3
+Cog3  ** /----- dumping 5 records [contains 5 records]
+Cog3  ** Record #1:
+Cog3   $0000_0000: $ED $FE $AD $BE $01 $00 $00 $00 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0010: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0020: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0030: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0040: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0050: $41 $03 $41 $03 $50 $79 $B8 $E9
+Cog3  ** Record #2:
+Cog3   $0000_0000: $ED $FE $AD $BE $02 $00 $00 $00 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0010: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0020: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0030: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0040: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0050: $42 $03 $42 $03 $D7 $38 $0E $2E
+Cog3  ** Record #3:
+Cog3   $0000_0000: $ED $FE $AD $BE $03 $00 $00 $00 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0010: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0020: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0030: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0040: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0050: $43 $03 $43 $03 $2D $46 $2A $AB
+Cog3  ** Record #4:
+Cog3   $0000_0000: $ED $FE $AD $BE $04 $00 $00 $00 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0010: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0020: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0030: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0040: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0050: $44 $03 $44 $03 $A1 $38 $F1 $82
+Cog3  ** Record #5:
+Cog3   $0000_0000: $ED $FE $AD $BE $05 $00 $00 $00 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0010: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0020: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0030: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0040: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0050: $45 $03 $45 $03 $5B $46 $D5 $07
+Cog3  ** \----- ----- ----- ----- ----- ----- -----
+Cog3
+Cog3
+Cog3  * Test #12: read expected N RECORDs
+Cog3    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #13: ensure no errors on read RECORDs
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #14: BAD: read one more Record than written
+Cog3    Sub-Test Results: count=1, Pass: 1, Fail: 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #15: Close read file
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3    All Files:
+Cog3  by-101-file.bin, byteCount = 5, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-604-file.bin, byteCount = 20, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-202-file.bin, byteCount = 20, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+Cog3  rc-403-file.bin, byteCount = 440, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-605-file.bin, byteCount = 20, blockID = 5, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-106-file.bin, byteCount = 10, blockID = 6, BlocksUsed = 1, @Buff={binary data}
+Cog3  by-207-file.bin, byteCount = 5, blockID = 7, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-408-file.bin, byteCount = 20, blockID = 8, BlocksUsed = 1, @Buff={binary data}
+Cog3  zs-009-file.str, byteCount = 5, blockID = 9, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-010-file.bin, byteCount = 20, blockID = 10, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-711-file.bin, byteCount = 10, blockID = 11, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-712-file.bin, byteCount = 10, blockID = 12, BlocksUsed = 1, @Buff={binary data}
+Cog3  rc-513-file.bin, byteCount = 440, blockID = 13, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-514-file.bin, byteCount = 10, blockID = 14, BlocksUsed = 1, @Buff={binary data}
+Cog3  rc-315-file.bin, byteCount = 440, blockID = 15, BlocksUsed = 1, @Buff={binary data}
+Cog3
+Cog3
+Cog3   ------------------------------------------------------------
+Cog3  * Test Group: Cog write file #2
+Cog3  - testWriteRecords(rc-316-file.bin, 5)
+Cog3
+Cog3  * Test #16: Open File for write
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #17: validate handle
+Cog3    open(,'w'): 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #18: Write N Records
+Cog3    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #19: ensure no errors on Record writes
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3    File: [rc-316-file.bin] pending commit
+Cog3    # 1 Blocks in chain:
+Cog3      1: [$0000] HEAD/last, thisID=15, dataOfs=$0000, endPtr=$0240, lifeCycle [erased], sig=[$2400_0FF4]  MODIFIED
+Cog3
+Cog3  * Test #20: Close written file
+Cog3  * wr_block() block_address = $0EEC, block_id = 15, NextID_EndPtr = $0240
+Cog3  - program_block() block_address = $0EEC
+Cog3  - activate_block() block_address = $0EEC
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #21: Ensure expected file stats
+Cog3    File: [rc-316-file.bin]
+Cog3    # 1 Blocks in file:
+Cog3      1: [$0EEC] HEAD/last, thisID=15, dataOfs=$0000, endPtr=$0240, lifeCycle [ACTIVE-3], sig=[$2400_0F7C]
+Cog3    # blocks: 1
+Cog3    # bytes used: 440
+Cog3     -> pass
+Cog3
+Cog3  * Test #22: Ensure expected unused bytes stats
+Cog3    file_size_unused(): 3_516
+Cog3     -> pass
+Cog3
+Cog3  * Test #23: Ensure no error on size unused call
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #24: Open File for read
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #25: validate handle
+Cog3    open(,'r'): 0
+Cog3     -> pass
+Cog3
+Cog3  ** /----- dumping 5 records [contains 5 records]
+Cog3  ** Record #1:
+Cog3   $0000_0000: $ED $FE $AD $BE $01 $00 $00 $00 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0010: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0020: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0030: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0040: $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03 $41 $03
+Cog3   $0000_0050: $41 $03 $41 $03 $50 $79 $B8 $E9
+Cog3  ** Record #2:
+Cog3   $0000_0000: $ED $FE $AD $BE $02 $00 $00 $00 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0010: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0020: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0030: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0040: $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03 $42 $03
+Cog3   $0000_0050: $42 $03 $42 $03 $D7 $38 $0E $2E
+Cog3  ** Record #3:
+Cog3   $0000_0000: $ED $FE $AD $BE $03 $00 $00 $00 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0010: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0020: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0030: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0040: $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03 $43 $03
+Cog3   $0000_0050: $43 $03 $43 $03 $2D $46 $2A $AB
+Cog3  ** Record #4:
+Cog3   $0000_0000: $ED $FE $AD $BE $04 $00 $00 $00 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0010: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0020: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0030: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0040: $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03 $44 $03
+Cog3   $0000_0050: $44 $03 $44 $03 $A1 $38 $F1 $82
+Cog3  ** Record #5:
+Cog3   $0000_0000: $ED $FE $AD $BE $05 $00 $00 $00 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0010: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0020: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0030: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0040: $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03 $45 $03
+Cog3   $0000_0050: $45 $03 $45 $03 $5B $46 $D5 $07
+Cog3  ** \----- ----- ----- ----- ----- ----- -----
+Cog3
+Cog3
+Cog3  * Test #26: read expected N RECORDs
+Cog3    Sub-Test Results: count=5, Pass: 5, Fail: 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #27: ensure no errors on read RECORDs
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3  * Test #28: BAD: read one more Record than writteCog3    Sub-Test Results: count=1, Pass: 1, Fail: 0
+Cog3     -> pass
+Cog3
+Cog3  * Test #29: Close read file
+Cog3     ECode: SUCCESS: No error
+Cog3     -> pass
+Cog3
+Cog3    All Files:
+Cog3  by-101-file.bin, byteCount = 5, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-604-file.bin, byteCount = 20, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-202-file.bin, byteCount = 20, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+Cog3  rc-403-file.bin, byteCount = 440, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-605-file.bin, byteCount = 20, blockID = 5, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-106-file.bin, byteCount = 10, blockID = 6, BlocksUsed = 1, @Buff={binary data}
+Cog3  by-207-file.bin, byteCount = 5, blockID = 7, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-408-file.bin, byteCount = 20, blockID = 8, BlocksUsed = 1, @Buff={binary data}
+Cog3  zs-009-file.str, byteCount = 5, blockID = 9, BlocksUsed = 1, @Buff={binary data}
+Cog3  ln-010-file.bin, byteCount = 20, blockID = 10, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-711-file.bin, byteCount = 10, blockID = 11, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-712-file.bin, byteCount = 10, blockID = 12, BlocksUsed = 1, @Buff={binary data}
+Cog3  rc-513-file.bin, byteCount = 440, blockID = 13, BlocksUsed = 1, @Buff={binary data}
+Cog3  wd-514-file.bin, byteCount = 10, blockID = 14, BlocksUsed = 1, @Buff={binary data}
+Cog3  rc-315-file.bin, byteCount = 440, blockID = 15, BlocksUsed = 1, @Buff={binary data}
+Cog3  rc-316-file.bin, byteCount = 440, blockID = 16, BlocksUsed = 1, @Buff={binary data}
+Cog3
+Cog3  * 29 Tests - Pass: 29, Fail: 0
+Cog3
+Cog3  * Cog #3 DONE
+Cog0  * Let's see what happened
+Cog0  *  after waiting on COGs to finish writing
+Cog0
+Cog0  * Test #27: Check Cogs wrote All files
+Cog0    file written count: 16
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  by-101-file.bin, byteCount = 5, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog0  ln-604-file.bin, byteCount = 20, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog0  ln-202-file.bin, byteCount = 20, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+Cog0  rc-403-file.bin, byteCount = 440, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+Cog0  ln-605-file.bin, byteCount = 20, blockID = 5, BlocksUsed = 1, @Buff={binary data}
+Cog0  wd-106-file.bin, byteCount = 10, blockID = 6, BlocksUsed = 1, @Buff={binary data}
+Cog0  by-207-file.bin, byteCount = 5, blockID = 7, BlocksUsed = 1, @Buff={binary data}
+Cog0  ln-408-file.bin, byteCount = 20, blockID = 8, BlocksUsed = 1, @Buff={binary data}
+Cog0  zs-009-file.str, byteCount = 5, blockID = 9, BlocksUsed = 1, @Buff={binary data}
+Cog0  ln-010-file.bin, byteCount = 20, blockID = 10, BlocksUsed = 1, @Buff={binary data}
+Cog0  wd-711-file.bin, byteCount = 10, blockID = 11, BlocksUsed = 1, @Buff={binary data}
+Cog0  wd-712-file.bin, byteCount = 10, blockID = 12, BlocksUsed = 1, @Buff={binary data}
+Cog0  rc-513-file.bin, byteCount = 440, blockID = 13, BlocksUsed = 1, @Buff={binary data}
+Cog0  wd-514-file.bin, byteCount = 10, blockID = 14, BlocksUsed = 1, @Buff={binary data}
+Cog0  rc-315-file.bin, byteCount = 440, blockID = 15, BlocksUsed = 1, @Buff={binary data}
+Cog0  rc-316-file.bin, byteCount = 440, blockID = 16, BlocksUsed = 1, @Buff={binary data}
+Cog0
+Cog0  * 27 Tests - Pass: 27, Fail: 0
+Cog0
+Cog0  * TOTALs 212 Tests - Pass: 212, Fail: 0
+Cog0  TESTs complete
