@@ -23,19 +23,21 @@ The Regression test coverage is nearly complete!  This table indicates which met
 | PUB open(p_filename,"r") : handle | YES
 | PUB open(p_filename,"w") : handle | YES
 | PUB open(p_filename,"a") : handle | YES
-| PUB open(p_filename,"r+") : handle | | Not in initial release
+| PUB open(p_filename,"r+") : handle |  YES
+| PUB open(p_filename,"w+") : handle |  YES
 | PUB open\_circular(p_filename,"r") : handle | YES
 | PUB open\_circular(p_filename,"a") : handle | YES
 | PUB flush(handle) : status | YES
 | PUB close(handle) : status | YES
 | PUB rename(p_old_filename, p_new_filename) : status | YES
 | PUB delete(p_filename) : status | YES
+| PUB create_file(p_filename, fill_value, byte_count) : status | YES
 | PUB exists(p_filename) : result | YES
 | PUB file\_size(p_filename) : size\_in\_bytes | YES
 | PUB file\_size\_unused(p_filename) : size\_in\_bytes\_unused | YES
 | PUB seek(handle, position) : result | YES
 | PUB write(handle, p_buffer, count) : result | YES
-| PUB wr_byte(handle, byteValue) : result | YES
+| PUB wr_byte(handle, byte_value) : result | YES
 | PUB wr\_word(handle, word_value) : result | YES
 | PUB wr\_long(handle, long_value) : result | YES
 | PUB wr\_str(handle, p_str) : result | YES
@@ -53,7 +55,7 @@ The Regression test coverage is nearly complete!  This table indicates which met
 
 In order the compile the tests you need to uncomment the test-support routines in `Draft_flash_fs.spin2`. Look for line 1705:
 
-#### Driver file: Draft\_flash\_fs.spin2: line 1705
+#### Driver file: flash\_fs.spin2: line 2871
 ```spin2
 {   ' REMOVE BEFORE FLIGHT: uncomment this line before release!!!
 
@@ -70,9 +72,10 @@ At the head of each of test RT .spin2 files you want to run look for the debug o
 ```spin2
 {
     ' debug via serial to RPi (using RPi gateway pins)
-    DEBUG_PIN_TX = 57
-    DEBUG_PIN_RX = 56
-    DEBUG_BAUD = 2_000_000
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
 '}
 ```
 
@@ -98,6 +101,8 @@ This is a recap of the version history of these files:
 |  <PRE>2023-Sep-12</PRE> | More Tests `RT_read_write_tests.spin2`<br>Added testing of unmount() and mount() methods
 |  <PRE>2023-Sep-13</PRE> | More Tests `RT_read_seek_tests.spin2`<br>Added testing of seek()'s new "current position relative" feature
 |  <PRE>2023-Sep-19</PRE> | More Tests `RT_read_write_8cog_tests.spin2`<br>Added testing of multi-cog support
+|  <PRE>2023-Dec-18</PRE> | Added Tests `RT_read_modify_write_tests.spin2`<br>Added testing of read/modify/write support ("r+" and "w+" open modes)
+|  <PRE>2023-Dec-19</PRE> | More Tests `RT_read_write_tests.spin2`<br>Added testing of create_file() method
 
 ## Test files by Stephen
 
@@ -108,25 +113,26 @@ This is my work in progress as I'm working toward customer facing release of the
 | --- | --- |
 | [RT\_utilities.spin2](RT_utilities.spin2) | Utility methods common to all Test Files |
 | [RT\_mount\_handle\_basics_tests.spin2](RT_mount_handle_basics_tests.spin2) | The read/write basic types test suite |
-| [RT\_mount\_handle\_basics_tests.log](RT_mount_handle_basics_tests.log) | Log of the read/write basic types tests [85 passes, 0 fails] |
+| [RT\_mount\_handle\_basics_tests.log](RT_mount_handle_basics_tests.log) | Log of the read/write basic types tests [48 passes, 0 fails] |
+| [RT\_read\_modify\_write_tests.spin2](RT_read_modify_write_tests.spin2) | The read/write basic types test suite |
+| [RT\_read\_modify\_write_tests.log](RT_read_modify_write_tests.log) | Log of the read/write basic types tests [102 passes, 0 fails] |
 | [RT\_read\_seek_tests.spin2](RT_read_seek_tests.spin2) | The open for read seek test suite |
-| [RT\_read\_seek_tests.log](RT_read_seek_tests.log) | Log of the open for read seek tests [97 passes, 0 fails] |
+| [RT\_read\_seek_tests.log](RT_read_seek_tests.log) | Log of the open for read seek tests [81 passes, 0 fails] |
 | [RT\_read\_write\_8cog_tests.spin2](RT_read_write_8cog_tests.spin2) | The multi-cog testing suite |
-| [RT\_read\_write\_8cog_tests.log](RT_read_write_8cog_tests.log) | Log of the multi-cog tests [231 passes, 0 fails] |
-| [RT\_read\_write\_8cog\_tests_byCog.log](RT_read_write_8cog_tests_byCog.log) | Log of the multi-cog tests - **Sorted by COG** [231 passes, 0 fails] |
+| [RT\_read\_write\_8cog_tests.log](RT_read_write_8cog_tests.log) | Log of the multi-cog tests [216 passes, 0 fails] |
+| [RT\_read\_write\_8cog\_tests_byCog.log](RT_read_write_8cog_tests_byCog.log) | Log of the multi-cog tests - **Sorted by COG** [216 passes, 0 fails] |
 | [RT\_read\_write\_block_tests.spin2](RT_read_write_block_tests.spin2) | The read/write records(blocks) test suite  |
-| [RT\_read\_write\_block_tests.log](RT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [42 passes, 0 fails] |
+| [RT\_read\_write\_block_tests.log](RT_read_write_block_tests.log) | Log of the read/write records(blocks) tests  [39 passes, 0 fails] |
 | [RT\_read\_write\_circular_tests.spin2](RT_read_write_circular_tests.spin2) | The read/write circular test suite |
-| [RT\_read\_write\_circular_tests.log](RT_read_write_circular_tests.log) | Log of the read/write circular tests [247 passes, 0 fails] |
+| [RT\_read\_write\_circular_tests.log](RT_read_write_circular_tests.log) | Log of the read/write circular tests [262 passes, 0 fails] |
 | [RT\_read\_write_tests.spin2](RT_read_write_tests.spin2) | The read/write basic types test suite |
-| [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [102 passes, 0 fails] |
+| [RT\_read\_write_tests.log](RT_read_write_tests.log) | Log of the read/write basic types tests [118 passes, 0 fails] |
 | [RT\_write\_append_tests.spin2](RT_write_append_tests.spin2) | The open for append test suite |
-| [RT\_write\_append_tests.log](RT_write_append_tests.log) | Log of the open for append tests [102 passes, 0 fails] |
+| [RT\_write\_append_tests.log](RT_write_append_tests.log) | Log of the open for append tests [114 passes, 0 fails] |
 
 ### Next Steps:
 
 - certify life-cycle changes for blocks of files created/modified (this is visuall checked for now...)
-- finish tests for read-modify write modes (*When this feature arrives, soonish*)
 - ...
 
 ---
