@@ -15,7 +15,7 @@
  v1.3.0 - update for flexspin compatibility, seek() returns file position, write() returns bytes written
  v1.3.1 - more update for flexspin compatibility, adjusted seek(), read() and write() add file_size_for_handle()
  v1.4.0 - Adjustments allowing multi-cog support
- v2.0.0 - Add read/modify/write and non-destructive mount check
+ v2.0.0 - Add read/modify/write, non-destructive mount check, create_file()
  -------------------------------------------------------------------------------------------------
 
 Object "flash_fs" Interface:
@@ -79,8 +79,8 @@ _____________________
 PUB format() : status
 
  Format the file system blocks and (re)mount it
- @returns status - 0 (SUCCESS) if successful,
- .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+ @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
+ .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
  .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
  .. E_NOT_MOUNTED if filesystem has not been mounted
 
@@ -88,7 +88,8 @@ ____________________
 PUB mount() : status
 
  Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
- @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+ @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
+ .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
  .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
 
 ______________________
@@ -96,6 +97,7 @@ PUB can_mount() : bool
 
  Check entire flash - to see if it would mount without overwite some blocks
  @returns bool - Returns T/F where T means no blocks would be changed by mount
+  (NOTE: result is valid only when error() == SUCCESS)
 
 ____________________
 PUB mounted() : bool

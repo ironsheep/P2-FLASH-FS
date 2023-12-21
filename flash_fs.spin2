@@ -17,7 +17,7 @@
 '' v1.3.0 - update for flexspin compatibility, seek() returns file position, write() returns bytes written
 '' v1.3.1 - more update for flexspin compatibility, adjusted seek(), read() and write() add file_size_for_handle()
 '' v1.4.0 - Adjustments allowing multi-cog support
-'' v2.0.0 - Add read/modify/write and non-destructive mount check
+'' v2.0.0 - Add read/modify/write, non-destructive mount check, create_file()
 '' -------------------------------------------------------------------------------------------------
 
 
@@ -249,8 +249,8 @@ PUB format() : status | block_address, cycleBits
 
 '' Format the file system blocks and (re)mount it
 ''
-'' @returns status - 0 (SUCCESS) if successful,
-'' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+'' @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
+'' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted
 
@@ -293,7 +293,8 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
 
 '' Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
 ''
-'' @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+'' @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
+'' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
 
 ' Local Variables:
@@ -376,6 +377,7 @@ PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCou
 '' Check entire flash - to see if it would mount without overwite some blocks
 ''
 '' @returns bool - Returns T/F where T means no blocks would be changed by mount
+''  (NOTE: result is valid only when error() == SUCCESS)
 
 ' Local Variables:
 ' @local block_address - the block offset within the file system
@@ -2868,7 +2870,7 @@ PRI flash_receive(p_buffer, count) | rx_byte
               end
 
 
-'{   ' REMOVE BEFORE FLIGHT: uncomment this line before commit to git, and release!!!
+{   ' REMOVE BEFORE FLIGHT: uncomment this line before commit to git, and release!!!
 
 ' ----------------------------------------------------------------------------------------------
 '   these methods are for regression testing only - they are not used in production code
