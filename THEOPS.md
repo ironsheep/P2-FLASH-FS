@@ -400,7 +400,7 @@ Please enjoy!
 
 ## License
 
-Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
+Licensed under the MIT License.
 
 Follow these links for more information:
 

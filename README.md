@@ -26,8 +26,8 @@ Additional pages:
 
 - [The flash_fs Object I/F Documentation](flash_fs.txt) - the object interface with documentation for each public method
 - [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
-- [FS Theory of Operations](THEOPS.md) - a detailed description of key concepts of this filesystem
-- [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features (604+ tests so far)
+- [FS Theory of Operations](THEOPSv2.md) - a detailed description of key concepts of this filesystem (See [v1.x FS Theory of...](THEOPS.md) for earlier version)
+- [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features (900+ tests so far)
 
 ## Flash Filesystem Features
 
@@ -39,6 +39,7 @@ Key features of this Flash Filesystem for the P2 Edge Flash chip:
 - Filenames are 127 characters plus zero terminator
 - Seeks supported
 - File Append supported
+- Read-Modify-Write supported
 - Circular file writes supported 
 - Supports multi-cog use (first cog to call mount() mounts the filesystem for all cogs to use.)
 - **Coming soon** *Directory Support* 
@@ -136,7 +137,7 @@ Thank you also to members of the [forum thread - "On-Board Flash File System"](h
 
 ## License
 
-Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
+Licensed under the MIT License.
 
 Follow these links for more information:
 

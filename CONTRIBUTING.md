@@ -49,8 +49,7 @@ And last but not least: Always write your commit messages in the present tense. 
 
 ## License
 
-Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
-
+Licensed under the MIT License.
 
 Follow these links for more information:
 

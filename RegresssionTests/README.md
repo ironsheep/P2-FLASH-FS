@@ -155,7 +155,7 @@ This is my work in progress as I'm working toward customer facing release of the
 
 ## License
 
-Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
+Licensed under the MIT License.
 
 Follow these links for more information:
 
