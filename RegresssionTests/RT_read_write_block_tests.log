@@ -1,15 +1,20 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_A5B0 jump
+Cog0  INIT $0000_0EC0 $0000_BA80 jump
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
 Cog0    All Files:
+Cog0
+Cog0  * Environment: Chip S/N and Driver Version
+Cog0     CHIP Serial Number: $E461_2D03-$D35B_1A2A
+Cog0     Driver:
+Cog0  * init VAR
 Cog0
 Cog0  * Test #1: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #2: Write Records
-Cog0    Sub-Test Results: Pass: 20, Fail: 0
+Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #3: ensure no errors on Record writes
@@ -18,9 +23,12 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rwblocks.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0000] HEAD/last, thisID=0, endPtr=$03F8, lifeCycle [erased], sig=[$3F80_00FC]
+Cog0      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$03F8, lifeCycle [erased], sig=[$3F80_00F4]  MODIFIED
 Cog0
 Cog0  * Test #4: Close written file
+Cog0  * wr_block() block_address = $0506, block_id = 0, NextID_EndPtr = $03F8
+Cog0  - program_block() block_address = $0506
+Cog0  - activate_block() block_address = $0506
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -34,7 +42,7 @@ Cog0
 Cog0  * Test #6: Ensure expected file stats
 Cog0    File: [rwblocks.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$08D3] HEAD/last, thisID=0, endPtr=$03F8, lifeCycle [ACTIVE-3], sig=[$3F80_007C]
+Cog0      1: [$0506] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$03F8, lifeCycle [ACTIVE-3], sig=[$3F80_007C]
 Cog0    # blocks: 1
 Cog0    # bytes used: 880
 Cog0     -> pass
@@ -52,7 +60,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #10: read expected RECORDs
-Cog0    Sub-Test Results: Pass: 30, Fail: 0
+Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #11: ensure no errors on reads
@@ -60,9 +68,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #12: BAD: read one more Record than written
-Cog0    read(): 0
-Cog0     -> pass
-Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #13: Close read file
@@ -70,14 +76,16 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    All Files:
-Cog0  rwblocks.bin, Bytes = 880, ID = 1, @Buff={binary data}
+Cog0  rwblocks.bin, byteCount = 880, blockID = 1, BlocksUsed = 1, @Buff={binary data}
 Cog0
 Cog0  * Test #14: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #15: Write Records
-Cog0    Sub-Test Results: Pass: 90, Fail: 0
+Cog0  * wr_block() block_address = $0F5C, block_id = 1, NextID_EndPtr = $0002
+Cog0  - program_block() block_address = $0F5C
+Cog0    Sub-Test Results: count=45, Pass: 45, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #16: ensure no errors on Record writes
@@ -86,10 +94,14 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw2blocks.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$05FD] HEAD/more, thisID=1, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
-Cog0      2: [$0000] BODY/last, thisID=2, endPtr=$0008, lifeCycle [erased], sig=[$0080_02FE]
+Cog0      1: [$0F5C] HEAD/more, thisID=1, dataOfs=0, nextId=2, lifeCycle [erased], sig=[$0020_01FD]
+Cog0      2: [$0000] BODY/last, thisID=2, endPtr=$0008, lifeCycle [erased], sig=[$0080_02F6]  MODIFIED
 Cog0
 Cog0  * Test #17: Close written file
+Cog0  * wr_block() block_address = $00E8, block_id = 2, NextID_EndPtr = $0008
+Cog0  - program_block() block_address = $00E8
+Cog0  - activate_block() block_address = $00E8
+Cog0  - activate_block() block_address = $0F5C
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -103,8 +115,8 @@ Cog0
 Cog0  * Test #19: Ensure expected file stats
 Cog0    File: [rw2blocks.bin]
 Cog0    # 2 Blocks in file:
-Cog0      1: [$05FD] HEAD/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
-Cog0      2: [$0C63] BODY/last, thisID=2, endPtr=$0008, lifeCycle [ACTIVE-3], sig=[$0080_027E]
+Cog0      1: [$0F5C] HEAD/more, thisID=1, dataOfs=0, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017D]
+Cog0      2: [$00E8] BODY/last, thisID=2, endPtr=$0008, lifeCycle [ACTIVE-3], sig=[$0080_027E]
 Cog0    # blocks: 2
 Cog0    # bytes used: 3_960
 Cog0     -> pass
@@ -122,7 +134,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #23: read expected RECORDs
-Cog0    Sub-Test Results: Pass: 135, Fail: 0
+Cog0    Sub-Test Results: count=45, Pass: 45, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #24: ensure no errors on reads
@@ -130,9 +142,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #25: BAD: read one more Record than written
-Cog0    read(): 0
-Cog0     -> pass
-Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #26: Close read file
@@ -140,15 +150,20 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    All Files:
-Cog0  rwblocks.bin, Bytes = 880, ID = 1, @Buff={binary data}
-Cog0  rw2blocks.bin, Bytes = 3_960, ID = 2, @Buff={binary data}
+Cog0  rwblocks.bin, byteCount = 880, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog0  rw2blocks.bin, byteCount = 3_960, blockID = 2, BlocksUsed = 2, @Buff={binary data}
 Cog0
 Cog0  * Test #27: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #28: Write Records
-Cog0    Sub-Test Results: Pass: 184, Fail: 0
+Cog0  * wr_block() block_address = $0944, block_id = 3, NextID_EndPtr = $0004
+Cog0  - program_block() block_address = $0944
+Cog0  * wr_block() block_address = $088C, block_id = 4, NextID_EndPtr = $0005
+Cog0  - program_block() block_address = $088C
+Cog0  - activate_block() block_address = $088C
+Cog0    Sub-Test Results: count=92, Pass: 92, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #29: ensure no errors on Record writes
@@ -157,11 +172,15 @@ Cog0     -> pass
 Cog0
 Cog0    File: [rw3blocks.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0072] HEAD/more, thisID=3, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
-Cog0      2: [$02E4] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
-Cog0      3: [$0000] BODY/last, thisID=5, endPtr=$0038, lifeCycle [erased], sig=[$0380_05FE]
+Cog0      1: [$0944] HEAD/more, thisID=3, dataOfs=0, nextId=4, lifeCycle [erased], sig=[$0040_03FD]
+Cog0      2: [$088C] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      3: [$0000] BODY/last, thisID=5, endPtr=$0038, lifeCycle [erased], sig=[$0380_05F6]  MODIFIED
 Cog0
 Cog0  * Test #30: Close written file
+Cog0  * wr_block() block_address = $0405, block_id = 5, NextID_EndPtr = $0038
+Cog0  - program_block() block_address = $0405
+Cog0  - activate_block() block_address = $0405
+Cog0  - activate_block() block_address = $0944
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -175,9 +194,9 @@ Cog0
 Cog0  * Test #32: Ensure expected file stats
 Cog0    File: [rw3blocks.bin]
 Cog0    # 3 Blocks in file:
-Cog0      1: [$0072] HEAD/more, thisID=3, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
-Cog0      2: [$02E4] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
-Cog0      3: [$0930] BODY/last, thisID=5, endPtr=$0038, lifeCycle [ACTIVE-3], sig=[$0380_057E]
+Cog0      1: [$0944] HEAD/more, thisID=3, dataOfs=0, nextId=4, lifeCycle [ACTIVE-3], sig=[$0040_037D]
+Cog0      2: [$088C] BODY/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047F]
+Cog0      3: [$0405] BODY/last, thisID=5, endPtr=$0038, lifeCycle [ACTIVE-3], sig=[$0380_057E]
 Cog0    # blocks: 3
 Cog0    # bytes used: 8_096
 Cog0     -> pass
@@ -195,7 +214,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #36: read expected RECORDs
-Cog0    Sub-Test Results: Pass: 276, Fail: 0
+Cog0    Sub-Test Results: count=92, Pass: 92, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #37: ensure no errors on reads
@@ -203,9 +222,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #38: BAD: read one more Record than written
-Cog0    read(): 0
-Cog0     -> pass
-Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #39: Close read file
@@ -213,9 +230,9 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    All Files:
-Cog0  rwblocks.bin, Bytes = 880, ID = 1, @Buff={binary data}
-Cog0  rw2blocks.bin, Bytes = 3_960, ID = 2, @Buff={binary data}
-Cog0  rw3blocks.bin, Bytes = 8_096, ID = 4, @Buff={binary data}
+Cog0  rwblocks.bin, byteCount = 880, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog0  rw2blocks.bin, byteCount = 3_960, blockID = 2, BlocksUsed = 2, @Buff={binary data}
+Cog0  rw3blocks.bin, byteCount = 8_096, blockID = 4, BlocksUsed = 3, @Buff={binary data}
 Cog0
-Cog0  * 39 Tests: , Pass: 42, Fail: 0
+Cog0  * 39 Tests - Pass: 39, Fail: 0
 Cog0  * Test Complete

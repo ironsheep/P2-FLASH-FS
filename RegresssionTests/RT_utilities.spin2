@@ -106,7 +106,7 @@ pub showSubTestResults() | passScaled, failScaled, total, pPassFail
             failCount[cogId()]++
         else
             passCount[cogId()]++
-        pPassFail := failCountSub[cogId()] <> 0 ? @"sub-failed" : @"pass"
+        pPassFail := failCountSub[cogId()] <> 0 ? @"FAIL" : @"pass"
         debug("   -> ", zstr_(pPassFail))
         passCountSub[cogId()] := 0
         failCountSub[cogId()] := 0
@@ -120,6 +120,22 @@ pub ShowTestEndCounts() | pMsg
       pMsg := (numberTests[cogId()] > passCount[cogId()] + failCount[cogId()]) ? @"missing" : @"extra"
       debug("*  BAD TEST COUNTS: ", udec_(numberTests[cogId()]), " <> ", udec_(passCount[cogId()] + failCount[cogId()]), " (", zstr_(pMsg), " ", udec_(abs(numberTests[cogId()] - (passCount[cogId()] + failCount[cogId()]))), " tests)")
 
+
+pub ShowMultiCogTestEndCounts() | pMsg, totalTests, totalPasses, totalFails, cogIdx
+    ' show summary of all tests
+    ' gather totals
+    repeat 8 with cogIdx
+      totalTests += numberTests[cogIdx]
+      totalPasses += passCount[cogIdx]
+      totalFails += failCount[cogIdx]
+  ' report totals
+    debug(" ")  ' blank line
+    debug("* TOTALs ", udec_(totalTests), " Tests - Pass: ", udec_(totalPasses), ", Fail: ", udec_(totalFails))
+    if totalTests <> totalPasses + totalFails
+      pMsg := (totalTests > totalPasses + totalFails) ? @"missing" : @"extra"
+      debug("*  TOTALs BAD TEST COUNTS: ", udec_(totalTests), " <> ", udec_(totalPasses + totalFails), " (", zstr_(pMsg), " ", udec_(abs(totalTests - (totalPasses + totalFails))), " tests)")
+
+
 pub setCheckCountPerTest(countTests)
 
 '' set the number of subtests per record/group
@@ -132,7 +148,7 @@ pub evaluateSubStatus(result, pMessage, expectedResult) | ecGot, ecExpected, bPa
     ecGot := flash.string_for_error(result)
     ecExpected := flash.string_for_error(expectedResult)
     bPassed := result == expectedResult
-    pPassFail := !bPassed ? @"FAIL" : @"pass"
+    pPassFail := !bPassed ? @"Sub-FAIL" : @"pass"
     ifnot bPassed
         failCountSub[cogId()]++
     else
@@ -146,7 +162,7 @@ pub evaluateSubStatus(result, pMessage, expectedResult) | ecGot, ecExpected, bPa
 
 pub evaluateSubValue(result, pMessage, expectedResult) | bPassed, pPassFail
     bPassed := result == expectedResult
-    pPassFail := !bPassed ? @"FAIL" : @"pass"
+    pPassFail := !bPassed ? @"Sub-FAIL" : @"pass"
     ifnot bPassed
         failCountSub[cogId()]++
     else
