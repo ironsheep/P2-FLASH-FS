@@ -12,7 +12,7 @@
 
 CON
 
-  MAX_FILES_OPEN = 8
+  MAX_FILES_OPEN = 2 ' ensure is same default as FLASH F/S!!!
   TEST_SIGNATURE = $12345678
 
 OBJ
@@ -21,18 +21,19 @@ OBJ
 
 VAR { test stats vars }
 
-    LONG    numberTests[8]
-    LONG    subTestPer[8]
-    LONG    passCount[8]
-    LONG    failCount[8]
-    LONG    passCountSub[8]
-    LONG    failCountSub[8]
+  LONG    numberTests[8]
+  LONG    subTestPer[8]
+  LONG    passCount[8]
+  LONG    failCount[8]
+  LONG    passCountSub[8]
+  LONG    failCountSub[8]
 
-    LONG    varSignature[8]
+  LONG    varSignature[8]
 
-    BYTE    versionString[10]  '  "flash_fs v"
-    BYTE    vDigits[5+1]       ' "x.x.x", 0
+  BYTE    versionString[10]  '  "flash_fs v"
+  BYTE    vDigits[5+1]       ' "x.x.x", 0
 
+  byte    filename[128]
 
 pub null()
 
@@ -413,19 +414,19 @@ pub ShowStats() | blocksUsed, blocksFree, fileCount
     debug(udec(blocksUsed, blocksFree, fileCount))
 
 
-pub showFiles() | ID, ByteCount, byte Filename[128], byte Buff[30], BlocksUsed
+pub showFiles() | blockID, byteCount, byte Buff[30], BlocksUsed
     debug(" ")  ' blank line
     debug("  All Files:")
-    ID := 0                                                         'strictly speaking only needed for flexspin, but it helps to remind us that ID must be initialized to 0
+    blockID := 0                                                         'strictly speaking only needed for flexspin, but it helps to remind us that blockID must be initialized to 0
     repeat
-        flash.directory(@ID, @Filename, @ByteCount)                     'get next file
-        BlocksUsed := blockCountForFileSize(ByteCount)
-        if Filename[0]                                              'is there a filename?
-            ReadFile(@Filename, @Buff, 30)                            'read file
+        flash.directory(@blockID, @filename, @byteCount)                     'get next file
+        BlocksUsed := blockCountForFileSize(byteCount)
+        if filename[0]                                              'is there a filename?
+            ReadFile(@filename, @Buff, 30)                            'read file
             if isZstr(@Buff, 30)
-                debug(zstr_(@Filename), udec(ByteCount, ID, BlocksUsed), zstr(@Buff))      'show filename, bytes, ID, and file contents
+                debug(zstr_(@filename), udec(byteCount, blockID, BlocksUsed), zstr(@Buff))      'show filename, bytes, blockID, and file contents
             else
-                debug(zstr_(@Filename), udec(ByteCount, ID, BlocksUsed), ", @Buff={binary data}")      'show filename, bytes, ID, and file contents
+                debug(zstr_(@filename), udec(byteCount, blockID, BlocksUsed), ", @Buff={binary data}")      'show filename, bytes, blockID, and file contents
         else
             quit                                                      'no more files, quit
 
@@ -457,22 +458,22 @@ pub ReadFile(pFilename, pStr, maxlen) | handle, byteCount
                 byteCount := flash.rd_str(handle, pStr, maxlen)             'read bytes of zstring
                 if byteCount < 0
                     showError(@"rd_str()", byteCount)
-            'debug("- read str(", udec_(byteCount), ")=[", zstr_(pStr), "]")      'show filename, bytes, ID, and file contents
+            'debug("- read str(", udec_(byteCount), ")=[", zstr_(pStr), "]")      'show filename, bytes, blockID, and file contents
 
             flash.close(handle)                                         'close file
     else
         bytefill(pStr, $ff, maxlen)
 
-pub ensureEmptyDirectory() | ID, ByteCount, byte Filename[128], bPassed, pPassFail
+pub ensureEmptyDirectory() | blockID, byteCount, bPassed, pPassFail
 '' validate that directory is empty!
-    flash.directory(@ID, @Filename, @ByteCount)                     'get first file
+    flash.directory(@blockID, @filename, @byteCount)                     'get first file
     bPassed := true
-    if Filename[0]                                              'is there a filename?
+    if filename[0]                                              'is there a filename?
         bPassed := false
     pPassFail := !bPassed ? @"FAIL" : @"pass"
 
     ifnot bPassed
-        debug("  # Error Found file: [", zstr_(@Filename), "] (expected: no files)")
+        debug("  # Error Found file: [", zstr_(@filename), "] (expected: no files)")
         failCount[cogId()]++
     else
         passCount[cogId()]++
@@ -512,7 +513,7 @@ pub bytesInLastBlock(totalBytes) : bytesInLast
   if bytesInLast > flash.BYTES_IN_BODY_BLOCK
     bytesInLast := bytesInLast +// flash.BYTES_IN_BODY_BLOCK
 
-pub checkMatchingEntries(pDirEntries) | ID, ByteCount, byte Filename[128], bPassed, pPassFail, refFileCount, foundFileCount, pCurrRefDir, pRefFilename, refByteCount, refBlocks, calcBlocks, bBadEntry
+pub checkMatchingEntries(pDirEntries) | blockID, byteCount, bPassed, pPassFail, refFileCount, foundFileCount, pCurrRefDir, pRefFilename, refByteCount, refBlocks, calcBlocks, bBadEntry
 {
         ' structure for directory checking
         ' (pDirEntries := @dirEntr1)
@@ -528,33 +529,33 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
     pCurrRefDir := pDirEntries
     refFileCount := 0
     foundFileCount := 0
-    ID := 0                                             ' start seach at beginning
+    blockID := 0                                             ' start seach at beginning
     repeat
         pRefFilename := LONG[pCurrRefDir][0]            ' get pointer to reference filename -OR- NULL
         refByteCount := LONG[pCurrRefDir][1]            ' get byte count
         refBlocks    := LONG[pCurrRefDir][2]            ' get block count
-        flash.directory(@ID, @Filename, @ByteCount)         'get next file
+        flash.directory(@blockID, @filename, @byteCount)         'get next file
         if pRefFilename == 0                            ' if not beyond last REF entry
             'debug(" - end of table entries!")
         else
             refFileCount++
-        if Filename[0] == 0                             'is there a filename?
+        if filename[0] == 0                             'is there a filename?
             'debug(" - end of directory entries!")
         else
             foundFileCount++
-        if pRefFilename == 0 && Filename[0] == 0
+        if pRefFilename == 0 && filename[0] == 0
             quit
 
-        if pRefFilename <> 0 && Filename[0] <> 0
-            calcBlocks := blockCountForFileSize(ByteCount)
-            'debug(" read ->: [", zstr_(@Filename), "], bytes=(", udec_(Bytes), "), blocks(", udec_(calcBlocks), ")")
+        if pRefFilename <> 0 && filename[0] <> 0
+            calcBlocks := blockCountForFileSize(byteCount)
+            'debug(" read ->: [", zstr_(@filename), "], bytes=(", udec_(Bytes), "), blocks(", udec_(calcBlocks), ")")
             'debug(" load ->: [", zstr_(pRefFilename), "], bytes=(", udec_(refByteCount), "), blocks(", udec_(refBlocks), ")")
             bBadEntry := false
             ' ensure all three values match
-            if strcomp(@Filename, pRefFilename) == false
+            if strcomp(@filename, pRefFilename) == false
                 debug(" - BAD filenames!")
                 bBadEntry := true
-            if ByteCount <> refByteCount
+            if byteCount <> refByteCount
                 debug(" - BAD byte count!")
                 bBadEntry := true
             if calcBlocks <> refBlocks
@@ -562,7 +563,7 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
                 bBadEntry := true
             ' checked, now summarize findings iff bad
             if bBadEntry
-                debug("  #    Found: [", zstr_(@Filename), "], bytes=(", udec_(ByteCount), "), blocks(", udec_(calcBlocks), ")")
+                debug("  #    Found: [", zstr_(@filename), "], bytes=(", udec_(byteCount), "), blocks(", udec_(calcBlocks), ")")
                 debug("  # Expected: [", zstr_(pRefFilename), "], bytes=(", udec_(refByteCount), "), blocks(", udec_(refBlocks), ")")
                 bPassed := false
         if pRefFilename <> 0                            ' if not beyond last REF entry
@@ -571,6 +572,7 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
     if foundFileCount <> refFileCount
         debug("  # Found ", udec_(foundFileCount), " files (expected ", udec_(refFileCount), ")")
         bPassed := false
+
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
         failCount[cogId()]++
@@ -643,14 +645,14 @@ pub record_crc(p_record_buffer, record_length) : crc
 
   return getcrc(p_record_buffer, $AD0424F3 rev 31, record_length - 4)  'compute CRC of a buffered block
 
-pub dumpFileHeads() | ID, ByteCount, byte Filename[128], pBlock
+pub dumpFileHeads() | blockID, byteCount, pBlock
     debug(" ")  ' blank line
     debug("  All File heads:")
     repeat
-        flash.directory(@ID, @Filename, @ByteCount)                     'get next file
-        if Filename[0]                                              'is there a filename?
-            pBlock := flash.TEST_getHead4kBlock(@Filename)
-            dbgMemDump(@Filename, pBlock, 64)
+        flash.directory(@blockID, @filename, @byteCount)                     'get next file
+        if filename[0]                                              'is there a filename?
+            pBlock := flash.TEST_getHead4kBlock(@filename)
+            dbgMemDump(@filename, pBlock, 64)
             debug(" ")  ' blank line
         else
             quit                                                      'no more files, quit

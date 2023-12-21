@@ -267,7 +267,7 @@ PUB format() : status | block_address, cycleBits
 
     'debug("* format()")
 
-    debug("- have lock, trying...")
+    'debug("- have lock, trying...")
     repeat while locktry(fsLock) == 0                                           ' try to get the lock
 
     LONG[@errorCode][cogid()] := SUCCESS
@@ -309,7 +309,7 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
         if setup_semaphore() < 0
             return LONG[@errorCode][cogid()]
 
-    debug("* mount()")
+    'debug("* mount()")
     LONG[@errorCode][cogid()] := SUCCESS                                        ' preset to success
 
     'debug("- have lock, trying...")
@@ -365,10 +365,10 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
           elseif field[BlockState][block_address] == B_TEMP                     'is this an file block?
             debug("* MNT: ERR bad marking found B_TEMP at", uhex_word(block_address))
 
-    debug("mnt: - mount ", udec(fileCount, blockCount))
+    'debug("mnt: - mount ", udec(fileCount, blockCount))
 
     lockrel(fsLock)              ' release the lock, we're done with it
-    debug("- lock released")
+    'debug("- lock released")
 
 
 PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCount, fileCount, badBlockCount, bad_count, dupe_count
@@ -439,7 +439,7 @@ PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCou
 
     'debug("mntCk: - mount test done")
     bool := badBlockCount == 0 ? true :false
-    debug("mntCk: - ", udec(badBlockCount, dupeIdCount, fileCount))
+    'debug("mntCk: - ", udec(badBlockCount, dupeIdCount, fileCount))
 
     lockrel(fsLock)              ' release the lock, we're done with it
     'debug("- lock released")
@@ -819,7 +819,7 @@ PUB delete(p_filename) : status | signature
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
-PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_block_id, block_id, block_address, NotFirst, dataOffset, isLast, currOffset, NextID_EndPtr
+PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_block_id, block_id, block_address, notHead, dataOffset, isLast, currOffset, NextID_EndPtr
 
 '' Make a file of a byteCount size filled with fillValue bytes - use OpenModify() to read and write contents
 ''
@@ -837,7 +837,7 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
 ' @local head_block_id - the head block id for this new file
 ' @local block_id - temporary block id
 ' @local block_address - the block offset within the file system
-' @local NotFirst - T/F where T means is not first block in file
+' @local notHead - T/F where T means is not first block in file
 ' @local dataOffset - temp integer containing the initial data offset
 ' @local isLast - T/F where T means this is last block
 ' @local currOffset - temporary block offset
@@ -865,25 +865,27 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
 
     repeat
       block_address := next_block_address()                                     'get a new block now (may alter BlockBuff and IDToBlock)
-      ifnot NotFirst                                                            'if first block..
+      ifnot notHead                                                             'if HEAD block..
         build_head_block(@tmpBlockBuffer, p_filename, 0)                        '..build head block in buffer
         dataOffset := $088                                                      '..set data start for head block
-      else                                                                      'if not first block..
-        bytefill(@tmpBlockBuffer, fill_value, BLOCK_SIZE)                       '..clear buffer for body block
+      else                                                                      'if BODY block..
         dataOffset := $004                                                      '..set data start for body block
+      bytefill(@tmpBlockBuffer + dataOffset, fill_value, BLOCK_SIZE - dataOffset) '..clear buffer for body block
       if isLast := byte_count <= (currOffset += $FFC - dataOffset)              'if last block.. (update position and check if last block)
         NextID_EndPtr := byte_count - currOffset + $FFC                         '..get EndPtr
       else                                                                      'if not last block..
         NextID_EndPtr := next_available_block_id()                              '..get NextID
       LONG[@tmpBlockBuffer].[0] := !isLast                                      'set more/last bit
+      LONG[@tmpBlockBuffer].[1] := notHead                                      'set head/body bit
       LONG[@tmpBlockBuffer].[19..8] := block_id                                 'set ThisID
       LONG[@tmpBlockBuffer].[31..20] := NextID_EndPtr                           'set NextID or EndPtr
       flash_program_block(block_address, @tmpBlockBuffer, %011)                 'program block
-      if NotFirst                                                               'if not head block..
+      if notHead                                                                'if not head block..
         flash_activate_block(block_address, %011)                               '..activate body block
       field[IDToBlock][block_id] := block_address                               'set IDToBlock
-      field[BlockState][block_address] := NotFirst~~ ? B_BODY : B_HEAD          'set block state to head/body, set NotFirst
+      field[BlockState][block_address] := notHead ? B_BODY : B_HEAD             'set block state to head/body, set notHead
       block_id := NextID_EndPtr                                                 'switch to next ID
+      notHead := true
     until isLast                                                                'loop until last block done
 
     flash_activate_block(field[IDToBlock][head_block_id], %011)                 'now activate head block to activate file
@@ -1627,8 +1629,8 @@ PRI get_file_head_signature(p_filename) : foundSignature | tmpFilenameCRC, block
           foundSignature := signature                                           '..return first long of block (always non-zero or logically TRUE)
           'debug("- GOOD crc19 and strcomp!")
           quit
-        else
-          debug("- bad crc19 filename ", uhex_word(block_address))
+        'else
+          'debug("- bad crc19 filename ", uhex_word(block_address))
       else
         ' see if old format (crc32 vs crc19)
         'debug("- bad CRC19 is CRC32? ", uhex_word(block_address))
@@ -1636,10 +1638,10 @@ PRI get_file_head_signature(p_filename) : foundSignature | tmpFilenameCRC, block
         if bIsOldFmt
           if strcomp(p_filename, @tmpBlockBuffer)                               'if filename matches..
             foundSignature := signature                                         '..return first long of block (always non-zero or logically TRUE)
-            debug("- GOOD crc32 and strcomp!")
+            'debug("- GOOD crc32 and strcomp!")
             quit
-          else
-            debug("- bad crc32 filename ", uhex_word(block_address))
+          'else
+          '  debug("- bad crc32 filename ", uhex_word(block_address))
         'else
         '  debug("- bad crc19 and not OLD Fmt ", uhex_word(block_address))
 
@@ -2547,21 +2549,21 @@ PRI setup_semaphore() : status
         'debug("setupSemaphore() ENTRY")
         ifnot can_acquire_lock()
             ' i was NOT first so I just wait
-            debug("! didn't win, waiting...")
+            'debug("! didn't win, waiting...")
             repeat
                 if fsLock <> -1                                                 ' I'm not allocating, just wait until is allocated
                     quit
             'debug("! done waiting")
         else
-            debug("! DID WIN, installing lock")
+            'debug("! DID WIN, installing lock")
             ' i was the first to mount this thing
             fsLock := locknew()                                                 'I'm allocating... reserve a lock for driver use
             'debug("! ", sdec(fsLock))
             if(fsLock < 0)                                                      'if lock allocation failed
-                debug("EEE failed to allocate lock")
+                'debug("EEE failed to allocate lock")
                 status := (LONG[@errorCode][cogid()] := E_NO_LOCK_AVAIL)        '..return error
-    else
-        debug("setupLock() abort, already set up")
+    'else
+        'debug("setupLock() abort, already set up")
 
 PRI can_acquire_lock() : bItsMe | myCogId, tmpCogId, lowestValue, lowestID
 
@@ -2588,7 +2590,7 @@ PRI can_acquire_lock() : bItsMe | myCogId, tmpCogId, lowestValue, lowestID
                 lowestID := tmpCogId
         ' if we were earliest, we get to allocate the lock and mount
         bItsMe := lowestID == myCogId ? true : false
-        debug("acquire_lock_and_mount() ", udec(lowestValue, lowestID, myCogId), sdec(bItsMe))
+        'debug("acquire_lock_and_mount() ", udec(lowestValue, lowestID, myCogId), sdec(bItsMe))
 
 
 CON ' >>>  miscellaneous, one-off  <<<
@@ -2866,7 +2868,7 @@ PRI flash_receive(p_buffer, count) | rx_byte
               end
 
 
-{   ' REMOVE BEFORE FLIGHT: uncomment this line before commit to git, and release!!!
+'{   ' REMOVE BEFORE FLIGHT: uncomment this line before commit to git, and release!!!
 
 ' ----------------------------------------------------------------------------------------------
 '   these methods are for regression testing only - they are not used in production code
