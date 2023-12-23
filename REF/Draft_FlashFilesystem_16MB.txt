@@ -1,124 +1,266 @@
+****************************************************************************************************************
+*                                                                                                              *
+*  P2 Flash File System                                                                                        *
+*                                                                                                              *
+*  - on-board W25Q128 flash chip becomes 16MB SSD (minus 512KB for boot area)                                  *
+*  - automatic wear leveling is achieved via random block picking and moving                                   *
+*  - if power fails during file rewriting or renaming, the old file or name is still intact                    *
+*                                                                                                              *
+****************************************************************************************************************
+*  v1.0  2023-08-14  Initial release.                                                                          *
+*  v1.1  2023-08-18  Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI_CS now rests high.          *
+*  v1.2  2023-08-25  Adds open_append(), cleans up byte counting, adjusts get new handle to set fname.         *
+*  v2.0  2023-08-23  draft renovated file with new internal documentation.                                     *
+*  v2.1  2023-09-26  Added file froncation, truncation, and modification. Filenames extended to 127+1 bytes.   *
+*                    SPI code can now run from all cogs.                                                       *
+****************************************************************************************************************
 
 Object "Draft_FlashFilesystem_16MB" Interface:
 
-PUB Format() : status
-PUB Mount() : status
+PUB format() : status
+PUB mount() : status
+PUB unmount()
 PUB OpenRead(pFilename) : handle
-PUB SeekRead(handle, pointer)
-PUB ByteRead(handle) : byteValue
 PUB OpenWrite(pFilename) : handle
 PUB OpenAppend(pFilename) : handle
-PUB ByteWrite(handle, byteValue) : status
-PUB Close(handle) : status
-PUB Delete(pFilename) : status
-PUB Rename(pOldFilename, pNewFilename) : status
-PUB Exists(pFilename) : status
-PUB SizeOf(pFilename) : byteCount
-PUB Directory(pBlockID, pFilename, pSize)
-PUB Stats() : usedBlocks, freeBlocks, fileCount
+PUB OpenAppendFroncate(pFilename, SizeLimit) : handle
+PUB OpenModify(pFilename) : handle
+PUB SeekRel(handle, relative_offset) : status
+PUB SeekAbs(handle, file_offset) : status
+PUB Tell(handle) : Location
+PUB rd_str(handle, pBuff, MaxLength, EndChr) : ChrCount
+PUB read(handle, pBuff, count) : bytes_read
+PUB rd_long(handle) : DataLong
+PUB rd_word(handle) : DataWord
+PUB rd_byte(handle) : DataByte
+PUB wr_str(handle, pStr, MaxLength) : status
+PUB write(handle, pBytes, count) : bytes_written
+PUB wr_long(handle, DataLong) : status
+PUB wr_word(handle, DataWord) : status
+PUB wr_byte(handle, DataByte) : status
+PUB flush(handle) : status
+PUB close(handle) : status
+PUB MakeFile(pFilename, Size) : status
+PUB Froncate(pFilename, SizeLimit) : status
+PUB Truncate(pFilename, SizeLimit) : status
+PUB delete(pFilename) : status
+PUB rename(pOldFilename, pNewFilename) : status
+PUB exists(pFilename) : DoesExist
+PUB file_size(pFilename) : byteCount
+PUB directory(pID, pFilename, pSize)
+PUB stats() : UsedBlocks, FreeBlocks, FileCount
 
 _____________________
-PUB Format() : status
+PUB format() : status
 
  Format file system and (re)mount it
  @returns status - ebadBlocksRemoved if bad blocks were found and fixed (SHOULD NOT HAPPEN ON FORMAT), otherwise 0 for success
 
 ____________________
-PUB Mount() : status
+PUB mount() : status
 
  Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
  @returns status - eBadBlocksRemoved if BAD blocks were found adn fixed, otherwise 0 for success
+
+_____________
+PUB unmount()
+
+ Unmount file system by closing all open handles
 
 ________________________________
 PUB OpenRead(pFilename) : handle
 
  Open a file for reading, returns handle
-
-_____________________________
-PUB SeekRead(handle, pointer)
-
- Go to location in file opened for reading
- if pointer exceeds size of file, ByteRead() will return -1
-
-________________________________
-PUB ByteRead(handle) : byteValue
-
- Read and return next byte [0-255] from file opened for reading (or eAtEndOfFile if no more data)
- @param handle - the handle to the file from which to read a byte
- @returns byteValue - einvalidHandle if the handle is not valid, eFileWriting if the file is not open for rading, eAtEndOfFile if no more data, otherwise the next byte [0-255] from the file
+ Subsequent calls are allowed to:
+   SeekRel(), Seek(), Tell()
+   rd_byte(), rd_word(), rd_long(), read(), rd_str()
+   close() - releases handle
+ @param pFilename -
+ @returns handle -
 
 _________________________________
 PUB OpenWrite(pFilename) : handle
 
- Open a file for (re)writing
+ Open a file for writing or rewriting, returns handle
+ Subsequent calls are allowed to:
+   Tell()
+   wr_byte(), wr_word(), wr_long(), write(), wr_str()
+   flush()
+   close() - releases handle
  @param pFilename - pointer to a zstring containing the filename
  @returns handle - efileWriting if file is being written, eFileOpen if file is open, or 0 if successful
 
 __________________________________
 PUB OpenAppend(pFilename) : handle
 
- Open a file for appending, returns handle
- if file doesn't exist, it will be created
+ Open a file for appending or writing, returns handle
+ Subsequent calls are allowed to:
+   Tell()
+   wr_byte(), wr_word(), wr_long(), write(), wr_str()
+   flush()
+   close() - releases handle
+
+_____________________________________________________
+PUB OpenAppendFroncate(pFilename, SizeLimit) : handle
+
+ Open a file for appending or writing with a froncating file size limit, returns handle
+ Subsequent calls are allowed to:
+   Tell()
+   wr_byte(), wr_word(), wr_long(), write(), wr_str()
+   flush()
+   close() - releases handle
+
+__________________________________
+PUB OpenModify(pFilename) : handle
+
+ Open an existing file for reading and writing within current file boundaries, returns handle
+ Subsequent calls are allowed to:
+   SeekRel(), Seek(), Tell()
+   rd_byte(), rd_word(), rd_long(), read(), rd_str()
+   wr_byte(), wr_word(), wr_long(), write(), wr_str()
+   flush()
+   close() - releases handle
+
+_____________________________________________
+PUB SeekRel(handle, relative_offset) : status
+
+ Go to offset relative to current location in file opened for reading or modifying
+ if relative_offset >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
 
 _________________________________________
-PUB ByteWrite(handle, byteValue) : status
+PUB SeekAbs(handle, file_offset) : status
 
- Write a byte to a file that is open for write or rewrite
- @param handle - handle to a file that is open for write or rewrite
- @param byteValue - value to write to the file
- @returns status - either eInvalidHandle or eFileReading if the handle is not valid or the file is open for reading, otherwise 0 for success
+ Go to location in file opened for reading or modifying
+ if Location >= size of file, ByteRead() will return -1, ByteWrite() will be ignored
+
+___________________________
+PUB Tell(handle) : Location
+
+ Return current location in file
+
+_______________________________________________________
+PUB rd_str(handle, pBuff, MaxLength, EndChr) : ChrCount
+
+ Read a string from a file opened for reading/modifying
+ - pBuff must point to a buffer which will receive the string plus a zero terminator
+ - MaxLength is the maximum number of characters to read into the buffer, not including the zero terminator
+ - EndChr is the character which will signify the end of the input string (ie $00/$09/$0D/$0A/$20)
+ - ChrCount returns the number of characters read, not including the zero terminator
+
+___________________________________________
+PUB read(handle, pBuff, count) : bytes_read
+
+ Read bytes from a file opened for reading/modifying
+ - pBuff must point to a buffer which will receive the bytes
+ - MaxLength is the maximum number of bytes to read into the buffer
+ - byteCount returns the number of bytes read, in case the end of file was reached
+
+______________________________
+PUB rd_long(handle) : DataLong
+
+ Read the next long from a file opened for reading/modifying
+
+______________________________
+PUB rd_word(handle) : DataWord
+
+ Read the next word from a file opened for reading/modifying
+
+______________________________
+PUB rd_byte(handle) : DataByte
+
+ Read the next byte from a file opened for reading/modifying
+ - returns -1 if at end of file, cannot advance, or
+           eNotAllowed is not a legal operation for the open file
+
+____________________________________________
+PUB wr_str(handle, pStr, MaxLength) : status
+
+ Write a string to a file opened for writing/appending/modifying
+ - pStr must point to a zero-terminated string
+ - MaxLength is the maximum number of characters to write
+ - The zero terminator will not be written to the file
+
+________________________________________________
+PUB write(handle, pBytes, count) : bytes_written
+
+ Write bytes to a file opened for writing/appending/modifying
+ - pBytes must point to the bytes
+ - Length must contain the number of bytes to be written
+
+______________________________________
+PUB wr_long(handle, DataLong) : status
+
+ Write a long to a file opened for writing/appending/modifying
+
+______________________________________
+PUB wr_word(handle, DataWord) : status
+
+ Write a word to a file opened for writing/appending/modifying
+
+______________________________________
+PUB wr_byte(handle, DataByte) : status
+
+ Write a byte to a file opened for writing/appending/modifying
 
 __________________________
-PUB Close(handle) : status
+PUB flush(handle) : status
 
- Close an open file, completes file (re)write, frees handle
- @param handle - a file handle to an open file
- @returns status - either eInvalidHandle if the handle is not valid, otherwise 0 for success
+ Flush write buffer, completes any write operation, but leaves file open
+
+__________________________
+PUB close(handle) : status
+
+ Close an open file, completes any write operation, frees handle
+
+______________________________________
+PUB MakeFile(pFilename, Size) : status
+
+ Make a file of a certain size filled with $FF bytes - use OpenModify() to read and write contents
+
+___________________________________________
+PUB Froncate(pFilename, SizeLimit) : status
+
+ Froncate a file - limits file size, measured from end of file, by trimming the front of the file
+
+___________________________________________
+PUB Truncate(pFilename, SizeLimit) : status
+
+ Truncate a file - limits file size, measured from start of file, by trimming the end of the file
 
 ______________________________
-PUB Delete(pFilename) : status
+PUB delete(pFilename) : status
 
  Delete a file
- @param pFilename - pointer to zstring containing the filename
- @returns status - eFileNotFound if file doesn't exist, eFileOpen if file is open, or 0 if successful
 
 _______________________________________________
-PUB Rename(pOldFilename, pNewFilename) : status
+PUB rename(pOldFilename, pNewFilename) : status
 
  Rename a file
- @param pOldFilename - pointer to zstring containing old filename
- @param pNewFilename - pointer to zstring containing new filename
- @returns status - eFileNotFound if old file doesn't exist, eFileOpen if old file is open, eFileExists if new file exists -or- 0 if successful
-
-______________________________
-PUB Exists(pFilename) : status
-
- Check if a file exists
- @param pFilename - pointer to zstring containing the filename
- @returns status - return T/F where T means the file exists
+ @param pOldFilename -
+ @param pNewFilename -
+ @returns status - either eFileNotFound is the old file doesn't exist, eFileOpen is the old file is current open, or eFileExists if the new file already exists, otherwise 0 for SUCCESS
 
 _________________________________
-PUB SizeOf(pFilename) : byteCount
+PUB exists(pFilename) : DoesExist
 
- Get size of file in bytes
- @param pFilename - pointer to zstring containing the filename
- @returns byteCount - either the size of the file in bytes or eFileNotFound if the file doesn't exist
+ Check if a file exists
 
-_________________________________________
-PUB Directory(pBlockID, pFilename, pSize)
+____________________________________
+PUB file_size(pFilename) : byteCount
 
- Get next file's filename and size in bytes via current blockID
- @param pBlockID - the next block ID to check for a file head. (Initialize to 0, will be auto-advanced by each call to this method)
- @param pFilename - the filename of the file found (or a zero length string if no more files)
- @param pSize - the number of bytes in the file found (or 0 when no more files)
+ Get the size of a file
+
+____________________________________
+PUB directory(pID, pFilename, pSize)
+
+ Get the next file's filename and size, in bytes, via the current block ID
+ - Initialize block ID to 0, then block ID will be advanced by each call to this method
+ - When filename returns empty, there are no more files
 
 _______________________________________________
-PUB Stats() : usedBlocks, freeBlocks, fileCount
+PUB stats() : UsedBlocks, FreeBlocks, FileCount
 
- Get fielsystem stats: used/free block counts and file count
- @returns usedBlocks - the number of blocks in use
- @returns freeBlocks - the number of free blocks
- @returns fileCount - the number of files recorded in filesystem
+ Get stats on used blocks, free blocks, and number of files
 
 
 

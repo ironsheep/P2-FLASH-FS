@@ -1,19 +1,19 @@
-'****************************************************************************************************************
-'*                                                                                                              *
-'*  P2 Flash File System                                                                                        *
-'*                                                                                                              *
-'*  - on-board W25Q128 flash chip becomes 16MB SSD (minus 512KB for boot area)                                  *
-'*  - automatic wear leveling is achieved via random block picking and moving                                   *
-'*  - if power fails during file rewriting or renaming, the old file or name is still intact                    *
-'*                                                                                                              *
-'****************************************************************************************************************
-'*  v1.0  2023-08-14  Initial release.                                                                          *
-'*  v1.1  2023-08-18  Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI_CS now rests high.          *
-'*  v1.2  2023-08-25  Adds open_append(), cleans up byte counting, adjusts get new handle to set fname.         *
-'*  v2.0  2023-08-23  draft renovated file with new internal documentation.                                     *
-'*  v2.1  2023-09-26  Added file froncation, truncation, and modification. Filenames extended to 127+1 bytes.   *
-'*                    SPI code can now run from all cogs.                                                       *
-'****************************************************************************************************************
+''****************************************************************************************************************
+''*                                                                                                              *
+''*  P2 Flash File System                                                                                        *
+''*                                                                                                              *
+''*  - on-board W25Q128 flash chip becomes 16MB SSD (minus 512KB for boot area)                                  *
+''*  - automatic wear leveling is achieved via random block picking and moving                                   *
+''*  - if power fails during file rewriting or renaming, the old file or name is still intact                    *
+''*                                                                                                              *
+''****************************************************************************************************************
+''*  v1.0  2023-08-14  Initial release.                                                                          *
+''*  v1.1  2023-08-18  Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI_CS now rests high.          *
+''*  v1.2  2023-08-25  Adds open_append(), cleans up byte counting, adjusts get new handle to set fname.         *
+''*  v2.0  2023-08-23  draft renovated file with new internal documentation.                                     *
+''*  v2.1  2023-09-26  Added file froncation, truncation, and modification. Filenames extended to 127+1 bytes.   *
+''*                    SPI code can now run from all cogs.                                                       *
+''****************************************************************************************************************
 
 CON 'default flash pin parameters
     SPI_CS          = 61        'flash chip select                            [output]
