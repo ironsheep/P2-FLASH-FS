@@ -18,8 +18,11 @@ On this Page:
 - [File System Block types/format](#file-system-block-types-and-formats-of-these-blocks)
   - [Writing to a file](#writing-to-a-file)
   - [Appending to an existing File](#appending-to-an-existing-file)
-  - [Seeking within an existing File](#seeking-within-an-existing-file)
-  - [Treating a file as a circular buffer](#treating-a-file-as-a-circular-buffer)
+  - [Replacing records within a File](#replacing-records-within-a-file)
+  - [Writing, Overwriting, Appending](#behavior-writing-overwriting-appending)
+  - [Seeking within an existing File](#behavior-seeking-within-an-existing-file-opened-for-read)
+  - [Treating a file as a circular buffer](#behavior-treating-a-file-as-a-circular-buffer)
+  - [Treating a file as Modifiable (replacing records within a file)](#behavior-treating-a-file-as-modifiable-replacing-records-within-a-file)
 - [Tracking Data](#tracking-data-state-of-filesystem) - State of Filesystem
 - [Tracking Data](#tracking-data-open-files) - Open Files
 - [The Format Process [F]](#the-format-process-f)
