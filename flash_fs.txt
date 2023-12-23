@@ -15,7 +15,7 @@
  v1.3.0 - update for flexspin compatibility, seek() returns file position, write() returns bytes written
  v1.3.1 - more update for flexspin compatibility, adjusted seek(), read() and write() add file_size_for_handle()
  v1.4.0 - Adjustments allowing multi-cog support
- v2.0.0 - Add read/modify/write, non-destructive mount check, create_file()
+ v2.0.0 - Add read/modify/write and non-destructive mount check
  -------------------------------------------------------------------------------------------------
 
 Object "flash_fs" Interface:
@@ -59,7 +59,7 @@ __________
 PUB null()
 
  This is not an application
-  (invoke format() or mount() to use the flash file system)
+ -- (invoke format() or mount() to use the flash file system)
 
 ______________________
 PUB version() : result
@@ -79,8 +79,8 @@ _____________________
 PUB format() : status
 
  Format the file system blocks and (re)mount it
- @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
- .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
+ @returns status - 0 (SUCCESS) if successful,
+ .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
  .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
  .. E_NOT_MOUNTED if filesystem has not been mounted
 
@@ -88,41 +88,40 @@ ____________________
 PUB mount() : status
 
  Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
- @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
- .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
+ @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
  .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
 
 ______________________
 PUB can_mount() : bool
 
- Check entire flash - to see if it would mount without overwite some blocks
- @returns bool - Returns T/F where T means no blocks would be changed by mount
-  (NOTE: result is valid only when error() == SUCCESS)
+ Check entire flash - to see if it would mount without modifying any blocks
+ @returns bool - True/False where True means no blocks would be changed by mount
 
 ____________________
 PUB mounted() : bool
 
  Returns the mounted status of the filesystem
-  (saves us from having to find creative ways to get an error code telling us this)
+ -- (saves us from having to find creative ways to get an error code telling us this)
  @returns bool - True/False where True means the filesystem has already been successfully mounted
 
 ______________________
 PUB unmount() : status
 
  Prepare for shutdown / power-off by closing any open files
+ -- (no further access allowed until a subsequent mount())
  @returns status - 0 (SUCCESS) if successful,
  .. E_NOT_MOUNTED if filesystem had not been mounted
 
 ____________________
 PUB error() : status
 
- Returns error code from most recent operation
+ Returns the error code from most recent operation
  @returns result - latest error code (SUCCESS, for no error)
 
 ___________________________________
 PUB open(p_filename, mode) : handle
 
- Open file in mode; return handle (0..n) if successful
+ Open file in mode; return handle (0..MAX_FILES_OPEN-1) if successful
  @param p_filename - address of a zstring containing the filename
  @param mode - the mode in which to open the file:
  -- mode "r", "R" to read from an existing file
@@ -141,7 +140,7 @@ PUB open(p_filename, mode) : handle
 _____________________________________________________________
 PUB open_circular(p_filename, mode, max_file_length) : handle
 
- Open circular file of max_file_length in mode; return handle (0..n) if successful
+ Open circular file of max_file_length in mode; return handle (0..MAX_FILES_OPEN-1) if successful
  @param p_filename - address of a zstring containing the filename
  @param mode - the mode in which to open the file:
  -- mode "a", "A" to append to the end of an existing circular file (file created if doesn't exist)
@@ -159,7 +158,8 @@ PUB open_circular(p_filename, mode, max_file_length) : handle
 __________________________
 PUB flush(handle) : status
 
- Logically, "close", then "reopen file in same mode" (but you don't lose filehandle when you flush() instead
+ Logically, "close", then "reopen file in same mode" (but you don't lose the file handle)
+ -- (forces any pending writes to be completed)
  @param handle - a handle to an open file
  @returns status - 0 (SUCCESS) if successful,
  .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
@@ -169,7 +169,7 @@ PUB flush(handle) : status
 __________________________
 PUB close(handle) : status
 
- Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
+ Close an open file, completes any pending writes then frees the handle
  @param handle - a handle to an open file
  @returns status - 0 (SUCCESS) if successful,
  .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
@@ -178,7 +178,7 @@ PUB close(handle) : status
 ___________________________________________________
 PUB rename(p_cur_filename, p_new_filename) : status
 
- Rename a a file named p_cur_filename to p_new_filename
+ Rename a file named {p_cur_filename} to {p_new_filename}
  @param p_cur_filename - address of a zstring containing the existing filename
  @param p_new_filename - address of a zstring containing the new filename
  @returns status - 0 (SUCCESS) if successful,
@@ -201,9 +201,9 @@ PUB delete(p_filename) : status
 ____________________________________________________________
 PUB create_file(p_filename, fill_value, byte_count) : status
 
- Make a file of a byteCount size filled with fillValue bytes - use OpenModify() to read and write contents
- @param p_filename - address of zstring containing name for new file
- @param fill_value - initial value for all bytes in file
+ Make a file of a byte_count size filled with fill_value bytes - "open read/write extended" to rewrite contents
+ @param p_filename - address of a zstring containing the filename
+ @param fill_value - initial value for all bytes in the new file
  @param byte_count - desired length of file in bytes
  @returns status - 0 (SUCCESS) if successful,
  .. E_NOT_MOUNTED if filesystem has not been mounted,
@@ -250,11 +250,11 @@ _________________________________________________
 PUB seek(handle, position, whence) : end_position
 
  Postion seek file pointer to position within the file or at the end of the file
- -- use 0, SK_FILE_START for position to seek to the start of the file
- -- use POSX, SK_FILE_START (largest positive LONG value) for position to seek to the current end of the file
- -- use 0, SK_CURRENT_POSN to get the current position within the file
+ -- use 0, SK_FILE_START for position to seek to the START of the file
+ -- use POSX, SK_FILE_START (largest positive LONG value) for position to seek to the current END of the file
+ -- use +/- value, SK_CURRENT_POSN to move RELATIVE to the current position within the file
  @param handle - a handle to an open file
- @param position - position (in bytes) within the file (0 to length-1)
+ @param position - position (in bytes) within the file (0 to length-1, posx)
   use  seek(handle, POSX, SK_FILE_START) to seek to end of the file
  @param whence - meaning of position: [SK_FILE_START, SK_CURRENT_POSN]
  @returns end_position - within the file to which the file pointer was set, or
@@ -267,7 +267,7 @@ PUB seek(handle, position, whence) : end_position
 __________________________________________________
 PUB write(handle, p_buffer, count) : bytes_written
 
- Write count bytes from p_buffer to the file associated with handle
+ Write count bytes from p_buffer to the file (open for write/append) associated with the handle
  @param handle - the handle to the file to which to write byte(s)
  @param p_buffer - the address of the buffer containing the users' data to write
  @param count - the number of bytes to write to the file
@@ -279,7 +279,7 @@ PUB write(handle, p_buffer, count) : bytes_written
 ________________________________________
 PUB wr_byte(handle, byte_value) : status
 
- Write a byte to a file that is open for write or rewrite
+ Write a byte to the file (open for write/append) associated with the handle
  @param handle - handle to a file that is open for write or rewrite
  @param byte_value - value to write to the file
  @returns status - 0 (SUCCESS) if successful,
@@ -290,7 +290,7 @@ PUB wr_byte(handle, byte_value) : status
 ________________________________________
 PUB wr_word(handle, word_value) : status
 
- Write WORD (16-bits) to file associated with handle
+ Write WORD (16-bits) to the file (open for write/append) associated with the handle
  -- order is Little Endian
  @param handle - the handle of the file to which to write the WORD
  @param word_value - the 16 bit WORD to write to the file
@@ -302,7 +302,7 @@ PUB wr_word(handle, word_value) : status
 ________________________________________
 PUB wr_long(handle, long_value) : status
 
- Write LONG (32-bits) to file associated with handle
+ Write LONG (32-bits) to the file (open for write/append) associated with the handle
  -- order is Little Endian
  @param handle - the handle of the file to which to write the LONG
  @param long_value - the 32 bit LONG to write to the file
@@ -314,7 +314,7 @@ PUB wr_long(handle, long_value) : status
 __________________________________
 PUB wr_str(handle, p_str) : status
 
- Write string (including the terminator) from p_str to file associate with handle
+ Write string (including the terminator) from p_str to the file (open for write/append) associated with the handle
  @param handle - the handle of the file to which to write the zString
  @param p_str - the address of the zString to write to the file
  @returns status - 0 (SUCCESS) if successful,
@@ -325,11 +325,11 @@ PUB wr_str(handle, p_str) : status
 ______________________________________________
 PUB read(handle, p_buffer, count) : bytes_read
 
- Read count bytes from file associated with handle into p_buffer or to end of file which ever comes first
- -- returns count of bytes read
-  check error() == SUCCESS before using contents of p_buffer
-  if error() <> SUCCESS then bytes_read is number of bytes read before error occurred
-  "bytes_read < expected" also indicates a non-SUCCESS value in error()
+ Read count bytes from the file associated with handle into p_buffer
+ -- returns count of bytes read (may be less than requested if reached end of file)
+ -- check for error() == SUCCESS before using contents of p_buffer
+ -- if error() <> SUCCESS then bytes_read is number of bytes read before error occurred
+ -- "bytes_read < expected" indicates an E_END_OF_FILE or another non-SUCCESS value in error()
  @param handle - the handle to the file from which to read bytes
  @param p_buffer - address of the buffer into which to place the bytes read
  @param count - the maximum number of bytes to place into the buffer
@@ -338,13 +338,13 @@ PUB read(handle, p_buffer, count) : bytes_read
  .. E_NOT_MOUNTED if filesystem has not been mounted,
  .. E_BAD_HANDLE if the handle is not valid,
  .. E_FILE_MODE if the file is not open for reading,
- .. E_END_OF_FILE if attempted read beyond written data,
+ .. E_END_OF_FILE if attempted read beyond written data
 
 ________________________________
 PUB rd_byte(handle) : byte_value
 
  Read next byte from file associated with handle
-  -- negative value indicates error or end of file
+ -- negative value indicates error or end of file
  @param handle - the handle to the file from which to read a byte
  @returns byte_value - the next byte [0-255] from the file, or
  .. E_NOT_MOUNTED if filesystem has not been mounted,
@@ -356,7 +356,7 @@ ________________________________
 PUB rd_word(handle) : word_value
 
  Read next WORD from file associated with the handle
-  -- negative value indicates error or end of file
+ -- negative value indicates error or end of file
  @param handle - the handle to the file from which to read a WORD
  @returns result - the WORD value read from the file, or:
  .. E_NOT_MOUNTED if filesystem has not been mounted,
@@ -368,8 +368,8 @@ ________________________________
 PUB rd_long(handle) : long_value
 
  Read next LONG from file associated with the handle
-  NOTE: negative values can be legitimate values, so
-  check error() == SUCCESS before using value
+ -- NOTE: negative values can be legitimate values, so
+ -- check for error() == SUCCESS before using value
  @param handle - the handle to the file from which to read a LONG
  @returns value - the LONG value read from the file
   error() when not SUCCESS could be:
@@ -382,7 +382,7 @@ _____________________________________________
 PUB rd_str(handle, p_str, count) : bytes_read
 
  Read zstring from file at handle into buffer at p_str (count is max length of string + terminator)
-  check error() == SUCCESS before using value
+ -- check for error() == SUCCESS before using value
  @param handle - the handle to the file from which to read a zstring
  @param p_str - the address of the buffer into which to place the zstring
  @param count - the maximum number of bytes to place into the buffer (including the terminator)
@@ -397,7 +397,7 @@ ___________________________________________________________
 PUB directory(p_block_id, p_filename, p_file_size) : status
 
  Get next file's filename and size in bytes via current blockID
-  NOTE: p_filename must be address of a 128 byte buffer!
+ -- NOTE: p_filename must be address of a 128 byte buffer!
  @param p_block_id - the next block ID to check for a file head. (Initialize to 0, will be auto-advanced by each call to this method)
  @param p_filename - the filename of the file found (or a zero length string if no more files, must be address of 128 byte buffer!)
  @param p_file_size - the number of bytes in the file found (or 0 when no more files)
@@ -407,7 +407,7 @@ PUB directory(p_block_id, p_filename, p_file_size) : status
 __________________________________________________
 PUB stats() : used_blocks, free_blocks, file_count
 
- Get filesystem stats: used/free block counts and file count
+ Get filesystem status: used/free block counts and file count
  @returns used_blocks - the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
  @returns free_blocks - the number of free blocks (or 0 if there is an error)
  @returns file_count - the number of files recorded in filesystem (or 0 if there is an error)
@@ -415,17 +415,9 @@ PUB stats() : used_blocks, free_blocks, file_count
 _______________________________________________
 PUB string_for_error(status) : p_interpretation
 
- Return a string describing the error code
+ Return an address of a zstring describing the error code
  @param status - the error code to translate
  @returns p_interpretation - interpretation of the errcode
-
-
-
-
-
-
-
-
 
 
   =================================================================================================

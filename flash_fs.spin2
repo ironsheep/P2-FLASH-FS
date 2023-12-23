@@ -17,35 +17,36 @@
 '' v1.3.0 - update for flexspin compatibility, seek() returns file position, write() returns bytes written
 '' v1.3.1 - more update for flexspin compatibility, adjusted seek(), read() and write() add file_size_for_handle()
 '' v1.4.0 - Adjustments allowing multi-cog support
-'' v2.0.0 - Add read/modify/write, non-destructive mount check, create_file()
+'' v2.0.0 - Add read/modify/write and non-destructive mount check
 '' -------------------------------------------------------------------------------------------------
 
 
 CON { version }
 
-  LIB_VERSION = 200                                             ' 2.0.0
+  LIB_VERSION = 200                                     ' 2.0.0
 
   #true,  ON, OFF
   #false, NO, YES
 
-  ' file open mode equivalents
-  MODE_READ = $72
-  MODE_WRITE = $77
-  MODE_APPEND = $61
-  FILEMODE_READ_EXTENDED = $722B
-  FILEMODE_WRITE_EXTENDED = $772B
+  ' file open mode equivalents (the values match the %"r+", %"w+" value encodings!)
+  ' for extended-mode use these constants when the %"..." syntax is not supported by your compiler
+  FILEMODE_READ = $72                                   ' "r"
+  FILEMODE_WRITE = $77                                  ' "w"
+  FILEMODE_APPEND = $61                                 ' "a"
+  FILEMODE_READ_EXTENDED = $2B72                        ' "r+"
+  FILEMODE_WRITE_EXTENDED = $2B77                       ' "w+"
 
 CON { fixed io pins }
 
-  PGM_RX   = 63  { I }                                          ' programming / debug
+  PGM_RX   = 63  { I }                                  ' programming / debug
   PGM_TX   = 62  { O }
 
-  SF_CS    = 61  { O }                                          ' flash chip select
-  SF_SCLK  = 60  { O }                                          ' flash clock
-  SF_MOSI  = 59  { O }                                          ' flash data in
-  SF_MISO  = 58  { I }                                          ' flash data out
+  SF_CS    = 61  { O }                                  ' flash chip select
+  SF_SCLK  = 60  { O }                                  ' flash clock
+  SF_MOSI  = 59  { O }                                  ' flash data in
+  SF_MISO  = 58  { I }                                  ' flash data out
 
-  LED2     = 57  { O }                                          ' Eval and Edge LEDs
+  LED2     = 57  { O }                                  ' Eval and Edge LEDs
   LED1     = 56  { O }
 
 
@@ -53,8 +54,8 @@ CON { PUBLIC driver constants }
 
   ' Return Codes
 
-  OKAY             = 0                                          ' No error / Success
-  SUCCESS          = OKAY                                       ' No error / Success
+  OKAY             = 0                                  ' No error / Success
+  SUCCESS          = OKAY                               ' No error / Success
 
 ' SK_* ENUM values (parameter to seek() method)
 ' SK_FILE_START: seek using position from start of file
@@ -81,11 +82,11 @@ CON { PUBLIC driver constants }
   E_BAD_FILE_LENGTH = -18                                       ' Error: File length given is negative or zero
   E_BAD_SEEK_ARG = -19                                          ' Error: Invalid seek argument
 
-  BYTES_IN_HEAD_BLOCK = 3956
+  BYTES_IN_HEAD_BLOCK = 3956                                    ' first block in file contains 3956 bytes, 140 bytes overhead
   WORDS_IN_HEAD_BLOCK = BYTES_IN_HEAD_BLOCK/2
   LONGS_IN_HEAD_BLOCK = BYTES_IN_HEAD_BLOCK/4
 
-  BYTES_IN_BODY_BLOCK = 4088
+  BYTES_IN_BODY_BLOCK = 4088                                    ' all other blocks in file contain 4088 bytes, 8 bytes overhead
   WORD_IN_BODY_BLOCK = BYTES_IN_BODY_BLOCK/2
   LONGS_IN_BODY_BLOCK = BYTES_IN_BODY_BLOCK/4
 
@@ -98,8 +99,9 @@ CON { PRIVATE driver constants }
   MAX_FILES_OPEN   = 2                                          ' Maximum number of files that can be open at one time
 
 
-  ' NOT customizable! below here
-
+  ' ------------------------------
+  '  NOT customizable! below here
+  ' ------------------------------
   BLOCKS           = LAST_BLOCK - FIRST_BLOCK+1                 ' Number of blocks in flash allocated to this file system
 
   BLOCK_SIZE       = $1000                                      ' Size in bytes: 4KB block (4096 bytes)
@@ -189,7 +191,7 @@ CON ' --- Public Methods ---
 PUB null()
 
 '' This is not an application
-''  (invoke format() or mount() to use the flash file system)
+'' -- (invoke format() or mount() to use the flash file system)
 
 PUB version() : result
 
@@ -249,8 +251,8 @@ PUB format() : status | block_address, cycleBits
 
 '' Format the file system blocks and (re)mount it
 ''
-'' @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
-'' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
+'' @returns status - 0 (SUCCESS) if successful,
+'' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted
 
@@ -293,8 +295,7 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
 
 '' Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
 ''
-'' @returns status - 0 (SUCCESS or E_BAD_BLOCKS_REMOVED) if successful,
-'' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed (is success with info),
+'' @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
 
 ' Local Variables:
@@ -374,10 +375,9 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
 
 PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCount, fileCount, badBlockCount, bad_count, dupe_count
 
-'' Check entire flash - to see if it would mount without overwite some blocks
+'' Check entire flash - to see if it would mount without modifying any blocks
 ''
-'' @returns bool - Returns T/F where T means no blocks would be changed by mount
-''  (NOTE: result is valid only when error() == SUCCESS)
+'' @returns bool - True/False where True means no blocks would be changed by mount
 
 ' Local Variables:
 ' @local block_address - the block offset within the file system
@@ -450,7 +450,7 @@ PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCou
 PUB mounted() : bool
 
 '' Returns the mounted status of the filesystem
-''  (saves us from having to find creative ways to get an error code telling us this)
+'' -- (saves us from having to find creative ways to get an error code telling us this)
 ''
 '' @returns bool - True/False where True means the filesystem has already been successfully mounted
 
@@ -460,6 +460,7 @@ PUB mounted() : bool
 PUB unmount() : status | handle, tmpFsLock, tmpStatus
 
 '' Prepare for shutdown / power-off by closing any open files
+'' -- (no further access allowed until a subsequent mount())
 ''
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem had not been mounted
@@ -493,7 +494,7 @@ PUB unmount() : status | handle, tmpFsLock, tmpStatus
 
 PUB error() : status
 
-'' Returns error code from most recent operation
+'' Returns the error code from most recent operation
 ''
 '' @returns result - latest error code (SUCCESS, for no error)
 
@@ -502,7 +503,7 @@ PUB error() : status
 
 PUB open(p_filename, mode) : handle | findings, bFileExists
 
-'' Open file in mode; return handle (0..n) if successful
+'' Open file in mode; return handle (0..MAX_FILES_OPEN-1) if successful
 ''
 '' @param p_filename - address of a zstring containing the filename
 '' @param mode - the mode in which to open the file:
@@ -594,7 +595,7 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
 
 PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
 
-'' Open circular file of max_file_length in mode; return handle (0..n) if successful
+'' Open circular file of max_file_length in mode; return handle (0..MAX_FILES_OPEN-1) if successful
 ''
 '' @param p_filename - address of a zstring containing the filename
 '' @param mode - the mode in which to open the file:
@@ -663,8 +664,8 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
 
 PUB flush(handle) : status
 
-'' Logically, "close", then "reopen file in same mode" (but you don't lose filehandle when you flush() instead
-''
+'' Logically, "close", then "reopen file in same mode" (but you don't lose the file handle)
+'' -- (forces any pending writes to be completed)
 '' @param handle - a handle to an open file
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
@@ -701,7 +702,7 @@ PUB flush(handle) : status
 
 PUB close(handle) : status
 
-'' Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
+'' Close an open file, completes any pending writes then frees the handle
 ''
 '' @param handle - a handle to an open file
 '' @returns status - 0 (SUCCESS) if successful,
@@ -729,7 +730,7 @@ PUB close(handle) : status
 
 PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_address, cur_block_address, next_cycle_bits
 
-'' Rename a a file named p_cur_filename to p_new_filename
+'' Rename a file named {p_cur_filename} to {p_new_filename}
 ''
 '' @param p_cur_filename - address of a zstring containing the existing filename
 '' @param p_new_filename - address of a zstring containing the new filename
@@ -823,10 +824,10 @@ PUB delete(p_filename) : status | signature
 
 PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_block_id, block_id, block_address, notHead, dataOffset, isLast, currOffset, NextID_EndPtr
 
-'' Make a file of a byteCount size filled with fillValue bytes - use OpenModify() to read and write contents
+'' Make a file of a byte_count size filled with fill_value bytes - "open read/write extended" to rewrite contents
 ''
-'' @param p_filename - address of zstring containing name for new file
-'' @param fill_value - initial value for all bytes in file
+'' @param p_filename - address of a zstring containing the filename
+'' @param fill_value - initial value for all bytes in the new file
 '' @param byte_count - desired length of file in bytes
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
@@ -1002,12 +1003,12 @@ PUB file_size_unused(p_filename) : size_in_bytes_unused | signature
 PUB seek(handle, position, whence) : end_position | file_length, file_position, block_id, pBuff
 
 '' Postion seek file pointer to position within the file or at the end of the file
-'' -- use 0, SK_FILE_START for position to seek to the start of the file
-'' -- use POSX, SK_FILE_START (largest positive LONG value) for position to seek to the current end of the file
-'' -- use 0, SK_CURRENT_POSN to get the current position within the file
+'' -- use 0, SK_FILE_START for position to seek to the START of the file
+'' -- use POSX, SK_FILE_START (largest positive LONG value) for position to seek to the current END of the file
+'' -- use +/- value, SK_CURRENT_POSN to move RELATIVE to the current position within the file
 ''
 '' @param handle - a handle to an open file
-'' @param position - position (in bytes) within the file (0 to length-1)
+'' @param position - position (in bytes) within the file (0 to length-1, posx)
 ''  use  seek(handle, POSX, SK_FILE_START) to seek to end of the file
 '' @param whence - meaning of position: [SK_FILE_START, SK_CURRENT_POSN]
 '' @returns end_position - within the file to which the file pointer was set, or
@@ -1075,7 +1076,7 @@ PUB seek(handle, position, whence) : end_position | file_length, file_position, 
 
 PUB write(handle, p_buffer, count) : bytes_written | checkValue, byteIndex, wr_value, wr_status
 
-'' Write count bytes from p_buffer to the file associated with handle
+'' Write count bytes from p_buffer to the file (open for write/append) associated with the handle
 ''
 '' @param handle - the handle to the file to which to write byte(s)
 '' @param p_buffer - the address of the buffer containing the users' data to write
@@ -1122,7 +1123,7 @@ PUB write(handle, p_buffer, count) : bytes_written | checkValue, byteIndex, wr_v
 
 PUB wr_byte(handle, byte_value) : status | checkValue
 
-'' Write a byte to a file that is open for write or rewrite
+'' Write a byte to the file (open for write/append) associated with the handle
 ''
 '' @param handle - handle to a file that is open for write or rewrite
 '' @param byte_value - value to write to the file
@@ -1153,7 +1154,7 @@ PUB wr_byte(handle, byte_value) : status | checkValue
 
 PUB wr_word(handle, word_value) : status | writeLength
 
-'' Write WORD (16-bits) to file associated with handle
+'' Write WORD (16-bits) to the file (open for write/append) associated with the handle
 '' -- order is Little Endian
 ''
 '' @param handle - the handle of the file to which to write the WORD
@@ -1169,7 +1170,7 @@ PUB wr_word(handle, word_value) : status | writeLength
 
 PUB wr_long(handle, long_value) : status | writeLength
 
-'' Write LONG (32-bits) to file associated with handle
+'' Write LONG (32-bits) to the file (open for write/append) associated with the handle
 '' -- order is Little Endian
 ''
 '' @param handle - the handle of the file to which to write the LONG
@@ -1185,7 +1186,7 @@ PUB wr_long(handle, long_value) : status | writeLength
 
 PUB wr_str(handle, p_str) : status | writeLength
 
-'' Write string (including the terminator) from p_str to file associate with handle
+'' Write string (including the terminator) from p_str to the file (open for write/append) associated with the handle
 ''
 '' @param handle - the handle of the file to which to write the zString
 '' @param p_str - the address of the zString to write to the file
@@ -1201,11 +1202,11 @@ PUB wr_str(handle, p_str) : status | writeLength
 
 PUB read(handle, p_buffer, count) : bytes_read | byteIndex, readValue, checkValue
 
-'' Read count bytes from file associated with handle into p_buffer or to end of file which ever comes first
-'' -- returns count of bytes read
-''  check error() == SUCCESS before using contents of p_buffer
-''  if error() <> SUCCESS then bytes_read is number of bytes read before error occurred
-''  "bytes_read < expected" also indicates a non-SUCCESS value in error()
+'' Read count bytes from the file associated with handle into p_buffer
+'' -- returns count of bytes read (may be less than requested if reached end of file)
+'' -- check for error() == SUCCESS before using contents of p_buffer
+'' -- if error() <> SUCCESS then bytes_read is number of bytes read before error occurred
+'' -- "bytes_read < expected" indicates an E_END_OF_FILE or another non-SUCCESS value in error()
 ''
 '' @param handle - the handle to the file from which to read bytes
 '' @param p_buffer - address of the buffer into which to place the bytes read
@@ -1215,7 +1216,7 @@ PUB read(handle, p_buffer, count) : bytes_read | byteIndex, readValue, checkValu
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_MODE if the file is not open for reading,
-'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_END_OF_FILE if attempted read beyond written data
 
 ' Local Variables:
 ' @local byteIndex - the index into the users' buffer for the next byte to be read
@@ -1251,7 +1252,7 @@ PUB read(handle, p_buffer, count) : bytes_read | byteIndex, readValue, checkValu
 PUB rd_byte(handle) : byte_value | ptr, signature, checkValue
 
 '' Read next byte from file associated with handle
-''  -- negative value indicates error or end of file
+'' -- negative value indicates error or end of file
 ''
 '' @param handle - the handle to the file from which to read a byte
 '' @returns byte_value - the next byte [0-255] from the file, or
@@ -1283,7 +1284,7 @@ PUB rd_byte(handle) : byte_value | ptr, signature, checkValue
 PUB rd_word(handle) : word_value | readLength
 
 '' Read next WORD from file associated with the handle
-''  -- negative value indicates error or end of file
+'' -- negative value indicates error or end of file
 ''
 '' @param handle - the handle to the file from which to read a WORD
 '' @returns result - the WORD value read from the file, or:
@@ -1299,8 +1300,8 @@ PUB rd_word(handle) : word_value | readLength
 PUB rd_long(handle) : long_value | status, readCount
 
 '' Read next LONG from file associated with the handle
-''  NOTE: negative values can be legitimate values, so
-''  check error() == SUCCESS before using value
+'' -- NOTE: negative values can be legitimate values, so
+'' -- check for error() == SUCCESS before using value
 ''
 '' @param handle - the handle to the file from which to read a LONG
 '' @returns value - the LONG value read from the file
@@ -1316,7 +1317,7 @@ PUB rd_long(handle) : long_value | status, readCount
 PUB rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
 
 '' Read zstring from file at handle into buffer at p_str (count is max length of string + terminator)
-''  check error() == SUCCESS before using value
+'' -- check for error() == SUCCESS before using value
 ''
 '' @param handle - the handle to the file from which to read a zstring
 '' @param p_str - the address of the buffer into which to place the zstring
@@ -1377,7 +1378,7 @@ PUB rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
 PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_address, signature
 
 '' Get next file's filename and size in bytes via current blockID
-''  NOTE: p_filename must be address of a 128 byte buffer!
+'' -- NOTE: p_filename must be address of a 128 byte buffer!
 ''
 '' @param p_block_id - the next block ID to check for a file head. (Initialize to 0, will be auto-advanced by each call to this method)
 '' @param p_filename - the filename of the file found (or a zero length string if no more files, must be address of 128 byte buffer!)
@@ -1413,7 +1414,7 @@ PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
 
 PUB stats() : used_blocks, free_blocks, file_count | block_address
 
-'' Get filesystem stats: used/free block counts and file count
+'' Get filesystem status: used/free block counts and file count
 ''
 '' @returns used_blocks - the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
 '' @returns free_blocks - the number of free blocks (or 0 if there is an error)
@@ -1446,7 +1447,7 @@ PUB stats() : used_blocks, free_blocks, file_count | block_address
 
 PUB string_for_error(status) : p_interpretation
 
-'' Return a string describing the error code
+'' Return an address of a zstring describing the error code
 ''
 '' @param status - the error code to translate
 '' @returns p_interpretation - interpretation of the errcode
@@ -1464,7 +1465,7 @@ PUB string_for_error(status) : p_interpretation
         E_END_OF_FILE:          p_interpretation := @"E_END_OF_FILE: no more data available, at end of file"
         E_FILE_MODE:            p_interpretation := @"E_FILE_MODE: file not opened in desired mode"
         E_FILE_SEEK:            p_interpretation := @"E_FILE_SEEK: Attempted seek past either end of file"
-        E_BAD_BLOCKS_REMOVED:   p_interpretation := @"E_BAD_BLOCKS_REMOVED: Block bit failure detetected, bad blocks removed"
+        E_BAD_BLOCKS_REMOVED:   p_interpretation := @"E_BAD_BLOCKS_REMOVED: Block bit failure detected, bad blocks removed"
         E_NO_LOCK_AVAIL:        p_interpretation := @"E_NO_LOCK_AVAIL: Unable to obtain a LOCK for driver use"
         E_TRUNCATED_STRING:     p_interpretation := @"E_TRUNCATED_STRING: Buffer full, before reaching string terminator"
         E_INCOMPLETE_STRING:    p_interpretation := @"E_INCOMPLETE_STRING: End of file reached before string terminator"
@@ -1478,7 +1479,7 @@ PUB string_for_error(status) : p_interpretation
 
 CON ' --- Private Methods ---
 
-CON ' >>>  p_filename  <<<
+CON ' >>>  (parameter type) p_filename  <<<
 
 PRI finish_open_read(p_filename, max_file_length) : handle | signature, block_id
 
@@ -1510,7 +1511,7 @@ PRI finish_open_read(p_filename, max_file_length) : handle | signature, block_id
 PRI finish_open_write(p_filename, max_file_length) : handle | signature, ptr
 
 ' Open a file for (re)writing, returning handle if success
-'  (overwrites existing file, if you wish to prevent overwrite, use exists() to check!)
+' -- (overwrites existing file, if you wish to prevent overwrite, use exists() to check!)
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file if successful,
@@ -1540,65 +1541,58 @@ PRI finish_open_write(p_filename, max_file_length) : handle | signature, ptr
 PRI finish_open_append(p_filename, max_file_length) : handle | signature, end_block_address, endPtr, bytes_used, ptr
 
 ' Open for append, returning handle if success
-'  NOTE: this is called only if file already exists
-'  (if it didn't exist finish_open_write() would have been called instead)
+' -- NOTE: this is called only if file already exists
+' -- (if it didn't exist finish_open_write() would have been called instead)
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file if successful,
 ' .. or E_NO_HANDLE if no handle is available
 
-    'debug("* finish_open_append(", zstr_(p_filename), ", bytes=", udec_(max_file_length), ") - ENTRY")
+  'debug("* finish_open_append(", zstr_(p_filename), ", bytes=", udec_(max_file_length), ") - ENTRY")
 
-    'debug("finish_open_append() get handle")
+  'debug("finish_open_append() get handle")
 
-    handle := new_handle(p_filename)                    'get new handle, set error() if no handle available
-    hCircularLength[handle] := max_file_length           'set size limit if non-zero
+  handle := new_handle(p_filename)                                              'get new handle, set error() if no handle available
+  hCircularLength[handle] := max_file_length                                    'set size limit if non-zero
 
-    if signature := get_file_head_signature(p_filename)         'if file already exists, append it
-      start_modify(handle, H_APPEND, signature.[19..8], $FFFFFF, true)
-    else                          'else, write it
-      start_write(handle, H_WRITE, next_available_block_id(), %011)
-      ' NO, we don't write empty files!
-      'hModified[handle]~~                 'force first block to be written in case no data
+  if signature := get_file_head_signature(p_filename)                           'if file already exists, append it
+    start_modify(handle, H_APPEND, signature.[19..8], $FFFFFF, true)
+  else                          'else, write it
+    start_write(handle, H_WRITE, next_available_block_id(), %011)
+    ' NO, we don't write empty files!
+    'hModified[handle]~~                                                        'force first block to be written in case no data
 
-    lockrel(fsLock)                                    ' release the lock, we're done with it
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id
-
 ' Open an existing file for reading and writing within current file boundaries, returns handle
-'
-' Subsequent calls are allowed to:
-'   seek(),
-'   rd_byte(), rd_word(), rd_long(), read(), rd_str()
-'   wr_byte(), wr_word(), wr_long(), write(), wr_str()
-'   flush()
-'   close() - releases handle
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file
 
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
+' @local head_block_id - id of block being checked
 
-handle := new_handle(p_filename)            'get new handle, abort if no handle available
-if signature := get_file_head_signature(p_filename)         'if file already exists
+handle := new_handle(p_filename)                                                'get new handle, abort if no handle available
+if signature := get_file_head_signature(p_filename)                             'if file already exists
   ' file exists, allow modification and append-only extension (no gaps)
   start_modify(handle, H_READWRITE, signature.[19..8], 0, true)
 else
   ' file DOES NOT exist, create it, allow modification after append-only extension (no gaps)
   ' no starting block-id means create new head!
-  head_block_id := next_available_block_id()                        'get initial ID
+  head_block_id := next_available_block_id()                                    'get initial ID
   build_head_block(buffer_pointer(handle), filename_pointer(handle), head_block_id) 'build head block in buffer
-  start_modify(handle, H_READWRITE, head_block_id, 0, false)  'go to start of file
+  start_modify(handle, H_READWRITE, head_block_id, 0, false)                    'go to start of file
 
-  lockrel(fsLock)                                                             ' release the lock, we're done with it
+lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 PRI exists_no_lock(p_filename) : bool
 
 ' Determine if named file is present in the file system
-' . (internal version - for use when caller has already grabbed lock)
+' -- (internal version - for use when caller has already grabbed lock)
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns bool - True/False where True means the file exists
@@ -1653,7 +1647,7 @@ PRI build_head_block(pBuff, p_filename, head_block_id)
 ' initialize empty block with control information
 '
 ' @param pBuff - address of block in RAM
-' @param p_filename - address of zstring containing the filename of this file
+' @param p_filename - address of a zstring containing the filename
 ' @param head_block_id - the head block id for this new file
 
   bytefill(pBuff, $FF, BLOCK_SIZE)                                              'erase block buffer to build new head block
@@ -1671,7 +1665,7 @@ PRI is_file_open(p_filename, open_mode_bits) : result | handle
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @param open_mode_bits - some combiantion of H_READ, H_WRITE, and H_REPLACE
-' @returns status - T/F where T means the file is open
+' @returns status - True/False where True means the file is open
 
 ' Local Variables:
 ' @local handle - temporary handle to check for availability
@@ -1718,14 +1712,14 @@ PRI filename_crc(p_filename) : filenameCRC
 
 ' Return the CRC19 value calculated for the filename zstring
 '
-' @param p_filename - address of the filename zstring
+' @param p_filename - address of a zstring containing the filename
 ' @returns filenameCRC - the calculated CRC value
 
   filenameCRC := getcrc(p_filename, $B5827 rev 19, strsize(p_filename))         'compute CRC of filename
 
 
 
-CON ' >>>  handle  <<<
+CON ' >>>  (parameter type) handle  <<<
 
 PRI start_write(handle, open_mode, head_block_id, head_cycle) | block_address
 
@@ -2016,7 +2010,7 @@ PRI filename_pointer(handle) : p_filename
 ' Return pointer to filename for this handle
 '
 ' @param handle - a handle to an open file
-' @returns p_filename - address of zstr filename associated with this handle
+' @returns p_filename - address of a zstring containing the filename
 
   return @hFilename + handle << FILENAME_SIZE_EXP                               'get filename pointer by handle
 
@@ -2049,7 +2043,7 @@ PRI ensure_handle_mode(handle, open_mode_bits) : status
     status :=  E_FILE_MODE
 
 
-CON ' >>>  block_id  <<<
+CON ' >>>  (parameter type) block_id  <<<
 
 PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address, new_head_block_id, block_offset, body_signature, delete_mode, prior_block_id, data_offset
 
@@ -2210,7 +2204,7 @@ PRI delete_chain_from_id(block_id, EndID, delete_mode, KeepFirstIDValid) | block
 
 ' Local Variables:
 ' @local block_address - temporary block address
-' @local signature - temporary block signature
+' @local signature - temporary block state bits
 
 ' delete_mode  Deletes to...
 '---------------------------------
@@ -2239,7 +2233,7 @@ PRI delete_chain_from_id(block_id, EndID, delete_mode, KeepFirstIDValid) | block
               block_id <> EndID)          'mode 2: delete to NextID = EndID
 
 
-CON ' >>>  block_address  <<<
+CON ' >>>  (parameter type) block_address  <<<
 
 PRI is_old_format_file_head(block_address, pBlockBuffer): oldFormatStatus | fnmCrc32, possOldCRC
   ' return T/F where T means we have an Old-Format crc32 file head block
@@ -2445,7 +2439,7 @@ PRI trace_file_set_flags(block_address, set) : valid | signature, block_id
 
 
 
-CON ' >>>  no parameter  <<<
+CON ' >>>  (parameter type) no parameter  <<<
 
 PRI blocks_free() : count | block_address
 
@@ -2571,7 +2565,7 @@ PRI can_acquire_lock() : bItsMe | myCogId, tmpCogId, lowestValue, lowestID
 
 ' determine if first or subsequent caller
 '
-' @returns bItsMe - T/F where True means is first caller and therefore should acquire lock
+' @returns bItsMe - True/False where True means is first caller and therefore should acquire lock
 
 ' Local Variables:
 ' @local myCogId - hold codID of caller
@@ -2595,7 +2589,7 @@ PRI can_acquire_lock() : bItsMe | myCogId, tmpCogId, lowestValue, lowestID
         'debug("acquire_lock_and_mount() ", udec(lowestValue, lowestID, myCogId), sdec(bItsMe))
 
 
-CON ' >>>  miscellaneous, one-off  <<<
+CON ' >>>  (parameter type) miscellaneous, one-off  <<<
 
 PRI next_active_cycle(cycleIn) : cycleOut
 
@@ -2927,7 +2921,7 @@ PUB TEST_getHead4kBlock(p_filename) : p_buffer | signature
 '' @returns p_buffer - address of a 4KB buffer containing the head block
 
 ' Local Variables:
-' @local signature - temporary storage for a block signature
+' @local signature - temporary storage for a block state bits
 
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
@@ -2947,7 +2941,7 @@ PUB TEST_get4kBlockAndNextAtOffset(p_filename, file_position) : p_buffer, p_buff
 '' @returns p_buffer - address of a 4KB buffer containing the head block
 
 ' Local Variables:
-' @local signature - temporary storage for a block signature
+' @local signature - temporary storage for a block state bits
 
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
@@ -2978,7 +2972,7 @@ PUB TEST_getTail4kBlock(p_filename) : p_buffer | signature, block_address
 '' @returns p_buffer - address of a 4KB buffer containing the head block
 
 ' Local Variables:
-' @local signature - temporary storage for a block signature
+' @local signature - temporary storage for a block state bits
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
     p_buffer := @blockForUser
@@ -3009,7 +3003,7 @@ PUB TEST_getFileBlockSignatures(p_filename) : p_sigLong, sigCount | signature[2]
 '' @returns sigCount - the number of signatures in the array
 
 ' Local Variables:
-' @local signature - temporary storage for a block signature
+' @local signature - temporary storage for a block state bits
 ' @local block_address - the block offset within the file system
 
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
@@ -3040,7 +3034,7 @@ PUB TEST_getCommitBlockSignatures(handle) : p_sigLong, sigCount  | pBuff, endPtr
 '' @returns sigCount - the number of signatures in the array
 
 ' Local Variables:
-' @local signature - temporary storage for a block signature
+' @local signature - temporary storage for a block state bits
 ' @local block_address - the block offset within the file system
 
     ifnot fsMounted
