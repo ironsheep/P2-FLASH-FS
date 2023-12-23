@@ -159,7 +159,7 @@ Blocks written to our flash filesystem are of the following formats:
 
 A file is a one-way linked list. From the study of the block structures above, we see that the file contains control structures and data. The last bock of the file aways contains the End-Pointer which is the address of the next byte to be written or the value of $FFC which points to the CRC which means there is no more room to write in this block. In this condition (end pointer is $FFC) a next write to this file will first allocate a new block adding more space in which to write. The End pointer in this new last block is set to the first byte of data space in the new block. The former last block is set to point to the new last block and its type is set to body/more instead of body/last.
 
-The file's control data also contains logical next pointers in each block except the last block. These next pointers contain the block ID of next block that is part of this file. WE use block IDs instead of block addreses so the blocks containing the ID can be replaced with another block having the same ID when the file content changes but the block pointing to this ID don't have to change. 
+The file's control data also contains logical next pointers in each block except the last block. These next pointers contain the block ID of next block that is part of this file. We use block IDs instead of block addreses so the blocks containing the ID can be replaced with another block having the same ID when the file content changes but the block pointing to this ID don't have to change. 
 
 A file made up of these blocks can exist in one of three shapes:
 
@@ -177,9 +177,11 @@ A file made up of these blocks can exist in one of three shapes:
 
 | Open Mode | supports seek() | description |
 | --- | --- | ---|
-| <pre>read ["r", "R"]</pre>  | YES | Read from an **existing file**,<BR>Supports direct access via seek() |
-| <pre>write ["w", "W"]</pre>   | no | Write to a **new file**, creating it (or write to an **existing file**, replacing it))<br>use `if exists(@"filename") ...` to avoid overwriting an <BR>existing file |
-| <pre>append ["a", "A"]</pre> | no | Write to an **existing file**, extending the existing file. If the file didn't exist then this becomes a write ["w", "W"]  |
+| <pre>read [%"r", %"R"]</pre>  | YES | Read from an **existing file**,<BR>Supports direct access via seek() |
+| <pre>write [%"w", %"W"]</pre>   | no | Write to a **new file**, creating it (or write to an **existing file**, replacing it.) <br>Use `if exists(@"filename") ...` to avoid overwriting an existing file |
+| <pre>append [%"a", %"A"]</pre> | no | Write to an **existing file**, extending the existing file. If the file didn't exist then this becomes a write ["w", "W"]  |
+| <pre>append [%"r+", %"R+"]</pre> | YES | Read Extended from, Write Extended to an **existing file**, extending the existing file by writing records at end, and/or modifying the middle of the file by seeking to a location the, overwriting a record at that location within the existing file. <BR>Supports direct access via seek()|
+| <pre>append [%"w+", %"W+"]</pre> | YES | Write Extended to a **new file**, creating it (or write Extended to an **existing file**, replacing it.) Use `if exists(@"filename") ...` to avoid overwriting an existing file. <BR>Extend the file by writing records at end, then modify already written parts of the file by seeking to a location, and overwriting a record at that location. The original file is deleted when the new file is closed or flushed.<BR>Supports direct access via seek() |
 
 
 #### Writing to a File
@@ -193,26 +195,37 @@ A file made up of these blocks can exist in one of three shapes:
 
 When appending there are really two cases with the more normal case being the first:
 
-- **Case #1**: In the case of appending to a longer file (a file which is 2 or more blocks) then the append consists of wirting to the **Body/Last block** until we attmpt to write the byte just past then end of theis block. At this time we allocate a new **Body/Last block** to contain this new byte and rewrite the prior **Body/Last block** as a **Body/More block**.
+- **Case #1**: In the case of appending to a longer file (a file which is 2 or more blocks) then the append consists of wirting to the **Body/Last block** until we attmpt to write the byte just past then end of this block. At this time we allocate a new **Body/Last block** to contain this new byte and rewrite the prior **Body/Last block** as a **Body/More block**.
 
 The less frequent case is when we append to a file that contains less than 3,956 bytes:
 
 - **Case #2**: In the case of a small file we write into the (**Head/Last block**) until we fill it. Thie growth of this file follows the seqence shown in  "Writing to a File" (above.)
 
-#### BEHAVIOR: Writing, Replacing, Appending
+#### Replacing records within a File
+
+When replacing records (regions of bytes) within a file, we seek to the location of the record and write **new record content** to replace the previous content.  If our seek took us to the end of the current file, we then write the new record content at the end of the file. This is logically an append of a record to the current file.
+
+Internally this is all handled very simply. The user seeks to the location in the file. The seek locates the block containing the byte at the seek address which is then loaded into our block buffer for the file handle.  The next writes then are written to this block in the handle buffer. If we attempt to write beyond the end of this block (or we seek to a location outside of this block) then this block is first replaced and actived and the new block is loaded into the buffer either where we contining the current write or are ready for the next write.
+
+Replacing is different from writing or appending in that in this "extended" file mode (R+, W+) our commit chain is always only the current block we are modifying.
+
+
+#### BEHAVIOR: Writing, Overwriting, Appending
 
 When a file is opened for sequential writing all the writes are accumulated into what we call a "commit chain". As a commit chain block fills it is written to the filesystem. Upon close the last block is written to the filesystem. Lastly, the commit chain head block is activated. If there was a prior file (we are overwriting or appending) then the commit head block will supercede the prior files block and the prior block(s) will be deleted. If the power fails just before the head  is activated, the block will be discovered (block of same ID but with newer lifecycle) at mount and the older block will be canceled during the mount.
 
 ##### Actions unique to open() mode
 
-When we **open(filename, "W")** and **there is no prior file** (Write) then we are creating a new file. In this case there is no prior block to be replaced at close.
+When we **open(filename, %"W")** and **there is no prior file** (Write) then we are creating a new file. In this case there is no prior block to be replaced at close.
 
 
-When we **open(filename, "W")** and a **prior file DOES exist** (Replace) then we are also creating a new file but upon close we are replacing the prior file, deleting all the blocks associated with the prior file.
+When we **open(filename, %"W")** and a **prior file DOES exist** (Replace) then we are also creating a new file but upon close we are replacing the prior file, deleting all the blocks associated with the prior file.
 
-When we **open(filename, "A")** and **there is no prior file** (Write) then we are creating a new file. In this case there is no prior block to be replaced at close.
+When we **open(filename, %"A")** and **there is no prior file** (Write) then we are creating a new file. In this case there is no prior block to be replaced at close.
 
-When we **open(filename, "A")** and a **prior file DOES exist** (Append) then we are opening the file, seeking to the end and then writing bytes beyond the end of the original file. Upon close the commit head block will be activated to replace the tail block of the original file.
+When we **open(filename, %"A")** and a **prior file DOES exist** (Append) then we are opening the file, seeking to the end and then writing bytes beyond the end of the original file. Upon close the commit head block will be activated to replace the tail block of the original file.
+
+When we **open(filename, %"W+")** and a **prior file DOES exist** (Replace) then we are also creating a new file but upon close we are replacing the prior file, deleting all the blocks associated with the prior file.
 
 
 #### BEHAVIOR: Seeking within an existing File opened for Read
@@ -227,12 +240,26 @@ Maintaining an existing file in a circular fashion is supported without any cont
 
 | Open_circular() Mode | supports seek() | description |
 | --- | --- | ---|
-| read ["r", "R"] | YES | Read from an **existing file**, first byte read is exactly max\_file\_length from the end of the file (Allocated space will be max\_file\_length rounded up to end of block) Or it will be from first byte if file has not yet grown to max\_file\_length. |
-| append ["a", "A"]  | no | Write to an **existing file**, extending the existing file. If the file didn't exist it will be created |
+| <pre>read [%"r", %"R"] limit</pre> | YES | Read from an **existing file**, first byte read is exactly **max\_file\_length** from the end of the file (Allocated space will be max\_file\_length rounded up to end of block) Or it will be from first byte if file has not yet grown to max\_file\_length. |
+| <pre>append [%"a", %"A"] limit </pre>  | no | Write to an **existing file**, extending the existing file. If the file didn't exist it will be created, upon close() or flush() if the file exceeds limit then the file will be froncated (truncated from the front) leaving limit bytes, from the tail of the file, active |
 
 Under the covers this circular behavior affect reads and writes. When **opened for read as circular** the first data returned will be from the front of the file unless the file has reached the max size. If it has then the first data returned will instead be the data at the (file length - max size) offet (The front of your circular buffer.)
 
-When the file is **opened for write as circular** after the write, if a new tail block is added to the file after the file has reached the desired size then the head block will removed and the next body block will be made into the new head block. In net, we've added 4088 bytes to the end of the file and we've removed 4088 bytes from the front of the file.
+When the file is **opened for write as circular** after the writes are completed and the file is being closed or flushed then the entire write commit chain is written to flash. After this file is complete on flash then the file is froncated (Front Truncated) removing any/all leading blocks leaving enough blocks to contain the **max\_file\_length** bytes at the tail of fhe file blocks. If any blocks are removed during Froncation this means the file head block effectively moves to be the new leading block of the file blocks not removed during this Fruncate process.
+
+#### BEHAVIOR: Treating a file as Modifiable (replacing records within a file)
+
+File content modification is supported if a file is opened in the Extended Read (R+) or Extended Write (W+) mode.  
+
+In this mode, we think of the file as containing records. Open the file, seek to a location, read the exsting record, make a change in it, then seek back to the record location and write the newly modified record.  We can do this anywhere within the existing file or we can append records the the file.
+
+In the case of the **Write Extended** (W+) mode we must first append records then we can seek within the records written, replacing records as we need.
+
+There are really only two underlying forms of transactions when handling extended file writes.  
+
+- **Case #1**: the record being replaced fits entirely within a block. In this case when we close(), flush(), or seek to another location away from this block the current modified block buffer contents are written to a new block with the same block ID, but the next LifeCycle value of the block it is replacing. After the block is written and activated, the prior block is deleted.
+
+- **Case #2**: The record being replaced overflows from the current block into the next block. In this case, as we run off the end of the current buffer we have to write the first part of the record by replacing the block containing it. The current modified block buffer contents are written to a new block with the same block ID, but the next LifeCycle value of the block it is replacing. After the block is written and activated, the prior block is deleted. Then we resume the record write by loading the next block and continuing to write the remainder of the record into the buffer containing this next block. Lastly, when we close(), flush(), or seek to another location away from this block the current modified block buffer contents are written to a new block with the same block ID and the next LifeCycle value of the block it is replacing. After the block is written and activated, the prior block is deleted.
 
 
 ## Tracking Data (State of Filesystem)
@@ -329,18 +356,21 @@ For each open file (handle) teh driver maintains the following information:
 | --- | --- | --- | --- |
 | | **File State tracking**
 | hStatus | BYTE    0[MAX\_FILES_OPEN] | handle: status [H\_READ, H\_WRITE, H\_REPLACE, 0 not in use]| 1 byte
-| hHeadBlockAddr | WORD    0[MAX\_FILES_OPEN] | handle: first block_address of file chain | 2 bytes
+| hHeadBlockID | WORD    0[MAX\_FILES_OPEN] | handle: first blockID of file chain | 2 bytes
 | hEndPtr | WORD    0[MAX\_FILES_OPEN] | handle: pointer to next write byte in block (or $FFC if block full) | 2 bytes
 | hFilename | BYTE    0[MAX\_FILES_OPEN * FILENAME\_SIZE] | handle: 127+1 byte buffer for filename | 128 bytes
 | hBlockBuff | BYTE    0[MAX\_FILES_OPEN * BLOCK\_SIZE] | handle: 4KB buffer for file data | <pre>4096 bytes</pre>
+| hModified | BYTE    0[MAX\_FILES_OPEN] | T/F where T menas the buffer has been modified and needs to be written to flash | 1 byte
 | | **Commit-chain tracking**
 | hChainBlockID | WORD    0[MAX\_FILES_OPEN] | handle: first blockID of commit chain | 2 bytes
 | hChainBlockAddr | WORD    0[MAX\_FILES_OPEN] | handle: first block_address of commit chain | 2 bytes
 | hChainLifeCycle | BYTE    0[MAX\_FILES_OPEN] | handle: first block lifecycle (cycle value for replacement first block of commit chain) | 1 byte
 | | **Special Mode tracking**<br>**(Seeking, Circular files)**
 | hSeekPtr | WORD    NOT\_ENABLED[MAX\_FILES_OPEN] | handle: seek address within active block | 2 bytes
+|
+| hSeekFileOffsetPtr | LONG    0[MAX\_FILES_OPEN] | handle: logical seek address within entire file | 4 bytes
 | hCircularLength | WORD    NOT\_ENABLED[MAX\_FILES_OPEN] | handle: circular buffer length in max blocks | 2 bytes
-| | | | **4,238 bytes / handle**
+| | | | **4,243 bytes / handle**
 
 
 ## The Format Process [F]
@@ -371,11 +401,14 @@ The final pass then clears these somehow damaged blocks by canceling each of the
 
 ## Locating a next block to allocate to a file [L]
 
-Our wear leveling is accomplished by two mechanisms. The first is by how we choose a block to be allocated. We randomly pick a block from within the entire flash filesystem space. The 2nd mechanism then ensures the leveling. Once the new location is randomly determined then if the block is already in use we relocate the contents of that block and continue to place our new content in this location.
+Our wear leveling is accomplished by two mechanisms:
 
-## This is my first ...
+1. The first is by how we choose a block to be allocated. We randomly pick a block from within the entire flash filesystem space. 
+2. The 2nd mechanism then ensures the leveling. Once the new location is randomly determined then if the block is already in use we relocate the contents of this block to another randomly picked open location and continue to place our new content in this first random location.
 
-This is my first version of this Theory of Operations Document. If I've not covered something here that you would like to see please let me know by filing issue, contacting me directly or by posting your request in our P2 Forums.
+## This is my second ...
+
+This is my second version of this Theory of Operations Document. If I've not covered something here that you would like to see please let me know by filing issue, contacting me directly or by posting your request in our P2 Forums.
 
 Please enjoy!
 
