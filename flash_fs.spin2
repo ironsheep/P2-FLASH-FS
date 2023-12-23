@@ -9,7 +9,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 20 DEC 2023
+''   Updated.... 22 DEC 2023
 ''
 '' =================================================================================================
 '' v1.2.0 - initial release of flash_fs with full API
@@ -270,7 +270,7 @@ PUB format() : status | block_address, cycleBits
     'debug("* format()")
 
     'debug("- have lock, trying...")
-    repeat while locktry(fsLock) == 0                                           ' try to get the lock
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
     LONG[@errorCode][cogid()] := SUCCESS
 
@@ -315,7 +315,7 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
     LONG[@errorCode][cogid()] := SUCCESS                                        ' preset to success
 
     'debug("- have lock, trying...")
-    repeat while locktry(fsLock) == 0                                           ' try to get the lock
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
    'debug("- locked")
     fsMounted := true                                                           ' set "mounted" inidcation
@@ -399,7 +399,7 @@ PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCou
     LONG[@errorCode][cogid()] := SUCCESS                                        ' preset to success
 
     'debug("- have lock, trying...")
-    repeat while locktry(fsLock) == 0                                           ' try to get the lock
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
     'debug("- mounting...")
     bytefill(@hStatus, 0, MAX_FILES_OPEN)                                       'clear handles
@@ -549,7 +549,7 @@ PUB open(p_filename, mode) : handle | findings, bFileExists
     other: return (LONG[@errorCode][cogid()] := E_FILE_MODE)
 
   'debug("open(", udec_(handle), ") ENTRY get sem #", udec_(fsLock))
-  repeat while locktry(fsLock) == 0                                             'lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   LONG[@errorCode][cogid()] := SUCCESS                                          'new operation clear any prior error code
   handle := NOT_VALID
@@ -625,7 +625,7 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
     other: return (LONG[@errorCode][cogid()] := E_FILE_MODE)
 
   ' acquire lock
-  repeat while locktry(fsLock) == 0                                             'lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   LONG[@errorCode][cogid()] := SUCCESS                                          'new operation clear any prior error code
   handle := NOT_VALID
@@ -676,7 +676,7 @@ PUB flush(handle) : status
   elseif handle < 0 or handle > MAX_FILES_OPEN - 1
     return (LONG[@errorCode][cogid()] := E_BAD_HANDLE)
 
-  repeat while locktry(fsLock) == 0                                             'lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   LONG[@errorCode][cogid()] := SUCCESS                                          'new operation clear any prior error code
 
@@ -715,7 +715,7 @@ PUB close(handle) : status
     return (LONG[@errorCode][cogid()] := E_BAD_HANDLE)
 
   'debug("close(", udec_(handle), ") ENTRY get sem #", udec_(fsLock))
-  repeat while locktry(fsLock) == 0                                             'lock for exlusive use
+  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
 
   status := close_no_lock(handle)                                               'commit our file changes
   hCircularLength[handle] := 0                                                  'clear prior length
