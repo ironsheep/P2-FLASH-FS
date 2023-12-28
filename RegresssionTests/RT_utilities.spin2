@@ -270,8 +270,7 @@ pub evaluateFileStats(pfilename, expectedBlockCount, expectedBytesUsed) | bytesU
 ' @local bytesUsed -
 ' @local bytesFree -
 ' @local blockCount -
-    debug("  File: [", zstr_(pFilename), "]")
-    showFileSignatures(pFilename)
+    showFileChain(pFilename)
     bytesUsed, bytesFree, blockCount := flash.TEST_count_file_bytes(pFilename)
     if bytesUsed < 0
         debug("  # Error: ", zstr_(flash.string_for_error(bytesUsed)))
@@ -309,8 +308,7 @@ pub evaluateFileStatsRange(pfilename, expectedBlockCount, exptecedMinBytesUsed, 
 ' @local blockCount -
 ' @local maxBytesUsed -
 
-    debug("  File: [", zstr_(pFilename), "]")
-    showFileSignatures(pFilename)
+    showFileChain(pFilename)
     bytesUsed, bytesFree, blockCount := flash.TEST_count_file_bytes(pFilename)
     maxBytesUsed := flash.BYTES_IN_HEAD_BLOCK
     maxBytesUsed += (flash.BYTES_IN_BODY_BLOCK * (expectedBlockCount - 1))
@@ -360,7 +358,9 @@ pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount, st
     else
         debug("  # 0 Blocks in commit")
 
-pub showFileSignatures(pFilename) | pSignatureAr, signatureCount
+
+pub showFileChain(pFilename) | pSignatureAr, signatureCount
+    debug("  File: [", zstr_(pFilename), "]")
     pSignatureAr, signatureCount := flash.TEST_getFileBlockSignatures(pFilename)
     if signatureCount > 0
         debug("  # ", udec_(signatureCount / 2), " Blocks in file:")
@@ -368,16 +368,120 @@ pub showFileSignatures(pFilename) | pSignatureAr, signatureCount
     else
         debug("  # 0 Blocks in file ???")
 
+
+CON
+  MAX_FILE_BLOCKS = 50
+  MAX_FILENAME_LEN = 127
+
+DAT
+  fileblockAddrAr       LONG 0[MAX_FILE_BLOCKS * 3] ' addr, sig[0], sig[1]
+  badlockAddrAr         LONG 0[MAX_FILE_BLOCKS * 3] ' addr, sig[0], sig[1]
+  filenameBuff          BYTE 0[MAX_FILENAME_LEN + 1]
+
+
+pub showMountSignatures() | fileLen, badLen, fileCt, blockIdx
+
+  fileLen, badLen := flash.TEST_dumpMountMap(@fileblockAddrAr, @badlockAddrAr)
+  blockIdx := 0
+  fileCt := 0
+  repeat
+    ' show file lists
+    if LONG[@fileblockAddrAr][blockIdx] <> 0
+      ' if we have a file
+      if LONG[@fileblockAddrAr][blockIdx] <> 0
+          flash.TEST_filename_for_block_addr(LONG[@fileblockAddrAr][blockIdx], @filenameBuff, MAX_FILENAME_LEN + 1)
+      debug("dmm: file #", udec_(++fileCt), " of ", udec_(fileLen), " [", zstr_(@filenameBuff), "]")
+      repeat
+          if LONG[@fileblockAddrAr][blockIdx] <> 0
+            ' count longs in this set
+            showSignature(LONG[@fileblockAddrAr][blockIdx], LONG[@fileblockAddrAr][blockIdx+1], LONG[@fileblockAddrAr][blockIdx+2])
+            blockIdx += 3
+          else
+            'debug("   ")
+            blockIdx += 1 ' skip end of file
+            quit
+    else
+      quit
+
+  debug("   ")
+  debug("dmm: ", udec_(badLen), " bad blocks")
+  blockIdx := 0
+  repeat
+    ' show bad block list
+    if LONG[@badlockAddrAr][blockIdx] <> 0
+      ' count longs in this set
+       showSignature(LONG[@badlockAddrAr][blockIdx], LONG[@badlockAddrAr][blockIdx+1], LONG[@badlockAddrAr][blockIdx+2])
+       blockIdx += 3
+    else
+      quit
+
+
 PUB bytesSkipped(pFilename) : bytes_skipped | pSignatureAr, signatureCount, dataOfs
     pSignatureAr, signatureCount := flash.TEST_getFileBlockSignatures(pFilename)
     if signatureCount > 0
         bytes_skipped := LONG[pSignatureAr][0+1].[11..0]
 
-pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, signatureIdx, pBlockType, pLifeCycle, nextIdOrEndPtr, blockID, blockAddr, dataOfs, pModified
+
+pub showSignature(block_address, signature, signature1) | pBlockType, pLifeCycle, nextIdOrEndPtr, blockID, dataOfs, pModified, bIsOldFormat
+    bIsOldFormat := signature.[2] == 0 ? true: false
+    dataOfs := bIsOldFormat == false ? signature1.[11..0] : 0
+    nextIdOrEndPtr := signature.[31..20]
+    blockID := signature.[19..8]
+    pModified := signature.[3] == 0 ? @" MODIFIED" : @" "
+    case signature.[7..5]
+        %000:
+          pLifeCycle := @"canceled-0"
+        %001:
+          pLifeCycle := @"canceled-1"
+        %010:
+          pLifeCycle := @"canceled-2"
+        %011:
+          pLifeCycle := @"ACTIVE-3"
+        %100:
+          pLifeCycle := @"canceled-4"
+        %101:
+          pLifeCycle := @"ACTIVE-5"
+        %110:
+          pLifeCycle := @"ACTIVE-6"
+        %111:
+          pLifeCycle := @"erased"
+
+    case signature.[1..0]
+        %00: pBlockType := @"HEAD/last"
+        %01: pBlockType := @"HEAD/more"
+        %10: pBlockType := @"BODY/last"
+        %11: pBlockType := @"BODY/more"
+    if signature.[1]
+      if signature.[0]
+        ' show body more block
+        debug("    [", uhex_word_(block_address), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+      else
+        ' show body last block
+        debug("    [", uhex_word_(block_address), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+    elseif bIsOldFormat
+      ' OLD v1.4 format header block
+      if signature.[0]
+        ' show head more block
+        debug("    [", uhex_word_(block_address), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+      else
+        ' show head last block
+        debug("    [", uhex_word_(block_address), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+    else
+      ' NEW v2.x format header block
+      if signature.[0]
+        ' show head more block
+        debug("    [", uhex_word_(block_address), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", dataOfs=", udec_(dataOfs), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+      else
+        ' show head last block
+        debug("    [", uhex_word_(block_address), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", dataOfs=", uhex_word_(dataOfs), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+
+
+pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, signatureIdx, pBlockType, pLifeCycle, nextIdOrEndPtr, blockID, blockAddr, dataOfs, pModified, bIsOldFormat
     if signatureCount > 0
         repeat signatureIdx from 0 to signatureCount -1 step 2
             signature := LONG[pSignatureAr][signatureIdx]
-            dataOfs := LONG[pSignatureAr][signatureIdx+1].[11..0]
+            bIsOldFormat := signature.[2] == 0 ? true: false
+            dataOfs := bIsOldFormat == false ? LONG[pSignatureAr][signatureIdx+1].[11..0] : 0
             nextIdOrEndPtr := signature.[31..20]
             blockID := signature.[19..8]
             pModified := signature.[3] == 0 ? @" MODIFIED" : @" "
@@ -412,7 +516,16 @@ pub showSignatureChain(pSignatureAr, signatureCount, possHandle) | signature, si
               else
                 ' show body last block
                 debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+            elseif bIsOldFormat
+              ' OLD format header block
+              if signature.[0]
+                ' show head more block
+                debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
+              else
+                ' show head last block
+                debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", endPtr=", uhex_word_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
             else
+              ' NEW format header block
               if signature.[0]
                 ' show head more block
                 debug("    ", udec_(signatureIdx/2+1), ": [", uhex_word_(blockAddr), "] ", zstr_(pBlockType), ", thisID=",udec_(blockID), ", dataOfs=", udec_(dataOfs), ", nextId=", udec_(nextIdOrEndPtr), ", lifeCycle [", zstr_(pLifeCycle), "], sig=[", uhex_long_(signature), "] ", zstr_(pModified))
