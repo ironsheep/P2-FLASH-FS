@@ -94,6 +94,18 @@ Lastly we've added a `flash.create_file()` method which you can use to create an
 
 In this example we are initilizing a file with 4k bytes of zeros.  You can use any byte value you wish for the fill value.
 
+## Migration from v1.4 to v2.0
+
+There is NO migration needed if you are **not using Circular Files**.
+
+If you are using Circular files and you need to preseve them instead of just creating new ones, then you will first want to copy your exising circular file to a new one. This creates the new file head block supporting circular seeks.
+
+Example copy file code:
+
+```spin2
+... TBA ...
+```
+
 ## Adding the Flash FS to your own project
 
 This section describes how to quickly get the flash filesystem working in your project.
