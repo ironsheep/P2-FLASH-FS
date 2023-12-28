@@ -1,8 +1,13 @@
 Cog0  INIT $0000_0000 $0000_0000 load
-Cog0  INIT $0000_0EB8 $0000_B890 jump
+Cog0  INIT $0000_0EC0 $0000_D17C jump
 Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
 Cog0
 Cog0    All Files:
+Cog0
+Cog0  * Environment: Chip S/N and Driver Version
+Cog0     CHIP Serial Number: $E461_2D03-$D35B_1A2A
+Cog0     Driver:
+Cog0  * init VAR
 Cog0
 Cog0  * Test #1: Ensure we have no files at start
 Cog0     -> pass
@@ -23,7 +28,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #4: Write N BYTEs
-Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #5: ensure no errors on writes
@@ -32,33 +37,34 @@ Cog0     -> pass
 Cog0
 Cog0    File: [ap1010bytes.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0000] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [erased], sig=[$0920_00FC]
+Cog0      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_00F4]  MODIFIED
 Cog0
 Cog0  * Test #6: Close written file
+Cog0  * wr_block() block_address = $0231, block_id = 0, NextID_EndPtr = $0092
+Cog0  - program_block() block_address = $0231
+Cog0  - activate_block() block_address = $0231
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap1010bytes.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
 Cog0
-Cog0  * Test #7: Ensure expected file system changes post BYTEs write
+Cog0  * Test #7: Ensure expected file stats
+Cog0    File: [ap1010bytes.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: [$0231] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]
+Cog0    # blocks: 1
+Cog0    # bytes used: 10
+Cog0     -> pass
+Cog0
+Cog0  * Test #8: Ensure expected file system changes post BYTEs initial write
 Cog0  * post file write
 Cog0    # FileSystem: 1, 3_967, 1
 Cog0    # files: 1
 Cog0    # blocks used: 1
 Cog0     -> pass
 Cog0
-Cog0  * Test #8: Ensure expected file stats
-Cog0    File: [ap1010bytes.bin]
-Cog0    # 1 Blocks in file:
-Cog0      1: [$0327] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]
-Cog0    # blocks: 1
-Cog0    # bytes used: 10
-Cog0     -> pass
-Cog0
 Cog0  * Test #9: Get starting length before append of BYTEs
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0    file_size(): 10
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #10: Open File for append
@@ -66,7 +72,7 @@ Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0  * Test #11: Append count BYTEs
-Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #12: ensure no errors on writes
@@ -75,9 +81,14 @@ Cog0     -> pass
 Cog0
 Cog0    File: [ap1010bytes.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0327] HEAD/last, thisID=0, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]
+Cog0      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_0074]  MODIFIED
 Cog0
 Cog0  * Test #13: Close append file
+Cog0  * wr_block() block_address = $0CAC, block_id = 0, NextID_EndPtr = $009C
+Cog0  - program_block() block_address = $0CAC
+Cog0  - activate_block() block_address = $0CAC
+Cog0  * delChnFmID() [$0231] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $0231
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
@@ -86,572 +97,775 @@ Cog0
 Cog0  * Test #14: Ensure expected file stats post BYTEs append
 Cog0    File: [ap1010bytes.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0322] HEAD/last, thisID=0, endPtr=$009C, lifeCycle [ACTIVE-5], sig=[$09C0_00BC]
+Cog0      1: [$0CAC] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-5], sig=[$09C0_00BC]
 Cog0    # blocks: 1
 Cog0    # bytes used: 20
 Cog0     -> pass
 Cog0
+Cog0  * Test #15: Ensure expected file system changes post BYTEs append write
+Cog0  * post file append
+Cog0    # FileSystem: 1, 3_967, 1
+Cog0    # files: 1
+Cog0    # blocks used: 1
+Cog0     -> pass
+Cog0
 Cog0    All Files:
-Cog0  ap1010bytes.bin, Bytes = 20, ID = 1, @Buff={binary data}
+Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block only - partially filled with 9 WORDs then apppend 9 more
 Cog0
-Cog0  * Test #15: Open File for write
+Cog0  * Test #16: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #16: Write N WORDs
-Cog0    Sub-Test Results: Pass: 9, Fail: 0
+Cog0  * Test #17: Write N WORDs
+Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #17: ensure no errors on writes
+Cog0  * Test #18: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap99words.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0000] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [erased], sig=[$09A0_01FC]
+Cog0      1: [$0000] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009A, lifeCycle [erased], sig=[$09A0_01F4]  MODIFIED
 Cog0
-Cog0  * Test #18: Close written file
+Cog0  * Test #19: Close written file
+Cog0  * wr_block() block_address = $023E, block_id = 1, NextID_EndPtr = $009A
+Cog0  - program_block() block_address = $023E
+Cog0  - activate_block() block_address = $023E
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap99words.bin], bytesUsed = 18, bytes_free = 3_938, block_count = 1
 Cog0
-Cog0  * Test #19: Ensure expected file system changes post WORDs write
+Cog0  * Test #20: Ensure expected file stats
+Cog0    File: [ap99words.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: [$023E] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
+Cog0    # blocks: 1
+Cog0    # bytes used: 18
+Cog0     -> pass
+Cog0
+Cog0  * Test #21: Ensure expected file system changes post WORDs write
 Cog0  * post file write
 Cog0    # FileSystem: 2, 3_966, 2
 Cog0    # files: 2
 Cog0    # blocks used: 2
 Cog0     -> pass
 Cog0
-Cog0  * Test #20: Ensure expected file stats
-Cog0    File: [ap99words.bin]
-Cog0    # 1 Blocks in file:
-Cog0      1: [$00A9] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
-Cog0    # blocks: 1
-Cog0    # bytes used: 18
+Cog0  * Test #22: Get starting length before append of WORDs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #21: Get starting length before append of WORDs
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0    file_size(): 18
-Cog0     -> pass
-Cog0
-Cog0  * Test #22: Open File for append
+Cog0  * Test #23: Open File for append
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #23: Append count WORDs
-Cog0    Sub-Test Results: Pass: 9, Fail: 0
+Cog0  * Test #24: Append count WORDs
+Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #24: ensure no errors on writes
+Cog0  * Test #25: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap99words.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$00A9] HEAD/last, thisID=1, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]
+Cog0      1: [$0000] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$00AC, lifeCycle [ACTIVE-3], sig=[$0AC0_0174]  MODIFIED
 Cog0
-Cog0  * Test #25: Close append file
+Cog0  * Test #26: Close append file
+Cog0  * wr_block() block_address = $0DEB, block_id = 1, NextID_EndPtr = $00AC
+Cog0  - program_block() block_address = $0DEB
+Cog0  - activate_block() block_address = $0DEB
+Cog0  * delChnFmID() [$023E] block_id = 1, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $023E
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap99words.bin], bytesUsed = 36, bytes_free = 3_920, block_count = 1
 Cog0
-Cog0  * Test #26: Ensure expected file stats post WORDs append
+Cog0  * Test #27: Ensure expected file stats post WORDs append
 Cog0    File: [ap99words.bin]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$0025] HEAD/last, thisID=1, endPtr=$00AC, lifeCycle [ACTIVE-5], sig=[$0AC0_01BC]
+Cog0      1: [$0DEB] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$00AC, lifeCycle [ACTIVE-5], sig=[$0AC0_01BC]
 Cog0    # blocks: 1
 Cog0    # bytes used: 36
 Cog0     -> pass
 Cog0
+Cog0  * Test #28: Ensure expected file system changes post WORDs append write
+Cog0  * post file append
+Cog0    # FileSystem: 2, 3_966, 2
+Cog0    # files: 2
+Cog0    # blocks used: 2
+Cog0     -> pass
+Cog0
 Cog0    All Files:
-Cog0  ap1010bytes.bin, Bytes = 20, ID = 1, @Buff={binary data}
-Cog0  ap99words.bin, Bytes = 36, ID = 2, @Buff={binary data}
+Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block only - partially filled with 12 LONGs then apppend 12 more
 Cog0
-Cog0  * Test #27: Open File for write
+Cog0  * Test #29: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #28: Write N LONGs
-Cog0    Sub-Test Results: Pass: 12, Fail: 0
+Cog0  * Test #30: Write N LONGs
+Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #29: ensure no errors on writes
+Cog0  * Test #31: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap1212longs.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0000] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [erased], sig=[$0B80_02FC]
+Cog0      1: [$0000] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00B8, lifeCycle [erased], sig=[$0B80_02F4]  MODIFIED
 Cog0
-Cog0  * Test #30: Close written file
+Cog0  * Test #32: Close written file
+Cog0  * wr_block() block_address = $0F10, block_id = 2, NextID_EndPtr = $00B8
+Cog0  - program_block() block_address = $0F10
+Cog0  - activate_block() block_address = $0F10
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap1212longs.bin], bytesUsed = 48, bytes_free = 3_908, block_count = 1
 Cog0
-Cog0  * Test #31: Ensure expected file system changes post LONGs write
+Cog0  * Test #33: Ensure expected file stats
+Cog0    File: [ap1212longs.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: [$0F10] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
+Cog0    # blocks: 1
+Cog0    # bytes used: 48
+Cog0     -> pass
+Cog0
+Cog0  * Test #34: Ensure expected file system changes post LONGs write
 Cog0  * post file write
 Cog0    # FileSystem: 3, 3_965, 3
 Cog0    # files: 3
 Cog0    # blocks used: 3
 Cog0     -> pass
 Cog0
-Cog0  * Test #32: Ensure expected file stats
-Cog0    File: [ap1212longs.bin]
-Cog0    # 1 Blocks in file:
-Cog0      1: [$0ED3] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
-Cog0    # blocks: 1
-Cog0    # bytes used: 48
+Cog0  * Test #35: Get starting length before append of LONGs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #33: Get starting length before append of LONGs
-Cog0    Sub-Test Results: Pass: 1, Fail: 0
-Cog0     -> pass
-Cog0
-Cog0  * Test #34: Open File for append
+Cog0  * Test #36: Open File for append
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #35: Append count LONGs
-Cog0    Sub-Test Results: Pass: 12, Fail: 0
+Cog0  * Test #37: Append count LONGs
+Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #36: ensure no errors on writes
+Cog0  * Test #38: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap1212longs.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0ED3] HEAD/last, thisID=2, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]
+Cog0      1: [$0000] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00E8, lifeCycle [ACTIVE-3], sig=[$0E80_0274]  MODIFIED
 Cog0
-Cog0  * Test #37: Close append file
+Cog0  * Test #39: Close append file
+Cog0  * wr_block() block_address = $05C4, block_id = 2, NextID_EndPtr = $00E8
+Cog0  - program_block() block_address = $05C4
+Cog0  - activate_block() block_address = $05C4
+Cog0  * delChnFmID() [$0F10] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $0F10
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
+Cog0    File: [ap1212longs.bin], bytesUsed = 96, bytes_free = 3_860, block_count = 1
+Cog0
+Cog0  * Test #40: Ensure expected file stats post LONGs append
+Cog0    File: [ap1212longs.bin]
+Cog0    # 1 Blocks in file:
+Cog0      1: [$05C4] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00E8, lifeCycle [ACTIVE-5], sig=[$0E80_02BC]
+Cog0    # blocks: 1
+Cog0    # bytes used: 96
+Cog0     -> pass
+Cog0  - test blocksUsed = 1, blocksAdded = 0, startingBlockCount = 3
+Cog0
+Cog0  * Test #41: Ensure expected file system changes post LONGs append write
+Cog0  * post file append
+Cog0    # FileSystem: 3, 3_965, 3
+Cog0    # files: 3
+Cog0    # blocks used: 3
+Cog0     -> pass
+Cog0
 Cog0    All Files:
-Cog0  ap1010bytes.bin, Bytes = 20, ID = 1, @Buff={binary data}
-Cog0  ap99words.bin, Bytes = 36, ID = 2, @Buff={binary data}
-Cog0  ap1212longs.bin, Bytes = 96, ID = 3, @Buff={binary data}
+Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block only - partially filled with 10 STRINGs then apppend 10 more
 Cog0
-Cog0  * Test #38: Open File for write
+Cog0  * Test #42: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #39: Write N STRINGs
-Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0  * Test #43: Write N STRINGs
+Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #40: ensure no errors on writes
+Cog0  * Test #44: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap1010strings.zstr] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0000] HEAD/last, thisID=3, endPtr=$0239, lifeCycle [erased], sig=[$2390_03FC]
+Cog0      1: [$0000] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0219, lifeCycle [erased], sig=[$2190_03F4]  MODIFIED
 Cog0
-Cog0  * Test #41: Close written file
+Cog0  * Test #45: Close written file
+Cog0  * wr_block() block_address = $081D, block_id = 3, NextID_EndPtr = $0219
+Cog0  - program_block() block_address = $081D
+Cog0  - activate_block() block_address = $081D
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [ap1010strings.zstr], bytesUsed = 433, bytes_free = 3_523, block_count = 1
+Cog0    File: [ap1010strings.zstr], bytesUsed = 401, bytes_free = 3_555, block_count = 1
 Cog0
-Cog0  * Test #42: Ensure expected file system changes post STRINGs write
+Cog0  * Test #46: Ensure expected file stats
+Cog0    File: [ap1010strings.zstr]
+Cog0    # 1 Blocks in file:
+Cog0      1: [$081D] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0219, lifeCycle [ACTIVE-3], sig=[$2190_037C]
+Cog0    # blocks: 1
+Cog0    # bytes used: 401
+Cog0     -> pass
+Cog0
+Cog0  * Test #47: Ensure expected file system changes post STRINGs write
 Cog0  * post file write
 Cog0    # FileSystem: 4, 3_964, 4
 Cog0    # files: 4
 Cog0    # blocks used: 4
 Cog0     -> pass
 Cog0
-Cog0  * Test #43: Ensure expected file stats
-Cog0    File: [ap1010strings.zstr]
-Cog0    # 1 Blocks in file:
-Cog0      1: [$081D] HEAD/last, thisID=3, endPtr=$0239, lifeCycle [ACTIVE-3], sig=[$2390_037C]
-Cog0    # blocks: 1
-Cog0    # bytes used: 433
+Cog0  * Test #48: Get starting length before append of STRINGs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #44: Get starting length before append of STRINGs
-Cog0    Sub-Test Results: Pass: 1, Fail: 0
-Cog0     -> pass
-Cog0
-Cog0  * Test #45: Open File for append
+Cog0  * Test #49: Open File for append
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #46: Append N STRINGs
-Cog0    Sub-Test Results: Pass: 10, Fail: 0
+Cog0  * Test #50: Append N STRINGs
+Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #47: ensure no errors on append writes
+Cog0  * Test #51: ensure no errors on append writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [ap1010strings.zstr] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$081D] HEAD/last, thisID=3, endPtr=$0239, lifeCycle [ACTIVE-3], sig=[$2390_037C]
+Cog0      1: [$0000] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0448, lifeCycle [ACTIVE-3], sig=[$4480_0374]  MODIFIED
 Cog0
-Cog0  * Test #48: Close append file
+Cog0  * Test #52: Close append file
+Cog0  * wr_block() block_address = $0A17, block_id = 3, NextID_EndPtr = $0448
+Cog0  - program_block() block_address = $0A17
+Cog0  - activate_block() block_address = $0A17
+Cog0  * delChnFmID() [$081D] block_id = 3, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $081D
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0    File: [ap1010strings.zstr], bytesUsed = 767, bytes_free = 3_189, block_count = 1
+Cog0    File: [ap1010strings.zstr], bytesUsed = 960, bytes_free = 2_996, block_count = 1
 Cog0
-Cog0  * Test #49: Ensure expected file stats post STRINGs append
+Cog0  * Test #53: Ensure expected file stats post STRINGs append
 Cog0    File: [ap1010strings.zstr]
 Cog0    # 1 Blocks in file:
-Cog0      1: [$06BB] HEAD/last, thisID=3, endPtr=$0387, lifeCycle [ACTIVE-5], sig=[$3870_03BC]
+Cog0      1: [$0A17] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0448, lifeCycle [ACTIVE-5], sig=[$4480_03BC]
 Cog0    # blocks: 1
-Cog0    # bytes used: 767
+Cog0    # bytes used: 960
 Cog0     -> pass
 Cog0
-Cog0  * Test #50: Readback all strings and verify
-Cog0    File: [ap1010strings.zstr]
-Cog0    # 1 Blocks in file:
-Cog0      1: [$06BB] HEAD/last, thisID=3, endPtr=$0387, lifeCycle [ACTIVE-5], sig=[$3870_03BC]
-Cog0    # blocks: 1
-Cog0    # bytes used: 767
+Cog0  * Test #54: Ensure expected file system changes post STRINGs append write
+Cog0  * post file append
+Cog0    # FileSystem: 4, 3_964, 4
+Cog0    # files: 4
+Cog0    # blocks used: 4
 Cog0     -> pass
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Read and verify the content of all 20 string
 Cog0
-Cog0  * Test #51: Open File for read
+Cog0  * Test #55: Open File for read
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #52: read expected 10 STRINGs
-Cog0    Sub-Test Results: Pass: 40, Fail: 0
+Cog0  * Test #56: read expected N STRINGs
+Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #53: ensure no errors on reads
+Cog0  * Test #57: ensure no errors on reads
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #54: BAD: read one more STRING than written
+Cog0  * Test #58: BAD: read one more STRING than written
 Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
 Cog0     -> pass
 Cog0
-Cog0  * Test #55: Close read file
+Cog0  * Test #59: Close read file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    All Files:
-Cog0  ap1010bytes.bin, Bytes = 20, ID = 1, @Buff={binary data}
-Cog0  ap99words.bin, Bytes = 36, ID = 2, @Buff={binary data}
-Cog0  ap1212longs.bin, Bytes = 96, ID = 3, @Buff={binary data}
-Cog0  ap1010strings.zstr, Bytes = 767, ID = 4, @Buff={binary data}
+Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap1010strings.zstr, byteCount = 960, blockID = 4, BlocksUsed = 1, @Buff={binary data}
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block + body block - filled with LONGs full HEAD, 2 in BODY, append 8 more
 Cog0
-Cog0  * Test #56: Open File for write
+Cog0  * Test #60: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #57: Write N LONGs
-Cog0    Sub-Test Results: Pass: 991, Fail: 0
+Cog0  * Test #61: Write N LONGs
+Cog0  * wr_block() block_address = $061C, block_id = 4, NextID_EndPtr = $0005
+Cog0  - program_block() block_address = $061C
+Cog0    Sub-Test Results: count=991, Pass: 991, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #58: ensure no errors on writes
+Cog0  * Test #62: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHeadBody.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$0994] HEAD/more, thisID=4, nextId=, lifeCycle [erased], sig=[$0050_04FD]
-Cog0      2: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05FE]
+Cog0      1: [$061C] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [erased], sig=[$0050_04FD]
+Cog0      2: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05F6]  MODIFIED
 Cog0
-Cog0  * Test #59: Close written file
+Cog0  * Test #63: Close written file
+Cog0  * wr_block() block_address = $034D, block_id = 5, NextID_EndPtr = $000C
+Cog0  - program_block() block_address = $034D
+Cog0  - activate_block() block_address = $034D
+Cog0  - activate_block() block_address = $061C
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHeadBody.bin], bytesUsed = 3_964, bytes_free = 4_080, block_count = 2
 Cog0
-Cog0  * Test #60: Ensure expected file system changes post LONGs write
+Cog0  * Test #64: Ensure expected file stats
+Cog0    File: [apLongsHeadBody.bin]
+Cog0    # 2 Blocks in file:
+Cog0      1: [$061C] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]
+Cog0      2: [$034D] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
+Cog0    # blocks: 2
+Cog0    # bytes used: 3_964
+Cog0     -> pass
+Cog0
+Cog0  * Test #65: Ensure expected file system changes post LONGs write
 Cog0  * post file write
 Cog0    # FileSystem: 6, 3_962, 5
 Cog0    # files: 5
 Cog0    # blocks used: 6
 Cog0     -> pass
 Cog0
-Cog0  * Test #61: Ensure expected file stats
-Cog0    File: [apLongsHeadBody.bin]
-Cog0    # 2 Blocks in file:
-Cog0      1: [$0994] HEAD/more, thisID=4, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]
-Cog0      2: [$06A4] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
-Cog0    # blocks: 2
-Cog0    # bytes used: 3_964
+Cog0  * Test #66: Get starting length before append of LONGs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #62: Get starting length before append of LONGs
-Cog0    Sub-Test Results: Pass: 1, Fail: 0
-Cog0     -> pass
-Cog0
-Cog0  * Test #63: Open File for append
+Cog0  * Test #67: Open File for append
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #64: Append count LONGs
-Cog0    Sub-Test Results: Pass: 8, Fail: 0
-Cog0     -> pass
-Cog0
-Cog0  * Test #65: ensure no errors on writes
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0    File: [apLongsHeadBody.bin] pending commit
-Cog0    # 1 Blocks in chain:
-Cog0      1: [$06A4] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]
-Cog0
-Cog0  * Test #66: Close append file
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0
-Cog0   ------------------------------------------------------------
-Cog0  * Test Group: Head block + 2 x body block - filled with LONGs full HEAD & BODY, 2 in 2nd BODY, append 8 more
-Cog0
-Cog0  * Test #67: Open File for write
-Cog0     ECode: SUCCESS: No error
-Cog0     -> pass
-Cog0
-Cog0  * Test #68: Write N LONGs
-Cog0    Sub-Test Results: Pass: 2_013, Fail: 0
+Cog0  * Test #68: Append count LONGs
+Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
 Cog0     -> pass
 Cog0
 Cog0  * Test #69: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
+Cog0    File: [apLongsHeadBody.bin] pending commit
+Cog0    # 1 Blocks in chain:
+Cog0      1: [$0000] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-3], sig=[$02C0_0576]  MODIFIED
+Cog0
+Cog0  * Test #70: Close append file
+Cog0  * wr_block() block_address = $03AF, block_id = 5, NextID_EndPtr = $002C
+Cog0  - program_block() block_address = $03AF
+Cog0  - activate_block() block_address = $03AF
+Cog0  * delChnFmID() [$034D] block_id = 5, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $034D
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [apLongsHeadBody.bin], bytesUsed = 3_996, bytes_free = 4_048, block_count = 2
+Cog0
+Cog0  * Test #71: Ensure expected file stats post LONGs append
+Cog0    File: [apLongsHeadBody.bin]
+Cog0    # 2 Blocks in file:
+Cog0      1: [$061C] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]
+Cog0      2: [$03AF] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_05BE]
+Cog0    # blocks: 2
+Cog0    # bytes used: 3_996
+Cog0     -> pass
+Cog0  - test blocksUsed = 2, blocksAdded = 0, startingBlockCount = 6
+Cog0
+Cog0  * Test #72: Ensure expected file system changes post LONGs append write
+Cog0  * post file append
+Cog0    # FileSystem: 6, 3_962, 5
+Cog0    # files: 5
+Cog0    # blocks used: 6
+Cog0     -> pass
+Cog0
+Cog0
+Cog0   ------------------------------------------------------------
+Cog0  * Test Group: Head block + 2 x body block - filled with LONGs full HEAD & BODY, 2 in 2nd BODY, append 8 more
+Cog0
+Cog0  * Test #73: Open File for write
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0  * Test #74: Write N LONGs
+Cog0  * wr_block() block_address = $0658, block_id = 6, NextID_EndPtr = $0007
+Cog0  - program_block() block_address = $0658
+Cog0  * wr_block() block_address = $019F, block_id = 7, NextID_EndPtr = $0008
+Cog0  - program_block() block_address = $019F
+Cog0  - activate_block() block_address = $019F
+Cog0    Sub-Test Results: count=2_013, Pass: 2_013, Fail: 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #75: ensure no errors on writes
+Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
 Cog0    File: [apLongsHead2xBody.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$0240] HEAD/more, thisID=6, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
-Cog0      2: [$0307] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$000C, lifeCycle [erased], sig=[$00C0_08FE]
+Cog0      1: [$0658] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [erased], sig=[$0070_06FD]
+Cog0      2: [$019F] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$000C, lifeCycle [erased], sig=[$00C0_08F6]  MODIFIED
 Cog0
-Cog0  * Test #70: Close written file
+Cog0  * Test #76: Close written file
+Cog0  * wr_block() block_address = $05A4, block_id = 8, NextID_EndPtr = $000C
+Cog0  - program_block() block_address = $05A4
+Cog0  - activate_block() block_address = $05A4
+Cog0  - activate_block() block_address = $0658
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead2xBody.bin], bytesUsed = 8_052, bytes_free = 4_080, block_count = 3
 Cog0
-Cog0  * Test #71: Ensure expected file system changes post LONGs write
+Cog0  * Test #77: Ensure expected file stats
+Cog0    File: [apLongsHead2xBody.bin]
+Cog0    # 3 Blocks in file:
+Cog0      1: [$0658] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
+Cog0      2: [$019F] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$05A4] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]
+Cog0    # blocks: 3
+Cog0    # bytes used: 8_052
+Cog0     -> pass
+Cog0
+Cog0  * Test #78: Ensure expected file system changes post LONGs write
 Cog0  * post file write
 Cog0    # FileSystem: 9, 3_959, 6
 Cog0    # files: 6
 Cog0    # blocks used: 9
 Cog0     -> pass
 Cog0
-Cog0  * Test #72: Ensure expected file stats
-Cog0    File: [apLongsHead2xBody.bin]
-Cog0    # 3 Blocks in file:
-Cog0      1: [$0240] HEAD/more, thisID=6, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
-Cog0      2: [$0307] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
-Cog0      3: [$0545] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]
-Cog0    # blocks: 3
-Cog0    # bytes used: 8_052
+Cog0  * Test #79: Get starting length before append of LONGs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #73: Get starting length before append of LONGs
-Cog0    Sub-Test Results: Pass: 1, Fail: 0
-Cog0     -> pass
-Cog0
-Cog0  * Test #74: Open File for append
+Cog0  * Test #80: Open File for append
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #75: Append count LONGs
-Cog0    Sub-Test Results: Pass: 8, Fail: 0
+Cog0  * Test #81: Append count LONGs
+Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #76: ensure no errors on writes
+Cog0  * Test #82: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead2xBody.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0545] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]
+Cog0      1: [$0000] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-3], sig=[$02C0_0876]  MODIFIED
 Cog0
-Cog0  * Test #77: Close append file
+Cog0  * Test #83: Close append file
+Cog0  * wr_block() block_address = $09ED, block_id = 8, NextID_EndPtr = $002C
+Cog0  - program_block() block_address = $09ED
+Cog0  - activate_block() block_address = $09ED
+Cog0  * delChnFmID() [$05A4] block_id = 8, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $05A4
 Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [apLongsHead2xBody.bin], bytesUsed = 8_084, bytes_free = 4_048, block_count = 3
+Cog0
+Cog0  * Test #84: Ensure expected file stats post LONGs append
+Cog0    File: [apLongsHead2xBody.bin]
+Cog0    # 3 Blocks in file:
+Cog0      1: [$0658] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]
+Cog0      2: [$019F] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]
+Cog0      3: [$09ED] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_08BE]
+Cog0    # blocks: 3
+Cog0    # bytes used: 8_084
+Cog0     -> pass
+Cog0  - test blocksUsed = 3, blocksAdded = 0, startingBlockCount = 9
+Cog0
+Cog0  * Test #85: Ensure expected file system changes post LONGs append write
+Cog0  * post file append
+Cog0    # FileSystem: 9, 3_959, 6
+Cog0    # files: 6
+Cog0    # blocks used: 9
 Cog0     -> pass
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Head block + 2 x body block - filled with LONGsfull HEAD & 2 BODY (-3), append 9 more append causes add of new body
 Cog0
-Cog0  * Test #78: Open File for write
+Cog0  * Test #86: Open File for write
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #79: Write N LONGs
-Cog0    Sub-Test Results: Pass: 3_030, Fail: 0
+Cog0  * Test #87: Write N LONGs
+Cog0  * wr_block() block_address = $04F9, block_id = 9, NextID_EndPtr = $000A
+Cog0  - program_block() block_address = $04F9
+Cog0  * wr_block() block_address = $0179, block_id = 10, NextID_EndPtr = $000B
+Cog0  - program_block() block_address = $0179
+Cog0  - activate_block() block_address = $0179
+Cog0    Sub-Test Results: count=3_030, Pass: 3_030, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #80: ensure no errors on writes
+Cog0  * Test #88: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin] pending commit
 Cog0    # 3 Blocks in chain:
-Cog0      1: [$03F7] HEAD/more, thisID=9, nextId=10, lifeCycle [erased], sig=[$00A0_09FD]
-Cog0      2: [$0A7F] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
-Cog0      3: [$0000] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [erased], sig=[$FF00_0BFE]
+Cog0      1: [$04F9] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [erased], sig=[$00A0_09FD]
+Cog0      2: [$0179] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0000] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [erased], sig=[$FF00_0BF6]  MODIFIED
 Cog0
-Cog0  * Test #81: Close written file
+Cog0  * Test #89: Close written file
+Cog0  * wr_block() block_address = $0D72, block_id = 11, NextID_EndPtr = $0FF0
+Cog0  - program_block() block_address = $0D72
+Cog0  - activate_block() block_address = $0D72
+Cog0  - activate_block() block_address = $04F9
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_120, bytes_free = 12, block_count = 3
 Cog0
-Cog0  * Test #82: Ensure expected file system changes post LONGs write
+Cog0  * Test #90: Ensure expected file stats
+Cog0    File: [apLongsHead3xBody.bin]
+Cog0    # 3 Blocks in file:
+Cog0      1: [$04F9] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0179] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0D72] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [ACTIVE-3], sig=[$FF00_0B7E]
+Cog0    # blocks: 3
+Cog0    # bytes used: 12_120
+Cog0     -> pass
+Cog0
+Cog0  * Test #91: Ensure expected file system changes post LONGs write
 Cog0  * post file write
 Cog0    # FileSystem: 12, 3_956, 7
 Cog0    # files: 7
 Cog0    # blocks used: 12
 Cog0     -> pass
 Cog0
-Cog0  * Test #83: Ensure expected file stats
-Cog0    File: [apLongsHead3xBody.bin]
-Cog0    # 3 Blocks in file:
-Cog0      1: [$03F7] HEAD/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
-Cog0      2: [$0A7F] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
-Cog0      3: [$036B] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [ACTIVE-3], sig=[$FF00_0B7E]
-Cog0    # blocks: 3
-Cog0    # bytes used: 12_120
+Cog0  * Test #92: Get starting length before append of LONGs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #84: Get starting length before append of LONGs
-Cog0    Sub-Test Results: Pass: 1, Fail: 0
-Cog0     -> pass
-Cog0
-Cog0  * Test #85: Open File for append
+Cog0  * Test #93: Open File for append
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #86: Append count LONGs
-Cog0    Sub-Test Results: Pass: 9, Fail: 0
+Cog0  * Test #94: Append count LONGs
+Cog0  * wr_block() block_address = $0002, block_id = 11, NextID_EndPtr = $000C
+Cog0  - program_block() block_address = $0002
+Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #87: ensure no errors on writes
+Cog0  * Test #95: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin] pending commit
 Cog0    # 2 Blocks in chain:
-Cog0      1: [$0BCB] BODY/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFF]
-Cog0      2: [$0000] BODY/last, thisID=12, endPtr=$001C, lifeCycle [erased], sig=[$01C0_0CFE]
+Cog0      1: [$0002] BODY/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFF]
+Cog0      2: [$0000] BODY/last, thisID=12, endPtr=$001C, lifeCycle [erased], sig=[$01C0_0CF6]  MODIFIED
 Cog0
-Cog0  * Test #88: Close append file
+Cog0  * Test #96: Close append file
+Cog0  * wr_block() block_address = $0019, block_id = 12, NextID_EndPtr = $001C
+Cog0  - program_block() block_address = $0019
+Cog0  - activate_block() block_address = $0019
+Cog0  - activate_block() block_address = $0002
+Cog0  * delChnFmID() [$0D72] block_id = 11, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $0D72
 Cog0     ECode: SUCCESS: No error
+Cog0     -> pass
+Cog0
+Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_156, bytes_free = 4_064, block_count = 4
+Cog0
+Cog0  * Test #97: Ensure expected file stats post LONGs append
+Cog0    File: [apLongsHead3xBody.bin]
+Cog0    # 4 Blocks in file:
+Cog0      1: [$04F9] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0179] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0002] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
+Cog0      4: [$0019] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]
+Cog0    # blocks: 4
+Cog0    # bytes used: 12_156
+Cog0     -> pass
+Cog0  - test blocksUsed = 4, blocksAdded = 1, startingBlockCount = 12
+Cog0
+Cog0  * Test #98: Ensure expected file system changes post LONGs append write
+Cog0  * post file append
+Cog0    # FileSystem: 13, 3_955, 7
+Cog0    # files: 7
+Cog0    # blocks used: 13
 Cog0     -> pass
 Cog0
 Cog0
 Cog0   ------------------------------------------------------------
 Cog0  * Test Group: Certifying Flush - appends to existing file with flush() for each
 Cog0
-Cog0  * Test #89: Open File for append
+Cog0  * Test #99: Check F/S status before append of BYTEs
+Cog0    File: [apLongsHead3xBody.bin]
+Cog0    # 4 Blocks in file:
+Cog0      1: [$04F9] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0179] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0002] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
+Cog0      4: [$0019] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]
+Cog0    # blocks: 4
+Cog0    # bytes used: 12_156
+Cog0     -> pass
+Cog0
+Cog0  * Test #100: Get starting length before append of BYTEs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+Cog0     -> pass
+Cog0
+Cog0  * Test #101: Open File for append
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
-Cog0  * Test #90: Get starting length before append of LONGs
-Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_156, bytes_free = 4_064, block_count = 4
+Cog0
+Cog0  * Test #102: Get starting length before append of LONGs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #91: Append count LONGs
-Cog0    Sub-Test Results: Pass: 6, Fail: 0
+Cog0  * Test #103: Append count LONGs
+Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #92: ensure no errors on writes
+Cog0  * Test #104: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0DE8] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]
+Cog0      1: [$0000] BODY/last, thisID=12, endPtr=$0034, lifeCycle [ACTIVE-3], sig=[$0340_0C76]  MODIFIED
 Cog0
-Cog0  * Test #93: Flush append file
+Cog0  * Test #105: Flush append file
+Cog0  * wr_block() block_address = $005F, block_id = 12, NextID_EndPtr = $0034
+Cog0  - program_block() block_address = $005F
+Cog0  - activate_block() block_address = $005F
+Cog0  * delChnFmID() [$0019] block_id = 12, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $0019
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_180, bytes_free = 4_040, block_count = 4
 Cog0
-Cog0  * Test #94: Ensure expected file stats post LONGs append
+Cog0  * Test #106: Ensure expected file stats post append flush
 Cog0    File: [apLongsHead3xBody.bin]
 Cog0    # 4 Blocks in file:
-Cog0      1: [$03F7] HEAD/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
-Cog0      2: [$0A7F] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
-Cog0      3: [$0BCB] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
-Cog0      4: [$0AFE] BODY/last, thisID=12, endPtr=$0034, lifeCycle [ACTIVE-5], sig=[$0340_0CBE]
+Cog0      1: [$04F9] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0179] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0002] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
+Cog0      4: [$005F] BODY/last, thisID=12, endPtr=$0034, lifeCycle [ACTIVE-5], sig=[$0340_0CBE]
 Cog0    # blocks: 4
 Cog0    # bytes used: 12_180
 Cog0     -> pass
 Cog0
-Cog0  * Test #95: Get starting length before append of LONGs
-Cog0    Sub-Test Results: Pass: 1, Fail: 0
+Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_180, bytes_free = 4_040, block_count = 4
+Cog0
+Cog0  * Test #107: Get starting length before append of LONGs
+Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #96: Append count LONGs
-Cog0    Sub-Test Results: Pass: 22, Fail: 0
+Cog0  * Test #108: Append count LONGs
+Cog0    Sub-Test Results: count=22, Pass: 22, Fail: 0
 Cog0     -> pass
 Cog0
-Cog0  * Test #97: ensure no errors on writes
+Cog0  * Test #109: ensure no errors on writes
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin] pending commit
 Cog0    # 1 Blocks in chain:
-Cog0      1: [$0AFE] BODY/last, thisID=12, endPtr=$008C, lifeCycle [erased], sig=[$08C0_0CFE]
+Cog0      1: [$0000] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-5], sig=[$08C0_0CB6]  MODIFIED
 Cog0
-Cog0  * Test #98: Flush append file
+Cog0  * Test #110: Flush append file
+Cog0  * wr_block() block_address = $0F4D, block_id = 12, NextID_EndPtr = $008C
+Cog0  - program_block() block_address = $0F4D
+Cog0  - activate_block() block_address = $0F4D
+Cog0  * delChnFmID() [$005F] block_id = 12, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+Cog0  - cancel_block() block_address = $005F
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_268, bytes_free = 3_952, block_count = 4
 Cog0
-Cog0  * Test #99: Ensure expected file stats post LONGs append
+Cog0  * Test #111: Ensure expected file stats post append flush
 Cog0    File: [apLongsHead3xBody.bin]
 Cog0    # 4 Blocks in file:
-Cog0      1: [$03F7] HEAD/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
-Cog0      2: [$0A7F] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
-Cog0      3: [$0BCB] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
-Cog0      4: [$06DA] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-3], sig=[$08C0_0C7E]
+Cog0      1: [$04F9] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0179] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0002] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
+Cog0      4: [$0F4D] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-6], sig=[$08C0_0CDE]
 Cog0    # blocks: 4
 Cog0    # bytes used: 12_268
 Cog0     -> pass
 Cog0
-Cog0  * Test #100: Close append file
+Cog0  * Test #112: Close append file
 Cog0     ECode: SUCCESS: No error
 Cog0     -> pass
 Cog0
 Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_268, bytes_free = 3_952, block_count = 4
 Cog0
-Cog0    All Files:
-Cog0  seekLongs3bl, Bytes = 3_996, ID = 1, @Buff={binary data}
-Cog0  ap99words.bin, Bytes = 36, ID = 2, @Buff={binary data}
-Cog0  ap1212longs.bin, Bytes = 96, ID = 3, @Buff={binary data}
-Cog0  ap1010strings.zstr, Bytes = 767, ID = 4, @Buff={binary data}
-Cog0  apLongsHeadBody.bin, Bytes = 3_996, ID = 5, @Buff={binary data}
-Cog0  apLongsHead2xBody.bin, Bytes = 8_084, ID = 7, @Buff={binary data}
-Cog0  apLongsHead3xBody.bin, Bytes = 12_268, ID = 10, @Buff={binary data}
+Cog0  * Test #113: Ensure expected file stats
+Cog0    File: [apLongsHead3xBody.bin]
+Cog0    # 4 Blocks in file:
+Cog0      1: [$04F9] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]
+Cog0      2: [$0179] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]
+Cog0      3: [$0002] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]
+Cog0      4: [$0F4D] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-6], sig=[$08C0_0CDE]
+Cog0    # blocks: 4
+Cog0    # bytes used: 12_268
+Cog0     -> pass
+Cog0  - test blocksUsed = 4, blocksAdded = 0, startingBlockCount = 13
 Cog0
-Cog0  * 100 Tests: , Pass: 102, Fail: 0
+Cog0  * Test #114: Ensure expected file system changes post dual append write
+Cog0  * post file write
+Cog0    # FileSystem: 13, 3_955, 7
+Cog0    # files: 7
+Cog0    # blocks used: 13
+Cog0     -> pass
+Cog0
+Cog0    All Files:
+Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+Cog0  ap1010strings.zstr, byteCount = 960, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+Cog0  apLongsHeadBody.bin, byteCount = 3_996, blockID = 5, BlocksUsed = 2, @Buff={binary data}
+Cog0  apLongsHead2xBody.bin, byteCount = 8_084, blockID = 7, BlocksUsed = 3, @Buff={binary data}
+Cog0  apLongsHead3xBody.bin, byteCount = 12_268, blockID = 10, BlocksUsed = 4, @Buff={binary data}
+Cog0
+Cog0  * 114 Tests - Pass: 114, Fail: 0
 Cog0  * Test Complete

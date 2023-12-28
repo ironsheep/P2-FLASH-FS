@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 14 SEP 2023
+''   Updated.... 19 DEC 2023
 ''
 '' =================================================================================================
 
@@ -16,9 +16,11 @@ CON
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
-    DEBUG_PIN_TX = 57
-    DEBUG_PIN_RX = 56
-    DEBUG_BAUD = 2_000_000
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
 '}
 
 OBJ
@@ -27,11 +29,9 @@ OBJ
 
 CON
     RECORD_LEN = 88 ' just for fun, tiny but even number of longs
-'---+---+-------+---+-----------+-----------+-----------+-----------+-----------+
     RECORD_DATA_LEN = RECORD_LEN - 12
 DAT
 
-'---+-----------+---+---+---+-------------------+---+---+---+---+---+-----------+
 testfile        BYTE    "rwblocks.bin", 0
 testfile2        BYTE    "rw2blocks.bin", 0
 testfile3        BYTE    "rw3blocks.bin", 0
@@ -61,6 +61,8 @@ PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern
     utils.ShowStats()                                   ' should have empty filesystem
     utils.showFiles()
 
+    utils.showChipAndDriverVersion()
+
     testWriteRecords(@testfile, 10, 1, 0)
     testWriteRecords(@testfile2, 45, 2, 1)                 ' tail last record in 2nd block
     testWriteRecords(@testfile3, 92, 3, 3)                 ' tail of last record in 3rd block
@@ -76,9 +78,10 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
 
     utils.startTest(@"Write Records")
+    utils.setCheckCountPerTest(2)
     status := flash.SUCCESS
     repeat recordNbr from 1 to recordCount
         testValue := $40 + recordNbr                    ' A, B, C, etc.
@@ -95,7 +98,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
             quit ' abort on first failure
 
     utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -103,7 +106,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 {
     ' AUGH dump head block to see if content is correct
@@ -138,7 +141,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     utils.startTest(@"Ensure no error on size unused call")
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     'debug("* holding...")
     'repeat ' hold here
@@ -146,10 +149,11 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluate(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(handle, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
+    utils.setCheckCountPerTest(3)
     repeat recordNbr from 1 to recordCount
         rdLength := flash.read(handle, @record, RECORD_LEN)
         if rdLength <> RECORD_LEN
@@ -164,19 +168,20 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
         utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
 
     utils.startTest(@"ensure no errors on reads")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more Record than written")
+    utils.setCheckCountPerTest(2)
     rdLength := flash.read(handle, @record, RECORD_LEN)
-    utils.evaluateSingleValue(rdLength, @"read()", 0)
+    utils.evaluateSubValue(rdLength, @"read()", 0)
     status := flash.error()
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFiles()
 

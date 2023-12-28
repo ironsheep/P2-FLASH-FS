@@ -14,6 +14,7 @@ This is a recap of the version history of files arriving from Chip:
 |  v1.0 | <PRE>2023-08-14</PRE> | Initial release.	 |
 | v1.1 |  <PRE>2023-08-18</PRE> | Optimized SPI to 8 clocks/bit, or 40MHz SPI_CK at 320MHz. SPI\_CS now resets high.	|
 | v1.2 |  <PRE>2023-08-25</PRE> | Adds open_append(), cleans up byte counting, adjusts get new handle to set filename for handle.
+| v2.1 |  <PRE>2023-11-13</PRE> | Added file froncation, truncation, and modification along with create_file() (orig. MakeFile())
 
 ## The latest Files from Chip
 
@@ -22,7 +23,7 @@ This is the latest files from the [Forum Thread](https://forums.parallax.com/dis
 | File | Purpose |
 | --- | --- |
 | [FlashFileSystem_16MB.spin2](FlashFileSystem_16MB.spin2) | Chip's latest found in the forums |
-| [FlashFileSystem_16MB_Demo.spin2](FlashFileSystem_16MB_Demo.spin2) | A demo using Chip's driver |
+| [FlashFileSystem\_16MB_Demo.spin2](FlashFileSystem_16MB_Demo.spin2) | A demo using Chip's driver |
 
 ## Files for Review by Stephen
 
@@ -30,7 +31,7 @@ This is my work in progress as I'm working toward customer facing release of the
 
 | File | Purpose |
 | --- | --- |
-| [Draft\_FlashFileSystem_16MB_Demo.spin2](Draft_FlashFileSystem_16MB_Demo.spin2) | A Demo of the filesystem code reworked for publication |
+| [Draft\_FlashFileSystem\_16MB_Demo.spin2](Draft_FlashFileSystem_16MB_Demo.spin2) | A Demo of the filesystem code reworked for publication |
 | [Draft\_FlashFilesystem_16MB.spin2](Draft_FlashFilesystem_16MB.spin2) | A draft of the filesystem code reworked for publication |
 | [Draft\_FlashFilesystem_16MB.txt](Draft_FlashFilesystem_16MB.txt) | The Object Interface document generated from the new draft |
 
@@ -38,7 +39,7 @@ This is my work in progress as I'm working toward customer facing release of the
 ### Next Steps:
 
 - Keep up with Chip's changes:
-  - Integrate read/write/modify version from Chip when it arrives
+  - nothing planned at the moment.. but who can tell  ;-)
 - ... more I'm sure ...
 
 ---

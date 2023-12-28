@@ -26,8 +26,8 @@ Additional pages:
 
 - [The flash_fs Object I/F Documentation](flash_fs.txt) - the object interface with documentation for each public method
 - [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
-- [FS Theory of Operations](THEOPS.md) - a detailed description of key concepts of this filesystem
-- [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features (604+ tests so far)
+- [FS Theory of Operations](THEOPSv2.md) - a detailed description of key concepts of this filesystem (See [v1.x FS Theory of...](THEOPS.md) for earlier version)
+- [Regression Testing Status](./RegresssionTests) - regression test code and output logs - growing as we certify each of the features (900+ tests so far)
 
 ## Flash Filesystem Features
 
@@ -39,9 +39,60 @@ Key features of this Flash Filesystem for the P2 Edge Flash chip:
 - Filenames are 127 characters plus zero terminator
 - Seeks supported
 - File Append supported
+- Read-Modify-Write supported
 - Circular file writes supported 
 - Supports multi-cog use (first cog to call mount() mounts the filesystem for all cogs to use.)
 - **Coming soon** *Directory Support* 
+
+## Features of Note
+
+In addition to standard file operations this filesystem contains a couple features worth noting:
+
+### Feature: Circular files
+
+Circulr files are useful when you want to record the most recent journal entries (or event log entries) in a file.
+
+One writes to circular files by appending to them. At file open, one specifies a maximum limit to the file size in bytes, for example:
+
+```spin2
+    status := flash.open_circular(@"filename", "a", 8_192)
+    ... many writes ...
+    status := flash.close()
+```
+
+In this example you see a file being limited to 8k bytes.  This means keep track of the last 8k bytes worth of journal or log entries.  Upon close the journal will be reduced to the requested limit. 
+
+NOTE: Remember to call `flash.flush()` periodically to keep the pending writes small enough so that you don't run out of flash space.
+
+An `open_circular(..., "r", 8_192)` is provided so that one can open the journal file and start reading at the front of the last 8_192 bytes in the file.
+
+
+### Feature: File Read-Modify-Write
+
+You can now modiify existing files on flash.  Think of a file which contains fixed size records, maybe the state of an array of sensors where each sensor (or group of sensors) is in their own record within the file.
+
+```spin2
+    status := flash.open(@"filename", %"r+")  ' alternatively use FILEMODE_READ_EXTENDED for %"r+" 
+    ... many  reads and/or replacing writes  ...
+    status := flash.close()
+```
+
+Open the file with the new %"r+" mode., then seek to the record you wish to replace and write it (replacing the record already there.)  Continue by seeking to locations and writing new records. Of course you can seek to and read the existing records, too.  Lastly close the file as normal.
+
+We also provide an open mode of `flash.open(@"filename", %"w+")` where you first have to write the new records before you can seek to them or replace them with new records.
+
+Lastly we've added a `flash.create_file()` method which you can use to create an initialized file with empty records.  For example:
+
+```spin2
+    ' create empty file
+    status := flash.create_file(@"filename", $00, 4_096)
+    ' now do updates to the file
+    status := flash.open(@"filename", %"r+")
+    ... many  reads and/or replacing writes  ...
+    status := flash.close()
+```
+
+In this example we are initilizing a file with 4k bytes of zeros.  You can use any byte value you wish for the fill value.
 
 ## Adding the Flash FS to your own project
 
@@ -136,7 +187,7 @@ Thank you also to members of the [forum thread - "On-Board Flash File System"](h
 
 ## License
 
-Licensed under the MIT License. Copyright © 2023 Iron Sheep Productions, LLC.
+Licensed under the MIT License.
 
 Follow these links for more information:
 

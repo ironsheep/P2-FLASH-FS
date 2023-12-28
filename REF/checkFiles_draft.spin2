@@ -1,0 +1,78 @@
+CON
+  _CLKFREQ  = 320_000_000
+
+  debug_top = 20
+  'debug_height = 2400
+  debug_height = 1000
+
+OBJ
+  Flash : "Draft_FlashFileSystem_16MB"
+
+VAR
+
+  LONG  byteCount
+  BYTE  filename[127+1]
+  BYTE  rdBuffer[1024]
+
+PUB go() | moreFiles, currId, newCRC
+
+  debug("* test compatibility: DRAFT FLASH F/S")
+  Flash.mount()
+
+  ShowStats()           'Do a bunch of file stuff while reporting status, along the way
+  ShowFiles()
+  debug(" ")
+
+  moreFiles:=true
+  currId := 0
+  repeat
+    Flash.directory(@currId, @filename, @byteCount)
+    'debug(zstr(@filename), udec(byteCount, currId))
+    if filename[0]
+      ReadFile(@filename, @rdBuffer)                'read file
+      newCRC := calc_crc32(@rdBuffer, byteCount)
+      debug(zstr(@filename), udec(byteCount, currId), udec_long(newCRC))  'show file-unique details
+    else
+      moreFiles:= false
+  until !moreFiles
+
+  debug("* Done")
+  repeat
+
+PRI ShowStats() | BlocksUsed, BlocksFree, Files
+
+  BlocksUsed, BlocksFree, Files := Flash.stats()
+  debug(udec(BlocksUsed, BlocksFree, Files))
+
+PRI ShowFiles() | ID, cntBytes, Handle, Ptr, x, byte tmpFilename[127+1], byte Buff[15000]
+  repeat
+    Flash.directory(@ID, @tmpFilename, @cntBytes)         'get next file
+    'debug(zstr(@tmpFilename), udec(cntBytes, ID))
+    if tmpFilename[0]                      'is there a filename?
+      bytefill(@Buff, 0, 120)
+      ReadFile(@tmpFilename, @Buff)                'read file
+      debug(zstr(@tmpFilename), udec(cntBytes, ID), " [", zstr_(@Buff), "](", udec_(strsize(@Buff) + 1), ")")
+    else
+      quit                          'no more files, quit
+
+PRI ReadFile(pFilename, pBuff) | Handle, x, byteCt
+
+  Handle := Flash.OpenRead(pFilename)               'open file for reading
+  if handle>= 0
+    byteCt := Flash.file_size(pFilename)
+    'debug("* ReadFile(", zstr_(pFilename), ") ", udec(Handle, byteCt))
+    repeat byteCt
+      byte[pBuff++] := Flash.rd_byte(Handle)         'read bytes
+
+    Flash.close(Handle)        'close file
+  else
+    debug(" * ERROR: Failed to open file", sdec(handle))
+
+pri calc_crc32(p_buffer, length) : crc
+
+' Calculate and return the CRC for this buffer of length bytes
+'
+' @param p_buffer - the address of the buffer
+' @returns crc - the calculated CRC for the buffer of length bytes
+
+  return getcrc(p_buffer, $AD0424F3 rev 31, length)  'compute CRC of a buffered block

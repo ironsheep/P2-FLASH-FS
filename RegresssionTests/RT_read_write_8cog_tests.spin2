@@ -6,7 +6,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 19 SEP 2023
+''   Updated.... 20 DEC 2023
 ''
 '' =================================================================================================
 
@@ -16,14 +16,16 @@ CON
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
-    DEBUG_PIN_TX = 57
-    DEBUG_PIN_RX = 56
-    DEBUG_BAUD = 2_000_000
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
 '}
 
 OBJ
     flash : "flash_fs" | MAX_FILES_OPEN = 8
-    utils : "RT_utilities"
+    utils : "RT_utilities" | MAX_FILES_OPEN = 8
 
 CON
     RECORD_LEN = 88 ' just for fun, tiny but even number of longs
@@ -42,131 +44,64 @@ recordData       LONG    0[RECORD_DATA_LEN/4]
 recordCRC        LONG    0
 recordEnd
 
+bufferLock      LONG    -1
+
 stack           LONG    0[STACK_SIZE_PER_COG * 7]
 
 fileCountAr     BYTE    0[8]
-
-testfile1       BYTE    "rw10bytes.bin", 0
-testfile2       BYTE    "rw9words.bin", 0
-testfile3       BYTE    "rw12longs.bin", 0
-testfile4       BYTE    "rw10strings.zstr", 0
 
 fileNbr         BYTE    0
 
 PUB go() | cogIdx, totalFiles,  status
 
-    debug("* Formatting the FLASH")
     utils.startTest(@"Format the FLASH")
     status := flash.format()      ' Comment out this line to not erase all files
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    ' Ensure our test methods work
-    {
-    utils.startTestGroup(@"do our tests methods work?")
-    readWriteBytes(@testfile1)
-    readWriteWords(@testfile2)
-
-    utils.showFiles()
-
-    utils.ShowTestEndCounts()
-    '}
-
-    ' ---------------------------------------------------------------------
-    ' TEST SCENARIO 0: main cog starts filesystem, cog0 and cog1 write file
-    ' ---------------------------------------------------------------------
-    ' start a single cog
-    {
-    cogIdx := 0
-    cogspin(NEWCOG, readWriteBytes(@testfile1), @stack[cogIdx * STACK_SIZE_PER_COG])
-
-    debug("* running own readwrite")
-    readWriteWords(@testfile2)
-
-    debug("* ------")
-    waitms(5_000)  ' wait 5 secs
-    debug("* Let's see what happened")
-
-    utils.showFiles()
-
-    utils.ShowTestEndCounts()
-    '}
+    bufferLock := locknew()                                                 'I'm allocating... reserve a lock for RT use
 
     ' ---------------------------------------------------------------------
     ' TEST SCENARIO 1: write tests by all cogs then read by main cog
     ' ---------------------------------------------------------------------
     ' early cogs get to write two files
+
+    '{
+    debug("  ")
     debug("* starting COGs")
     'cogIdx := 0
     'cogspin(NEWCOG, genTwoFiles(@fileCountAr), @stack[cogIdx * STACK_SIZE_PER_COG])
 
+    'repeat cogIdx from 0 to 1
     repeat cogIdx from 0 to 8 - 2
         cogspin(NEWCOG, genTwoFiles(@fileCountAr), @stack[cogIdx * STACK_SIZE_PER_COG])
+    '}
 
     debug("* writing own files")
    ' last cog gets to write two files
     genTwoFiles(@fileCountAr)
 
-    debug("* ------")
+    debug("  ")
+    debug("* ------ waiting... ------")
     waitms(5_000)  ' wait 5 secs
     debug("* Let's see what happened")
 
-    debug("* waiting on COGs to finish writing")
+    debug("*  after waiting on COGs to finish writing")
     ' wait for all cogs to complete their writes
     totalFiles := 0
     repeat cogIdx from 0 to 7
         totalFiles += BYTE[@fileCountAr][cogIdx]
-    debug(" - found ", udec(totalFiles), " expected 16!")
+    'debug(" - found ", udec(totalFiles), " expected 16!")
+    utils.startTest(@"Check Cogs wrote All files")
+    utils.evaluateSingleValue(totalFiles, @"file written count", 16)
 
     utils.showFiles()
 
     utils.ShowTestEndCounts()
-
+    utils.ShowMultiCogTestEndCounts()
 
     ' ---------------------------------------------------------------------
     ' TEST SCENARIO 2: read/write tests by all cogs individually but at same time
     ' ---------------------------------------------------------------------
-{
-    ' start a single cog
-    cogIdx := 0
-    cogspin(NEWCOG, readWriteBytes(@testfile1), @stack[cogIdx * STACK_SIZE_PER_COG])
-
-    debug("* running own readwrite")
-    readWriteWords(@testfile2)
-
-    debug("* ------")
-    waitms(5_000)  ' wait 5 secs
-    debug("* Let's see what happened")
-
-    utils.showFiles()
-
-    utils.ShowTestEndCounts()
-'}
-    ' test case #1 start only 2 cogs for testing
-    'cogspin(NEWCOG, genTwoFiles(@fileCountAr), @stack[0 * STACK_SIZE_PER_COG])
-
-{
-    ' early cogs get to write two files
-    debug("* starting COGs")
-    repeat cogIdx from 0 to 8 - 2
-        cogspin(NEWCOG, genTwoFiles(@fileCountAr), @stack[cogIdx * STACK_SIZE_PER_COG])
-'}
-{
-    debug("* writing own files")
-   ' last cog gets to write two files
-    genTwoFiles(@fileCountAr)
-'}
-{
-    debug("* waiting on COGs to finish writing")
-    ' wait for all cogs to complete their writes
-    repeat
-        totalFiles := 0
-        repeat cogIdx from 0 to 7
-            totalFiles += BYTE[@fileCountAr][cogIdx]
-        if totalFiles <> 16
-            debug(" - at ", udec(totalFiles))
-        waitms(100) ' wait for more cogs to complete
-    while totalFiles < 16
-'}
 
     debug("TESTs complete")
     repeat
@@ -178,13 +113,15 @@ pri genTwoFiles(pByteFileCountAr) | myId, fileType, delayMS, fType1, fType2, sta
 
     myId := cogid()
     delayMS := (GETRND() +// 30000)
-    debug(" - cog #", udec_(myId), " starting after ", udec(delayMS), "ms")
+    debug("   ")
+    debug(" ----------------------- ")
+    debug("* Cog #", udec_(myId), " starting after ", udec(delayMS), "ms")
     waitms(delayMS)
 
     debug("* Mounting the FLASH")
     utils.startTest(@"Mount the filesystem")
     status := flash.mount()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTestGroup(@"Cog write file #1")
     fType1 := (GETRND() +// 5)
@@ -196,7 +133,12 @@ pri genTwoFiles(pByteFileCountAr) | myId, fileType, delayMS, fType1, fType2, sta
     writeAndVerifyATestFile(fType2, myId)
     BYTE[pByteFileCountAr][myId]++
 
-    debug(" - cog #", udec_(myId), " DONE")
+    if myId <> 0
+        utils.ShowTestEndCounts()
+
+    debug("   ")
+    debug("* Cog #", udec_(myId), " DONE")
+
 
 pri readWriteBytes(pFilename)
 
@@ -207,6 +149,7 @@ pri readWriteBytes(pFilename)
 
     utils.showFiles()
 
+
 pri readWriteWords(pFilename)
     ' Real tests start here:
     utils.startTestGroup(@"Head block only - partially filled with 9 WORDs")
@@ -215,12 +158,14 @@ pri readWriteWords(pFilename)
 
     utils.showFiles()
 
+
 pri readWriteLongs(pFilename)
     utils.startTestGroup(@"Head block only - partially filled with 12 LONGs")
     testWriteLongs(pFilename, 12)
     testVerifyLongs(pFilename, 12)
 
     utils.showFiles()
+
 
 pri readWriteStrings(pFilename)
     utils.startTestGroup(@"Head block only - partially filled with 10 STRINGs")
@@ -236,13 +181,15 @@ pri testWriteBytes(pFilename, count) | blocksUsed, handle, status, testValue
     debug("- testWriteBytes(", zstr_(pFilename), ", ", udec_(count), ")")
     utils.startTest(@"Open File for write")
     handle, status := openWaitOnHandle(pFilename,"w")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'w')")
     if handle < 0
         return
 
     utils.startTest(@"Write N BYTEs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -250,10 +197,12 @@ pri testWriteBytes(pFilename, count) | blocksUsed, handle, status, testValue
         if status <> flash.SUCCESS
             quit ' quit on first failure
         utils.evaluateSubStatus(status, @"wr_byte()", flash.SUCCESS)
-    utils.evaluateSubValue(testValue, @"wr_byte()", count)
+
+    utils.startTest(@"ensure all bytes written")
+    utils.evaluateSingleValue(testValue, @"wr_byte()", count)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -261,7 +210,7 @@ pri testWriteBytes(pFilename, count) | blocksUsed, handle, status, testValue
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -278,14 +227,16 @@ pri testVerifyBytes(pFilename, count) | handle, status, expectedValue, testValue
     '  open file for read
     utils.startTest(@"Open File for read")
     handle, status := openWaitOnHandle(pFilename,"r")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'r')")
     if handle < 0
         return
 
     utils.startTest(@"read expected N BYTEs")
+    utils.setCheckCountPerTest(1)
     expectedValue := 0
     repeat count
         expectedValue++
@@ -296,17 +247,17 @@ pri testVerifyBytes(pFilename, count) | handle, status, expectedValue, testValue
         utils.evaluateSubValue(testValue, @"rd_byte()", expectedValue)
 
     utils.startTest(@"ensure no errors on read BYTEs")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more BYTE than written")
     status := flash.rd_byte(handle)
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateResultNegError(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri testWriteWords(pFilename, count) | handle, status, testValue
@@ -316,13 +267,15 @@ pri testWriteWords(pFilename, count) | handle, status, testValue
     debug("- testWriteWords(", zstr_(pFilename), ", ", udec_(count), ")")
     utils.startTest(@"Open File for write")
     handle, status := openWaitOnHandle(pFilename,"w")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'w')")
     if handle < 0
         return
 
     utils.startTest(@"Write N WORDs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -330,7 +283,7 @@ pri testWriteWords(pFilename, count) | handle, status, testValue
         utils.evaluateSubStatus(status, @"wr_word()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -338,7 +291,7 @@ pri testWriteWords(pFilename, count) | handle, status, testValue
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -356,14 +309,16 @@ pri testVerifyWords(pFilename, count) | handle, status, expectedValue, testValue
     '  open file for read
     utils.startTest(@"Open File for read")
     handle, status := openWaitOnHandle(pFilename,"r")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'r')")
     if handle < 0
         return
 
     utils.startTest(@"read expected N WORDs")
+    utils.setCheckCountPerTest(1)
     expectedValue := 0
     repeat count
         expectedValue++
@@ -374,17 +329,17 @@ pri testVerifyWords(pFilename, count) | handle, status, expectedValue, testValue
         utils.evaluateSubValue(testValue, @"rd_word()", expectedValue)
 
     utils.startTest(@"ensure no errors on read WORDs")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more WORD than written")
     status := flash.rd_word(handle)
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateResultNegError(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri testWriteLongs(pFilename, count) | handle, status, testValue, blocksUsed
@@ -394,13 +349,15 @@ pri testWriteLongs(pFilename, count) | handle, status, testValue, blocksUsed
     debug("- testWriteLongs(", zstr_(pFilename), ", ", udec_(count), ")")
     utils.startTest(@"Open File for write")
     handle, status := openWaitOnHandle(pFilename,"w")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'w')")
     if handle < 0
         return
 
     utils.startTest(@"Write N LONGs")
+    utils.setCheckCountPerTest(1)
     testValue := 0
     repeat count
         testValue++
@@ -408,7 +365,7 @@ pri testWriteLongs(pFilename, count) | handle, status, testValue, blocksUsed
         utils.evaluateSubStatus(status, @"wr_long()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -416,7 +373,7 @@ pri testWriteLongs(pFilename, count) | handle, status, testValue, blocksUsed
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
 
@@ -435,14 +392,16 @@ pri testVerifyLongs(pFilename, count) | handle, status, expectedValue, testValue
     '  open file for read
     utils.startTest(@"Open File for read")
     handle, status := openWaitOnHandle(pFilename,"r")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'r')")
     if handle < 0
         return
 
     utils.startTest(@"read expected LONGs")
+    utils.setCheckCountPerTest(1)
     expectedValue := 0
     repeat count
         expectedValue++
@@ -453,18 +412,18 @@ pri testVerifyLongs(pFilename, count) | handle, status, expectedValue, testValue
         utils.evaluateSubValue(testValue, @"rd_long()", expectedValue)
 
     utils.startTest(@"ensure no errors on read LONGs")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more LONG than written")
     testValue := flash.rd_long(handle)
     status := flash.error()
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateResultNegError(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 con { string test constants }
@@ -513,14 +472,16 @@ pri testWriteStrings(pFilename, count) | handle, status, strIdx, maxStringIdx, p
     debug("- testWriteStrings(", zstr_(pFilename), ", ", udec_(count), ")")
     utils.startTest(@"Open File for write")
     handle, status := openWaitOnHandle(pFilename,"w")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'w')")
     if handle < 0
         return
 
     maxStringIdx := (count - 1 < MAX_STRINGS_WRITTEN - 1) ? count - 1 : MAX_STRINGS_WRITTEN - 1
     utils.startTest(@"Write 10 STRINGs")
+    utils.setCheckCountPerTest(1)
     expectedFileSize := 0
     repeat readWriteIdx from 0 to maxStringIdx
         strIdx := (GETRND() +// stringIdCt)
@@ -531,7 +492,7 @@ pri testWriteStrings(pFilename, count) | handle, status, strIdx, maxStringIdx, p
         utils.evaluateSubStatus(status, @"wr_str()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -539,7 +500,7 @@ pri testWriteStrings(pFilename, count) | handle, status, strIdx, maxStringIdx, p
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     {
     ' AUGH dump head block to see if content is correct
@@ -566,15 +527,17 @@ pri testVerifyStrings(pFilename, count) | handle, status, maxStringIdx, readWrit
     '  open file for read
     utils.startTest(@"Open File for read")
     handle, status := openWaitOnHandle(pFilename,"r")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'r')")
     if handle < 0
         return
 
     maxStringIdx := (count - 1 < MAX_STRINGS_WRITTEN - 1) ? count - 1 : MAX_STRINGS_WRITTEN - 1
     utils.startTest(@"read expected N STRINGs")
+    utils.setCheckCountPerTest(2)
     repeat readWriteIdx from 0 to maxStringIdx
          strIdx := BYTE[@idxStringWritten][readWriteIdx]
         pString := WORD[@stringIdTable][strIdx] ' get ptr to string
@@ -591,18 +554,18 @@ pri testVerifyStrings(pFilename, count) | handle, status, maxStringIdx, readWrit
         utils.evaluateSubValue(compareResult, @"rd_str()", true)
 
     utils.startTest(@"ensure no errors on read STRINGs")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more STRING than written")
     flash.rd_str(handle, @testStrBuffer, MAX_STRING_SIZE)
     status := flash.error()
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateResultNegError(status, flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeLength, recordNbr, expectedFileSize, expectedFileBlocks, sizeUnused, allocatedFileSize
@@ -613,18 +576,22 @@ pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeL
     debug("- testWriteRecords(", zstr_(pFilename), ", ", udec_(recordCount), ")")
     utils.startTest(@"Open File for write")
     handle, status := openWaitOnHandle(pFilename,"w")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'w')")
     if handle < 0
         return
 
+    repeat while locktry(bufferLock) == 0                                             'lock for exlusive use
+
     utils.startTest(@"Write N Records")
+    utils.setCheckCountPerTest(2)
     status := flash.SUCCESS
     repeat recordNbr from 1 to recordCount
-        testValue := $40 + recordNbr                    ' A, B, C, etc.
+        testValue := cogid() << 8 + ($40 + recordNbr)                    ' A, B, C, etc.
         recordId := recordNbr
-        bytefill(@recordData, testValue, RECORD_DATA_LEN)
+        wordfill(@recordData, testValue, RECORD_DATA_LEN/2)
         recordCRC := utils.record_crc(@record, RECORD_LEN)
         'debug("* write rcd #", udec_(recordNbr), " of 10")
         'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
@@ -634,7 +601,7 @@ pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeL
         utils.evaluateSubStatus(status, @"write()", flash.SUCCESS)
 
     utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  dump commit chain
     utils.showPendingCommitChain(handle)
@@ -642,7 +609,9 @@ pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeL
     '  close file
     utils.startTest(@"Close written file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    lockrel(bufferLock)                                                               ' release the lock, we're done with it
 
 {
     ' AUGH dump head block to see if content is correct
@@ -677,7 +646,7 @@ pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeL
 
     utils.startTest(@"Ensure no error on size unused call")
     status := flash.error()
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     'debug("* holding...")
     'repeat ' hold here
@@ -688,19 +657,22 @@ pri testVerifyRecords(pFilename, recordCount) | handle, status, recordNbr, rdLen
     '  open file for read
     utils.startTest(@"Open File for read")
     handle, status := openWaitOnHandle(pFilename,"r")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
     '    seek to various locations and read longs validating for correct value
 
+    repeat while locktry(bufferLock) == 0                                             'lock for exlusive use
+
+    utils.startTest(@"validate handle")
     utils.evaluateHandle(handle, @"open(,'r')")
     if handle < 0
         return
 
+    dumpRecords(pFilename, handle, recordCount, @record, RECORD_LEN)
+
     utils.startTest(@"read expected N RECORDs")
+    utils.setCheckCountPerTest(3)
     repeat recordNbr from 1 to recordCount
         rdLength := flash.read(handle, @record, RECORD_LEN)
-        if rdLength <> RECORD_LEN
-            status := flash.error()
-            quit
         ' ensure length is same as expected
         utils.evaluateSubValue(rdLength, @"read()", RECORD_LEN)
         ' ensure record ID is same as expected
@@ -708,26 +680,96 @@ pri testVerifyRecords(pFilename, recordCount) | handle, status, recordNbr, rdLen
         ' ensure record CRC is same as expected
         calcCRC := utils.record_crc(@record, RECORD_LEN)
         utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
+        ' IF WE HAVE a CRC error then show buffers!
+        if calcCRC <> recordCRC
+          dumpBlocksAtSplice(pFilename, recordNbr, recordCount, @record, RECORD_LEN)
+        if rdLength <> RECORD_LEN
+            debug("- ABORT bad rcd length")
+            status := flash.error()
+            quit
 
     utils.startTest(@"ensure no errors on read RECORDs")
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  read past end of file to verify read returns error
     utils.startTest(@"BAD: read one more Record than written")
+    utils.setCheckCountPerTest(2)
     rdLength := flash.read(handle, @record, RECORD_LEN)
-    utils.evaluateSingleValue(rdLength, @"read()", 0)
+    utils.evaluateSubValue(rdLength, @"read()", 0)
     status := flash.error()
-    utils.evaluate(status, flash.E_END_OF_FILE)
+    utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
 
     '  close file
     utils.startTest(@"Close read file")
     status := flash.close(handle)
-    utils.evaluate(status, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    lockrel(bufferLock)                                                               ' release the lock, we're done with it
 
     utils.showFiles()
 
 
 con ' ---- Utility Methods ---
+
+PRI dumpBlocksAtSplice(pFilename, rcdNunber, totalRecordsWritten, pRcdBuffer, rcdSize) | fileOffset, p_buffer, p_buffer2, blkAddr, blkAddr2
+
+    fileOffset := (rcdNbr - 1) * rcdSize
+    p_buffer, p_buffer2, blkAddr, blkAddr2 := flash.TEST_get4kBlockAndNextAtOffset(pFilename, fileOffset)
+
+    if p_buffer
+      ' dump record
+      utils.dbgMemDump(@"Record HEAD", pRcdBuffer, 128)
+      utils.dbgMemDump(@"Record TAIL", @BYTE[pRcdBuffer][rcdSize-128], 128)
+      debug("  ")
+      ' dump first block tail
+      debug("/* [", uhex_word_(blkAddr),"]")
+      utils.dbgMemDump(@"lead-buffer TAIL", @BYTE[p_buffer][4096-256], 256)
+      ' dump second block head
+      if p_buffer2
+          debug("  ")
+          debug("/* [", uhex_word_(blkAddr2),"]")
+          utils.dbgMemDump(@"trail-buffer HEAD", p_buffer2, 256)
+      else
+          debug("- no following block")
+    else
+        debug("- dumpBlocksAtSplice() FILE NOT FOUND [", zstr_(pFilename), "]")
+
+DAT
+
+  rcdHeader   BYTE  "Record #"
+  rcdNbr      BYTE  "00",0
+
+PRI setTitle(rcdNunber) | units, tens
+  tens := (rcdNunber / 10) + $30
+  units := (rcdNunber +// 10) + $30
+  if(tens == $30)
+    ' no leading zero
+    BYTE[@rcdNbr][0] := units
+    BYTE[@rcdNbr][1] := 0
+  else
+    BYTE[@rcdNbr][0] := tens
+    BYTE[@rcdNbr][1] := units
+
+PRI dumpRecords(pFilename, handle, totalRecordsWritten, pRcdBuffer, rcdSize) | status, lenBytes, recordNbr, rdLength, pErr
+
+    '  file is already open  for read
+    lenBytes := flash.file_size(pFilename)
+
+
+    debug("   ")
+    debug("** /----- dumping ", udec_(totalRecordsWritten), " records [contains ", udec_(lenBytes/rcdSize), " records]")
+    repeat recordNbr from 1 to totalRecordsWritten
+        setTitle(recordNbr)
+        rdLength := flash.read(handle, @record, RECORD_LEN)
+        if rdLength >= 0 and rdLength <> RECORD_LEN
+            debug("-- bad length [", udec_(rdLength), " vs. ", udec_(RECORD_LEN), "]")
+        elseif rdLength < 0
+            pErr := flash.string_for_error(rdLength)
+            debug("-- read error: ", zstr_(pErr))
+        utils.dbgMemDump(@rcdHeader, @record, RECORD_LEN)
+    debug("** \----- ----- ----- ----- ----- ----- ----- ")
+    debug("   ")
+    flash.seek(handle, 0, flash.SK_FILE_START)
 
 pri openWaitOnHandle(pFilename, mode): handle, status | pErr
 ' keep trying until we get handle or error

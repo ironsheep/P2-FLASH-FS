@@ -1,7 +1,8 @@
 CON	_CLKFREQ	= 320_000_000
 
   debug_top = 20
-  debug_height = 2400
+  'debug_height = 2400
+  debug_height = 1000
 
 OBJ     Flash : "Draft_FlashFileSystem_16MB"
 
@@ -13,8 +14,8 @@ PUB gox()
 
 PUB go() | i
 
-  Flash.Format()		'Comment out this line to not erase all files
-  Flash.Mount()
+  Flash.format()		'Comment out this line to not erase all files
+  Flash.mount()
 
   ShowStats()			'Do a bunch of file stuff while reporting status, along the way
   ShowFiles()
@@ -29,8 +30,8 @@ PUB go() | i
   ShowStats()
   ShowFiles()
 
-  if Flash.Exists(@"file3") and not Flash.Exists(@"Apples")
-    Flash.Rename(@"file3",@"Apples")
+  if Flash.exists(@"file3") and not Flash.exists(@"Apples")
+    Flash.rename(@"file3",@"Apples")
 
   repeat i from 1 to 10'366+20
     AppendFile2(@"file1")
@@ -40,7 +41,7 @@ PUB go() | i
   flash.MakeFile(@"AAA", 12000)
 
   flash.MakeFile(@"Made", 10000)
-  'Flash.Delete(@"file1")
+  'Flash.delete(@"file1")
 
   ModifyFile(@"file1", 1, @"abc")
 
@@ -50,13 +51,14 @@ PUB go() | i
 
 PRI ShowStats() | BlocksUsed, BlocksFree, Files
 
-  BlocksUsed, BlocksFree, Files := Flash.Stats()
+  BlocksUsed, BlocksFree, Files := Flash.stats()
   debug(udec(BlocksUsed, BlocksFree, Files))
 
 
 PRI ShowFiles() | ID, ByteCount, Handle, Ptr, x, byte Filename[$80], byte Buff[15000]
+'PRI ShowFiles() | ID, ByteCount, Handle, Ptr, x, byte Filename[Flash.FILENAME_SIZE], byte Buff[15000]
   repeat
-    Flash.Directory(@ID, @Filename, @ByteCount)			'get next file
+    Flash.directory(@ID, @Filename, @ByteCount)			'get next file
     if Filename[0]						'is there a filename?
       bytefill(@Buff, 0, 100)
       ReadFile(@Filename, @Buff)				'read file
@@ -68,10 +70,10 @@ PRI ShowFiles() | ID, ByteCount, Handle, Ptr, x, byte Filename[$80], byte Buff[1
 PRI ReadFile(pFilename, pBuff) | Handle, x
 
   Handle := Flash.OpenRead(pFilename)				'open file for reading
-  repeat Flash.SizeOf(pFilename)
-    byte[pBuff++] := Flash.ReadByte(Handle)			'read bytes
+  repeat Flash.file_size(pFilename)
+    byte[pBuff++] := Flash.rd_byte(Handle)			'read bytes
 
-  Flash.Close(Handle)						'close file
+  Flash.close(Handle)						'close file
 
 
 PRI WriteFile(pFilename, pBuff) | Handle
@@ -81,10 +83,10 @@ PRI WriteFile(pFilename, pBuff) | Handle
   Handle := Flash.OpenWrite(pFilename)				'open file for writing
 
   repeat							'write bytes until 0 written
-    Flash.WriteByte(Handle, byte[pBuff])
+    Flash.wr_byte(Handle, byte[pBuff])
   while byte[pBuff++]
 
-  Flash.Close(Handle)						'close file
+  Flash.close(Handle)						'close file
 
 
 PRI AppendFile(pFilename, pBuff) | Handle
@@ -94,22 +96,22 @@ PRI AppendFile(pFilename, pBuff) | Handle
   Handle := Flash.OpenAppendFroncate(pFilename, 9)			'open file for appending
 
   repeat							'write bytes until 0 written
-    Flash.WriteByte(Handle, byte[pBuff])
+    Flash.wr_byte(Handle, byte[pBuff])
   while byte[pBuff++]
 
-  Flash.Close(Handle)						'close file
+  Flash.close(Handle)						'close file
 
 
 PRI AppendFile2(pFilename) | Handle
 
   Handle := Flash.OpenAppendFroncate(pFilename, 10)			'open file for appending
   repeat 11
-    Flash.WriteByte(Handle, chr1)
+    Flash.wr_byte(Handle, chr1)
     if chr1 == "9"
       chr1 := "0"
     else
       chr1++
-  Flash.Close(Handle)						'close file
+  Flash.close(Handle)						'close file
 
   'Flash.Truncate(pFilename, 0)
 
@@ -117,20 +119,20 @@ PRI AppendFile2(pFilename) | Handle
 PRI ReadFile2(pFilename, pBuff) | Handle, x
 
   Handle := Flash.OpenRead(pFilename)				'open file for reading
-  repeat Flash.SizeOf(pFilename)
-    byte[pBuff++] := Flash.ReadByte(Handle)			'read bytes
+  repeat Flash.file_size(pFilename)
+    byte[pBuff++] := Flash.rd_byte(Handle)			'read bytes
   byte[pBuff] := 0
 
-  Flash.Close(Handle)						'close file
+  Flash.close(Handle)						'close file
 
 
 PRI ModifyFile(pFilename, Location, pData) | Handle
 
   Handle := Flash.OpenModify(pFilename)				'open file for appending
-  Flash.Seek(Handle, Location)
+  Flash.SeekAbs(Handle, Location)
   repeat strsize(pData)
-    Flash.WriteByte(Handle, byte[pData++])
-  Flash.Close(Handle)						'close file
+    Flash.wr_byte(Handle, byte[pData++])
+  Flash.close(Handle)						'close file
 
 
 DAT
