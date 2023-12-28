@@ -103,7 +103,42 @@ If you are using Circular files and you need to preseve them instead of just cre
 Example copy file code:
 
 ```spin2
-... TBA ...
+PUB exampleCopy(pOldFilename, pNewFilename) | status, rdHandle, rdLength, wrHandle, rdStatus, wrStatus, wrLength
+
+    ' remove existing file if it exists
+    if flash.exists(pNewFilename)
+      status := flash.delete(pNewFilename)
+
+    ifnot flash.exists(pNewFilename)
+        debug("Abort: no file to copy")
+
+    ' open existng file in basic "read" mode
+    rdHandle := flash.open(pOldFilename, "r")
+    ' open new file with exact circular length of your orignal file
+    wrHandle := flash.open_circular(pNewFilename, "a", CIRCULAR_LEN_IN_BYTES)
+
+    repeat
+      rdLength := flash.read(rdHandle, @record, RECORD_LEN)
+      rdStatus := flash.error()
+      if rdStatus <> flash.SUCCESS and rdStatus <> flash.E_END_OF_FILE
+        debug("Abort: read error")
+        quit
+
+      wrLength := flash.write(wrHandle, @record, rdLength)
+      wrStatus := flash.error()
+      if wrStatus <> flash.SUCCESS
+        debug("Abort: write error")
+        quit
+
+      if rdStatus == flash.E_END_OF_FILE
+         debug("DONE: copy complete")
+        quit
+
+    while wrStatus == flash.SUCCESS
+    ' and close our files
+    flash.close(rdHandle)
+    flash.close(wrHandle)
+
 ```
 
 ## Adding the Flash FS to your own project
