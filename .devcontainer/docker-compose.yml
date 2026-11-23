@@ -1,0 +1,14 @@
+# Pinned to the project name the Dev Containers extension derives from the
+# workspace folder, so named volumes keep their data across rebuilds.
+name: p2-flash-fs_devcontainer
+
+services:
+  dev:
+    # Built by devcontainer.json's initializeCommand, not by a `build:` section
+    # here (the reason is with that command).
+    image: p2-flash-fs-dev:local
+    volumes:
+      - ..:/workspaces/P2-FLASH-FS:cached
+    # No devices passed: Docker Desktop on macOS cannot forward USB, so the
+    # board is reached from the Mac, not from here.
+    command: sleep infinity
