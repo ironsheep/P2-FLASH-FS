@@ -1,0 +1,1011 @@
+'' =================================================================================================
+''
+''   File....... RT_performance_baseline.spin2
+''   Purpose.... This object times the flash filesystem: write and read of 4 KB, 64 KB and 690 KB,
+''               open() with 1, 50 and 100 files present, the write that programs a full block, a seek
+''               to the far end of a file, and mount(), can_mount() and format() on a populated flash,
+''               then shows every measurement as one row of a table
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... NOV 2026
+''   Updated.... 24 NOV 2026
+''
+'' =================================================================================================
+
+{ Every measurement is the count of system clock ticks that getct() advances while one driver call, or
+  the sum of the driver calls of one operation, runs.  A tick is one cycle of the system clock, so the
+  table states clkfreq once and gives every row in ticks and in microseconds.  The elapsed count is the
+  unsigned difference of two getct() values, which is right across a wrap of the 32-bit counter; the
+  counter wraps every 2^32 ticks, so a transfer is timed one chunk at a time and the chunk counts are
+  added into a count held in two longs, whole billions of ticks and the ticks below one billion.
+
+  Each bracket holds the driver call and nothing else: the data to write is built, and the data read is
+  checked, outside it.  A bracket is also compared with getms(), which runs on the 64-bit counter: a
+  bracket whose tick count and millisecond count disagree by more than a few milliseconds is not sound.
+
+  No RT_utilities method is called until the last measurement is done, because the harness turns on the
+  driver's block debug output the first time it is used, and that output would be printed inside the
+  timed calls.  The measurements are recorded in tables as they are made and the checks are made
+  afterwards, one test for each row.  A row passes when every call of its bracket completed inside a
+  sound bracket and the data it moved was verified.
+
+  The write and read of a file move the data in the chunks the file is stored in: the head block, then
+  one body block at a time.  Every chunk but the first starts by making the driver program the full
+  block before it, so the mean of those calls is the time to write one 4 KB block, and the slowest of
+  them is the longest a write() holds the filesystem lock.  The data is verified by a CRC of the chunks
+  written and a CRC of the chunks read back, which must be equal.
+
+  The files of the run take the blocks of 4 KB, 64 KB and 690 KB files, one block for each of 100 small
+  files, and a few more.  The program checks that the formatted flash has that many free blocks, and its
+  buffers are two chunk buffers and two lists of chunk CRCs, far less than the hub RAM.
+}
+
+CON
+
+     _CLKFREQ        = 320_000_000
+
+{
+    ' debug via serial to RPi (using RPi gateway pins)
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
+'}
+
+OBJ
+    flash : "flash_fs"
+    utils : "RT_utilities"
+
+CON ' ---- Measured Sizes ----
+
+    KILOBYTE = 1024                                     ' bytes in a KB
+    SMALL_BYTES = 4 * KILOBYTE                          ' size of the first transfer
+    MEDIUM_BYTES = 64 * KILOBYTE                        ' size of the second transfer
+    LARGE_BYTES = 690 * KILOBYTE                        ' size of the third transfer
+    FAR_OFFSET = LARGE_BYTES - 1                        ' offset of the last byte of the large file, where the far seek goes
+    POP_FILE_BYTES = 16                                 ' bytes of each small file of the open() cases
+    ONE_BYTE = 1                                        ' bytes of the write that programs a full block, and of a seek read
+    NO_BYTES = 0                                        ' bytes a bracket moves when it times no data transfer
+    ONE_CALL = 1                                        ' calls of a row that reports the slowest call
+    FLUSH_FILE_BYTES = flash.BYTES_IN_HEAD_BLOCK + ONE_BYTE ' a full head block and the byte that makes the driver program it
+    FULL_BODY_CALLS = (LARGE_BYTES - flash.BYTES_IN_HEAD_BLOCK) / flash.BYTES_IN_BODY_BLOCK ' writes of a whole body block in the large file
+    POP_ONE = 1                                         ' files present for the first open() case
+    POP_FIFTY = 50                                      ' files present for the second open() case
+    POP_HUNDRED = 100                                   ' files present for the third open() case
+    POP_DIGIT_OFFSET = 2                                ' offset of the file number in the name of a small file
+    POP_DIGITS = 3                                      ' digits of that number
+    NO_BLOCKS = 0                                       ' blocks in use on an empty flash
+    NO_FILES = 0                                        ' files on an empty flash
+
+CON ' ---- Chunks and Data ----
+
+    FIRST_CHUNK = 0                                     ' number of the chunk that fills the head block
+    CHUNK_BYTES = flash.BYTES_IN_BODY_BLOCK             ' bytes of the largest chunk
+    MAX_CHUNKS = 2 + (LARGE_BYTES / flash.BYTES_IN_BODY_BLOCK) ' chunks of the largest file, with room to spare
+    BYTES_PER_LONG = 4                                  ' bytes of one chunk CRC
+    SPARE_BLOCKS = 8                                    ' free blocks the run needs beyond the blocks of its files
+    CRC_POLYNOMIAL = $EDB8_8320                         ' polynomial of every CRC the program computes
+    PATTERN_PAGE_SHIFT = 8                              ' 256-byte pages
+    BYTE_MASK = $FF                                     ' keeps a pattern value to one byte
+    SEED_SMALL = 11                                     ' pattern of the first transfer
+    SEED_MEDIUM = 13                                    ' pattern of the second transfer
+    SEED_LARGE = 17                                     ' pattern of the third transfer
+    SEED_FLUSH = 19                                     ' pattern of the file of the write that programs a full block
+    POISON_BYTE = $A5                                   ' value read buffers are filled with before a read
+    NO_MISMATCH = -1                                    ' firstMismatch() result when the buffers agree
+
+CON ' ---- Time Conversion ----
+
+    MILLIS_PER_SECOND = 1000                            ' milliseconds in a second
+    MICROS_PER_SECOND = 1_000_000                       ' microseconds in a second
+    TICK_UNIT = 1_000_000_000                           ' ticks counted in the high long of a count
+    TICK_UNIT_DIGITS = 9                                ' decimal digits of the ticks below TICK_UNIT
+    BRACKET_TOLERANCE_MS = 3                            ' milliseconds a bracket and getms() may differ by
+    TEXT_BYTES = 24                                     ' bytes the text of a tick count holds
+
+CON ' ---- Table Rows ----
+
+    ' the measurements, one table row each, in the order they are taken:
+    '  ROW_OPEN_ONE, ROW_OPEN_FIFTY, ROW_OPEN_HUNDRED - open(,r) of the last of 1, 50 and 100 files
+    '  ROW_FLUSH_HEAD                                 - the write of one byte after a full head block
+    '  ROW_WRITE_SMALL, ROW_READ_SMALL                - 4 KB written and read
+    '  ROW_WRITE_MEDIUM, ROW_READ_MEDIUM              - 64 KB written and read
+    '  ROW_WRITE_LARGE, ROW_READ_LARGE                - 690 KB written and read
+    '  ROW_BLOCK_MEAN, ROW_BLOCK_MAX                  - mean and slowest write of a whole body block in the large file
+    '  ROW_SEEK_FAR                                   - seek to the last byte of the large file
+    '  ROW_CAN_MOUNT, ROW_MOUNT, ROW_FORMAT           - can_mount(), mount() and format() of the populated flash
+    '  ROW_COUNT                                      - the number of rows
+    #0, ROW_OPEN_ONE, ROW_OPEN_FIFTY, ROW_OPEN_HUNDRED, ROW_FLUSH_HEAD, ROW_WRITE_SMALL, ROW_READ_SMALL, ROW_WRITE_MEDIUM, ROW_READ_MEDIUM, ROW_WRITE_LARGE, ROW_READ_LARGE, ROW_BLOCK_MEAN, ROW_BLOCK_MAX, ROW_SEEK_FAR, ROW_CAN_MOUNT, ROW_MOUNT, ROW_FORMAT, ROW_COUNT
+
+DAT ' ---- Files and Buffers ----
+
+popFile         BYTE    "pf000.bin", 0                  ' template of the names of the small files
+smallFile       BYTE    "pf_4k.bin", 0                  ' the 4 KB file
+mediumFile      BYTE    "pf_64k.bin", 0                 ' the 64 KB file
+largeFile       BYTE    "pf_690k.bin", 0                ' the 690 KB file
+flushFile       BYTE    "pf_flush.bin", 0               ' the file of the write that programs a full block
+
+oneByte         BYTE    0                               ' receives the byte read after the far seek
+textBuf         BYTE    0[TEXT_BYTES]                   ' the text of a number being shown
+chunkBuf        BYTE    0[CHUNK_BYTES]                  ' one chunk of a transfer, or the bytes a small file is expected to hold
+checkBuf        BYTE    0[CHUNK_BYTES]                  ' what a small file is read into to be checked
+
+DAT ' ---- Measurement Records ----
+
+                ALIGNL
+rowBytes        LONG    0[ROW_COUNT]                    ' bytes moved by the bracketed calls of each row
+rowCalls        LONG    0[ROW_COUNT]                    ' bracketed calls of each row
+rowTickHigh     LONG    0[ROW_COUNT]                    ' whole billions of ticks of each row
+rowTickLow      LONG    0[ROW_COUNT]                    ' ticks of each row below a billion
+rowCompleted    LONG    FALSE[ROW_COUNT]                ' TRUE when every bracketed call completed inside a sound bracket
+rowVerified     LONG    FALSE[ROW_COUNT]                ' TRUE when the data of the row was verified
+
+writeDigests    LONG    0[MAX_CHUNKS]                   ' CRC of each chunk written
+readDigests     LONG    0[MAX_CHUNKS]                   ' CRC of each chunk read back
+
+swHigh          LONG    0                               ' whole billions of ticks timed since swReset()
+swLow           LONG    0                               ' ticks timed since swReset(), below a billion
+swCalls         LONG    0                               ' brackets timed since swReset()
+swSound         LONG    TRUE                            ' TRUE while every bracket since swReset() was sound
+
+blockHigh       LONG    0                               ' whole billions of ticks of the whole-body-block writes
+blockLow        LONG    0                               ' ticks of the whole-body-block writes below a billion
+blockCount      LONG    0                               ' whole-body-block writes timed
+blockMaxTicks   LONG    0                               ' ticks of the slowest whole-body-block write
+blockSound      LONG    TRUE                            ' TRUE while every whole-body-block write bracket was sound
+
+populatedCount  LONG    0                               ' small files written so far
+populationOk    LONG    TRUE                            ' TRUE while every small file was written
+popUsedBlocks   LONG    0                               ' blocks in use before the flash is unmounted
+popFileCount    LONG    0                               ' files present before the flash is unmounted
+bSpaceOk        LONG    FALSE                           ' TRUE when the formatted flash had room for every file of the run
+
+
+PUB go() | status, pFailedCall
+'' Run every measurement, then show the table and the result.
+''
+
+' Local Variables:
+' @local status - status of the format and mount that start the run
+' @local pFailedCall - address of the name of the call that failed
+
+    pFailedCall := @"format()"
+    status := flash.format()
+    if status == flash.SUCCESS
+        pFailedCall := @"mount()"
+        status := flash.mount()
+
+    if status == flash.SUCCESS
+        measureAll()
+        reportAll()
+    else
+        utils.showError(pFailedCall, status)
+        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
+        utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    debug("* Test Complete")
+    utils.ShowTestResult(@"RT_performance_baseline")
+
+
+PRI measureAll()
+' Take every measurement, in the order of the table rows, recording each; no RT_utilities method is called.
+
+    checkSpace()
+    measureOpens()
+    measureFlush()
+    measureTransfers()
+    measureSeek()
+    measureMountOps()
+
+
+PRI checkSpace() | freeBlocks, neededBlocks
+' Record whether the formatted flash has room for every file of the run.
+
+' Local Variables:
+' @local freeBlocks - free blocks the filesystem has
+' @local neededBlocks - blocks the files of the run occupy, with the spare blocks
+
+    _, freeBlocks, _ := flash.stats()
+    neededBlocks := layoutBlocks(SMALL_BYTES) + layoutBlocks(MEDIUM_BYTES) + layoutBlocks(LARGE_BYTES) + layoutBlocks(FLUSH_FILE_BYTES)
+    neededBlocks += (POP_HUNDRED * layoutBlocks(POP_FILE_BYTES)) + SPARE_BLOCKS
+    bSpaceOk := freeBlocks >= neededBlocks
+
+
+PRI measureOpens()
+' Time open(,r) of the last small file written while 1, 50 and 100 small files are present.
+
+    measureOpen(ROW_OPEN_ONE, POP_ONE)
+    measureOpen(ROW_OPEN_FIFTY, POP_FIFTY)
+    measureOpen(ROW_OPEN_HUNDRED, POP_HUNDRED)
+
+
+PRI measureOpen(rowIdx, fileTotal) | bPopulated, lastIdx, handle, startMs, startCt, elapsedTicks, bSound, readCount, closeStatus, fileCount, bCompleted, bVerified
+' Write small files until fileTotal are present, then time open(,r) of the last one and check its content, as one row.
+
+' @param rowIdx - the row of the measurement, one of the ROW_ values
+' @param fileTotal - small files that must be present
+
+' Local Variables:
+' @local bPopulated - TRUE when every small file written so far was written
+' @local lastIdx - number of the last small file
+' @local handle - handle open() returned
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local readCount - bytes read from the file
+' @local closeStatus - status close() returned
+' @local fileCount - files the filesystem holds
+' @local bCompleted - TRUE when the call completed inside a sound bracket
+' @local bVerified - TRUE when the file holds what was written and the file count is the one expected
+
+    bPopulated := populateTo(fileTotal)
+    lastIdx := fileTotal - 1
+    setPopName(lastIdx)
+    swReset()
+    startMs := getms()
+    startCt := getct()
+    handle := flash.open(@popFile, flash.FILEMODE_READ)
+    elapsedTicks := getct() - startCt
+    bSound := bracketSound(elapsedTicks, startMs)
+    swAdd(elapsedTicks, bSound)
+
+    bCompleted := bPopulated and handle >= utils.FIRST_HANDLE and swSound
+    bVerified := FALSE
+    if handle >= utils.FIRST_HANDLE
+        fillPattern(@chunkBuf, 0, POP_FILE_BYTES, lastIdx)
+        bytefill(@checkBuf, POISON_BYTE, POP_FILE_BYTES)
+        readCount := flash.read(handle, @checkBuf, POP_FILE_BYTES)
+        closeStatus := flash.close(handle)
+        _, _, fileCount := flash.stats()
+        bVerified := readCount == POP_FILE_BYTES and firstMismatch(@chunkBuf, @checkBuf, POP_FILE_BYTES) == NO_MISMATCH and fileCount == fileTotal and closeStatus == flash.SUCCESS
+    recordRow(rowIdx, NO_BYTES, bCompleted, bVerified)
+
+
+PRI populateTo(fileTotal) : bAllWritten | bWritten
+' Write small files, numbered from the count written so far, until fileTotal have been written.
+
+' @param fileTotal - small files that must be present
+' @returns bAllWritten - TRUE when every small file written so far was written and closed
+
+' Local Variables:
+' @local bWritten - TRUE when the file just written was written and closed
+
+    repeat while populatedCount < fileTotal
+        bWritten := writePopFile(populatedCount)
+        populationOk := populationOk and bWritten
+        populatedCount++
+    bAllWritten := populationOk
+
+
+PRI writePopFile(fileIdx) : bWritten | handle, writeCount, closeStatus
+' Write one small file with the pattern of its number and close it.
+
+' @param fileIdx - number of the small file
+' @returns bWritten - TRUE when every byte was written and the close succeeded
+
+' Local Variables:
+' @local handle - handle of the file
+' @local writeCount - what write() returned
+' @local closeStatus - what close() returned
+
+    bWritten := FALSE
+    setPopName(fileIdx)
+    fillPattern(@chunkBuf, 0, POP_FILE_BYTES, fileIdx)
+    handle := flash.open(@popFile, flash.FILEMODE_WRITE)
+    if handle >= utils.FIRST_HANDLE
+        writeCount := flash.write(handle, @chunkBuf, POP_FILE_BYTES)
+        closeStatus := flash.close(handle)
+        bWritten := writeCount == POP_FILE_BYTES and closeStatus == flash.SUCCESS
+
+
+PRI measureFlush() | handle, startMs, startCt, elapsedTicks, bSound, headCount, flushCount, closeStatus, readCount, readCrc, expectedCrc, bCompleted, bVerified
+' Fill a head block, then time the write of the one byte after it, which makes the driver program the full block, as one row.
+
+' Local Variables:
+' @local handle - handle of the file
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local headCount - what the write that fills the head block returned
+' @local flushCount - what the timed write returned
+' @local closeStatus - what close() returned
+' @local readCount - bytes read back
+' @local readCrc - CRC of the bytes read back
+' @local expectedCrc - CRC of the bytes written
+' @local bCompleted - TRUE when the calls completed inside a sound bracket
+' @local bVerified - TRUE when the file read back holds the bytes written
+
+    fillPattern(@chunkBuf, 0, FLUSH_FILE_BYTES, SEED_FLUSH)
+    expectedCrc := getcrc(@chunkBuf, CRC_POLYNOMIAL, FLUSH_FILE_BYTES)
+    swReset()
+    bCompleted := FALSE
+    handle := flash.open(@flushFile, flash.FILEMODE_WRITE)
+    if handle >= utils.FIRST_HANDLE
+        headCount := flash.write(handle, @chunkBuf, flash.BYTES_IN_HEAD_BLOCK)  ' fills the head block; nothing is programmed yet
+        startMs := getms()
+        startCt := getct()
+        flushCount := flash.write(handle, @chunkBuf + flash.BYTES_IN_HEAD_BLOCK, ONE_BYTE)
+        elapsedTicks := getct() - startCt
+        bSound := bracketSound(elapsedTicks, startMs)
+        swAdd(elapsedTicks, bSound)
+        closeStatus := flash.close(handle)
+        bCompleted := headCount == flash.BYTES_IN_HEAD_BLOCK and flushCount == ONE_BYTE and closeStatus == flash.SUCCESS and swSound
+
+    readCount, readCrc := readWholeFile(@flushFile, FLUSH_FILE_BYTES)
+    bVerified := readCount == FLUSH_FILE_BYTES and readCrc == expectedCrc and flash.file_size(@flushFile) == FLUSH_FILE_BYTES
+    recordRow(ROW_FLUSH_HEAD, ONE_BYTE, bCompleted, bVerified)
+
+
+PRI measureTransfers() | bLargeVerified
+' Write and read the 4 KB, 64 KB and 690 KB files, then record the rows of the whole-body-block writes of the last.
+
+' Local Variables:
+' @local bLargeVerified - TRUE when the large file was read back with the CRC it was written with
+
+    measureTransfer(@smallFile, SMALL_BYTES, SEED_SMALL, ROW_WRITE_SMALL, ROW_READ_SMALL)
+    measureTransfer(@mediumFile, MEDIUM_BYTES, SEED_MEDIUM, ROW_WRITE_MEDIUM, ROW_READ_MEDIUM)
+    bLargeVerified := measureTransfer(@largeFile, LARGE_BYTES, SEED_LARGE, ROW_WRITE_LARGE, ROW_READ_LARGE)
+    recordBlockRows(bLargeVerified)
+
+
+PRI measureTransfer(pFilename, byteCount, seed, writeRow, readRow) : bVerified | bWritten, writeCrc, bRead, readCrc
+' Write a file, then read it back, and record the two rows; both are verified when the CRC of the chunks read equals the CRC of the chunks written.
+
+' @param pFilename - address of zstring with the file name
+' @param byteCount - bytes of the file
+' @param seed - number that makes the pattern differ from patterns of other seeds
+' @param writeRow - the row of the write, one of the ROW_ values
+' @param readRow - the row of the read, one of the ROW_ values
+' @returns bVerified - TRUE when the file was written, read back whole, and the two CRCs are equal
+
+' Local Variables:
+' @local bWritten - TRUE when the write completed
+' @local writeCrc - CRC of the chunks written
+' @local bRead - TRUE when the read completed
+' @local readCrc - CRC of the chunks read
+
+    bWritten, writeCrc := transferWrite(pFilename, byteCount, seed)
+    recordRow(writeRow, byteCount, bWritten, FALSE)
+    bRead, readCrc := transferRead(pFilename, byteCount)
+    bVerified := bWritten and bRead and readCrc == writeCrc and flash.file_size(pFilename) == byteCount
+    recordRow(readRow, byteCount, bRead, bVerified)
+    setVerified(writeRow, bVerified)
+
+
+PRI transferWrite(pFilename, byteCount, seed) : bCompleted, streamCrc | handle, chunkIdx, chunkLen, writtenCount, writeCount, startMs, startCt, elapsedTicks, bSound, closeStatus
+' Write a file one chunk at a time, timing every write() and the close(), and reduce the CRC of each chunk written to one CRC.
+
+' @param pFilename - address of zstring with the file name
+' @param byteCount - bytes of the file
+' @param seed - number that makes the pattern differ from patterns of other seeds
+' @returns bCompleted - TRUE when every byte was written, the close succeeded and every bracket was sound
+' @returns streamCrc - CRC of the CRCs of the chunks written
+
+' Local Variables:
+' @local handle - handle of the file
+' @local chunkIdx - number of the chunk being written
+' @local chunkLen - bytes of the chunk being written
+' @local writtenCount - bytes the driver took so far
+' @local writeCount - bytes the driver took from the chunk
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local closeStatus - status close() returned
+
+    bCompleted := FALSE
+    streamCrc := 0
+    swReset()
+    blockReset()
+    handle := flash.open(pFilename, flash.FILEMODE_WRITE)
+    if handle >= utils.FIRST_HANDLE
+        writtenCount := 0
+        chunkIdx := 0
+        repeat while writtenCount < byteCount
+            chunkLen := chunkLength(chunkIdx, byteCount - writtenCount)
+            fillPattern(@chunkBuf, writtenCount, chunkLen, seed)
+            LONG[@writeDigests][chunkIdx] := getcrc(@chunkBuf, CRC_POLYNOMIAL, chunkLen)
+            startMs := getms()
+            startCt := getct()
+            writeCount := flash.write(handle, @chunkBuf, chunkLen)
+            elapsedTicks := getct() - startCt
+            bSound := bracketSound(elapsedTicks, startMs)
+            swAdd(elapsedTicks, bSound)
+            if chunkLen == flash.BYTES_IN_BODY_BLOCK
+                blockAdd(elapsedTicks, bSound)
+            chunkIdx++
+            if writeCount <> chunkLen
+                quit
+            writtenCount += writeCount
+        startMs := getms()
+        startCt := getct()
+        closeStatus := flash.close(handle)
+        elapsedTicks := getct() - startCt
+        bSound := bracketSound(elapsedTicks, startMs)
+        swAdd(elapsedTicks, bSound)
+        streamCrc := getcrc(@writeDigests, CRC_POLYNOMIAL, chunkIdx * BYTES_PER_LONG)
+        bCompleted := writtenCount == byteCount and closeStatus == flash.SUCCESS and swSound
+
+
+PRI transferRead(pFilename, byteCount) : bCompleted, streamCrc | handle, chunkIdx, chunkLen, readTotal, readCount, startMs, startCt, elapsedTicks, bSound, closeStatus
+' Read a file one chunk at a time, timing every read(), and reduce the CRC of each chunk read to one CRC.
+
+' @param pFilename - address of zstring with the file name
+' @param byteCount - bytes of the file
+' @returns bCompleted - TRUE when every byte was read, the close succeeded and every bracket was sound
+' @returns streamCrc - CRC of the CRCs of the chunks read
+
+' Local Variables:
+' @local handle - handle of the file
+' @local chunkIdx - number of the chunk being read
+' @local chunkLen - bytes asked for by the read being made
+' @local readTotal - bytes the driver returned so far
+' @local readCount - bytes the driver returned for the chunk
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local closeStatus - status close() returned
+
+    bCompleted := FALSE
+    streamCrc := 0
+    swReset()
+    handle := flash.open(pFilename, flash.FILEMODE_READ)
+    if handle >= utils.FIRST_HANDLE
+        readTotal := 0
+        chunkIdx := 0
+        repeat while readTotal < byteCount
+            chunkLen := chunkLength(chunkIdx, byteCount - readTotal)
+            bytefill(@chunkBuf, POISON_BYTE, chunkLen)
+            startMs := getms()
+            startCt := getct()
+            readCount := flash.read(handle, @chunkBuf, chunkLen)
+            elapsedTicks := getct() - startCt
+            bSound := bracketSound(elapsedTicks, startMs)
+            swAdd(elapsedTicks, bSound)
+            LONG[@readDigests][chunkIdx] := getcrc(@chunkBuf, CRC_POLYNOMIAL, readCount)
+            chunkIdx++
+            readTotal += readCount
+            if readCount <> chunkLen
+                quit
+        closeStatus := flash.close(handle)
+        streamCrc := getcrc(@readDigests, CRC_POLYNOMIAL, chunkIdx * BYTES_PER_LONG)
+        bCompleted := readTotal == byteCount and closeStatus == flash.SUCCESS and swSound
+
+
+PRI recordBlockRows(bVerified) | meanHigh, meanLow, maxHigh, maxLow, bBlocksOk
+' Record the rows of the mean and of the slowest write of a whole body block, taken from the writes of the last file written.
+
+' @param bVerified - TRUE when the file those writes made was verified
+
+' Local Variables:
+' @local meanHigh - whole billions of ticks of the mean write
+' @local meanLow - ticks of the mean write below a billion
+' @local maxHigh - whole billions of ticks of the slowest write
+' @local maxLow - ticks of the slowest write below a billion
+' @local bBlocksOk - TRUE when every write of a whole body block the file holds was timed inside a sound bracket
+
+    bBlocksOk := blockSound and blockCount == FULL_BODY_CALLS
+    meanHigh, meanLow := meanTicks(blockHigh, blockLow, blockCount)
+    recordRowTicks(ROW_BLOCK_MEAN, flash.BYTES_IN_BODY_BLOCK, blockCount, meanHigh, meanLow, bBlocksOk, bVerified)
+    maxHigh := blockMaxTicks +/ TICK_UNIT
+    maxLow := blockMaxTicks +// TICK_UNIT
+    recordRowTicks(ROW_BLOCK_MAX, flash.BYTES_IN_BODY_BLOCK, ONE_CALL, maxHigh, maxLow, bBlocksOk, bVerified)
+
+
+PRI measureSeek() | handle, startMs, startCt, elapsedTicks, bSound, seekPosition, readCount, closeStatus, bCompleted, bVerified
+' Time a seek from the start of the large file to its last byte, then read that byte, as one row.
+
+' Local Variables:
+' @local handle - handle of the file
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local seekPosition - what seek() returned
+' @local readCount - bytes read at the new position
+' @local closeStatus - what close() returned
+' @local bCompleted - TRUE when the seek reached the offset inside a sound bracket
+' @local bVerified - TRUE when the byte read is the byte of the pattern at that offset
+
+    swReset()
+    bCompleted := FALSE
+    bVerified := FALSE
+    handle := flash.open(@largeFile, flash.FILEMODE_READ)
+    if handle >= utils.FIRST_HANDLE
+        startMs := getms()
+        startCt := getct()
+        seekPosition := flash.seek(handle, FAR_OFFSET, flash.SK_FILE_START)
+        elapsedTicks := getct() - startCt
+        bSound := bracketSound(elapsedTicks, startMs)
+        swAdd(elapsedTicks, bSound)
+        readCount := flash.read(handle, @oneByte, ONE_BYTE)
+        closeStatus := flash.close(handle)
+        bCompleted := seekPosition == FAR_OFFSET and swSound
+        bVerified := readCount == ONE_BYTE and BYTE[@oneByte] == patternByte(FAR_OFFSET, SEED_LARGE) and closeStatus == flash.SUCCESS
+    recordRow(ROW_SEEK_FAR, NO_BYTES, bCompleted, bVerified)
+
+
+PRI measureMountOps() | status
+' Unmount the populated flash, then time can_mount(), mount() and format() in that order.
+
+' Local Variables:
+' @local status - what unmount() returned
+
+    popUsedBlocks, _, popFileCount := flash.stats()
+    status := flash.unmount()
+    measureCanMount(status == flash.SUCCESS and flash.mounted() == FALSE)
+    measureMount()
+    measureFormat()
+
+
+PRI measureCanMount(bUnmounted) | startMs, startCt, elapsedTicks, bSound, bCanMount
+' Time can_mount() of the unmounted populated flash, as one row.
+
+' @param bUnmounted - TRUE when the filesystem was unmounted before the call
+
+' Local Variables:
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local bCanMount - what can_mount() returned
+
+    swReset()
+    startMs := getms()
+    startCt := getct()
+    bCanMount := flash.can_mount()
+    elapsedTicks := getct() - startCt
+    bSound := bracketSound(elapsedTicks, startMs)
+    swAdd(elapsedTicks, bSound)
+    recordRow(ROW_CAN_MOUNT, NO_BYTES, bUnmounted and bCanMount == TRUE and swSound, flash.mounted() == FALSE)
+
+
+PRI measureMount() | startMs, startCt, elapsedTicks, bSound, status, usedBlocks, fileCount, bSame
+' Time mount() of the populated flash, as one row; the blocks and files after it must be those before the unmount.
+
+' Local Variables:
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local status - what mount() returned
+' @local usedBlocks - blocks in use after the mount
+' @local fileCount - files present after the mount
+' @local bSame - TRUE when mount() succeeded and the flash holds what it held before the unmount
+
+    swReset()
+    startMs := getms()
+    startCt := getct()
+    status := flash.mount()
+    elapsedTicks := getct() - startCt
+    bSound := bracketSound(elapsedTicks, startMs)
+    swAdd(elapsedTicks, bSound)
+    usedBlocks, _, fileCount := flash.stats()
+    bSame := status == flash.SUCCESS and usedBlocks == popUsedBlocks and fileCount == popFileCount and flash.file_size(@smallFile) == SMALL_BYTES
+    recordRow(ROW_MOUNT, NO_BYTES, status == flash.SUCCESS and swSound, bSame)
+    setVerified(ROW_CAN_MOUNT, LONG[@rowVerified][ROW_CAN_MOUNT] and bSame)
+
+
+PRI measureFormat() | startMs, startCt, elapsedTicks, bSound, status, usedBlocks, fileCount, bEmpty
+' Time format() of the populated flash, which also mounts it, as one row; the flash must then hold no file.
+
+' Local Variables:
+' @local startMs - getms() before the bracket
+' @local startCt - getct() at the start of the bracket
+' @local elapsedTicks - ticks the bracket counted
+' @local bSound - TRUE when the bracket agrees with getms()
+' @local status - what format() returned
+' @local usedBlocks - blocks in use after the format
+' @local fileCount - files present after the format
+' @local bEmpty - TRUE when the flash is mounted and holds no block and no file
+
+    swReset()
+    startMs := getms()
+    startCt := getct()
+    status := flash.format()
+    elapsedTicks := getct() - startCt
+    bSound := bracketSound(elapsedTicks, startMs)
+    swAdd(elapsedTicks, bSound)
+    usedBlocks, _, fileCount := flash.stats()
+    bEmpty := flash.mounted() == TRUE and usedBlocks == NO_BLOCKS and fileCount == NO_FILES and flash.exists(@smallFile) == FALSE
+    recordRow(ROW_FORMAT, NO_BYTES, status == flash.SUCCESS and swSound, bEmpty)
+
+
+PRI readWholeFile(pFilename, byteCount) : readCount, readCrc | handle
+' Read a file whole into the check buffer, outside any bracket, and compute the CRC of what was read.
+
+' @param pFilename - address of zstring with the file name
+' @param byteCount - bytes to read, at most CHUNK_BYTES
+' @returns readCount - bytes read, or 0 when the file did not open
+' @returns readCrc - CRC of the bytes read
+
+' Local Variables:
+' @local handle - handle of the file
+
+    readCount := 0
+    bytefill(@checkBuf, POISON_BYTE, byteCount)
+    handle := flash.open(pFilename, flash.FILEMODE_READ)
+    if handle >= utils.FIRST_HANDLE
+        readCount := flash.read(handle, @checkBuf, byteCount)
+        flash.close(handle)
+    readCrc := getcrc(@checkBuf, CRC_POLYNOMIAL, readCount)
+
+
+PRI reportAll() | rowIdx
+' Show the table, then make one test of the clock, one of the room and one of each row.
+
+' Local Variables:
+' @local rowIdx - number of the row being checked
+
+    utils.showChipAndDriverVersion()
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+    utils.setCheckCountPerTest(1)                       ' each check of a row is shown on its own
+    showTable()
+
+    utils.startTestGroup(@"timed measurements")
+    utils.startTest(@"the clock the table states is the clock the program was built for")
+    utils.evaluateSubValue(clkfreq, @"clkfreq", _CLKFREQ)
+    utils.startTest(@"the formatted flash has room for every file of the run")
+    utils.evaluateSubValue(bSpaceOk, @"free blocks cover the files and the spare blocks", TRUE)
+    repeat ROW_COUNT with rowIdx
+        utils.startTest(rowName(rowIdx))
+        utils.evaluateSubValue(LONG[@rowCompleted][rowIdx], @"every timed call completed inside a sound bracket", TRUE)
+        utils.evaluateSubValue(LONG[@rowVerified][rowIdx], @"the data was verified", TRUE)
+
+
+PRI showTable() | rowIdx, tickHigh, tickLow, pStatus
+' Show every row of the measurements, with the clock the ticks were counted at.
+
+' Local Variables:
+' @local rowIdx - number of the row being shown
+' @local tickHigh - whole billions of ticks of the row
+' @local tickLow - ticks of the row below a billion
+' @local pStatus - address of the text saying whether the row completed and was verified
+
+    debug(" ")
+    debug("* Timing table: clkfreq ", udec_(clkfreq), " Hz, 1 us = ", udec_(ticksPerMicro()), " ticks, ticks are system clock ticks counted by getct()")
+    debug("PERF| row | measurement | bytes moved | timed calls | ticks | microseconds | status")
+    repeat ROW_COUNT with rowIdx
+        tickHigh := LONG[@rowTickHigh][rowIdx]
+        tickLow := LONG[@rowTickLow][rowIdx]
+        ticksText(@textBuf, tickHigh, tickLow)
+        pStatus := LONG[@rowCompleted][rowIdx] and LONG[@rowVerified][rowIdx] ? @"ok" : @"NOT OK"
+        debug("PERF| ", udec_(rowIdx + 1), " | ", zstr_(rowName(rowIdx)), " | ", udec_(LONG[@rowBytes][rowIdx]), " B | ", udec_(LONG[@rowCalls][rowIdx]), " calls | ", zstr_(@textBuf), " ticks | ", udec_(microsOf(tickHigh, tickLow)), " us | ", zstr_(pStatus))
+    debug(" ")
+
+
+PRI rowName(rowIdx) : pName
+' Give the name of the measurement of a row.
+
+' @param rowIdx - the row, one of the ROW_ values
+' @returns pName - address of zstring with the name
+
+    case rowIdx
+        ROW_OPEN_ONE: pName := @"open(,r) with 1 file present"
+        ROW_OPEN_FIFTY: pName := @"open(,r) with 50 files present"
+        ROW_OPEN_HUNDRED: pName := @"open(,r) with 100 files present"
+        ROW_FLUSH_HEAD: pName := @"write() of the one byte after a full head block"
+        ROW_WRITE_SMALL: pName := @"write 4 KB: write() calls and close()"
+        ROW_READ_SMALL: pName := @"read 4 KB: read() calls"
+        ROW_WRITE_MEDIUM: pName := @"write 64 KB: write() calls and close()"
+        ROW_READ_MEDIUM: pName := @"read 64 KB: read() calls"
+        ROW_WRITE_LARGE: pName := @"write 690 KB: write() calls and close()"
+        ROW_READ_LARGE: pName := @"read 690 KB: read() calls"
+        ROW_BLOCK_MEAN: pName := @"write block: mean of the write() calls of a whole body block in the 690 KB file"
+        ROW_BLOCK_MAX: pName := @"write block: slowest write() call of a whole body block in the 690 KB file"
+        ROW_SEEK_FAR: pName := @"seek() from the start to the last byte of the 690 KB file"
+        ROW_CAN_MOUNT: pName := @"can_mount() of the unmounted populated flash"
+        ROW_MOUNT: pName := @"mount() of the populated flash"
+        other: pName := @"format() of the populated flash, including its mount"
+
+
+PRI recordRow(rowIdx, byteCount, bCompleted, bVerified)
+' Record a row from the count the stopwatch holds.
+
+' @param rowIdx - the row, one of the ROW_ values
+' @param byteCount - bytes moved by the timed calls
+' @param bCompleted - TRUE when every timed call completed inside a sound bracket
+' @param bVerified - TRUE when the data of the row was verified
+
+    recordRowTicks(rowIdx, byteCount, swCalls, swHigh, swLow, bCompleted, bVerified)
+
+
+PRI recordRowTicks(rowIdx, byteCount, callCount, tickHigh, tickLow, bCompleted, bVerified)
+' Record a row from a count of timed calls and the ticks they took.
+
+' @param rowIdx - the row, one of the ROW_ values
+' @param byteCount - bytes moved by the timed calls
+' @param callCount - timed calls the ticks cover
+' @param tickHigh - whole billions of ticks
+' @param tickLow - ticks below a billion
+' @param bCompleted - TRUE when every timed call completed inside a sound bracket
+' @param bVerified - TRUE when the data of the row was verified
+
+    LONG[@rowBytes][rowIdx] := byteCount
+    LONG[@rowCalls][rowIdx] := callCount
+    LONG[@rowTickHigh][rowIdx] := tickHigh
+    LONG[@rowTickLow][rowIdx] := tickLow
+    LONG[@rowCompleted][rowIdx] := bCompleted
+    LONG[@rowVerified][rowIdx] := bVerified
+
+
+PRI setVerified(rowIdx, bVerified)
+' Set whether the data of a row was verified.
+
+' @param rowIdx - the row, one of the ROW_ values
+' @param bVerified - TRUE when the data of the row was verified
+
+    LONG[@rowVerified][rowIdx] := bVerified
+
+
+PRI swReset()
+' Clear the stopwatch.
+
+    swHigh := 0
+    swLow := 0
+    swCalls := 0
+    swSound := TRUE
+
+
+PRI swAdd(elapsedTicks, bSound)
+' Add the ticks of one bracket to the stopwatch.
+
+' @param elapsedTicks - ticks the bracket counted
+' @param bSound - TRUE when the bracket agrees with getms()
+
+    addTicks(@swHigh, @swLow, elapsedTicks)
+    swCalls++
+    swSound := swSound and bSound
+
+
+PRI blockReset()
+' Clear the count of the writes of a whole body block.
+
+    blockHigh := 0
+    blockLow := 0
+    blockCount := 0
+    blockMaxTicks := 0
+    blockSound := TRUE
+
+
+PRI blockAdd(elapsedTicks, bSound)
+' Add the ticks of the write of a whole body block to the count of those writes.
+
+' @param elapsedTicks - ticks the bracket counted
+' @param bSound - TRUE when the bracket agrees with getms()
+
+    addTicks(@blockHigh, @blockLow, elapsedTicks)
+    blockCount++
+    blockSound := blockSound and bSound
+    if elapsedTicks +> blockMaxTicks
+        blockMaxTicks := elapsedTicks
+
+
+PRI addTicks(pHigh, pLow, elapsedTicks)
+' Add a count of ticks to a count held as whole billions and the ticks below a billion.
+
+' @param pHigh - address of the long that holds the whole billions
+' @param pLow - address of the long that holds the ticks below a billion
+' @param elapsedTicks - ticks to add, as an unsigned 32-bit count
+
+    LONG[pHigh] += elapsedTicks +/ TICK_UNIT
+    LONG[pLow] += elapsedTicks +// TICK_UNIT
+    if LONG[pLow] >= TICK_UNIT
+        LONG[pLow] -= TICK_UNIT
+        LONG[pHigh]++
+
+
+PRI bracketSound(elapsedTicks, startMs) : bSound | elapsedMs, tickMs
+' Tell whether the ticks of a bracket agree with the milliseconds getms() counted from before it to now.
+
+' @param elapsedTicks - ticks the bracket counted
+' @param startMs - getms() taken before the bracket started
+' @returns bSound - TRUE when the two differ by no more than BRACKET_TOLERANCE_MS
+
+' Local Variables:
+' @local elapsedMs - milliseconds getms() counted
+' @local tickMs - milliseconds the ticks stand for
+
+    elapsedMs := getms() - startMs
+    tickMs := muldiv64(elapsedTicks, MILLIS_PER_SECOND, clkfreq)
+    bSound := abs(elapsedMs - tickMs) <= BRACKET_TOLERANCE_MS
+
+
+PRI meanTicks(tickHigh, tickLow, sampleCount) : meanHigh, meanLow
+' Divide a count of ticks held as whole billions and ticks below a billion by a number of samples.
+
+' @param tickHigh - whole billions of ticks
+' @param tickLow - ticks below a billion
+' @param sampleCount - samples the ticks cover
+' @returns meanHigh - whole billions of ticks of the mean
+' @returns meanLow - ticks of the mean below a billion
+
+    meanHigh := 0
+    meanLow := 0
+    if sampleCount > 0
+        meanHigh := tickHigh +/ sampleCount
+        meanLow := muldiv64(tickHigh +// sampleCount, TICK_UNIT, sampleCount) + (tickLow +/ sampleCount)
+        if meanLow >= TICK_UNIT
+            meanLow -= TICK_UNIT
+            meanHigh++
+
+
+PRI ticksPerMicro() : perMicro
+' Give the ticks of the system clock in one microsecond.
+
+' @returns perMicro - ticks in a microsecond, at least 1
+
+    perMicro := (clkfreq / MICROS_PER_SECOND) #> 1
+
+
+PRI microsOf(tickHigh, tickLow) : micros | perMicro
+' Convert a count of ticks held as whole billions and ticks below a billion to microseconds.
+
+' @param tickHigh - whole billions of ticks
+' @param tickLow - ticks below a billion
+' @returns micros - microseconds the ticks take, rounded down
+
+' Local Variables:
+' @local perMicro - ticks in a microsecond
+
+    perMicro := ticksPerMicro()
+    micros := muldiv64(tickHigh, TICK_UNIT, perMicro) + (tickLow +/ perMicro)
+
+
+PRI ticksText(pDest, tickHigh, tickLow) | textLen
+' Write a count of ticks held as whole billions and ticks below a billion as one decimal number.
+
+' @param pDest - address of the buffer for the text, TEXT_BYTES long
+' @param tickHigh - whole billions of ticks
+' @param tickLow - ticks below a billion
+
+' Local Variables:
+' @local textLen - characters written for the whole billions
+
+    if tickHigh > 0
+        textLen := numberText(pDest, tickHigh, 1)
+        numberText(pDest + textLen, tickLow, TICK_UNIT_DIGITS)
+    else
+        numberText(pDest, tickLow, 1)
+
+
+PRI numberText(pDest, number, padDigits) : textLen | digitIdx, scan
+' Write an unsigned number as decimal text with at least padDigits digits, ended by a zero.
+
+' @param pDest - address of the buffer for the text
+' @param number - the number to write
+' @param padDigits - fewest digits to write, filled with zeros on the left
+' @returns textLen - characters written, not counting the zero
+
+' Local Variables:
+' @local digitIdx - number of the digit being written, from the right
+' @local scan - what is left of the number while its digits are counted
+
+    textLen := 1
+    scan := number +/ utils.DECIMAL_BASE
+    repeat while scan > 0
+        textLen++
+        scan := scan +/ utils.DECIMAL_BASE
+    textLen := textLen #> padDigits
+    repeat textLen with digitIdx
+        BYTE[pDest][textLen - 1 - digitIdx] := "0" + (number +// utils.DECIMAL_BASE)
+        number := number +/ utils.DECIMAL_BASE
+    BYTE[pDest][textLen] := 0
+
+
+PRI setPopName(fileIdx) | digitIdx
+' Put the number of a small file, as POP_DIGITS digits, in the name of the small file.
+
+' @param fileIdx - number of the small file
+
+' Local Variables:
+' @local digitIdx - number of the digit being written, from the right
+
+    repeat POP_DIGITS with digitIdx
+        BYTE[@popFile][POP_DIGIT_OFFSET + POP_DIGITS - 1 - digitIdx] := "0" + (fileIdx +// utils.DECIMAL_BASE)
+        fileIdx := fileIdx +/ utils.DECIMAL_BASE
+
+
+PRI chunkLength(chunkIdx, remainingBytes) : chunkLen
+' Give the bytes of a chunk: a whole head block for the first, a whole body block for the others, or what is left.
+
+' @param chunkIdx - number of the chunk
+' @param remainingBytes - bytes of the file not yet moved
+' @returns chunkLen - bytes of the chunk
+
+    chunkLen := chunkIdx == FIRST_CHUNK ? flash.BYTES_IN_HEAD_BLOCK : flash.BYTES_IN_BODY_BLOCK
+    chunkLen := chunkLen <# remainingBytes
+
+
+PRI layoutBlocks(byteCount) : occupiedBlocks | capacityBytes
+' Find how many blocks hold a size, by filling blocks until their capacity covers it.
+
+' @param byteCount - bytes of the file
+' @returns occupiedBlocks - blocks the file occupies
+
+' Local Variables:
+' @local capacityBytes - bytes the blocks counted so far hold
+
+    occupiedBlocks := 1
+    capacityBytes := flash.BYTES_IN_HEAD_BLOCK
+    repeat while capacityBytes < byteCount
+        occupiedBlocks++
+        capacityBytes += flash.BYTES_IN_BODY_BLOCK
+
+
+PRI patternByte(fileOffset, seed) : patternValue
+' Compute the byte a pattern holds at a file offset.
+
+' @param fileOffset - offset of the byte from the start of the pattern
+' @param seed - number that makes this pattern differ from patterns of other seeds
+' @returns patternValue - the byte at the offset
+
+    patternValue := (fileOffset + (fileOffset >> PATTERN_PAGE_SHIFT) + seed) & BYTE_MASK
+
+
+PRI fillPattern(pBuffer, startOffset, byteCount, seed) | byteIdx
+' Fill a buffer with a repeatable pattern that differs by seed and by 256-byte page, starting at a pattern offset.
+
+' @param pBuffer - address of the buffer to fill
+' @param startOffset - pattern offset of the first byte of the buffer
+' @param byteCount - number of bytes to fill
+' @param seed - number that makes this pattern differ from patterns of other seeds
+
+' Local Variables:
+' @local byteIdx - number of the byte being filled
+
+    repeat byteCount with byteIdx
+        BYTE[pBuffer][byteIdx] := patternByte(startOffset + byteIdx, seed)
+
+
+PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
+' Find the first byte at which two buffers differ.
+
+' @param pFirst - address of the first buffer
+' @param pSecond - address of the second buffer
+' @param byteCount - number of bytes to compare
+' @returns mismatchIdx - offset of the first differing byte, or NO_MISMATCH when the buffers agree
+
+' Local Variables:
+' @local byteIdx - number of the byte being compared
+
+    mismatchIdx := NO_MISMATCH
+    repeat byteCount with byteIdx
+        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+            mismatchIdx := byteIdx
+            quit
+
+
+con { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Copyright (c) 2023 Iron Sheep Productions, LLC
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}
