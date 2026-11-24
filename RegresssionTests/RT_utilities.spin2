@@ -501,6 +501,8 @@ pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount, st
     if signatureCount > 0
         debug("  # ", udec_(signatureCount / 2), " Blocks in chain:")
         showSignatureChain(pSignatureAr, signatureCount, handle)
+        if LONG[pSignatureAr][signatureCount - 2].[0]   ' the last block listed still says more follow
+            debug("  # list holds ", udec_(flash.MAX_FILE_LEN_IN_BLOCKS), " blocks; the chain has more")
     else
         debug("  # 0 Blocks in commit")
 
@@ -512,6 +514,8 @@ pub showFileChain(pFilename) | pSignatureAr, signatureCount
     if signatureCount > 0
         debug("  # ", udec_(signatureCount / 2), " Blocks in file:")
         showSignatureChain(pSignatureAr, signatureCount, -1)
+        if LONG[pSignatureAr][signatureCount - 2].[0]   ' the last block listed still says more follow
+            debug("  # list holds ", udec_(flash.MAX_FILE_LEN_IN_BLOCKS), " blocks; the file has more")
     else
         debug("  # 0 Blocks in file ???")
 

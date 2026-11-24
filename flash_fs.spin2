@@ -3049,7 +3049,9 @@ PUB TEST_getFileBlockSignatures(p_filename, p_sigLong) : sigCount | signature[2]
 '' @param p_filename - address of a zstring containing the filename
 '' @param p_sigLong - address of a long array of at least MAX_FILE_LEN_IN_BLOCKS * 2 longs to receive the signatures
 '' @returns sigCount - the number of longs placed in the array (two per block: signature, data offset),
-'' .. 0 if the file doesn't exist or the file system is NOT mounted (error() then holds E_NOT_MOUNTED)
+'' .. 0 if the file doesn't exist or the file system is NOT mounted (error() then holds E_NOT_MOUNTED).
+'' .. A chain longer than MAX_FILE_LEN_IN_BLOCKS blocks is listed up to that many; the last block listed
+'' .. then still has its more-blocks bit (signature bit 0) set
 
 ' Local Variables:
 ' @local signature - temporary storage for a block state bits
@@ -3069,7 +3071,7 @@ PUB TEST_getFileBlockSignatures(p_filename, p_sigLong) : sigCount | signature[2]
                 LONG[p_sigLong][sigCount++] := signature[1]                     ' place the dataOffset in list
                 ifnot signature.[0]                                             ' if last block, exit loop
                     quit
-                if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                       ' if filled table, exit loop
+                if sigCount >= MAX_FILE_LEN_IN_BLOCKS * 2                       ' if filled table, exit loop
                     quit
                 bIsHeadSig := false
                 block_address := field[IDToBlock][signature.[31..20]]           ' get next block address
@@ -3084,7 +3086,9 @@ PUB TEST_getCommitBlockSignatures(handle, p_sigLong) : sigCount | pBuff, endPtr,
 '' @param handle - a handle to an open file
 '' @param p_sigLong - address of a long array of at least MAX_FILE_LEN_IN_BLOCKS * 2 longs to receive the signatures
 '' @returns sigCount - the number of longs placed in the array (two per block: signature, data offset),
-'' .. 0 if the file system is NOT mounted or the handle is not valid (error() then holds E_NOT_MOUNTED or E_BAD_HANDLE)
+'' .. 0 if the file system is NOT mounted or the handle is not valid (error() then holds E_NOT_MOUNTED or E_BAD_HANDLE).
+'' .. A chain longer than MAX_FILE_LEN_IN_BLOCKS blocks is listed up to that many; the last block listed
+'' .. then still has its more-blocks bit (signature bit 0) set
 
 ' Local Variables:
 ' @local pBuff - address of the handle's in-memory block buffer
@@ -3131,7 +3135,7 @@ PUB TEST_getCommitBlockSignatures(handle, p_sigLong) : sigCount | pBuff, endPtr,
             LONG[p_sigLong][sigCount++] := signature[1]                         ' place this data offset in list
             ifnot signature.[0]                                                 ' if last block, exit loop
                 quit
-            if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                           ' if filled table, exit loop
+            if sigCount >= MAX_FILE_LEN_IN_BLOCKS * 2                           ' if filled table, exit loop
                 quit
             if signature.[0] == 1 and signature.[31..20] == lastBlockId         ' if more block pointing to last in memory block
                 LONG[p_sigLong][sigCount++] := lastSignature[0]                 ' place final buffer signature in list
