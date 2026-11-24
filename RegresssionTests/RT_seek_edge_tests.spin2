@@ -1,0 +1,725 @@
+'' =================================================================================================
+''
+''   File....... RT_seek_edge_tests.spin2
+''   Purpose.... This object exercises the edges of seek() in the flash filesystem: positions before the
+''               first byte, the end of a file and of an empty file, relative seeks, invalid whence values,
+''               append handles, circular limits, seeks after an edit through a read/modify/write handle,
+''               and the size of a circular file after it has been trimmed to its limit
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... NOV 2026
+''   Updated.... 24 NOV 2026
+''
+'' =================================================================================================
+
+{ Every expectation is computed by the program from the sizes it wrote, never taken from the driver.
+  A position is a byte offset from the start of the file.  A seek may land on any offset from 0
+  through the file length, where the length is the first offset with no byte; a seek past either
+  end is refused with E_FILE_SEEK and leaves the position where it was.
+
+  The last case seeks inside a new w+ file whose head block is not yet on the flash.  It runs on
+  its own formatted filesystem, after every other case, so a driver that mishandles it cannot
+  disturb the other cases.
+}
+
+CON
+
+     _CLKFREQ        = 320_000_000
+
+{
+    ' debug via serial to RPi (using RPi gateway pins)
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
+'}
+
+OBJ
+    flash : "flash_fs"
+    utils : "RT_utilities"
+
+CON ' ---- Test Geometry ----
+
+    ' file sizes and offsets, chosen against the block layout: a head block holds
+    ' BYTES_IN_HEAD_BLOCK bytes and each body block BYTES_IN_BODY_BLOCK bytes
+    SMALL_BYTES = 300                                   ' a file that fits in the head block
+    SMALL_MIDDLE = 100                                  ' an offset inside a small file
+    EDIT_BYTES = 20                                     ' bytes of one in-place edit
+    RELATIVE_SKIP = 4                                   ' bytes a relative seek moves forward
+    SECOND_BLOCK_BYTES = 200                            ' bytes the two block file holds in its second block
+    TWO_BLOCK_BYTES = flash.BYTES_IN_HEAD_BLOCK + SECOND_BLOCK_BYTES
+    FULL_HEAD_BYTES = flash.BYTES_IN_HEAD_BLOCK         ' a file that exactly fills its only block
+    OFFSET_IN_BODY = flash.BYTES_IN_HEAD_BLOCK + 100    ' inside the second block of the two block file
+    ONE_BYTE = 1                                        ' bytes read by a single byte read
+    BEFORE_START = -1                                   ' the offset just before the first byte
+    WHENCE_PAST_LAST = flash.SK_CURRENT_POSN + 1        ' the first whence value above the valid ones
+
+    ' a plain file longer than the limit a circular handle is opened with
+    CIRC_FILE_BYTES = 2000                              ' bytes the file holds
+    CIRC_LIMIT_BYTES = 1000                             ' limit the circular handle is opened with
+    CIRC_OVER_LIMIT = CIRC_LIMIT_BYTES + 1              ' the first offset past the limit
+
+    ' a circular file written past its limit, so closing it trims leading blocks
+    TRIM_BODY_BLOCKS = 2                                ' full body blocks written after the head block
+    TRIM_TAIL_BYTES = 500                               ' bytes written into the last block
+    TRIM_WRITE_BYTES = flash.BYTES_IN_HEAD_BLOCK + (TRIM_BODY_BLOCKS * flash.BYTES_IN_BODY_BLOCK) + TRIM_TAIL_BYTES
+    TRIM_LIMIT_DEEP = 5000                              ' limit that keeps the data from deep inside the second block
+    TRIM_SKIP_IN_SECOND = 10                            ' bytes of the second block the other limit leaves out
+    TRIM_LIMIT_EDGE = TRIM_WRITE_BYTES - (flash.BYTES_IN_HEAD_BLOCK + TRIM_SKIP_IN_SECOND) ' limit that keeps the data from just inside the second block
+    CHUNK_BYTES = 1000                                  ' bytes moved by one write or read of the streaming checks
+
+CON ' ---- Test Data ----
+
+    ' the byte of a pattern is its offset, its 256-byte page number and the seed, so a block
+    ' that lands in the wrong place or a stale page shows as a differing byte
+    PATTERN_PAGE_SHIFT = 8                              ' 256-byte pages
+    BYTE_MASK = $FF                                     ' keeps a pattern value to one byte
+    SEED_ORIGINAL = 1                                   ' pattern of the content a file starts with
+    EDIT_FLIP = $5A                                     ' bits an in-place edit inverts in each byte
+    POISON_BYTE = $A5                                   ' value read buffers are filled with before a read
+    NO_MISMATCH = -1                                    ' firstMismatch() result when the buffers agree
+
+DAT ' ---- Files and Buffers ----
+
+seekFile        BYTE    "seek_edge.bin", 0
+circFile        BYTE    "seek_circ.bin", 0
+
+oneByte         BYTE    0                               ' receives a single byte read
+modelBuf        BYTE    0[TWO_BLOCK_BYTES]              ' what the file under test should hold
+readBuf         BYTE    0[TWO_BLOCK_BYTES]              ' what was read back from the file
+chunkBuf        BYTE    0[CHUNK_BYTES]                  ' one chunk of a streamed write or read
+
+
+PUB go() | status, pFailedCall
+'' Run every seek edge test, then show the result.
+''
+
+' Local Variables:
+' @local status - status of the format and mount that start the run
+' @local pFailedCall - address of the name of the call that failed
+
+    pFailedCall := @"format()"
+    status := flash.format()      ' Comment out this line to not erase all files
+    if status == flash.SUCCESS
+        pFailedCall := @"mount()"
+        status := flash.mount()
+
+    if status == flash.SUCCESS
+        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+
+        utils.showChipAndDriverVersion()
+        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+
+        testNegativeSeeks()
+        testSeekToEnd()
+        testRelativeSeeks()
+        testWhence()
+        testAppendHandleSeek()
+        testCircularSeeks()
+        testSameBlockSeekEdit()
+        testTrimmedCircularSize()
+        testEmptyFileSeekToEnd()
+    else
+        utils.showError(pFailedCall, status)
+        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
+        utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    debug("* Test Complete")
+    utils.ShowTestResult(@"RT_seek_edge_tests")
+
+
+PRI testNegativeSeeks() | handle
+' Seek before the first byte of a file, from the start of the file and from the current position.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"negative seeks")
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, SMALL_BYTES, SEED_ORIGINAL)
+    createFile(@"set up a one block file", @seekFile, @modelBuf, SMALL_BYTES)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_READ, @"open(,r) for negative seeks")
+    utils.startTest(@"negative absolute seeks are refused and leave the position alone")
+    if requireHandle(handle)
+        ' a position before the first byte is out of range
+        utils.evaluateSubStatus(flash.seek(handle, BEFORE_START, flash.SK_FILE_START), @"seek() to before the first byte", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.seek(handle, -SMALL_BYTES, flash.SK_FILE_START), @"seek() to a large negative position", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the second refused seek", flash.E_FILE_SEEK)
+        ' open() leaves the handle at the first byte, so that is the byte the next read returns
+        utils.evaluateSubValue(readByte(handle), @"byte read after the refused seeks", BYTE[@modelBuf][0])
+
+    utils.startTest(@"negative relative seek before the first byte is refused and leaves the position alone")
+    if requireHandle(handle)
+        seekAndCheck(handle, SMALL_MIDDLE)
+        utils.evaluateSubStatus(flash.seek(handle, -(SMALL_MIDDLE + 1), flash.SK_CURRENT_POSN), @"seek() back past the first byte", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+        utils.evaluateSubValue(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"position after the refused seek", SMALL_MIDDLE)
+
+    utils.startTest(@"negative relative seeks inside the file move backward")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.seek(handle, -RELATIVE_SKIP, flash.SK_CURRENT_POSN), @"seek() back a few bytes", SMALL_MIDDLE - RELATIVE_SKIP)
+        utils.evaluateSubValue(flash.seek(handle, -(SMALL_MIDDLE - RELATIVE_SKIP), flash.SK_CURRENT_POSN), @"seek() back to the first byte", 0)
+        utils.evaluateSubValue(readByte(handle), @"byte read at the first offset", BYTE[@modelBuf][0])
+        closeAndCheck(handle)
+
+
+PRI testSeekToEnd() | handle
+' Seek to exactly the end of a file, one byte past it and to POSX, on a short file and on a file that fills its block.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"seek to the end of a file")
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, FULL_HEAD_BYTES, SEED_ORIGINAL)
+    createFile(@"set up a file shorter than a block", @seekFile, @modelBuf, SMALL_BYTES)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_READ, @"open(,r) to seek to the end")
+    utils.startTest(@"seek to exactly the end, one byte past it, and to POSX")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.seek(handle, SMALL_BYTES, flash.SK_FILE_START), @"seek() to the end", SMALL_BYTES)
+        checkAtEnd(handle)
+        ' one byte past the length has no byte behind it, so it is out of range
+        utils.evaluateSubStatus(flash.seek(handle, SMALL_BYTES + 1, flash.SK_FILE_START), @"seek() one byte past the end", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+        utils.evaluateSubValue(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"position after the refused seek", SMALL_BYTES)
+        seekAndCheck(handle, 0)
+        ' POSX asks for the end of the file
+        utils.evaluateSubValue(flash.seek(handle, posx, flash.SK_FILE_START), @"seek() to POSX", SMALL_BYTES)
+        checkAtEnd(handle)
+        closeAndCheck(handle)
+
+    createFile(@"set up a file that fills its block", @seekFile, @modelBuf, FULL_HEAD_BYTES)
+    handle := openChecked(@seekFile, flash.FILEMODE_READ, @"open(,r) on a file that fills its block")
+    utils.startTest(@"seek to the end of a file that fills its last block")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.seek(handle, FULL_HEAD_BYTES, flash.SK_FILE_START), @"seek() to the end", FULL_HEAD_BYTES)
+        checkAtEnd(handle)
+        utils.evaluateSubStatus(flash.seek(handle, FULL_HEAD_BYTES + 1, flash.SK_FILE_START), @"seek() one byte past the end", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+        closeAndCheck(handle)
+
+
+PRI testRelativeSeeks() | handle
+' Relative seeks move from the true file offset: across a block boundary on a read handle and after a write on a read/modify/write handle.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"relative seeks follow the file offset")
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, TWO_BLOCK_BYTES, SEED_ORIGINAL)
+    createFile(@"set up a two block file", @seekFile, @modelBuf, TWO_BLOCK_BYTES)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_READ, @"open(,r) for relative seeks across blocks")
+    utils.startTest(@"relative seeks across the block boundary and to the end")
+    if requireHandle(handle)
+        seekAndCheck(handle, OFFSET_IN_BODY)
+        relativeSeekAndRead(handle, RELATIVE_SKIP, OFFSET_IN_BODY + RELATIVE_SKIP)
+        ' the read above moved one byte on, so this seek lands back in the first block
+        relativeSeekAndRead(handle, -OFFSET_IN_BODY, RELATIVE_SKIP + 1)
+        ' the read above moved one byte on again: seek forward to exactly the end of the file
+        utils.evaluateSubValue(flash.seek(handle, TWO_BLOCK_BYTES - (RELATIVE_SKIP + 2), flash.SK_CURRENT_POSN), @"relative seek() to the end", TWO_BLOCK_BYTES)
+        checkAtEnd(handle)
+        utils.evaluateSubStatus(flash.seek(handle, RELATIVE_SKIP, flash.SK_CURRENT_POSN), @"relative seek() past the end", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+        closeAndCheck(handle)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) for a relative seek after a write")
+    utils.startTest(@"relative seek moves on from the end of a write")
+    if requireHandle(handle)
+        seekAndCheck(handle, SMALL_MIDDLE)
+        editAndWrite(handle, SMALL_MIDDLE, EDIT_BYTES)
+        relativeSeekAndRead(handle, RELATIVE_SKIP, SMALL_MIDDLE + EDIT_BYTES + RELATIVE_SKIP)
+        closeAndCheck(handle)
+
+
+PRI testWhence() | handle
+' Seek with whence values that are neither SK_FILE_START nor SK_CURRENT_POSN.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"invalid whence values")
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, SMALL_BYTES, SEED_ORIGINAL)
+    createFile(@"set up a one block file", @seekFile, @modelBuf, SMALL_BYTES)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_READ, @"open(,r) to seek with a bad whence")
+    utils.startTest(@"whence 0 and the value above SK_CURRENT_POSN are refused")
+    if requireHandle(handle)
+        utils.evaluateSubStatus(flash.seek(handle, 0, flash.SK_Unknown), @"seek() with SK_Unknown", flash.E_BAD_SEEK_ARG)
+        utils.evaluateSubStatus(flash.error(), @"error() after SK_Unknown", flash.E_BAD_SEEK_ARG)
+        utils.evaluateSubStatus(flash.seek(handle, 0, WHENCE_PAST_LAST), @"seek() with the whence above SK_CURRENT_POSN", flash.E_BAD_SEEK_ARG)
+        utils.evaluateSubStatus(flash.error(), @"error() after the whence above SK_CURRENT_POSN", flash.E_BAD_SEEK_ARG)
+        ' the refused calls leave the handle usable
+        seekAndCheck(handle, SMALL_MIDDLE)
+        closeAndCheck(handle)
+
+
+PRI testAppendHandleSeek() | handle
+' Seek on a handle opened with "a": appending does not support seeks, whatever the whence.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"seek on an append handle")
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, SMALL_BYTES, SEED_ORIGINAL)
+    createFile(@"set up an existing file", @seekFile, @modelBuf, SMALL_BYTES)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_APPEND, @"open(,a) on an existing file")
+    utils.startTest(@"seek on an append handle is refused and the file is unchanged")
+    if requireHandle(handle)
+        utils.evaluateSubStatus(flash.seek(handle, 0, flash.SK_FILE_START), @"seek() from the start", flash.E_FILE_MODE)
+        utils.evaluateSubStatus(flash.error(), @"error() after the seek from the start", flash.E_FILE_MODE)
+        utils.evaluateSubStatus(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"seek() from the current position", flash.E_FILE_MODE)
+        utils.evaluateSubStatus(flash.error(), @"error() after the relative seek", flash.E_FILE_MODE)
+        closeAndCheck(handle)
+        utils.evaluateSubValue(flash.file_size(@seekFile), @"file_size()", SMALL_BYTES)
+
+
+PRI testCircularSeeks() | handle
+' Seek past the limit a circular handle was opened with, while the file itself is longer than the limit.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"seek past the circular limit")
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, CIRC_FILE_BYTES, SEED_ORIGINAL)
+    createFile(@"set up a file longer than the limit", @seekFile, @modelBuf, CIRC_FILE_BYTES)
+
+    handle := openCircularChecked(@seekFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES, @"open_circular(,r) with a limit below the file length")
+    utils.startTest(@"absolute seek stops at the limit")
+    if requireHandle(handle)
+        ' the file holds the bytes, so only the limit refuses a position past it
+        seekAndCheck(handle, CIRC_LIMIT_BYTES)
+        utils.evaluateSubStatus(flash.seek(handle, CIRC_OVER_LIMIT, flash.SK_FILE_START), @"seek() one byte past the limit", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+        utils.evaluateSubValue(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"position after the refused seek", CIRC_LIMIT_BYTES)
+
+    utils.startTest(@"relative seek stops at the limit")
+    if requireHandle(handle)
+        seekAndCheck(handle, 0)
+        utils.evaluateSubStatus(flash.seek(handle, CIRC_OVER_LIMIT, flash.SK_CURRENT_POSN), @"relative seek() one byte past the limit", flash.E_FILE_SEEK)
+        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+        utils.evaluateSubValue(flash.seek(handle, CIRC_LIMIT_BYTES, flash.SK_CURRENT_POSN), @"relative seek() to the limit", CIRC_LIMIT_BYTES)
+        closeAndCheck(handle)
+
+
+PRI testSameBlockSeekEdit()
+' Edit a file through an r+ handle, then seek: within the block the edit is still readable, and to another block and back it is too.
+
+    utils.startTestGroup(@"seek after an edit")
+    editSeekCase(@"open(,r+) to seek within the block after an edit", SMALL_BYTES, 0)
+    editSeekCase(@"open(,r+) to seek to another block after an edit", TWO_BLOCK_BYTES, OFFSET_IN_BODY)
+
+
+PRI testTrimmedCircularSize()
+' Write a circular file past its limit and close it: the file holds the newest bytes up to the limit, and its size and seek range match.
+
+    utils.startTestGroup(@"size of a trimmed circular file")
+    trimCase(@"open_circular(,a) with a limit that keeps data from deep inside the second block", TRIM_LIMIT_DEEP)
+    trimCase(@"open_circular(,a) with a limit that keeps data from just inside the second block", TRIM_LIMIT_EDGE)
+
+
+PRI testEmptyFileSeekToEnd() | handle
+' Seek to POSX in a new w+ file before anything is written: the end of an empty file is offset 0.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"seek to the end of an empty file")
+    freshFilesystem()
+
+    handle := openChecked(@seekFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) on a new file")
+    utils.startTest(@"seek to POSX in a new w+ file before any write")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.seek(handle, posx, flash.SK_FILE_START), @"seek() to POSX", 0)
+        utils.evaluateSubStatus(flash.error(), @"error() after seek() to POSX", flash.SUCCESS)
+        closeAndCheck(handle)
+
+
+PRI editSeekCase(pTitle, fileBytes, otherOffset) | handle
+' Edit bytes of a file through an r+ handle, seek to another offset and back, read the edit back, then check the closed file.
+
+' @param pTitle - address of zstring naming the open
+' @param fileBytes - size of the file under test
+' @param otherOffset - file offset the seek after the edit moves to
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, fileBytes, SEED_ORIGINAL)
+    createFile(@"set up the file to edit", @seekFile, @modelBuf, fileBytes)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_READ_EXTENDED, pTitle)
+    utils.startTest(@"edit, seek away and back, and read the edit back")
+    if requireHandle(handle)
+        seekAndCheck(handle, SMALL_MIDDLE)
+        editAndWrite(handle, SMALL_MIDDLE, EDIT_BYTES)
+        seekAndCheck(handle, otherOffset)
+        seekAndCheck(handle, SMALL_MIDDLE)
+        utils.evaluateSubValue(readByte(handle), @"first edited byte read back", BYTE[@modelBuf][SMALL_MIDDLE])
+        seekAndCheck(handle, SMALL_MIDDLE)
+        readAndCheck(handle, SMALL_MIDDLE, EDIT_BYTES)
+        closeAndCheck(handle)
+
+    utils.startTest(@"file holds the edit after the handle closes")
+    checkFileContent(@seekFile, @modelBuf, fileBytes)
+
+
+PRI trimCase(pTitle, limitBytes) | handle, firstKept, readable, mismatchIdx, fileSize
+' Write a circular file past its limit, close it, and compare what can be read, the size and the seek range with the bytes written.
+
+' @param pTitle - address of zstring naming the open
+' @param limitBytes - limit the circular handle is opened with
+
+' Local Variables:
+' @local handle - handle of the file being tested
+' @local firstKept - offset, in the bytes written, of the oldest byte the limit keeps
+' @local readable - bytes read from the file until it ended
+' @local mismatchIdx - offset of the first byte read that differs from the bytes written
+' @local fileSize - size file_size() reports for the file
+
+    firstKept := TRIM_WRITE_BYTES - limitBytes
+    readable := 0
+    freshFilesystem()
+
+    handle := openCircularChecked(@circFile, flash.FILEMODE_APPEND, limitBytes, pTitle)
+    utils.startTest(@"write past the limit, then close")
+    if requireHandle(handle)
+        utils.evaluateSubValue(writePattern(handle, TRIM_WRITE_BYTES), @"bytes written", TRIM_WRITE_BYTES)
+        closeAndCheck(handle)
+
+    handle := openChecked(@circFile, flash.FILEMODE_READ, @"open(,r) to read the trimmed file")
+    utils.startTest(@"file holds the newest bytes, as many as the limit")
+    if requireHandle(handle)
+        readable, mismatchIdx := countReadable(handle, firstKept)
+        utils.evaluateSubValue(readable, @"bytes readable", limitBytes)
+        utils.evaluateSubValue(mismatchIdx, @"first byte that differs from the newest bytes written", NO_MISMATCH)
+        closeAndCheck(handle)
+
+    utils.startTest(@"file_size() reports the bytes that can be read")
+    fileSize := flash.file_size(@circFile)
+    utils.evaluateSubValue(fileSize, @"file_size()", readable)
+    debug("* file_size() ", sdec_(fileSize), ", bytes readable ", sdec_(readable), ", difference ", sdec_(fileSize - readable))
+
+    handle := openChecked(@circFile, flash.FILEMODE_READ, @"open(,r) to seek in the trimmed file")
+    utils.startTest(@"seek reaches the last readable byte and not past it")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.seek(handle, readable, flash.SK_FILE_START), @"seek() to the end of the readable bytes", readable)
+        utils.evaluateSubStatus(flash.seek(handle, readable + 1, flash.SK_FILE_START), @"seek() one byte past the readable bytes", flash.E_FILE_SEEK)
+        closeAndCheck(handle)
+
+
+PRI freshFilesystem() | status
+' Format the flash and mount it, leaving no files.
+
+' Local Variables:
+' @local status - status format() returned
+
+    utils.startTest(@"format() and mount() leave an empty filesystem")
+    status := flash.format()
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+
+PRI createFile(pDescription, pFilename, pBuffer, byteCount) | handle, status, writeCount
+' Write bytes to a file opened with "w" and close it, as one test.
+
+' @param pDescription - address of zstring naming the test
+' @param pFilename - address of zstring with the file name
+' @param pBuffer - address of the bytes to write
+' @param byteCount - number of bytes to write
+
+' Local Variables:
+' @local handle - handle of the file being created
+' @local status - status of the open or of the close
+' @local writeCount - bytes written to the file
+
+    utils.startTest(pDescription)
+    handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_WRITE)
+    utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
+    if status == flash.SUCCESS
+        writeCount := flash.write(handle, pBuffer, byteCount)
+        utils.evaluateSubValue(writeCount, @"write()", byteCount)
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+
+
+PRI openChecked(pFilename, mode, pMessage) : handle
+' Open a file as a test that passes when open() returned a usable handle.
+
+' @param pFilename - address of zstring with the file name
+' @param mode - open mode
+' @param pMessage - address of zstring naming the test
+' @returns handle - handle from open(), or a negative error code
+
+    utils.startTest(pMessage)
+    handle, _ := utils.openWaitOnHandle(pFilename, mode)
+    utils.evaluateHandle(handle, pMessage)
+
+
+PRI openCircularChecked(pFilename, mode, limitBytes, pMessage) : handle
+' Open a circular file as a test that passes when open_circular() returned a usable handle.
+
+' @param pFilename - address of zstring with the file name
+' @param mode - open mode
+' @param limitBytes - circular limit of the handle
+' @param pMessage - address of zstring naming the test
+' @returns handle - handle from open_circular(), or a negative error code
+
+    utils.startTest(pMessage)
+    handle := flash.open_circular(pFilename, mode, limitBytes)
+    utils.evaluateHandle(handle, pMessage)
+
+
+PRI requireHandle(handle) : bUsable
+' Tell whether open() returned a handle; when it did not, record that as a failed check of the running test.
+
+' @param handle - handle from open(), or a negative error code
+' @returns bUsable - TRUE when the handle can be used
+
+    bUsable := handle >= utils.FIRST_HANDLE
+    ifnot bUsable
+        utils.evaluateSubValue(handle, @"usable handle", utils.FIRST_HANDLE)
+
+
+PRI closeAndCheck(handle) | status
+' Close a handle and check that close() and error() both report success.
+
+' @param handle - handle to close
+
+' Local Variables:
+' @local status - status close() returned
+
+    status := utils.closeHandle(handle)
+    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+    utils.evaluateSubStatus(flash.error(), @"error() after close()", flash.SUCCESS)
+
+
+PRI seekAndCheck(handle, position)
+' Seek to a file offset and check the seek reports that offset.
+
+' @param handle - handle of the open file
+' @param position - file offset to seek to
+
+    utils.evaluateSubValue(flash.seek(handle, position, flash.SK_FILE_START), @"seek()", position)
+
+
+PRI relativeSeekAndRead(handle, distance, expectedPosition)
+' Seek relative to the current position, check the seek reports the offset it should land on, and read the byte there.
+
+' @param handle - handle of the open file
+' @param distance - bytes to move, negative to move backward
+' @param expectedPosition - file offset the seek must land on
+
+    utils.evaluateSubValue(flash.seek(handle, distance, flash.SK_CURRENT_POSN), @"relative seek()", expectedPosition)
+    utils.evaluateSubValue(readByte(handle), @"byte read after the relative seek", BYTE[@modelBuf][expectedPosition])
+
+
+PRI readByte(handle) : byteValue | readCount
+' Read one byte at the handle's position.
+
+' @param handle - handle of the open file
+' @returns byteValue - the byte read, or the error code read() reported when it returned no byte
+
+' Local Variables:
+' @local readCount - bytes read from the file
+
+    readCount := flash.read(handle, @oneByte, ONE_BYTE)
+    byteValue := readCount == ONE_BYTE ? BYTE[@oneByte] : flash.error()
+
+
+PRI checkAtEnd(handle)
+' Check that a read at the handle's position finds the end of the file.
+
+' @param handle - handle of the open file
+
+    utils.evaluateSubStatus(readByte(handle), @"read at the end of the file", flash.E_END_OF_FILE)
+
+
+PRI readAndCheck(handle, fileOffset, byteCount) | readCount
+' Read bytes at the handle's position and compare them with the model of the file.
+
+' @param handle - handle of the open file, positioned at fileOffset
+' @param fileOffset - file offset the handle is positioned at
+' @param byteCount - number of bytes to read
+
+' Local Variables:
+' @local readCount - bytes read from the file
+
+    bytefill(@readBuf, POISON_BYTE, byteCount)
+    readCount := flash.read(handle, @readBuf, byteCount)
+    utils.evaluateSubValue(readCount, @"read()", byteCount)
+    utils.evaluateSubValue(firstMismatch(@modelBuf + fileOffset, @readBuf, byteCount), @"first byte that differs", NO_MISMATCH)
+
+
+PRI editAndWrite(handle, fileOffset, byteCount) | byteIdx, writeCount
+' Invert bytes of the model of the file and write them through the handle, which is positioned at fileOffset.
+
+' @param handle - handle of the open file, positioned at fileOffset
+' @param fileOffset - file offset the edit starts at
+' @param byteCount - number of bytes to edit
+
+' Local Variables:
+' @local byteIdx - number of the byte being inverted
+' @local writeCount - bytes written to the file
+
+    repeat byteCount with byteIdx
+        BYTE[@modelBuf][fileOffset + byteIdx] ^= EDIT_FLIP
+    writeCount := flash.write(handle, @modelBuf + fileOffset, byteCount)
+    utils.evaluateSubValue(writeCount, @"write()", byteCount)
+
+
+PRI writePattern(handle, byteCount) : totalWritten | chunkLen, writeCount
+' Write the pattern bytes of offsets 0 up to byteCount through a handle, one chunk at a time.
+
+' @param handle - handle of the file open for writing
+' @param byteCount - number of bytes to write
+' @returns totalWritten - bytes the driver accepted, less than byteCount when a write fell short
+
+' Local Variables:
+' @local chunkLen - bytes in the chunk being written
+' @local writeCount - bytes the driver took from the chunk
+
+    totalWritten := 0
+    repeat while totalWritten < byteCount
+        chunkLen := (byteCount - totalWritten) <# CHUNK_BYTES
+        fillPattern(@chunkBuf, totalWritten, chunkLen, SEED_ORIGINAL)
+        writeCount := flash.write(handle, @chunkBuf, chunkLen)
+        if writeCount > 0
+            totalWritten += writeCount
+        if writeCount <> chunkLen
+            quit
+
+
+PRI countReadable(handle, firstKept) : readable, mismatchIdx | chunkCount, byteIdx
+' Read a file to its end, counting the bytes and comparing each with the pattern byte of the offset it should hold.
+
+' @param handle - handle of the file open for reading, positioned at its first byte
+' @param firstKept - offset in the pattern of the byte the file should start with
+' @returns readable - bytes read before the end of the file
+' @returns mismatchIdx - offset in the file of the first byte that differs from the pattern, or NO_MISMATCH
+
+' Local Variables:
+' @local chunkCount - bytes read by one read
+' @local byteIdx - number of the byte of the chunk being compared
+
+    readable := 0
+    mismatchIdx := NO_MISMATCH
+    repeat
+        chunkCount := flash.read(handle, @chunkBuf, CHUNK_BYTES)
+        repeat chunkCount with byteIdx
+            if mismatchIdx == NO_MISMATCH and BYTE[@chunkBuf][byteIdx] <> patternByte(firstKept + readable + byteIdx, SEED_ORIGINAL)
+                mismatchIdx := readable + byteIdx
+        readable += chunkCount
+        if chunkCount < CHUNK_BYTES or readable > TRIM_WRITE_BYTES     ' a short read is the end of the file, the size bound stops a file that never ends
+            quit
+
+
+PRI checkFileContent(pFilename, pExpected, expectedBytes) | bExists, handle, status, readCount
+' Check that a file exists, has the expected size and holds the expected bytes, reading it back with "r".
+
+' @param pFilename - address of zstring with the file name
+' @param pExpected - address of the bytes the file should hold
+' @param expectedBytes - number of bytes the file should hold
+
+' Local Variables:
+' @local bExists - TRUE when the file exists
+' @local handle - handle of the file being read
+' @local status - status of the open or of the close
+' @local readCount - bytes read from the file
+
+    bExists := flash.exists(pFilename)
+    utils.evaluateSubValue(bExists, @"exists()", TRUE)
+    if bExists
+        utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", expectedBytes)
+        handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_READ)
+        utils.evaluateSubStatus(status, @"open(,r)", flash.SUCCESS)
+        if status == flash.SUCCESS
+            bytefill(@readBuf, POISON_BYTE, expectedBytes)
+            readCount := flash.read(handle, @readBuf, expectedBytes)
+            utils.evaluateSubValue(readCount, @"read()", expectedBytes)
+            utils.evaluateSubValue(firstMismatch(pExpected, @readBuf, expectedBytes), @"first byte that differs", NO_MISMATCH)
+            status := utils.closeHandle(handle)
+            utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+
+
+PRI patternByte(fileOffset, seed) : patternValue
+' Compute the byte a pattern holds at a file offset.
+
+' @param fileOffset - offset of the byte from the start of the pattern
+' @param seed - number that makes this pattern differ from patterns of other seeds
+' @returns patternValue - the byte at the offset
+
+    patternValue := (fileOffset + (fileOffset >> PATTERN_PAGE_SHIFT) + seed) & BYTE_MASK
+
+
+PRI fillPattern(pBuffer, startOffset, byteCount, seed) | byteIdx
+' Fill a buffer with a repeatable pattern that differs by seed and by 256-byte page, starting at a pattern offset.
+
+' @param pBuffer - address of the buffer to fill
+' @param startOffset - pattern offset of the first byte of the buffer
+' @param byteCount - number of bytes to fill
+' @param seed - number that makes this pattern differ from patterns of other seeds
+
+' Local Variables:
+' @local byteIdx - number of the byte being filled
+
+    repeat byteCount with byteIdx
+        BYTE[pBuffer][byteIdx] := patternByte(startOffset + byteIdx, seed)
+
+
+PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
+' Find the first byte at which two buffers differ.
+
+' @param pFirst - address of the first buffer
+' @param pSecond - address of the second buffer
+' @param byteCount - number of bytes to compare
+' @returns mismatchIdx - offset of the first differing byte, or NO_MISMATCH when the buffers agree
+
+' Local Variables:
+' @local byteIdx - number of the byte being compared
+
+    mismatchIdx := NO_MISMATCH
+    repeat byteCount with byteIdx
+        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+            mismatchIdx := byteIdx
+            quit
+
+
+con { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Copyright (c) 2023 Iron Sheep Productions, LLC
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}

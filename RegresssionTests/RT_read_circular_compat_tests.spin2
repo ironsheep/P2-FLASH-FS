@@ -32,6 +32,7 @@ CON
     RECORD_DATA_LEN = RECORD_LEN - 12
 
     CIRCULAR_LEN_IN_BYTES = RECORD_LEN * 8              ' 8_192 bytes
+    OLD_FORMAT_READ_RECORDS = 2                         ' records read before the relative seek checks
 
 
 DAT
@@ -219,6 +220,9 @@ PUB go()
 
     utils.showFiles()
 
+    utils.startTestGroup(@"Relative seek in an old format circular file")
+    testOldFormatRelativeSeek(@testfileD2, 20)
+
     utils.startTest(@"Unmount Flash")
     status := flash.unmount()      ' Comment out this line to not erase all files
     utils.evaluateResultNegError(status, flash.SUCCESS)
@@ -316,6 +320,59 @@ PRI testCopyFile(pOldFilename, pNewFilename) | rdHandle, wrHandle, rdStatus, wrS
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileChain(pNewFilename)
+
+
+PRI testOldFormatRelativeSeek(pFilename, totalRecordsWritten) | oldHandle, bytesRead, firstRecord, nextRecord, recordIdx, readLength
+' Read records from an old format circular file, then seek relative to the current position and check the position and the record read.
+'
+' @param pFilename - address of zstring with the name of an old format file longer than the circular limit
+' @param totalRecordsWritten - records written to the file since it was created
+' @local oldHandle - handle of the file being read
+' @local bytesRead - bytes read or skipped since the file was opened
+' @local firstRecord - number of the first record the circular limit keeps
+' @local nextRecord - number of the record the next read must return
+' @local recordIdx - number of the record being read
+' @local readLength - bytes read() returned
+
+    firstRecord := totalRecordsWritten - (CIRCULAR_LEN_IN_BYTES / RECORD_LEN) + 1
+    nextRecord := firstRecord
+    bytesRead := 0
+
+    utils.startTest(@"Open old format file for read")
+    oldHandle := flash.open_circular(pFilename, "r", CIRCULAR_LEN_IN_BYTES)
+    utils.evaluateHandle(oldHandle, @"open_circular(,'r')")
+
+    utils.startTest(@"relative seek after reads reports the offset and keeps the place")
+    utils.setCheckCountPerTest(1)
+    if oldHandle >= utils.FIRST_HANDLE
+        repeat OLD_FORMAT_READ_RECORDS with recordIdx
+            readLength := flash.read(oldHandle, @record, RECORD_LEN)
+            utils.verifyRecord(@record, RECORD_LEN, nextRecord, readLength)
+            nextRecord++
+            bytesRead += readLength
+
+        ' a relative seek of zero moves nowhere, so it reports the bytes read and the next record follows
+        utils.evaluateSubValue(flash.seek(oldHandle, 0, flash.SK_CURRENT_POSN), @"seek(0, SK_CURRENT_POSN)", bytesRead)
+        readLength := flash.read(oldHandle, @record, RECORD_LEN)
+        utils.verifyRecord(@record, RECORD_LEN, nextRecord, readLength)
+        nextRecord++
+        bytesRead += readLength
+
+        ' a relative seek over one record skips that record
+        utils.evaluateSubValue(flash.seek(oldHandle, RECORD_LEN, flash.SK_CURRENT_POSN), @"seek(RECORD_LEN, SK_CURRENT_POSN)", bytesRead + RECORD_LEN)
+        bytesRead += RECORD_LEN
+        nextRecord++
+        readLength := flash.read(oldHandle, @record, RECORD_LEN)
+        utils.verifyRecord(@record, RECORD_LEN, nextRecord, readLength)
+    else
+        utils.evaluateSubValue(oldHandle, @"usable handle", utils.FIRST_HANDLE)
+
+    utils.startTest(@"Close old format file")
+    if oldHandle >= utils.FIRST_HANDLE
+        status := utils.closeHandle(oldHandle)
+    else
+        status := oldHandle
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 con { license }
