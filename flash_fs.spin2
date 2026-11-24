@@ -340,7 +340,7 @@ PUB mount() : status | block_address, blockTypeBits, signature, blockCount, file
     'debug("- mounting...")
     bytefill(@hStatus, 0, MAX_FILES_OPEN)                                       'clear handles
 
-    bytefill(@IDToBlocks,0,ID_TO_BLOCKS_SZ)                                     'clear ID-to-block translation table
+    wordfill(@IDToBlocks, 0, ID_TO_BLOCKS_SZ)                                   'clear ID-to-block translation table
     bytefill(@IDValids, 0, FLAGS_SIZE)                                          'clear ID flags
     bytefill(@BlockStates, 0, STATES_SIZE)                                      'clear block states to B_FREE
 
@@ -421,7 +421,7 @@ PUB can_mount() : bool | block_address, signature, BYTE blockTypeBits, dupeIdCou
     'debug("- mounting...")
     bytefill(@hStatus, 0, MAX_FILES_OPEN)                                       'clear handles
 
-    bytefill(@IDToBlocks,0,ID_TO_BLOCKS_SZ)                                     'clear ID-to-block translation table
+    wordfill(@IDToBlocks, 0, ID_TO_BLOCKS_SZ)                                   'clear ID-to-block translation table
     bytefill(@IDValids, 0, FLAGS_SIZE)                                          'clear ID flags
     bytefill(@BlockStates, 0, STATES_SIZE)                                      'clear block states to B_FREE
 
@@ -1658,10 +1658,12 @@ PRI finish_open_append(p_filename, max_file_length) : handle | signature, head_b
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
-PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id
+PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id, pBuff
 ' Open an existing file for reading and writing within current file boundaries, returns handle
 ' -- a new file takes a free block ID for its head block before anything else changes; with none free,
 '    no handle is taken and E_DRIVE_FULL is returned
+' -- the head block of a new file is built in the buffer, holding no data, and has no copy on the flash until
+'    its first rewrite: IDToBlock holds an address outside the file system for it, so that rewrite cancels nothing
 '
 ' @param p_filename - address of a zstring containing the filename
 ' @returns handle - handle to open file, or E_DRIVE_FULL if a new file has no free block ID for its head block
@@ -1669,6 +1671,7 @@ PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
 ' @local head_block_id - id of block being checked
+' @local pBuff - the address of the 4KB buffer for the new file's head block
 
   head_block_id := 0
   ifnot signature := get_file_head_signature(p_filename)                        'a new file needs a free block ID first
@@ -1684,7 +1687,10 @@ PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id
     else
       ' file DOES NOT exist, create it, allow modification after append-only extension (no gaps)
       ' no starting block-id means create new head!
-      build_head_block(buffer_pointer(handle), filename_pointer(handle), head_block_id) 'build head block in buffer
+      pBuff := buffer_pointer(handle)                                           'get block buffer pointer
+      build_head_block(pBuff, filename_pointer(handle), head_block_id)          'build head block in buffer
+      long[pBuff].[31..20] := $088                                              'EndPtr at the first data byte: the new file holds no data
+      field[IDToBlock][head_block_id] := BLOCKS                                 'the head has no copy on the flash yet
       start_modify(handle, H_READWRITE, head_block_id, 0, false)                'go to start of file
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
@@ -1942,7 +1948,7 @@ PRI rd_byte_no_locks(handle) : byte_value | pBuff, signature, isSeeking, endPtr,
     'debug("rd_byte() [",uhex_byte_(byte_value),"]")
 
 
-PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeeking, endPtr
+PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeeking, endPtr, newBlockAddress
 
 ' Write a byte to a file that is open for write or rewrite
 '
@@ -1950,6 +1956,12 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
 ' and a free block left over for it once this one is written. Otherwise the byte is not written, the full block
 ' stays in the buffer for close() to write, and the status is E_DRIVE_FULL. In modify mode a modified block that
 ' cannot be rewritten for lack of a free block stays in the buffer, still modified, with the same status.
+'
+' In modify mode a write at or past the end of the file grows it, as in C. Within the last block the EndPtr moves
+' with the write. At the end of a full last block a new last block holding the byte is written and activated
+' first, then the full block is rewritten with a NextID link to it, so the chain on the flash is whole at every
+' step. That needs a free block ID and two free blocks; without them the byte is not written, nothing changes,
+' and the status is E_DRIVE_FULL.
 '
 ' @param handle - handle to a file that is open for write or rewrite
 ' @param byte_value - value to write to the file
@@ -1962,6 +1974,7 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
 ' @local nextBlockID - block ID of the next block to write to the file
 ' @local isSeeking - temporary variable T/F where T we use hSeekPtr vs hEndPtr
 ' @local endPtr - temporary variable value of whichever Ptr we are using
+' @local newBlockAddress - the block offset within the file system of the new last block of a growing file
 
   isSeeking := (hSeekPtr[handle] <> NOT_ENABLED) ? true : false                 ' is seek pointer in use?
   endPtr := isSeeking ? hSeekPtr[handle] : hEndPtr[handle]
@@ -1987,7 +2000,37 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
 
     H_READWRITE:                                                                'modify mode?
       if endPtr == $FFC                                                         '..and if block full
-        if hModified[handle]                                                    '..and if block was modified
+        if long[pBuff].[0] == 0                                                 '..and if it is the last block, the file grows into a new last block
+          nextBlockID := next_available_block_id()                              '....get the ID of the new last block
+          if nextBlockID < 0                                                    '....no free block ID: error() holds E_DRIVE_FULL
+            status := nextBlockID
+          else
+            newBlockAddress := next_block_address(NEXT_BLOCK_SPARE)             '....get its block, keeping one for the rewrite of this block
+            if newBlockAddress < 0                                              '....no free block for both: error() holds E_DRIVE_FULL
+              status := newBlockAddress
+              field[IDValid][nextBlockID]~                                      '......release the ID that got no block
+            else
+              bytefill(@tmpBlockBuffer, $FF, BLOCK_SIZE)                        '....build the new last block, holding this byte
+              LONG[@tmpBlockBuffer].[1..0] := %10                               '......body/last
+              LONG[@tmpBlockBuffer].[19..8] := nextBlockID                      '......set ID
+              LONG[@tmpBlockBuffer].[31..20] := $005                            '......EndPtr after its one data byte
+              BYTE[@tmpBlockBuffer][$004] := byte_value                         '......its data byte
+              flash_program_block(newBlockAddress, @tmpBlockBuffer, %011)       '....write and activate it before any block links to it
+              flash_activate_block(newBlockAddress, %011)
+              field[BlockState][newBlockAddress] := B_BODY
+              field[IDToBlock][nextBlockID] := newBlockAddress
+              long[pBuff].[0] := 1                                              '....this block now has a next block..
+              long[pBuff].[31..20] := nextBlockID                               '....and its NextID replaces its EndPtr
+              status := rewrite_block(handle)                                   '....rewrite this block with the link (might move a block)
+              if status == SUCCESS
+                hModified[handle]~
+              else                                                              '....no block for the rewrite: undo the new last block
+                long[pBuff].[0] := 0                                            '......this block is the last block again..
+                long[pBuff].[31..20] := endPtr                                  '......full to its end
+                flash_cancel_block(newBlockAddress)
+                field[BlockState][newBlockAddress] := B_FREE
+                field[IDValid][nextBlockID]~                                    '......release the ID
+        elseif hModified[handle]                                                '..else if block was modified
           status := rewrite_block(handle)                                       '..then rewrite block (might move a block)
           if status == SUCCESS
             hModified[handle]~
@@ -2001,6 +2044,8 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
   if status == SUCCESS
     hModified[handle]~~                                                         'set modified flag
     byte[pBuff][endPtr++] := byte_value                                         'write byte into block buffer, post-increment pointer
+    if hStatus[handle] == H_READWRITE and long[pBuff].[0] == 0 and endPtr > long[pBuff].[31..20]
+      long[pBuff].[31..20] := endPtr                                            'a write past the end of the last block moves its EndPtr: the file grows
     if isSeeking
         hSeekPtr[handle] := endPtr                                              ' point to start of data in body block
         hSeekFileOffset[handle]++                                               ' we moved keep track
@@ -2010,12 +2055,15 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
         '    debug("+ wr_byte() ", uhex_word(hEndPtr[handle], handle))
 
 
-PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fileOffset
+PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fileOffset, bInBuffer
 
 ' seek file associted with handle to new position
 '
-' In modify mode a modified block is rewritten before another block is read. With no free block for the rewrite
-' the position does not change, the block stays in the buffer still modified, and the status is E_DRIVE_FULL.
+' In modify mode the buffer always holds the handle's current block, so a seek within that block keeps the buffer
+' and any edits in it, and the block is not read again. A seek to another block first rewrites a modified block.
+' With no free block for the rewrite the position does not change, the block stays in the buffer still modified,
+' and the status is E_DRIVE_FULL. In read mode the located block is always read: the buffer of a newly opened
+' handle can hold a block left from an earlier file.
 '
 ' @param handle - handle to open file
 ' @param file_position - desired file postion
@@ -2026,22 +2074,26 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
 ' @local block_id - temporary block id
 ' @local endPtr - offset within the located block of the byte at file_position
 ' @local fileOffset - the position within the file that was located
+' @local bInBuffer - TRUE when the located block is the modify-mode block already in the buffer
 
     status := SUCCESS
+    bInBuffer := FALSE
     pBuff := buffer_pointer(handle)                                             'get block buffer pointer
     block_id, endPtr, fileOffset := locate_file_byte(hHeadBlockID[handle], file_position) 'locate byte in file
     'debug("seek_no_locks() ", udec(block_id, file_position, fileOffset), uhex_word(endPtr))
     if hStatus[handle] & H_MODIFY                                               'if modify mode..
-      if block_id <> long[pBuff].[19..8]                                        '..and if different block block ID
-        if hModified[handle]                                                    '..and if block was modified
-          status := rewrite_block(handle)                                       '..then rewrite block (might move a block)
-          if status == SUCCESS
-            hModified[handle]~
+      if block_id == long[pBuff].[19..8]                                        '..and the block is the one in the buffer, keep it
+        bInBuffer := TRUE
+      elseif hModified[handle]                                                  '..else if the buffered block was modified
+        status := rewrite_block(handle)                                         '..then rewrite block (might move a block)
+        if status == SUCCESS
+          hModified[handle]~
 
     if status == SUCCESS
       hSeekFileOffset[handle] := fileOffset                                     ' we moved keep track
       hSeekPtr[handle] := hEndPtr[handle] := endPtr                             ' point to start of data in body block
-      flash_read_block_id(block_id, pBuff, $000, $FFF)                          'read new block into buffer
+      if bInBuffer == FALSE
+        flash_read_block_id(block_id, pBuff, $000, $FFF)                        'read new block into buffer
 
 
 PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_id, chain_block_id, chainState
@@ -2151,6 +2203,9 @@ PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAdd
 
 ' Write block over existing (issed mew lifeCycle to make heigher priority
 '
+' The new copy takes the next lifecycle of the old copy, is activated, and then the old copy is cancelled. A block
+' with no copy on the flash yet, which IDToBlock shows with an address outside 0..BLOCKS-1 (the head of a new
+' "r+"/"w+" file), is written with the first active lifecycle and becomes B_HEAD or B_BODY; nothing is cancelled.
 ' With no free block for the new copy nothing is changed: the old copy stays on the flash and the buffer keeps
 ' the modified block.
 '
@@ -2172,12 +2227,16 @@ PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAdd
     pBuff := buffer_pointer(handle)                                             'get block buffer pointer
     block_id := long[pBuff].[19..8]                                             'get block ID
 
-    flash_activate_updated_block(block_address, pBuff)                          'program updated block
-
     oldBlockAddress := field[IDToBlock][block_id]\block_address                 'get the old block -AND- update IDToBlock to new block
-    flash_cancel_block(oldBlockAddress)                                         'cancel the old block
 
-    field[BlockState][block_address] := field[BlockState][oldBlockAddress]\B_FREE 'copy old block state to new -AND- free old
+    if oldBlockAddress > BLOCKS - 1                                             'no copy on the flash yet..
+      flash_program_block(block_address, pBuff, %011)                           '..program the first copy with the first active lifecycle
+      flash_activate_block(block_address, %011)                                 '..activate it
+      field[BlockState][block_address] := long[pBuff].[1] ? B_BODY : B_HEAD     '..an active block is B_HEAD or B_BODY by its type bit
+    else
+      flash_activate_updated_block(block_address, pBuff)                        'program updated block
+      flash_cancel_block(oldBlockAddress)                                       'cancel the old block
+      field[BlockState][block_address] := field[BlockState][oldBlockAddress]\B_FREE 'copy old block state to new -AND- free old
 
 
 PRI filename_pointer(handle) : p_filename
@@ -2882,6 +2941,10 @@ PRI flash_program_block(block_address, p_buffer, cycle_bits) | pageIndex
 
 ' Write block in memory at block_address to physical block
 '
+' The block is programmed inactive, its CRC computed with cycle_bits in the lifecycle field, and the
+' buffer is left holding cycle_bits there: what the block holds once flash_activate_block() is given
+' the same cycle_bits.
+'
 ' A block_address outside 0..BLOCKS-1 is refused before any command reaches the chip: nothing is
 ' sent to the flash and fsRefusedBlocks is incremented.
 '
@@ -2911,6 +2974,8 @@ PRI flash_program_block(block_address, p_buffer, cycle_bits) | pageIndex
       flash_command($02 | (FIRST_BLOCK + block_address) << 20 | pageIndex << 16, 4)  'program
       flash_send(p_buffer + pageIndex << 8, 256)                                'send 256 bytes
       flash_wait()                                                              'wait for programming to complete (~400us)
+
+    BYTE[p_buffer].[7..5] := cycle_bits                                         'the buffer again matches the block once activated, so a rewrite from it takes the next lifecycle
 
 
 PRI flash_activate_block(block_address, cycle_bits)
@@ -3720,7 +3785,7 @@ PUB TEST_dumpMountMap(pFileBlocks, pFragments): fileLen, badLen | bReady, bFileF
 
         bytefill(@hStatus, 0, MAX_FILES_OPEN)                                   ' clear handles
 
-        bytefill(@IDToBlocks,0,ID_TO_BLOCKS_SZ)                                 ' clear ID-to-block translation table
+        wordfill(@IDToBlocks, 0, ID_TO_BLOCKS_SZ)                               ' clear ID-to-block translation table
         bytefill(@IDValids, 0, FLAGS_SIZE)                                      ' clear ID flags
         bytefill(@BlockStates, 0, STATES_SIZE)                                  ' clear block states to B_FREE
 
