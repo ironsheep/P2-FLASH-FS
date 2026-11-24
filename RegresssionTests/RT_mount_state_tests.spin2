@@ -1,10 +1,12 @@
 '' =================================================================================================
 ''
 ''   File....... RT_mount_state_tests.spin2
-''   Purpose.... This object exercises the mount state of the flash filesystem: mounted() and null(),
+''   Purpose.... This object exercises the mount state of the flash filesystem: the first mount() with no
+''               free hub lock, mounted() and null(), mount() again from the same cog and from another cog,
 ''               can_mount() on a clean flash, on a flash with a bad block and while mounted, the handle
 ''               pool after every open mode, unmount() with a writer of each kind still open, mount()
-''               from two cogs at once, and mount() from another cog after an unmount
+''               from two cogs at once, unmount() while every other cog waits for the lock, format() while
+''               another cog loops on open(), and mount() from another cog after an unmount
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -20,16 +22,31 @@
   handles again after every mode.  unmount() commits each writer still open, so every byte written
   before it is in the file after the next mount().
 
-  The last two groups start other cogs that call mount().  Every wait for them is bounded by this
+  Several groups start other cogs that call the driver.  Every wait for them is bounded by this
   program's own time limit: a worker that has not returned by then is recorded as a failure and stopped,
   and the run goes on.  The main cog makes every check, because the harness counts tests per cog.
+  - The first group runs before any mount(), so no cog has created the driver's lock yet.  The main cog
+    first takes every hub lock LOCKNEW still gives (the harness and, in a DEBUG build, the debugger hold
+    one each already).  Cogs released together then call mount(): each must return E_NO_LOCK_AVAIL.
+    One lock is then given back, and mount() from a cog none of them ran on must create the lock.
+  - The lock created by the first mount() is kept for the rest of the run, so a later mount() from any
+    cog needs no election.  mount(), unmount() and mount() again run from the main cog, then the second
+    mount() runs from another cog.
   - A table build clears the block-state table and fills it again from the flash.  While other cogs
     mount, the main cog reads the table entry of a file's head block without the lock, over and over.
     The first case shows that this sampler sees a single mount() from another cog build the tables.
-  - Two cogs are then released together after an unmount.  While no cog has created the lock, a
-    mount() runs the lock election, which waits 10 ms before any cog can mark the filesystem mounted,
-    so two cogs released together both find it not mounted.  Only one of them may build the tables, so
-    once the first mount() has returned the entry of the head block must keep its state.
+  - Two cogs are then released together after an unmount.  mount() marks the filesystem mounted only
+    once its tables are built, so two cogs released together both find it not mounted.  Only one of
+    them may build the tables, so once the first mount() has returned the entry of the head block must
+    keep its state.
+  - The main cog takes the driver's lock with a test hook and holds it, and every other cog calls a
+    different locked method, which stops at the lock.  unmount() from the main cog takes the lock it
+    already holds and releases it at its end; each waiter then gets the lock and must return
+    E_NOT_MOUNTED.
+  - One cog loops on open() of a file that exists, while the main cog formats.  The main cog holds the
+    lock before it tells the opener a format is coming, so an open() begun after that cannot run before
+    format() does; it must return E_NOT_MOUNTED or E_FILE_NOT_FOUND, the answer of the formatted
+    filesystem fully mounted, and never a handle to the file the format removed.
   - Before an unmount every entry of the lock election is given the lowest count an earlier mount can
     leave in it.  A mount() from another cog after the unmount must still return.  This case runs last;
     after it the election entries are put back as they are at power-up, and no lock is held.
@@ -71,14 +88,40 @@ CON ' ---- Test Geometry ----
 
 CON ' ---- Worker Cogs ----
 
+    COG_COUNT = 8                                       ' cogs of the P2
+    HUB_LOCKS = 16                                      ' locks of the hub
     RACE_WORKERS = 2                                    ' cogs released together to call mount()
     SOLO_WORKERS = 1                                    ' cogs of a case that starts one worker
+    LOCKLESS_WORKERS = 3                                ' cogs released together to call mount() while no hub lock is free
+    LOCK_WAITERS = COG_COUNT - 1                        ' cogs that wait for the lock while unmount() runs: every cog but the main cog
+    MAX_WORKERS = LOCK_WAITERS                          ' the most worker cogs a case starts
     WORKER_STACK_LONGS = 512                            ' stack of each worker cog
     WORKER_START_MS = 2_000                             ' time the worker cogs have to start and report ready
-    WORKER_WAIT_MS = 5_000                              ' time the workers' mount() calls have to return
-    WORKER_POLL_MS = 10                                 ' pause between looks at the workers' ready flags
+    WORKER_WAIT_MS = 5_000                              ' time the workers' calls have to return
+    WORKER_POLL_MS = 10                                 ' pause between looks at the workers' flags
+    WAITER_SETTLE_MS = 50                               ' time a cog that has called a locked method is given to reach the lock
+    FORMAT_ROUNDS = 3                                   ' formats made while the opener loops on open()
     NO_STATUS = 1                                       ' a status no call returns, held until a worker records one
     NO_COG = -1                                         ' cog number of a worker that did not start
+
+    ' The locked method each lock waiter calls, one for each waiter:
+    '  WAIT_FILE_SIZE   - file_size() of a missing file
+    '  WAIT_SIZE_UNUSED - file_size_unused() of a missing file
+    '  WAIT_EXISTS      - exists() of a missing file
+    '  WAIT_STATS       - stats()
+    '  WAIT_OPEN        - open() "r" of a missing file
+    '  WAIT_DIRECTORY   - directory() from the first block ID
+    '  WAIT_DELETE      - delete() of a missing file
+    #0, WAIT_FILE_SIZE, WAIT_SIZE_UNUSED, WAIT_EXISTS, WAIT_STATS, WAIT_OPEN, WAIT_DIRECTORY, WAIT_DELETE
+
+    ' What the main cog tells the opener about the format of the round:
+    '  PHASE_BEFORE     - no format is under way
+    '  PHASE_FORMATTING - the main cog holds the lock and is about to format, or is formatting
+    '  PHASE_FORMATTED  - format() has returned
+    #0, PHASE_BEFORE, PHASE_FORMATTING, PHASE_FORMATTED
+
+    DIR_GUARD_BYTES = 4                                 ' room past the name: directory() reads one byte beyond FILENAME_SIZE
+    DIR_NAME_BYTES = flash.FILENAME_SIZE + DIR_GUARD_BYTES ' bytes of the name buffer directory() fills
 
 CON ' ---- Writers and Open Modes ----
 
@@ -99,21 +142,41 @@ CON ' ---- Writers and Open Modes ----
 DAT ' ---- Worker Flags and Stacks ----
 
 raceStart       LONG    FALSE                           ' set by the main cog to release the workers
-raceReady       LONG    FALSE[RACE_WORKERS]             ' set by each worker once it waits for raceStart
-raceDone        LONG    FALSE[RACE_WORKERS]             ' set by each worker once its mount() returned
-raceStatus      LONG    NO_STATUS[RACE_WORKERS]         ' what each worker's mount() returned
-raceCogs        LONG    NO_COG[RACE_WORKERS]            ' cog of each worker, or NO_COG when it did not start
+raceReady       LONG    FALSE[MAX_WORKERS]              ' set by each worker once it waits for raceStart
+raceCalling     LONG    FALSE[MAX_WORKERS]              ' set by each lock waiter just before it calls its locked method
+raceDone        LONG    FALSE[MAX_WORKERS]              ' set by each worker once its call returned
+raceStatus      LONG    NO_STATUS[MAX_WORKERS]          ' what each worker's call returned, or the error() a lock waiter's call left
+raceCogs        LONG    NO_COG[MAX_WORKERS]             ' cog of each worker, or NO_COG when it did not start
 raceHeadAddr    LONG    0                               ' head block of the file whose table entry the sampler reads
 crcHeadAddr     LONG    0                               ' the one block of the file the can_mount() case corrupts
 bCrcSetUp       LONG    FALSE                           ' TRUE when that file was written and its block found
 heldHandles     LONG    0[HANDLE_SLOTS]                 ' handles the pool cases hold
-workerStacks    LONG    0[WORKER_STACK_LONGS * RACE_WORKERS] ' one stack for each worker cog
+heldLocks       LONG    0[HUB_LOCKS]                    ' hub locks the case with no free hub lock holds
+dirBlockId      LONG    0                               ' block ID the directory() lock waiter starts from
+dirFileSize     LONG    0                               ' file size the directory() lock waiter is given
+workerStacks    LONG    0[WORKER_STACK_LONGS * MAX_WORKERS] ' one stack for each worker cog
+
+DAT ' ---- Opener Flags ----
+
+openerPhase     LONG    PHASE_BEFORE                    ' what the main cog tells the opener about the format, one of the PHASE_ values
+openerPause     LONG    FALSE                           ' set by the main cog to hold the opener between two calls
+openerPaused    LONG    FALSE                           ' set by the opener while it is held
+openerArmed     LONG    FALSE                           ' set by the opener when it calls open() during PHASE_FORMATTING
+openerSawAfter  LONG    FALSE                           ' set by the opener when an open() begun in PHASE_FORMATTED returned
+openerStop      LONG    FALSE                           ' set by the main cog to end the opener's loop
+openerDone      LONG    FALSE                           ' set by the opener once its loop has ended
+openerOpened    LONG    0                               ' handles open() gave the opener in PHASE_BEFORE
+openerJudged    LONG    0                               ' open() calls begun during PHASE_FORMATTING
+openerNotMounted LONG   0                               ' of those, the calls that returned E_NOT_MOUNTED
+openerHalf      LONG    0                               ' of those, the calls that returned anything but E_NOT_MOUNTED or E_FILE_NOT_FOUND
+openerHalfValue LONG    0                               ' what the last of those calls returned
 
 DAT ' ---- Files and Buffers ----
 
 missingFile     BYTE    "ms_missing.bin", 0             ' a name no file has
 crcFile         BYTE    "ms_crc.bin", 0                 ' a one-block file whose block the can_mount() case corrupts
 raceFile        BYTE    "ms_race.bin", 0                ' a one-block file whose head block the sampler watches
+formatFile      BYTE    "ms_format.bin", 0              ' a one-block file the opener opens while the main cog formats
 spareFile       BYTE    "ms_spare.bin", 0               ' the name opened when every handle is in use
 writerNewFile   BYTE    "ms_write.bin", 0               ' the new file of the "w" writer
 writerAddFile   BYTE    "ms_append.bin", 0              ' the file of the "a" writer
@@ -124,6 +187,7 @@ poolFile        BYTE    "pool00.bin", 0                 ' template of the names 
 writeBuf        BYTE    0[DATA_BUF_BYTES]               ' what a file is written from
 expectBuf       BYTE    0[DATA_BUF_BYTES]               ' what a file must hold
 readBuf         BYTE    0[DATA_BUF_BYTES]               ' what a file is read into
+dirName         BYTE    0[DIR_NAME_BYTES]               ' the name buffer of the directory() lock waiter
 
 
 PUB go() | status, pFailedCall
@@ -133,6 +197,9 @@ PUB go() | status, pFailedCall
 ' Local Variables:
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
+
+    utils.setCheckCountPerTest(1)                       ' each check of a case is shown on its own
+    testNoFreeLock()                                    ' runs before any other mount(), while no cog has created the driver's lock
 
     pFailedCall := @"format()"
     status := flash.format()      ' Comment out this line to not erase all files
@@ -144,14 +211,16 @@ PUB go() | status, pFailedCall
         utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
         utils.showChipAndDriverVersion()
-        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
 
         testMountedAndNull()
+        testRemountFromCogs()
         testCanMount()
         testHandlePool()
         testUnmountWriters()
-        debug("* The next cases start other cogs that call mount(); a worker that has not returned in time is stopped")
+        debug("* The next cases start other cogs that call the driver; a worker that has not returned in time is stopped")
         testConcurrentMount()
+        testUnmountWithWaiters()
+        testFormatWhileOpening()
         testMountFromOtherCog()
     else
         utils.showError(pFailedCall, status)
@@ -160,6 +229,89 @@ PUB go() | status, pFailedCall
 
     debug("* Test Complete")
     utils.ShowTestResult(@"RT_mount_state_tests")
+
+
+PRI testNoFreeLock() | takenCount, startedCount, readyCount, doneCount, workerIdx, retryCog, lockIdx
+' The first mount() of the run, from cogs released together while no hub lock is free, then from another cog once one is free.
+
+' Local Variables:
+' @local takenCount - hub locks the main cog holds
+' @local startedCount - worker cogs that started
+' @local readyCount - workers that were waiting when the main cog released them
+' @local doneCount - workers whose mount() returned before the time limit
+' @local workerIdx - number of the worker whose status is checked
+' @local retryCog - the cog of the retry, one none of the first workers ran on
+' @local lockIdx - number of the held hub lock being given back
+
+    utils.startTestGroup(@"the first mount() with no free hub lock")    ' the harness creates its own lock here, on its first use
+    takenCount := takeFreeLocks()
+
+    utils.startTest(@"mount() from cogs released together with no free hub lock: each returns E_NO_LOCK_AVAIL")
+    utils.evaluateSubValue(flash.mounted(), @"mounted() before the first mount()", FALSE)
+    startedCount, readyCount, doneCount, _, _ := runMountWorkers(LOCKLESS_WORKERS, NEWCOG)
+    utils.evaluateSubValue(startedCount, @"worker cogs started", LOCKLESS_WORKERS)
+    utils.evaluateSubValue(readyCount, @"workers waiting when released", LOCKLESS_WORKERS)
+    utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", LOCKLESS_WORKERS)
+    repeat LOCKLESS_WORKERS with workerIdx
+        ' LOCKNEW gives no lock, so no worker can create the driver's lock
+        utils.evaluateSubStatus(raceStatus[workerIdx], @"mount() of a worker with no free hub lock", flash.E_NO_LOCK_AVAIL)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after those mount() calls", FALSE)
+
+    utils.startTest(@"one hub lock is given back: mount() from a cog none of those workers ran on creates the lock")
+    retryCog := unusedCog(LOCKLESS_WORKERS)
+    if takenCount > 0
+        takenCount--
+        lockret(heldLocks[takenCount])                  ' one hub lock is free again
+    utils.evaluateSubValue(retryCog <> NO_COG, @"a cog none of the first workers ran on is free", TRUE)
+    startedCount := doneCount := 0
+    if retryCog <> NO_COG
+        startedCount, readyCount, doneCount, _, _ := runMountWorkers(SOLO_WORKERS, retryCog)
+    utils.evaluateSubValue(startedCount, @"worker cogs started", SOLO_WORKERS)
+    utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", SOLO_WORKERS)
+    utils.evaluateSubStatus(raceStatus[0], @"mount() of the worker once a hub lock is free", flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the worker's mount()", TRUE)
+
+    repeat takenCount with lockIdx
+        lockret(heldLocks[lockIdx])                     ' give back every hub lock still held
+
+
+PRI takeFreeLocks() : takenCount | lockId
+' Take every hub lock LOCKNEW still gives, and keep them in heldLocks.
+
+' @returns takenCount - hub locks taken
+
+' Local Variables:
+' @local lockId - the lock LOCKNEW gave, negative once none is free
+
+    takenCount := 0
+    repeat while takenCount < HUB_LOCKS
+        lockId := locknew()
+        if lockId < 0                                   ' LOCKNEW returns a negative value when no lock is free
+            quit
+        heldLocks[takenCount++] := lockId
+    debug("* hub locks taken by the test: ", udec_(takenCount))
+
+
+PRI unusedCog(usedCount) : cogNum | candidate, workerIdx, bUsed
+' Find a cog that is neither the main cog nor one the first workers of the last run ran on.
+
+' @param usedCount - workers of the last run whose cogs are excluded
+' @returns cogNum - the lowest such cog, or NO_COG when there is none
+
+' Local Variables:
+' @local candidate - cog being considered
+' @local workerIdx - number of the worker whose cog is compared
+' @local bUsed - TRUE when the candidate is excluded
+
+    cogNum := NO_COG
+    repeat COG_COUNT with candidate
+        bUsed := candidate == cogid()
+        repeat usedCount with workerIdx
+            if raceCogs[workerIdx] == candidate
+                bUsed := TRUE
+        if not bUsed
+            cogNum := candidate
+            quit
 
 
 PRI testMountedAndNull() | pending, status
@@ -189,6 +341,35 @@ PRI testMountedAndNull() | pending, status
     utils.startTest(@"mounted() is TRUE again after the next mount()")
     mountAndCheck(flash.SUCCESS)
     utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
+
+
+PRI testRemountFromCogs() | status, startedCount, readyCount, doneCount
+' mount(), unmount() and mount() again from the main cog, then an unmount() and a mount() from another cog.
+
+' Local Variables:
+' @local status - what unmount() returned
+' @local startedCount - worker cogs that started
+' @local readyCount - workers that were waiting when the main cog released them
+' @local doneCount - workers whose mount() returned before the time limit
+
+    utils.startTestGroup(@"mount, unmount and mount again from the same cog and from another cog")
+
+    utils.startTest(@"unmount() and mount() again from the main cog")
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the unmount", FALSE)
+    mountAndCheck(flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the mount", TRUE)
+
+    utils.startTest(@"unmount() from the main cog, then mount() from another cog")
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    startedCount, readyCount, doneCount, _, _ := runMountWorkers(SOLO_WORKERS, NEWCOG)
+    utils.evaluateSubValue(startedCount, @"worker cogs started", SOLO_WORKERS)
+    utils.evaluateSubValue(readyCount, @"workers waiting when released", SOLO_WORKERS)
+    utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", SOLO_WORKERS)
+    utils.evaluateSubStatus(raceStatus[0], @"mount() of the worker", flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the worker's mount()", TRUE)
 
 
 PRI testCanMount() | bCanMount, status
@@ -472,7 +653,7 @@ PRI soloMountCase() | startedCount, readyCount, doneCount, bLeftAny
 
     utils.startTest(@"the table sampler sees one mount() from another cog build the tables")
     flash.TEST_setElectionCounts(flash.TEST_COUNT_UNSET)    ' a lock election, if one runs, is as at power-up, so the worker wins it
-    startedCount, readyCount, doneCount, bLeftAny, _ := runMountWorkers(SOLO_WORKERS)
+    startedCount, readyCount, doneCount, bLeftAny, _ := runMountWorkers(SOLO_WORKERS, NEWCOG)
     utils.evaluateSubValue(startedCount, @"worker cogs started", SOLO_WORKERS)
     utils.evaluateSubValue(readyCount, @"workers waiting when released", SOLO_WORKERS)
     utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", SOLO_WORKERS)
@@ -483,7 +664,7 @@ PRI soloMountCase() | startedCount, readyCount, doneCount, bLeftAny
 
 
 PRI raceCase() | status, startedCount, readyCount, doneCount, bLeftAfterFirst, workerIdx
-' Two cogs released together call mount() while no cog has created the lock: only one may build the tables, as one test.
+' Two cogs released together call mount() after an unmount, both finding it not mounted: only one may build the tables, as one test.
 
 ' Local Variables:
 ' @local status - what unmount() returned
@@ -497,7 +678,7 @@ PRI raceCase() | status, startedCount, readyCount, doneCount, bLeftAfterFirst, w
     status := flash.unmount()
     utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
     flash.TEST_setElectionCounts(flash.TEST_COUNT_UNSET)    ' a lock election, if one runs, is as at power-up, so one of the two wins it
-    startedCount, readyCount, doneCount, _, bLeftAfterFirst := runMountWorkers(RACE_WORKERS)
+    startedCount, readyCount, doneCount, _, bLeftAfterFirst := runMountWorkers(RACE_WORKERS, NEWCOG)
     utils.evaluateSubValue(startedCount, @"worker cogs started", RACE_WORKERS)
     utils.evaluateSubValue(readyCount, @"workers waiting when released", RACE_WORKERS)
     utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", RACE_WORKERS)
@@ -507,6 +688,104 @@ PRI raceCase() | status, startedCount, readyCount, doneCount, bLeftAfterFirst, w
     utils.evaluateSubValue(bLeftAfterFirst, @"the head block's entry changed after the first mount() returned", FALSE)
     utils.evaluateSubValue(flash.TEST_blockStateOf(raceHeadAddr), @"table state of the head block after both mounts", flash.B_HEAD)
     utils.evaluateSubValue(flash.mounted(), @"mounted() after the workers' mount()", TRUE)
+
+
+PRI testUnmountWithWaiters() | status, startedCount, callingCount, unmountStatus, doneCount, workerIdx
+' unmount() while every other cog waits for the lock in a different locked method: each waiter returns E_NOT_MOUNTED.
+
+' Local Variables:
+' @local status - what the lock hook returned
+' @local startedCount - waiter cogs that started
+' @local callingCount - waiters that had called their locked method before the unmount
+' @local unmountStatus - what unmount() returned
+' @local doneCount - waiters whose call returned before the time limit
+' @local workerIdx - number of the waiter whose status is checked
+
+    utils.startTestGroup(@"unmount() while every other cog waits for the lock")
+    utils.startTest(@"unmount() while seven cogs wait for the lock: each waiter returns E_NOT_MOUNTED and none hangs")
+    dirBlockId := 0
+    status := flash.TEST_holdLock()                     ' the main cog holds the lock, so each waiter's call stops at it
+    utils.evaluateSubStatus(status, @"the main cog takes the driver's lock", flash.SUCCESS)
+    startedCount, callingCount, unmountStatus, doneCount := runLockWaiters()
+    utils.evaluateSubValue(startedCount, @"waiter cogs started", LOCK_WAITERS)
+    utils.evaluateSubValue(callingCount, @"waiters that called before the unmount", LOCK_WAITERS)
+    utils.evaluateSubStatus(unmountStatus, @"unmount() from the main cog", flash.SUCCESS)
+    utils.evaluateSubValue(doneCount, @"waiter calls that returned before the time limit", LOCK_WAITERS)
+    repeat LOCK_WAITERS with workerIdx
+        ' the unmount ran while the waiter was at the lock, so the waiter finds the filesystem not mounted once it has the lock
+        utils.evaluateSubStatus(raceStatus[workerIdx], @"error() a waiter's call left", flash.E_NOT_MOUNTED)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the waiters returned", FALSE)
+    mountAndCheck(flash.SUCCESS)
+
+
+PRI testFormatWhileOpening() | roundIdx, bEnded
+' format() from the main cog while another cog loops on open() of a file that exists before each format, as one test.
+
+' Local Variables:
+' @local roundIdx - number of the format round
+' @local bEnded - TRUE when the opener ended its loop before the time limit
+
+    utils.startTestGroup(@"format() from one cog while another cog loops on open()")
+    utils.startTest(@"open() begun while format() runs returns only E_NOT_MOUNTED or the answer of the formatted filesystem")
+    openerPhase := PHASE_BEFORE
+    openerPause := openerPaused := openerArmed := openerSawAfter := openerStop := openerDone := FALSE
+    openerOpened := openerJudged := openerNotMounted := openerHalf := openerHalfValue := 0
+    resetWorkerFlags()
+    raceCogs[0] := cogspin(NEWCOG, openerWorker(), @workerStacks[0])
+    utils.evaluateSubValue(raceCogs[0] >= 0, @"the opener cog started", TRUE)
+
+    repeat FORMAT_ROUNDS with roundIdx
+        formatRound()
+
+    openerStop := TRUE
+    openerPause := FALSE
+    bEnded := waitForLong(@openerDone, TRUE, WORKER_WAIT_MS)
+    raceDone[0] := openerDone
+    if raceCogs[0] < 0
+        raceCogs[0] := NO_COG
+    stopUnfinished(SOLO_WORKERS)
+    debug("* opener: ", udec_(openerJudged), " calls during a format, ", udec_(openerNotMounted), " returned E_NOT_MOUNTED")
+    utils.evaluateSubValue(bEnded, @"the opener ended its loop before the time limit", TRUE)
+    utils.evaluateSubValue(openerJudged >= FORMAT_ROUNDS, @"the opener called open() while each format ran", TRUE)
+    ' a handle, or any other code, would come from tables the format had not rebuilt yet
+    utils.evaluateSubValue(openerHalf, @"open() calls during a format that returned neither E_NOT_MOUNTED nor E_FILE_NOT_FOUND", 0)
+    if openerHalf > 0
+        debug("* the last such open() returned ", sdec_(openerHalfValue))
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the last format", TRUE)
+
+
+PRI formatRound() | bWritten, priorOpened, status
+' Write the format file, let the opener open it, hold the opener, take the lock, release the opener into a call that stops
+' at the lock, then format; wait until a call begun after format() returned has returned.
+
+' Local Variables:
+' @local bWritten - TRUE when the file was written and closed
+' @local priorOpened - handles the opener had been given before this round
+' @local status - what the lock hook and format() returned
+
+    priorOpened := openerOpened
+    fillPattern(@writeBuf, FILE_BYTES, BASE_SEED)
+    bWritten := writeNewFile(@formatFile, @writeBuf, FILE_BYTES)
+    utils.evaluateSubValue(bWritten, @"the format file is written", TRUE)
+    ' the opener is given a handle to the file before the format, so a call that ran on the old tables would return one
+    utils.evaluateSubValue(waitForChange(@openerOpened, priorOpened, WORKER_WAIT_MS), @"the opener opened the file before the format", TRUE)
+
+    openerPause := TRUE
+    utils.evaluateSubValue(waitForLong(@openerPaused, TRUE, WORKER_START_MS), @"the opener is held between two calls", TRUE)
+    status := flash.TEST_holdLock()                     ' no open() can take the lock before format() does
+    utils.evaluateSubStatus(status, @"the main cog takes the driver's lock", flash.SUCCESS)
+    openerArmed := FALSE
+    openerPhase := PHASE_FORMATTING
+    openerPause := FALSE
+    utils.evaluateSubValue(waitForLong(@openerArmed, TRUE, WORKER_START_MS), @"the opener called open() before the format", TRUE)
+    waitms(WAITER_SETTLE_MS)                            ' the opener's open() has passed the check made before the lock
+
+    status := flash.format()                            ' takes the lock the main cog holds, and releases it once mounted again
+    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+    openerSawAfter := FALSE
+    openerPhase := PHASE_FORMATTED
+    utils.evaluateSubValue(waitForLong(@openerSawAfter, TRUE, WORKER_WAIT_MS), @"every open() begun during the format returned", TRUE)
+    openerPhase := PHASE_BEFORE
 
 
 PRI testMountFromOtherCog() | status, startedCount, readyCount, doneCount
@@ -523,7 +802,7 @@ PRI testMountFromOtherCog() | status, startedCount, readyCount, doneCount
     flash.TEST_setElectionCounts(flash.TEST_COUNT_LOWEST)   ' every entry holds the lowest count an earlier mount can leave in it
     status := flash.unmount()
     utils.evaluateSubStatus(status, @"unmount() from the main cog", flash.SUCCESS)
-    startedCount, readyCount, doneCount, _, _ := runMountWorkers(SOLO_WORKERS)
+    startedCount, readyCount, doneCount, _, _ := runMountWorkers(SOLO_WORKERS, NEWCOG)
     utils.evaluateSubValue(startedCount, @"worker cogs started", SOLO_WORKERS)
     utils.evaluateSubValue(readyCount, @"workers waiting when released", SOLO_WORKERS)
     utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", SOLO_WORKERS)
@@ -532,11 +811,12 @@ PRI testMountFromOtherCog() | status, startedCount, readyCount, doneCount
     flash.TEST_setElectionCounts(flash.TEST_COUNT_UNSET)    ' leave the election as it is at power-up
 
 
-PRI runMountWorkers(workerCount) : startedCount, readyCount, doneCount, bLeftAny, bLeftAfterFirst | workerIdx, waitLimit, bLeft
+PRI runMountWorkers(workerCount, firstCog) : startedCount, readyCount, doneCount, bLeftAny, bLeftAfterFirst | workerIdx, waitLimit, bLeft
 ' Start worker cogs that each call mount() once, release them together, and sample the head block's table entry until every
 ' started worker has returned or the time limit has passed; a worker still running then is stopped.
 
-' @param workerCount - workers to start, at most RACE_WORKERS
+' @param workerCount - workers to start, at most MAX_WORKERS
+' @param firstCog - NEWCOG to start each worker in any free cog, or the cog of the first worker, the next ones following it
 ' @returns startedCount - worker cogs that started
 ' @returns readyCount - workers that were waiting when the main cog released them
 ' @returns doneCount - workers whose mount() returned before the time limit
@@ -544,32 +824,20 @@ PRI runMountWorkers(workerCount) : startedCount, readyCount, doneCount, bLeftAny
 ' @returns bLeftAfterFirst - TRUE when a sample taken after the first mount() returned was not B_HEAD
 
 ' Local Variables:
-' @local workerIdx - number of the worker being started, counted or stopped
+' @local workerIdx - number of the worker being started
 ' @local waitLimit - time at which the wait being made ends
 ' @local bLeft - TRUE when the sample just taken was not B_HEAD
 
-    raceStart := FALSE
-    repeat RACE_WORKERS with workerIdx
-        raceReady[workerIdx] := FALSE
-        raceDone[workerIdx] := FALSE
-        raceStatus[workerIdx] := NO_STATUS
-        raceCogs[workerIdx] := NO_COG
-
+    resetWorkerFlags()
     startedCount := 0
     repeat workerCount with workerIdx
-        raceCogs[workerIdx] := cogspin(NEWCOG, mountWorker(workerIdx), @workerStacks[workerIdx * WORKER_STACK_LONGS])
+        raceCogs[workerIdx] := cogspin(firstCog == NEWCOG ? NEWCOG : firstCog + workerIdx, mountWorker(workerIdx), @workerStacks[workerIdx * WORKER_STACK_LONGS])
         if raceCogs[workerIdx] >= 0
             startedCount++
         else
             raceCogs[workerIdx] := NO_COG
 
-    readyCount := 0
-    waitLimit := getms() + WORKER_START_MS
-    repeat
-        readyCount := countSet(@raceReady, workerCount)
-        if readyCount == startedCount or getms() - waitLimit > 0    ' signed difference, so a wrap of the millisecond count is harmless
-            quit
-        waitms(WORKER_POLL_MS)
+    readyCount := waitForFlags(@raceReady, workerCount, startedCount, WORKER_START_MS)
 
     bLeftAny := FALSE
     bLeftAfterFirst := FALSE
@@ -584,10 +852,7 @@ PRI runMountWorkers(workerCount) : startedCount, readyCount, doneCount, bLeftAny
         if doneCount == startedCount or getms() - waitLimit > 0
             quit
 
-    repeat workerCount with workerIdx
-        if raceCogs[workerIdx] <> NO_COG and not raceDone[workerIdx]
-            debug("* worker ", sdec_(workerIdx), " in cog ", sdec_(raceCogs[workerIdx]), " has not returned from mount(): stopping it")
-            cogstop(raceCogs[workerIdx])
+    stopUnfinished(workerCount)
 
 
 PRI mountWorker(workerIdx)
@@ -599,6 +864,178 @@ PRI mountWorker(workerIdx)
     repeat until raceStart
     raceStatus[workerIdx] := flash.mount()
     raceDone[workerIdx] := TRUE
+
+
+PRI runLockWaiters() : startedCount, callingCount, unmountStatus, doneCount | workerIdx
+' Start a lock waiter in every other cog, release them, and once each has called its locked method, which stops at the lock the
+' main cog holds, call unmount(); then wait until every waiter has returned or the time limit has passed, and stop the rest.
+
+' @returns startedCount - waiter cogs that started
+' @returns callingCount - waiters that had called their locked method before the unmount
+' @returns unmountStatus - what unmount() returned
+' @returns doneCount - waiters whose call returned before the time limit
+
+' Local Variables:
+' @local workerIdx - number of the waiter being started
+
+    resetWorkerFlags()
+    startedCount := 0
+    repeat LOCK_WAITERS with workerIdx
+        raceCogs[workerIdx] := cogspin(NEWCOG, lockWaiter(workerIdx), @workerStacks[workerIdx * WORKER_STACK_LONGS])
+        if raceCogs[workerIdx] >= 0
+            startedCount++
+        else
+            raceCogs[workerIdx] := NO_COG
+
+    waitForFlags(@raceReady, LOCK_WAITERS, startedCount, WORKER_START_MS)
+    raceStart := TRUE                                   ' every waiting waiter leaves its wait within one pass of its loop
+    callingCount := waitForFlags(@raceCalling, LOCK_WAITERS, startedCount, WORKER_START_MS)
+    waitms(WAITER_SETTLE_MS)                            ' each waiter that called has passed the check made before the lock
+
+    unmountStatus := flash.unmount()                    ' takes the lock the main cog holds, and releases it at its end
+    doneCount := waitForFlags(@raceDone, LOCK_WAITERS, startedCount, WORKER_WAIT_MS)
+    stopUnfinished(LOCK_WAITERS)
+
+
+PRI lockWaiter(workerIdx)
+' Run in its own cog: report ready, wait for the main cog's release, call this waiter's locked method, and record the error() it left.
+
+' @param workerIdx - number of this waiter, the index of its flags and one of the WAIT_ values
+
+    raceReady[workerIdx] := TRUE
+    repeat until raceStart
+    raceCalling[workerIdx] := TRUE
+    case workerIdx
+        WAIT_FILE_SIZE: flash.file_size(@missingFile)
+        WAIT_SIZE_UNUSED: flash.file_size_unused(@missingFile)
+        WAIT_EXISTS: flash.exists(@missingFile)
+        WAIT_STATS: flash.stats()
+        WAIT_OPEN: flash.open(@missingFile, flash.FILEMODE_READ)
+        WAIT_DIRECTORY: flash.directory(@dirBlockId, @dirName, @dirFileSize)
+        other: flash.delete(@missingFile)
+    raceStatus[workerIdx] := flash.error()              ' each of these calls leaves its status in the calling cog's error()
+    raceDone[workerIdx] := TRUE
+
+
+PRI openerWorker() | callPhase, handle
+' Run in its own cog: call open() of the format file over and over until told to stop, and record what each call
+' begun during PHASE_FORMATTING returned; between two calls, wait while the main cog holds the opener.
+
+' Local Variables:
+' @local callPhase - what the main cog said about the format when the call began
+' @local handle - what open() returned
+
+    repeat until openerStop
+        if openerPause
+            openerPaused := TRUE
+            repeat while openerPause and not openerStop
+            openerPaused := FALSE
+        else
+            callPhase := openerPhase
+            if callPhase == PHASE_FORMATTING
+                openerArmed := TRUE
+            handle := flash.open(@formatFile, flash.FILEMODE_READ)
+            if isUsableHandle(handle)
+                flash.close(handle)                     ' a format abandons the handle, so this close may find it free already
+            if callPhase == PHASE_FORMATTING
+                openerJudged++
+                if handle == flash.E_NOT_MOUNTED
+                    openerNotMounted++
+                elseif handle <> flash.E_FILE_NOT_FOUND
+                    openerHalf++
+                    openerHalfValue := handle
+            elseif callPhase == PHASE_FORMATTED
+                openerSawAfter := TRUE
+            elseif isUsableHandle(handle)
+                openerOpened++
+    openerDone := TRUE
+
+
+PRI resetWorkerFlags() | workerIdx
+' Clear the release flag and every worker's flags, status and cog.
+
+' Local Variables:
+' @local workerIdx - number of the worker whose flags are cleared
+
+    raceStart := FALSE
+    repeat MAX_WORKERS with workerIdx
+        raceReady[workerIdx] := FALSE
+        raceCalling[workerIdx] := FALSE
+        raceDone[workerIdx] := FALSE
+        raceStatus[workerIdx] := NO_STATUS
+        raceCogs[workerIdx] := NO_COG
+
+
+PRI waitForFlags(pFlags, flagCount, wantCount, limitMs) : setCount | waitLimit
+' Wait until a number of the flags of a list of LONG flags are TRUE, or the time limit has passed.
+
+' @param pFlags - address of the first flag
+' @param flagCount - flags in the list
+' @param wantCount - flags that must be TRUE
+' @param limitMs - time limit in milliseconds
+' @returns setCount - flags that were TRUE when the wait ended
+
+' Local Variables:
+' @local waitLimit - time at which the wait ends
+
+    waitLimit := getms() + limitMs
+    repeat
+        setCount := countSet(pFlags, flagCount)
+        if setCount >= wantCount or getms() - waitLimit > 0     ' signed difference, so a wrap of the millisecond count is harmless
+            quit
+        waitms(WORKER_POLL_MS)
+
+
+PRI waitForLong(pLong, wantValue, limitMs) : bReached | waitLimit
+' Wait until a LONG holds a value, or the time limit has passed.
+
+' @param pLong - address of the LONG
+' @param wantValue - the value to wait for
+' @param limitMs - time limit in milliseconds
+' @returns bReached - TRUE when the LONG held the value before the limit
+
+' Local Variables:
+' @local waitLimit - time at which the wait ends
+
+    waitLimit := getms() + limitMs
+    repeat
+        bReached := LONG[pLong] == wantValue
+        if bReached or getms() - waitLimit > 0                  ' signed difference, so a wrap of the millisecond count is harmless
+            quit
+        waitms(WORKER_POLL_MS)
+
+
+PRI waitForChange(pLong, oldValue, limitMs) : bChanged | waitLimit
+' Wait until a LONG no longer holds a value, or the time limit has passed.
+
+' @param pLong - address of the LONG
+' @param oldValue - the value it held when the wait began
+' @param limitMs - time limit in milliseconds
+' @returns bChanged - TRUE when the LONG changed before the limit
+
+' Local Variables:
+' @local waitLimit - time at which the wait ends
+
+    waitLimit := getms() + limitMs
+    repeat
+        bChanged := LONG[pLong] <> oldValue
+        if bChanged or getms() - waitLimit > 0                  ' signed difference, so a wrap of the millisecond count is harmless
+            quit
+        waitms(WORKER_POLL_MS)
+
+
+PRI stopUnfinished(workerCount) | workerIdx
+' Stop every worker that started and has not returned from its call.
+
+' @param workerCount - workers of the run
+
+' Local Variables:
+' @local workerIdx - number of the worker being looked at
+
+    repeat workerCount with workerIdx
+        if raceCogs[workerIdx] <> NO_COG and not raceDone[workerIdx]
+            debug("* worker ", sdec_(workerIdx), " in cog ", sdec_(raceCogs[workerIdx]), " has not returned from its call: stopping it")
+            cogstop(raceCogs[workerIdx])
 
 
 PRI countSet(pFlags, flagCount) : setCount | flagIdx

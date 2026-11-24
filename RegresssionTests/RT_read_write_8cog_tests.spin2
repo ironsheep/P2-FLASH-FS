@@ -1,12 +1,13 @@
 '' =================================================================================================
 ''
 ''   File....... RT_read_write_8cog_tests.spin2
-''   Purpose.... This object exercises the all cogs writing to the filesystem
+''   Purpose.... This object exercises the all cogs writing to the filesystem, then all eight cogs at
+''               once writing strings with wr_str() and reading them back with rd_str(), timing each call
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... AUG 2023
-''   Updated.... 20 DEC 2023
+''   Updated.... 24 NOV 2026
 ''
 '' =================================================================================================
 
@@ -46,6 +47,20 @@ CON
     WORKERS_DONE_LIMIT_MS = 120_000     ' time the main cog waits, once its own files are done, for the workers: the slowest start delay plus two files
     DONE_POLL_MS = 100                  ' pause between looks at the count of finished workers
 
+CON ' ---- String Stress Run ----
+
+    COG_COUNT = 8                       ' cogs of the P2, each of which writes and reads one string file
+    STRESS_STRINGS = 200                ' strings each cog writes with wr_str() and reads back with rd_str()
+    STRESS_MAX_CHARS = 40               ' characters of the longest string, so the strings cross block boundaries
+    STRESS_BUF = STRESS_MAX_CHARS + 1   ' bytes of a string buffer: the longest string and its terminator
+    STRESS_NAME_LEN = 16                ' bytes of the name buffer of each cog's string file
+    STRESS_NAME_DIGIT = 3               ' offset of the cog digit in that name
+    STRESS_START_LIMIT_MS = 5_000       ' time the workers have to start and report ready
+    STRESS_DONE_LIMIT_MS = 120_000      ' time the main cog waits, once its own file is done, for the workers
+    STRESS_POLL_MS = 10                 ' pause between looks at the ready and done counts
+    LETTER_COUNT = 26                   ' letters the string pattern cycles through
+    MICROS_PER_SECOND = 1_000_000       ' converts a clock frequency to ticks per microsecond
+
 DAT
 
 record
@@ -64,6 +79,18 @@ stack           LONG    0[STACK_SIZE_PER_COG * WORKER_COUNT]
 fileCountAr     BYTE    0[8]
 
 fileNbr         BYTE    0
+
+DAT ' ---- String Stress Run ----
+
+stressStart     LONG    FALSE                   ' set by the main cog to release every cog of the stress run together
+stressReady     LONG    0                       ' workers waiting for stressStart, guarded by doneLock
+stressDone      LONG    0                       ' workers that have finished the stress run, guarded by doneLock
+worstWait       LONG    0[COG_COUNT]            ' longest wr_str() or rd_str() call of each cog, in clock ticks
+stressStack     LONG    0[STACK_SIZE_PER_COG * WORKER_COUNT]
+stressNames     BYTE    0[STRESS_NAME_LEN * COG_COUNT]  ' the name of each cog's string file
+stressWrBuf     BYTE    0[STRESS_BUF * COG_COUNT]       ' the string each cog writes, and expects to read back
+stressRdBuf     BYTE    0[STRESS_BUF * COG_COUNT]       ' the string each cog reads
+stressTemplate  BYTE    "ss-0-strs.txt", 0      ' the name of a string file, before the cog digit is put in
 
 PUB go() | cogIdx, totalFiles, status, workerCog, workersStarted, waitLimit
 
@@ -119,6 +146,7 @@ PUB go() | cogIdx, totalFiles, status, workerCog, workersStarted, waitLimit
     ' ---------------------------------------------------------------------
     ' TEST SCENARIO 2: read/write tests by all cogs individually but at same time
     ' ---------------------------------------------------------------------
+    runStringStress()
 
     debug("TESTs complete")
     utils.ShowTestEndCounts()
@@ -283,6 +311,162 @@ pri testVerifyRecords(pFilename, recordCount) | handle, status, recordNbr, rdLen
         lockrel(bufferLock)                                                           ' release the lock, we're done with it
 
         utils.showFiles()
+
+
+con ' ---- string stress run ---
+
+PRI runStringStress() | cogIdx, workerCog, workersStarted, waitLimit, worstTicks, ticksPerMicro
+' Run the string stress run on every cog at once: each cog writes its own file with wr_str(), reads it back with rd_str()
+' and times every call, then show the longest call any cog made, the worst lock wait observed.
+
+' Local Variables:
+' @local cogIdx - number of the worker being started, or of the cog whose longest call is compared
+' @local workerCog - cog the worker started in, negative when none was free
+' @local workersStarted - workers that started
+' @local waitLimit - time at which the wait being made ends
+' @local worstTicks - longest call of any cog, in clock ticks
+' @local ticksPerMicro - clock ticks in one microsecond at the running clock frequency
+
+    debug("  ")
+    debug("* starting COGs for the string stress run")
+    stressStart := FALSE
+    stressReady := 0
+    stressDone := 0
+    longfill(@worstWait, 0, COG_COUNT)
+    workersStarted := 0
+    repeat WORKER_COUNT with cogIdx
+        workerCog := cogspin(NEWCOG, stressWorker(), @stressStack[cogIdx * STACK_SIZE_PER_COG])
+        if workerCog >= 0
+            workersStarted++
+
+    waitLimit := getms() + STRESS_START_LIMIT_MS
+    repeat while stressReady < workersStarted
+        if getms() - waitLimit > 0                                          ' signed difference, so a wrap of the millisecond count is harmless
+            quit
+        waitms(STRESS_POLL_MS)
+    stressStart := TRUE                                                     ' every cog of the run begins together
+
+    stressStrings()                                                         ' the main cog writes and reads its own file too
+
+    waitLimit := getms() + STRESS_DONE_LIMIT_MS
+    repeat while stressDone < workersStarted
+        if getms() - waitLimit > 0
+            quit
+        waitms(STRESS_POLL_MS)
+
+    utils.startTest(@"Every worker of the string stress run started")
+    utils.evaluateSingleValue(workersStarted, @"stress workers started", WORKER_COUNT)
+    utils.startTest(@"Every worker finished the string stress run within the time limit")
+    utils.evaluateSingleValue(stressDone, @"stress workers done", workersStarted)
+
+    worstTicks := 0
+    repeat COG_COUNT with cogIdx
+        if worstWait[cogIdx] +> worstTicks                                  ' unsigned: a tick count above POSX is still a count
+            worstTicks := worstWait[cogIdx]
+    ticksPerMicro := clkfreq +/ MICROS_PER_SECOND
+    debug("* string stress run: worst lock wait observed (one wr_str() or rd_str() call) ", udec_(worstTicks), " ticks = ", udec_(worstTicks +/ ticksPerMicro), " us at ", udec_(clkfreq), " Hz")
+
+
+PRI stressWorker()
+' Run in its own cog: report ready, wait for the main cog's release, run the string stress run, then report done.
+
+    repeat while locktry(doneLock) == 0
+    stressReady++
+    lockrel(doneLock)
+    repeat until stressStart
+    stressStrings()
+    utils.ShowTestEndCounts()
+    repeat while locktry(doneLock) == 0
+    stressDone++
+    lockrel(doneLock)
+
+
+PRI stressStrings() | myId, pName, pWrite, pRead, handle, status, strIdx, startTicks, badCount, readLength
+' Write STRESS_STRINGS strings to this cog's own file with wr_str(), read them back with rd_str(), and time every call.
+
+' Local Variables:
+' @local myId - cog ID of this cog, the index of its file, buffers and longest call
+' @local pName - address of the name of this cog's file
+' @local pWrite - address of the string written, and expected back
+' @local pRead - address of the string read
+' @local handle - handle of the file
+' @local status - what open, wr_str() and close returned
+' @local strIdx - number of the string
+' @local startTicks - getct() just before the call being timed
+' @local badCount - calls that did not do what they should
+' @local readLength - what rd_str() returned
+
+    myId := cogid()
+    pName := @stressNames[myId * STRESS_NAME_LEN]
+    pWrite := @stressWrBuf[myId * STRESS_BUF]
+    pRead := @stressRdBuf[myId * STRESS_BUF]
+    strcopy(pName, @stressTemplate, STRESS_NAME_LEN - 1)
+    BYTE[pName][STRESS_NAME_DIGIT] := "0" + myId
+
+    utils.startTestGroup(@"String stress run: every cog writes and reads strings at once")
+    utils.startTest(@"Open string file for write")
+    handle, status := utils.openWaitOnHandle(pName, "w")
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+    if handle >= utils.FIRST_HANDLE
+        utils.startTest(@"wr_str() of every string")
+        badCount := 0
+        repeat STRESS_STRINGS with strIdx
+            fillString(pWrite, myId, strIdx)
+            startTicks := getct()
+            status := flash.wr_str(handle, pWrite)
+            noteWait(myId, getct() - startTicks)
+            if status <> flash.SUCCESS
+                badCount++
+        utils.evaluateSingleValue(badCount, @"wr_str() calls that failed", 0)
+        utils.startTest(@"Close written string file")
+        status := utils.closeHandle(handle)
+        utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    utils.startTest(@"Open string file for read")
+    handle, status := utils.openWaitOnHandle(pName, "r")
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+    if handle >= utils.FIRST_HANDLE
+        utils.startTest(@"rd_str() of every string returns it whole")
+        badCount := 0
+        repeat STRESS_STRINGS with strIdx
+            fillString(pWrite, myId, strIdx)
+            startTicks := getct()
+            readLength := flash.rd_str(handle, pRead, STRESS_BUF)
+            noteWait(myId, getct() - startTicks)
+            if flash.error() <> flash.SUCCESS or readLength <> strsize(pWrite) or not strcomp(pRead, pWrite)
+                badCount++
+        utils.evaluateSingleValue(badCount, @"rd_str() calls that did not return the string written", 0)
+        utils.startTest(@"Close read string file")
+        status := utils.closeHandle(handle)
+        utils.evaluateResultNegError(status, flash.SUCCESS)
+
+
+PRI fillString(pDest, myId, strIdx) | charCount, charIdx
+' Build one string of the stress run: the cog's letter, then lower-case letters, 1 to STRESS_MAX_CHARS characters long.
+
+' @param pDest - address of a buffer of STRESS_BUF bytes
+' @param myId - cog ID of the writing cog
+' @param strIdx - number of the string, which sets its length and letters
+
+' Local Variables:
+' @local charCount - characters of the string, without the terminator
+' @local charIdx - number of the letter after the first
+
+    charCount := (strIdx +// STRESS_MAX_CHARS) + 1
+    BYTE[pDest][0] := "A" + myId
+    repeat charCount - 1 with charIdx
+        BYTE[pDest][charIdx + 1] := "a" + ((strIdx + charIdx) +// LETTER_COUNT)
+    BYTE[pDest][charCount] := 0
+
+
+PRI noteWait(myId, elapsedTicks)
+' Keep the longest call of a cog.
+
+' @param myId - cog ID of the cog that made the call
+' @param elapsedTicks - clock ticks the call took, getct() after less getct() before
+
+    if elapsedTicks +> worstWait[myId]                                      ' unsigned: a tick count above POSX is still a count
+        worstWait[myId] := elapsedTicks
 
 
 con ' ---- Utility Methods ---
