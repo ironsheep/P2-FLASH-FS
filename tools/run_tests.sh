@@ -17,6 +17,8 @@
 #   --run              download, run and capture (the default on the macOS host)
 #   --set NAME=VALUE   replace the default value of CON constant NAME in the generated copy
 #                      (repeatable; e.g. --set MAX_FILES_OPEN=1)
+#   --define SYMBOL    define preprocessor SYMBOL for every program compiled (pnut-ts -D;
+#                      repeatable; e.g. --define FULL_FLASH_GUARD_ONLY)
 #   --timeout SECONDS  per-program run timeout passed to pnut-term-ts (default 600)
 #   --driver FILE      driver to copy instead of the repository's flash_fs.spin2
 #   --judge LOGFILE    judge an existing log with the run-mode rules; generates and
@@ -36,9 +38,9 @@
 #
 # Files: compiled images go to RegresssionTests/build/bin/ (nothing is written beside the
 # sources). Run mode writes the log to RegresssionTests/<prog>.log, overwriting it; a build/
-# program writes beside itself as build/<path>.log, and a run with --set writes
-# RegresssionTests/build/<prog>.<NAME>-<VALUE>.log, so tracked logs are replaced only by
-# plain runs of RT_* programs. pnut-term-ts runs inside RegresssionTests/build/; the session
+# program writes beside itself as build/<path>.log, and a run with --set or --define writes
+# RegresssionTests/build/<prog>.<NAME>-<VALUE>.<SYMBOL>.log, so tracked logs are replaced only
+# by plain runs of RT_* programs. pnut-term-ts runs inside RegresssionTests/build/; the session
 # log it writes to build/logs/ during the run becomes the program's log, and its standard
 # output is used when it wrote none (the run says which).
 #
@@ -59,6 +61,7 @@ MODE=""
 TIMEOUT=600
 JUDGE=""
 SETS=()
+DEFINES=()
 PROGS=()
 
 die() { echo "run_tests: $2" >&2; exit "$1"; }
@@ -98,6 +101,9 @@ while [[ $# -gt 0 ]]; do
         --set)
             [[ $# -ge 2 ]] || die 2 "--set needs NAME=VALUE"
             SETS+=("$2"); shift 2 ;;
+        --define)
+            [[ $# -ge 2 && "$2" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || die 2 "--define needs a symbol name"
+            DEFINES+=("$2"); shift 2 ;;
         --timeout)
             [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || die 2 "--timeout needs whole seconds"
             TIMEOUT="$2"; shift 2 ;;
@@ -145,6 +151,13 @@ for s in ${SETS[@]+"${SETS[@]}"}; do
     SETNAMES+=("${BASH_REMATCH[1]}"); SETVALS+=("${BASH_REMATCH[2]}")
     tag="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}"
     SETTAG="${SETTAG:+$SETTAG.}${tag//[^A-Za-z0-9_.-]/_}"
+done
+# Each --define becomes a pnut-ts -D option, and joins the log tag so such a run never
+# replaces a tracked log.
+DEFARGS=()
+for d in ${DEFINES[@]+"${DEFINES[@]}"}; do
+    DEFARGS+=(-D "$d")
+    SETTAG="${SETTAG:+$SETTAG.}$d"
 done
 
 # ---- generate the hook-enabled copy -------------------------------------------------
@@ -217,8 +230,8 @@ for p in "${RESOLVED[@]}"; do
     mkdir -p "$(dirname "$bin")"
     rm -f "$bin"
     # build/ holds the generated driver; "." lets a program below build/ find RT_utilities.
-    echo "+ (in RegresssionTests/) pnut-ts -d -I build -I . -o $bin $p"
-    (cd "$TESTDIR" && pnut-ts -d -I build -I . -o "$bin" "$p") > "$TMPOUT" 2>&1
+    echo "+ (in RegresssionTests/) pnut-ts -d${DEFARGS[*]:+ ${DEFARGS[*]}} -I build -I . -o $bin $p"
+    (cd "$TESTDIR" && pnut-ts -d ${DEFARGS[@]+"${DEFARGS[@]}"} -I build -I . -o "$bin" "$p") > "$TMPOUT" 2>&1
     rc=$?
     cat "$TMPOUT"
     odd=$(grep -v -E "$CLEAN_RE" "$TMPOUT" | grep -v '^$' | head -n 1)
