@@ -89,7 +89,17 @@ if [[ $missing -gt 0 ]]; then
 fi
 
 TMP="$(mktemp)" || die 3 "cannot create a temporary file"
-trap 'rm -f "$TMP"' EXIT
+PROD="$(mktemp)" || die 3 "cannot create a temporary file"
+trap 'rm -f "$TMP" "$PROD"' EXIT
+
+# The regression-test block (from the REMOVE BEFORE FLIGHT line to the end) ships commented out
+# and is not part of the public interface, so checks 1-3 read only the lines before it.
+MARKER_LINE="$(grep -n 'REMOVE BEFORE FLIGHT' "$DRIVER" | head -n 1 | cut -d: -f1)"
+if [[ -n "$MARKER_LINE" ]]; then
+    head -n "$((MARKER_LINE - 1))" "$DRIVER" > "$PROD"
+else
+    cp "$DRIVER" "$PROD"
+fi
 
 echo ""
 echo "Documentation drift - tree: $ROOT"
@@ -119,7 +129,7 @@ echo ""
 echo "== 1. PUB signatures: $DRIVER vs $APITXT"
 declare -A DSIG LSIG SSIG
 DORDER=(); LORDER=(); SORDER=()
-load_sigs DSIG DORDER < <(grep -E '^PUB ' "$DRIVER" | grep -v -E '^PUB[[:space:]]+TEST_')
+load_sigs DSIG DORDER < <(grep -E '^PUB ' "$PROD" | grep -v -E '^PUB[[:space:]]+TEST_')
 load_sigs LSIG LORDER < <(awk '/^Object .*Interface/ { inl = 1; next } inl && /^_+[[:space:]]*$/ { exit } inl && /^PUB / { print }' "$APITXT")
 load_sigs SSIG SORDER < <(awk '/^_+[[:space:]]*$/ { seen = 1; next } seen && /^PUB / { print }' "$APITXT")
 echo "       ${#DORDER[@]} driver PUBs, ${#LORDER[@]} in the interface list, ${#SORDER[@]} method headings"
@@ -154,7 +164,7 @@ declare -A CONVAL CASEMSG
 CONORDER=()
 while read -r name val; do
     CONVAL[$name]="$val"; CONORDER+=("$name")
-done < <(sed -nE 's/^[[:space:]]+(E_[A-Z_0-9]+)[[:space:]]*=[[:space:]]*(-?[0-9]+).*/\1 \2/p' "$DRIVER")
+done < <(sed -nE 's/^[[:space:]]+(E_[A-Z_0-9]+)[[:space:]]*=[[:space:]]*(-?[0-9]+).*/\1 \2/p' "$PROD")
 
 CASEORDER=()
 while IFS=$'\t' read -r label msg; do
@@ -167,7 +177,7 @@ done < <(awk '/^PUB string_for_error/ { inf = 1; next } inf && /^(PUB|PRI|CON)[[
         msg = ""
         if (match(line, /@"[^"]*"/)) msg = substr(line, RSTART + 2, RLENGTH - 3)
         print label "\t" msg
-    }' "$DRIVER")
+    }' "$PROD")
 echo "       ${#CONORDER[@]} E_* codes in CON, ${#CASEORDER[@]} in string_for_error"
 [[ ${#CONORDER[@]} -gt 0 ]] || drift "no E_* code found in the CON of $DRIVER"
 for n in "${CONORDER[@]}"; do
@@ -195,7 +205,7 @@ done
 echo ""
 echo "== 3. version strings"
 c3=$drifts
-libv="$(sed -nE 's/^[[:space:]]*LIB_VERSION[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "$DRIVER" | head -n 1)"
+libv="$(sed -nE 's/^[[:space:]]*LIB_VERSION[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "$PROD" | head -n 1)"
 if [[ -z "$libv" ]]; then
     drift "$DRIVER: no LIB_VERSION constant found"
 else
@@ -210,9 +220,9 @@ else
             drift "$3 $1, LIB_VERSION is $want"
         fi
     }
-    version_agrees "$(grep -E '^[[:space:]]*LIB_VERSION[[:space:]]*=' "$DRIVER" | head -n 1 | sed -nE "s/.*'[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p")" \
+    version_agrees "$(grep -E '^[[:space:]]*LIB_VERSION[[:space:]]*=' "$PROD" | head -n 1 | sed -nE "s/.*'[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p")" \
         "$DRIVER: the LIB_VERSION line carries no X.Y.Z comment" "$DRIVER: LIB_VERSION comment says"
-    version_agrees "$(grep -E "^'' v[0-9]+\.[0-9]+\.[0-9]+" "$DRIVER" | tail -n 1 | sed -nE "s/^'' v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p")" \
+    version_agrees "$(grep -E "^'' v[0-9]+\.[0-9]+\.[0-9]+" "$PROD" | tail -n 1 | sed -nE "s/^'' v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p")" \
         "$DRIVER: no 'vX.Y.Z' header history line" "$DRIVER: newest header history line is"
     version_agrees "$(grep -E '^ v[0-9]+\.[0-9]+\.[0-9]+' "$APITXT" | tail -n 1 | sed -nE 's/^ v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')" \
         "$APITXT: no ' vX.Y.Z' history line" "$APITXT: newest history line is"
