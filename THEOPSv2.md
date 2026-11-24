@@ -98,7 +98,7 @@ The bits of this first long in the block are interpreted as follows:
 | Bit location | xx | xx |
 | --- | --- | --- |
 | 31..20 | EndPtr -or- NextId | 12-bit field: EndPtr is address of next free byte in block<br>NextID is Block ID of next block in chain 
-| 19..8 | ThisID | the Block ID [0-3975] assigned to this block
+| 19..8 | ThisID | the Block ID [0-3967] assigned to this block
 | 7..5 | LifeCycle | life-cycle state of this block
 | 4..2 | Unused | these bits reserved
 | 1..0 | Block Type | bit 1x = head/body, bit x1 = last/more <br>which yields: 00 = head/last, 01 = head/more, 10 = body/last, 11 = body/more
