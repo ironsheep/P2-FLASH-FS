@@ -23,9 +23,14 @@ CON
     DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
 '}
 
+CON
+    HANDLES_OPEN = 8                ' handles the driver and the harness both provide
+
+#PRAGMA EXPORTDEF RT_UTILITIES_FILES_OPEN
+
 OBJ
-    flash : "flash_fs" | MAX_FILES_OPEN = 8
-    utils : "RT_utilities" | FILES_OPEN = 8
+    flash : "flash_fs" | MAX_FILES_OPEN = HANDLES_OPEN
+    utils : "RT_utilities" | FILES_OPEN = HANDLES_OPEN
 
 CON
     RECORD_LEN = 88 ' just for fun, tiny but even number of longs
@@ -209,7 +214,7 @@ pri testWriteBytes(pFilename, count) | blocksUsed, handle, status, testValue
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -256,7 +261,7 @@ pri testVerifyBytes(pFilename, count) | handle, status, expectedValue, testValue
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
@@ -290,7 +295,7 @@ pri testWriteWords(pFilename, count) | handle, status, testValue
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -338,7 +343,7 @@ pri testVerifyWords(pFilename, count) | handle, status, expectedValue, testValue
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
@@ -372,7 +377,7 @@ pri testWriteLongs(pFilename, count) | handle, status, testValue, blocksUsed
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -422,7 +427,7 @@ pri testVerifyLongs(pFilename, count) | handle, status, expectedValue, testValue
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
@@ -499,7 +504,7 @@ pri testWriteStrings(pFilename, count) | handle, status, strIdx, maxStringIdx, p
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     {
@@ -564,7 +569,7 @@ pri testVerifyStrings(pFilename, count) | handle, status, maxStringIdx, readWrit
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
@@ -608,7 +613,7 @@ pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeL
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     lockrel(bufferLock)                                                               ' release the lock, we're done with it
@@ -701,7 +706,7 @@ pri testVerifyRecords(pFilename, recordCount) | handle, status, recordNbr, rdLen
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     lockrel(bufferLock)                                                               ' release the lock, we're done with it

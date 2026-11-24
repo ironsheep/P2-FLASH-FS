@@ -1,3 +1,4 @@
+{Spin2_v52}
 '' =================================================================================================
 ''
 ''   File....... RT_utilites.spin2
@@ -12,12 +13,40 @@
 
 CON
 
-  FILES_OPEN = 2 ' ensure is same default as FLASH F/S!!!
+#IFDEF RT_UTILITIES_FILES_OPEN
+  FILES_OPEN = -1                       ' the program must override this with its MAX_FILES_OPEN; -1 fails the build if it does not
+#ENDIF
   TEST_SIGNATURE = $12345678
   SIG_BUFFER_LONGS = flash.MAX_FILE_LEN_IN_BLOCKS * 2 ' longs the driver's signature hooks fill, per cog
+  FIRST_HANDLE = 0                      ' lowest handle value open() returns for a file that opened
+  SKIP_FS_STATS = -1                    ' startingFileCount value that skips the filesystem statistics check
+  OPEN_RETRY_LIMIT = 3000               ' open attempts made while every handle is in use by other cogs
+  OPEN_RETRY_WAIT_MS = 10               ' pause between those attempts
+  VALUE_BYTE = 1                        ' bytes in a BYTE value file entry
+  VALUE_WORD = 2                        ' bytes in a WORD value file entry
+  VALUE_LONG = 4                        ' bytes in a LONG value file entry
+  MAX_COGS = 8                          ' cogs the per-cog tables hold
+  HOLDER_SLOTS = flash.MAX_FILES_OPEN #> 1 ' handles the holder table tracks
+  NO_HOLDER = 0                         ' holder table value of a handle no cog holds
+  TEST_STRING_SIZE = (9 * 44) + 1       ' bytes the string read buffer holds
+  TEST_STRING_SLOTS = 30                ' strings one cog can record as written
+  RCD_ID_LONG = 1                       ' index of the record number long within a test record
+  RCD_DUMP_BYTES = 128                  ' record bytes shown when a record fails
+  SPLICE_DUMP_BYTES = 256               ' block bytes shown on each side of a block boundary
+  DECIMAL_BASE = 10                     ' radix of the numbers shown in titles
+  RCD_NUMBER_BYTES = 4                  ' bytes a record number title holds, with its zero
 
 OBJ
+#IFDEF RT_UTILITIES_FILES_OPEN
     flash : "flash_fs" | MAX_FILES_OPEN = FILES_OPEN
+#ELSE
+    flash : "flash_fs"
+#ENDIF
+
+
+DAT { harness lock }
+
+  harnessLock     LONG    -1                ' lock protecting handleHolder, or -1 when none could be allocated
 
 
 VAR { test stats vars }
@@ -32,8 +61,12 @@ VAR { test stats vars }
   LONG    varSignature[8]
   LONG    sigBuffer[8 * SIG_BUFFER_LONGS]    ' one signature list per cog
 
-  BYTE    versionString[10]  '  "flash_fs v"
-  BYTE    vDigits[5+1]       ' "x.x.x", 0
+  LONG    randState[MAX_COGS]                ' per-cog generator state for randomBelow()
+
+  LONG    handleHolder[HOLDER_SLOTS]         ' per handle: NO_HOLDER, or the number of the cog holding it plus 1
+
+  BYTE    idxStringWritten[MAX_COGS * TEST_STRING_SLOTS]   ' per cog: index of each string written, in order written
+  BYTE    testStrBuffer[MAX_COGS * TEST_STRING_SIZE]       ' per cog: string read buffer
 
   byte    filename[128]
 
@@ -42,41 +75,50 @@ pub null()
 '' This is not an application
 ''  (invoke format() or mount() to use the flash file system)
 
-pri initIfNotAlready()
-    if varSignature[cogId()] <> TEST_SIGNATURE
-        numberTests[cogId()] := 0
-        subTestPer[cogId()] := 1
-        passCount[cogId()] := 0
-        failCount[cogId()] := 0
-        passCountSub[cogId()] := 0
-        failCountSub[cogId()] := 0
-        strcopy(@versionString, @"flash_fs vx.x.x",15)
-        varSignature[cogId()] := TEST_SIGNATURE
-        debug("* init VAR")
-        flash.TEST_enableRTdebug()                      ' turn on extra debug output
+pub showChipAndDriverVersion() | snHi, snLo, version
+'' Show the chip serial number and the driver version as major.minor.patch.
 
-pub showChipAndDriverVersion() | snHi, snLo, version, hundreds, tens, units
+' Local Variables:
+' @local snHi - upper long of the chip serial number
+' @local snLo - lower long of the chip serial number
+' @local version - driver version, 200 for 2.0.0
+
     debug(" ")
     debug("* Environment: Chip S/N and Driver Version")
     snHi, snLo := flash.serial_number()
     debug("   CHIP Serial Number: ", uhex_long_(snHi), "-", uhex_long_(snLo))
     version := flash.version()
+    debug("   Driver: flash_fs v", udec_(version / 100), ".", udec_((version / 10) +// 10), ".", udec_(version +// 10))
 
-   ' brute force... (someone didn't import a string formatter, I wonder who that was?)
-    hundreds := version / 100
-    BYTE[@vDigits][0] := "0" + hundreds
-    tens := (version - (hundreds * 100)) / 10
-    BYTE[@vDigits][2] := "0" + tens
-    units := version - (hundreds * 100) - (tens * 10)
-    BYTE[@vDigits][4] := "0" + units
-    debug ("   Driver: ", zstr_(@versionString))
+
+pub setRandomSeed(seedValue)
+'' Set the calling cog's random generator state, and show it so a run can be repeated.
+''
+'' @param seedValue - generator state to use; 0 is replaced by 1 because a zero state never changes
+
+    initIfNotAlready()
+    randState[cogId()] := seedValue == 0 ? 1 : seedValue
+    debug("* Random seed (cog ", udec_(cogId()), "): ", uhex_long_(randState[cogId()]))
+
+
+pub randomBelow(limit) : drawn
+'' Draw the next pseudo-random number of the calling cog's generator.
+''
+'' @param limit - the number returned is below this
+'' @returns drawn - a number from 0 through limit - 1
+
+    initIfNotAlready()
+    drawn := ??randState[cogId()] +// limit
 
 
 pub startTestGroup(pDesciption)
-    ' show test-group heading
+'' Show a test-group heading and forget the handles the calling cog still holds.
+''
+'' @param pDesciption - address of zstring with the group description
 
     initIfNotAlready()
     showSubTestResults()
+    releaseCogHandles()
 
     debug(" ")  ' blank line
     debug(" ")  ' blank line
@@ -115,7 +157,12 @@ pub showSubTestResults() | passScaled, failScaled, total, pPassFail
 
 
 pub ShowTestEndCounts() | pMsg
-    ' show summary of all tests
+'' Show the calling cog's summary of all tests.
+
+' Local Variables:
+' @local pMsg - address of the text naming how the counts disagree
+
+    showSubTestResults()
     debug(" ")  ' blank line
     debug("* ", udec_(numberTests[cogId()]), " Tests - Pass: ", udec_(passCount[cogId()]), ", Fail: ", udec_(failCount[cogId()]))
     if numberTests[cogId()] <> passCount[cogId()] + failCount[cogId()]
@@ -123,10 +170,21 @@ pub ShowTestEndCounts() | pMsg
       debug("*  BAD TEST COUNTS: ", udec_(numberTests[cogId()]), " <> ", udec_(passCount[cogId()] + failCount[cogId()]), " (", zstr_(pMsg), " ", udec_(abs(numberTests[cogId()] - (passCount[cogId()] + failCount[cogId()]))), " tests)")
 
 
-pub ShowMultiCogTestEndCounts() | pMsg, totalTests, totalPasses, totalFails, cogIdx
-    ' show summary of all tests
-    ' gather totals
-    repeat 8 with cogIdx
+pub ShowMultiCogTestEndCounts() : totalTests, totalPasses, totalFails | pMsg, cogIdx
+'' Show the summary of all tests run by every cog.
+''
+'' @returns totalTests - tests started by all cogs
+'' @returns totalPasses - tests that passed in all cogs
+'' @returns totalFails - tests that failed in all cogs
+
+' Local Variables:
+' @local pMsg - address of the text naming how the counts disagree
+' @local cogIdx - number of the cog whose counts are added
+
+    totalTests := 0
+    totalPasses := 0
+    totalFails := 0
+    repeat MAX_COGS with cogIdx
       totalTests += numberTests[cogIdx]
       totalPasses += passCount[cogIdx]
       totalFails += failCount[cogIdx]
@@ -136,6 +194,33 @@ pub ShowMultiCogTestEndCounts() | pMsg, totalTests, totalPasses, totalFails, cog
     if totalTests <> totalPasses + totalFails
       pMsg := (totalTests > totalPasses + totalFails) ? @"missing" : @"extra"
       debug("*  TOTALs BAD TEST COUNTS: ", udec_(totalTests), " <> ", udec_(totalPasses + totalFails), " (", zstr_(pMsg), " ", udec_(abs(totalTests - (totalPasses + totalFails))), " tests)")
+
+
+pub ShowTestResult(pProgramName) | bCountsMatch
+'' Show the calling cog's summary, then the RESULT line and the end-of-session marker.
+''
+'' @param pProgramName - address of zstring with the program name, without a file extension
+
+' Local Variables:
+' @local bCountsMatch - TRUE when every test started was passed or failed
+
+    ShowTestEndCounts()
+    bCountsMatch := numberTests[cogId()] == passCount[cogId()] + failCount[cogId()]
+    emitResult(pProgramName, passCount[cogId()], numberTests[cogId()], failCount[cogId()] == 0 and bCountsMatch)
+
+
+pub ShowMultiCogTestResult(pProgramName) | totalTests, totalPasses, totalFails
+'' Show the summary of all cogs, then the RESULT line and the end-of-session marker.
+''
+'' @param pProgramName - address of zstring with the program name, without a file extension
+
+' Local Variables:
+' @local totalTests - tests started by all cogs
+' @local totalPasses - tests that passed in all cogs
+' @local totalFails - tests that failed in all cogs
+
+    totalTests, totalPasses, totalFails := ShowMultiCogTestEndCounts()
+    emitResult(pProgramName, totalPasses, totalTests, totalFails == 0 and totalTests == totalPasses + totalFails)
 
 
 pub setCheckCountPerTest(countTests)
@@ -216,16 +301,74 @@ pub evaluateSingleValue(result, pMessage, expectedResult) | bPassed, pPassFail
     debug("   -> ", zstr_(pPassFail))
 
 
-pub evaluateHandle(resultHandle, pMessage) | bPassed, pPassFail
-    bPassed := resultHandle >= 0
+pub evaluateHandle(resultHandle, pMessage) | bPassed, pPassFail, slotIdx, holderNumber
+'' Check that open returned a usable handle that no cog holds, and record the calling cog as its holder.
+''
+'' @param resultHandle - handle open returned
+'' @param pMessage - address of zstring describing the open
+
+' Local Variables:
+' @local bPassed - TRUE when the handle is valid and was free
+' @local pPassFail - address of the verdict text
+' @local slotIdx - holder table entry of the handle
+' @local holderNumber - cog number plus 1 of the cog already holding the handle
+
+    initIfNotAlready()
+    slotIdx := resultHandle - FIRST_HANDLE
+    bPassed := false
+    holderNumber := NO_HOLDER
+    if slotIdx >= 0 and slotIdx < HOLDER_SLOTS
+        acquireHarnessLock()
+        holderNumber := handleHolder[slotIdx]
+        if holderNumber == NO_HOLDER
+            handleHolder[slotIdx] := cogId() + 1
+            bPassed := true
+        releaseHarnessLock()
     pPassFail := !bPassed ? @"FAIL" : @"pass"
     ifnot bPassed
-        debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle), " (expected >= 0)")
+        if holderNumber == NO_HOLDER
+            debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle), " (expected a handle from ", sdec_(FIRST_HANDLE), " below ", sdec_(FIRST_HANDLE + HOLDER_SLOTS), ")")
+        else
+            debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle), " (already held by cog ", udec_(holderNumber - 1), ")")
         failCount[cogId()]++
     else
         debug("  ", zstr_(pMessage), ": ", sdec_long_(resultHandle))
         passCount[cogId()]++
     debug("   -> ", zstr_(pPassFail))
+
+
+pub releaseHandle(handle) | slotIdx
+'' Forget that a cog holds a handle.
+''
+'' @param handle - handle that was closed
+
+' Local Variables:
+' @local slotIdx - holder table entry of the handle
+
+    slotIdx := handle - FIRST_HANDLE
+    if slotIdx >= 0 and slotIdx < HOLDER_SLOTS
+        acquireHarnessLock()
+        handleHolder[slotIdx] := NO_HOLDER
+        releaseHarnessLock()
+
+
+pub closeHandle(handle) : status
+'' Close a file and forget that a cog holds its handle.
+''
+'' @param handle - handle to close
+'' @returns status - the status close() returned
+
+    status := flash.close(handle)
+    releaseHandle(handle)
+
+
+pub checkDriverInstance(maxFilesOpen)
+'' Record one test that fails when the program's driver instance and this object's differ in MAX_FILES_OPEN.
+''
+'' @param maxFilesOpen - the program's flash.MAX_FILES_OPEN
+
+    startTest(@"driver instance matches the harness instance")
+    evaluateSingleValue(maxFilesOpen, @"MAX_FILES_OPEN", flash.MAX_FILES_OPEN)
 
 
 pub evaluateFSStats(pMessage, expectedFileCount, expectedBlocksUsed) | blocksUsed, blocksFree, fileCount, bPassed, pPassFail
@@ -372,6 +515,459 @@ pub showFileChain(pFilename) | pSignatureAr, signatureCount
     else
         debug("  # 0 Blocks in file ???")
 
+
+pub openWaitOnHandle(pFilename, mode) : handle, status | pErr, retryIdx
+'' Open a file, retrying while every file handle is in use by other cogs.
+''
+'' @param pFilename - address of zstring with file name
+'' @param mode - open mode character such as "r", "w" or "a"
+'' @returns handle - handle from open(), or a negative error code
+'' @returns status - SUCCESS, or the error open() reported (E_NO_HANDLE after OPEN_RETRY_LIMIT attempts)
+
+' Local Variables:
+' @local pErr - address of the text for an error code
+' @local retryIdx - number of the open attempt
+
+    handle := flash.E_NO_HANDLE
+    status := flash.E_NO_HANDLE
+    repeat retryIdx from 1 to OPEN_RETRY_LIMIT
+        handle := flash.open(pFilename, mode)
+        status := flash.error()
+        if handle < 0 and status == flash.SUCCESS
+            pErr := flash.string_for_error(handle)
+            debug("**** BAD EXIT from flash_fs()  handle=[", zstr_(pErr), "] status=[SUCCESS]")
+            status := handle
+        if status <> flash.E_NO_HANDLE
+            quit
+        waitms(OPEN_RETRY_WAIT_MS)
+
+    if status <> flash.SUCCESS
+        pErr := flash.string_for_error(status)
+        debug("openWaitOnHandle() - ", sdec(handle), " [", zstr_(pErr), "]")
+
+
+pub testWriteBytes(pFilename, count, startingFileCount, startingBlockCount)
+'' Write the BYTE values 1 through count to a new file, close it and check the file and filesystem statistics.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of BYTEs to write
+'' @param startingFileCount - files in the filesystem before the call, or SKIP_FS_STATS to skip the filesystem check
+'' @param startingBlockCount - blocks in use before the call
+
+    writeValueFile(pFilename, count, VALUE_BYTE, startingFileCount, startingBlockCount)
+
+
+pub testVerifyBytes(pFilename, count)
+'' Read back a file written by testWriteBytes(), check each BYTE value and the end of file, and close the file.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of BYTEs the file holds
+
+    verifyValueFile(pFilename, count, VALUE_BYTE)
+
+
+pub testWriteWords(pFilename, count, startingFileCount, startingBlockCount)
+'' Write the WORD values 1 through count to a new file, close it and check the file and filesystem statistics.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of WORDs to write
+'' @param startingFileCount - files in the filesystem before the call, or SKIP_FS_STATS to skip the filesystem check
+'' @param startingBlockCount - blocks in use before the call
+
+    writeValueFile(pFilename, count, VALUE_WORD, startingFileCount, startingBlockCount)
+
+
+pub testVerifyWords(pFilename, count)
+'' Read back a file written by testWriteWords(), check each WORD value and the end of file, and close the file.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of WORDs the file holds
+
+    verifyValueFile(pFilename, count, VALUE_WORD)
+
+
+pub testWriteLongs(pFilename, count, startingFileCount, startingBlockCount)
+'' Write the LONG values 1 through count to a new file, close it and check the file and filesystem statistics.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of LONGs to write
+'' @param startingFileCount - files in the filesystem before the call, or SKIP_FS_STATS to skip the filesystem check
+'' @param startingBlockCount - blocks in use before the call
+
+    writeValueFile(pFilename, count, VALUE_LONG, startingFileCount, startingBlockCount)
+
+
+pub testVerifyLongs(pFilename, count)
+'' Read back a file written by testWriteLongs(), check each LONG value and the end of file, and close the file.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of LONGs the file holds
+
+    verifyValueFile(pFilename, count, VALUE_LONG)
+
+
+pub pickTestString(slotIdx) : pString | strIdx
+'' Choose a random test string and record the choice in the calling cog's slot.
+''
+'' @param slotIdx - position of the string in the file, from 0
+'' @returns pString - address of the chosen zstring
+
+' Local Variables:
+' @local strIdx - index of the chosen string in the string table
+
+    strIdx := randomBelow(stringIdCt)
+    BYTE[@idxStringWritten][(cogId() * TEST_STRING_SLOTS) + slotIdx] := strIdx
+    pString := @@LONG[@stringIdTable][strIdx]
+
+
+pub testWriteStrings(pFilename, count, startingFileCount, startingBlockCount) : fileSize | handle, status, strCount, slotIdx, pString, blocksUsed
+'' Write count random test strings to a new file, close it and check the file and filesystem statistics.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of strings to write, limited to TEST_STRING_SLOTS
+'' @param startingFileCount - files in the filesystem before the call, or SKIP_FS_STATS to skip the filesystem check
+'' @param startingBlockCount - blocks in use before the call
+'' @returns fileSize - bytes written, terminators included
+
+' Local Variables:
+' @local handle - handle of the file being written
+' @local status - status of the latest driver call
+' @local strCount - strings written
+' @local slotIdx - position of the string being written
+' @local pString - address of the string being written
+' @local blocksUsed - blocks the written file occupies
+
+    fileSize := 0
+    debug("- testWriteStrings(", zstr_(pFilename), ", ", udec_(count), ")")
+    startTest(@"Open File for write")
+    handle, status := openWaitOnHandle(pFilename, "w")
+    evaluateResultNegError(status, flash.SUCCESS)
+
+    startTest(@"validate handle")
+    evaluateHandle(handle, @"open(,'w')")
+    if handle >= FIRST_HANDLE
+        strCount := count <# TEST_STRING_SLOTS
+        startTest(@"Write N STRINGs")
+        setCheckCountPerTest(1)
+        repeat strCount with slotIdx
+            pString := pickTestString(slotIdx)
+            fileSize += strsize(pString) + 1
+            status := flash.wr_str(handle, pString)
+            evaluateSubStatus(status, @"wr_str()", flash.SUCCESS)
+            if status <> flash.SUCCESS
+                quit
+
+        startTest(@"ensure no errors on writes")
+        evaluateResultNegError(status, flash.SUCCESS)
+
+        showPendingCommitChain(handle)
+
+        startTest(@"Close written file")
+        status := closeHandle(handle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+        showFileDetails(pFilename)
+
+        blocksUsed := blockCountForFileSize(fileSize)
+        if startingFileCount <> SKIP_FS_STATS
+            startTest(@"Ensure expected file system changes")
+            evaluateFSStats(@"post file write", startingFileCount + 1, startingBlockCount + blocksUsed)
+
+        startTest(@"Ensure expected file stats")
+        evaluateFileStats(pFilename, blocksUsed, fileSize)
+
+
+pub testVerifyStrings(pFilename, count) | handle, status, strCount, slotIdx, strIdx, pString, pReadBuffer, rdLength, expectedLength, compareResult
+'' Read back the strings the calling cog recorded as written, check each one and the end of file, and close the file.
+''
+'' @param pFilename - address of zstring with file name
+'' @param count - number of strings the file holds, limited to TEST_STRING_SLOTS
+
+' Local Variables:
+' @local handle - handle of the file being read
+' @local status - status of the latest driver call
+' @local strCount - strings to read
+' @local slotIdx - position of the string being read
+' @local strIdx - index in the string table of the string expected
+' @local pString - address of the string expected
+' @local pReadBuffer - address of the calling cog's read buffer
+' @local rdLength - length rd_str() returned
+' @local expectedLength - length the string must have
+' @local compareResult - TRUE when the string read matches
+
+    startTest(@"Open File for read")
+    handle, status := openWaitOnHandle(pFilename, "r")
+    evaluateResultNegError(status, flash.SUCCESS)
+
+    startTest(@"validate handle")
+    evaluateHandle(handle, @"open(,'r')")
+    if handle >= FIRST_HANDLE
+        strCount := count <# TEST_STRING_SLOTS
+        pReadBuffer := @testStrBuffer[cogId() * TEST_STRING_SIZE]
+        startTest(@"read expected N STRINGs")
+        setCheckCountPerTest(2)
+        repeat strCount with slotIdx
+            strIdx := BYTE[@idxStringWritten][(cogId() * TEST_STRING_SLOTS) + slotIdx]
+            pString := @@LONG[@stringIdTable][strIdx]
+            expectedLength := strsize(pString)          ' rd_str() does not count the terminator
+            rdLength := flash.rd_str(handle, pReadBuffer, TEST_STRING_SIZE)
+            if rdLength < 0
+                status := rdLength
+                quit
+            evaluateSubValue(rdLength, @"rd_str()", expectedLength)
+            compareResult := strcomp(pReadBuffer, pString)
+            evaluateSubValue(compareResult, @"rd_str()", true)
+
+        startTest(@"ensure no errors on read STRINGs")
+        evaluateResultNegError(status, flash.SUCCESS)
+
+        startTest(@"BAD: read one more STRING than written")
+        flash.rd_str(handle, pReadBuffer, TEST_STRING_SIZE)
+        status := flash.error()
+        evaluateResultNegError(status, flash.E_END_OF_FILE)
+
+        startTest(@"Close read file")
+        status := closeHandle(handle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+
+pub verifyRecord(pRcd, rcdSize, expectedId, readLength) : bRecordGood | storedId, storedCrc, calcCrc
+'' Check a record just read: its length, its record number and its CRC.
+''
+'' @param pRcd - address of the buffer the record was read into
+'' @param rcdSize - bytes in a record; the CRC is the record's last long
+'' @param expectedId - record number the record must hold
+'' @param readLength - bytes the read returned
+'' @returns bRecordGood - TRUE when all three checks passed
+
+' Local Variables:
+' @local storedId - record number held in the record
+' @local storedCrc - CRC held in the record
+' @local calcCrc - CRC computed over the record
+
+    debug("   -- Verifying Rcd # ", udec_(expectedId))
+    storedId := LONG[pRcd][RCD_ID_LONG]
+    storedCrc := LONG[pRcd][(rcdSize / 4) - 1]
+    calcCrc := record_crc(pRcd, rcdSize)
+    evaluateSubValue(readLength, @"read()", rcdSize)
+    evaluateSubValue(storedId, @"recordID", expectedId)
+    evaluateSubValue(calcCrc, @"recordCRC", storedCrc)
+    bRecordGood := readLength == rcdSize and storedId == expectedId and calcCrc == storedCrc
+
+
+pub dumpBlocksAtSplice(pFilename, rcdIdx, pRcdBuffer, rcdSize, rcdDumpBytes, spliceDumpBytes) | fileOffset, pBuffer, pBuffer2, blkAddr, blkAddr2
+'' Show a record and the end of the block and start of the next block around its place in the file.
+''
+'' @param pFilename - address of zstring with file name
+'' @param rcdIdx - position of the record in the file, counting from 0
+'' @param pRcdBuffer - address of the buffer holding the record
+'' @param rcdSize - bytes in a record
+'' @param rcdDumpBytes - bytes of the record head and tail to show
+'' @param spliceDumpBytes - bytes of the end of the block and the start of the next to show
+
+' Local Variables:
+' @local fileOffset - byte offset of the record in the file
+' @local pBuffer - address of the block holding the offset
+' @local pBuffer2 - address of the block after it, or 0
+' @local blkAddr - flash address of the first block
+' @local blkAddr2 - flash address of the second block
+
+    fileOffset := rcdIdx * rcdSize
+    pBuffer, pBuffer2, blkAddr, blkAddr2 := flash.TEST_get4kBlockAndNextAtOffset(pFilename, fileOffset)
+
+    if pBuffer
+        dbgMemDump(@"Record HEAD", pRcdBuffer, rcdDumpBytes)
+        dbgMemDump(@"Record TAIL", @BYTE[pRcdBuffer][rcdSize - rcdDumpBytes], rcdDumpBytes)
+        debug("  ")
+        debug("/* [", uhex_word_(blkAddr), "]")
+        dbgMemDump(@"lead-buffer TAIL", @BYTE[pBuffer][flash.BLOCK_SIZE - spliceDumpBytes], spliceDumpBytes)
+        if pBuffer2
+            debug("  ")
+            debug("/* [", uhex_word_(blkAddr2), "]")
+            dbgMemDump(@"trail-buffer HEAD", pBuffer2, spliceDumpBytes)
+        else
+            debug("- no following block")
+    else
+        debug("- dumpBlocksAtSplice() FILE NOT FOUND [", zstr_(pFilename), "]")
+
+
+pub recordTitle(rcdNumber) : pTitle
+'' Build the text "Record #n" for a record number.
+''
+'' @param rcdNumber - record number, from 0 through 999
+'' @returns pTitle - address of zstring holding the title, valid until the next call
+
+    writeNumberText(@rcdNbrText, rcdNumber)
+    pTitle := @rcdHeader
+
+
+pub testVerifyRecords(pFilename, totalRecordsWritten, pRcdBuffer, rcdSize, circularLenBytes) | handle, status, startRcdNbr, readCount, recordIdx, recordNbr, rdLength, storedId, storedCrc, calcCrc
+'' Read back every record a circular file still holds, checking each one's length, number and CRC.
+''
+'' @param pFilename - address of zstring with file name
+'' @param totalRecordsWritten - records written to the file since it was created
+'' @param pRcdBuffer - address of the buffer to read records into
+'' @param rcdSize - bytes in a record; the CRC is the record's last long
+'' @param circularLenBytes - circular length the file was opened with
+
+' Local Variables:
+' @local handle - handle of the file being read
+' @local status - status of the latest driver call
+' @local startRcdNbr - number of the first record the file still holds
+' @local readCount - records to read
+' @local recordIdx - position of the record being read, from 0
+' @local recordNbr - number of the record being read
+' @local rdLength - bytes read() returned
+' @local storedId - record number held in the record read
+' @local storedCrc - CRC held in the record read
+' @local calcCrc - CRC computed over the record read
+
+    startRcdNbr := firstRecordInFile(pFilename, totalRecordsWritten, rcdSize, circularLenBytes)
+    handle := openCircularForRead(pFilename, circularLenBytes)
+    if handle >= FIRST_HANDLE
+        startTest(@"read expected RECORDs")
+        setCheckCountPerTest(3)
+        status := flash.SUCCESS
+        readCount := (totalRecordsWritten - startRcdNbr + 1) #> 0
+        repeat readCount with recordIdx
+            recordNbr := startRcdNbr + recordIdx
+            setMsgRcdNbr(recordNbr)
+            rdLength := flash.read(handle, pRcdBuffer, rcdSize)
+            evaluateSubValue(rdLength, @readMsg, rcdSize)
+            if rdLength <> rcdSize
+                status := flash.error()
+                quit
+            storedId := LONG[pRcdBuffer][RCD_ID_LONG]
+            storedCrc := LONG[pRcdBuffer][(rcdSize / 4) - 1]
+            evaluateSubValue(storedId, @idMsg, recordNbr)
+            calcCrc := record_crc(pRcdBuffer, rcdSize)
+            evaluateSubValue(calcCrc, @crcMsg, storedCrc)
+            if calcCrc <> storedCrc
+                dumpBlocksAtSplice(pFilename, recordIdx, pRcdBuffer, rcdSize, rcdSize <# RCD_DUMP_BYTES, SPLICE_DUMP_BYTES)
+
+        startTest(@"ensure no errors on reads")
+        evaluateResultNegError(status, flash.SUCCESS)
+
+        startTest(@"BAD: read one more Record than written")
+        setCheckCountPerTest(2)
+        rdLength := flash.read(handle, pRcdBuffer, rcdSize)
+        evaluateSubValue(rdLength, @"read()", 0)
+        status := flash.error()
+        evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
+
+        startTest(@"Close read file")
+        status := closeHandle(handle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+
+pub testVerifySeekRecords(pFilename, totalRecordsWritten, pRcdBuffer, rcdSize, circularLenBytes) | handle, status, startRcdNbr, rdLength
+'' Seek within a circular file to its third, first and last records and verify each, then read past the end.
+''
+'' @param pFilename - address of zstring with file name
+'' @param totalRecordsWritten - records written to the file since it was created
+'' @param pRcdBuffer - address of the buffer to read records into
+'' @param rcdSize - bytes in a record; the CRC is the record's last long
+'' @param circularLenBytes - circular length the file was opened with
+
+' Local Variables:
+' @local handle - handle of the file being read
+' @local status - status of the latest driver call
+' @local startRcdNbr - number of the first record the file still holds
+' @local rdLength - bytes read() returned
+
+    startRcdNbr := firstRecordInFile(pFilename, totalRecordsWritten, rcdSize, circularLenBytes)
+    handle := openCircularForRead(pFilename, circularLenBytes)
+    if handle >= FIRST_HANDLE
+        startTest(@"seek to 3 then read expected RECORD")
+        setCheckCountPerTest(5)
+        seekAndVerifyRecord(handle, pFilename, rcdSize * 2, startRcdNbr + 2, startRcdNbr, pRcdBuffer, rcdSize)
+
+        startTest(@"seek to zero then read expected RECORD")
+        seekAndVerifyRecord(handle, pFilename, 0, startRcdNbr, startRcdNbr, pRcdBuffer, rcdSize)
+
+        startTest(@"seek to N-1 then read expected RECORD")
+        seekAndVerifyRecord(handle, pFilename, (totalRecordsWritten - startRcdNbr) * rcdSize, totalRecordsWritten, startRcdNbr, pRcdBuffer, rcdSize)
+
+        startTest(@"BAD: read one more Record than written")
+        setCheckCountPerTest(2)
+        rdLength := flash.read(handle, pRcdBuffer, rcdSize)
+        evaluateSubValue(rdLength, @"read()", 0)
+        status := flash.error()
+        evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
+
+        startTest(@"Close read file")
+        status := closeHandle(handle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+
+pub testVerifyRecordsWDump(pFilename, totalRecordsWritten, pRcdBuffer, rcdSize, circularLenBytes) | handle, status, startRcdNbr, rdLength, pBlock
+'' Verify the first record a circular file still holds, show it and the file's head block, and close the file.
+''
+'' @param pFilename - address of zstring with file name
+'' @param totalRecordsWritten - records written to the file since it was created
+'' @param pRcdBuffer - address of the buffer to read the record into
+'' @param rcdSize - bytes in a record; the CRC is the record's last long
+'' @param circularLenBytes - circular length the file was opened with
+
+' Local Variables:
+' @local handle - handle of the file being read
+' @local status - status of the latest driver call
+' @local startRcdNbr - number of the first record the file still holds
+' @local rdLength - bytes read() returned
+' @local pBlock - address of the head block of the file
+
+    startRcdNbr := firstRecordInFile(pFilename, totalRecordsWritten, rcdSize, circularLenBytes)
+    handle := openCircularForRead(pFilename, circularLenBytes)
+    if handle >= FIRST_HANDLE
+        startTest(@"read expected RECORDs Dump")
+        setCheckCountPerTest(3)
+        rdLength := flash.read(handle, pRcdBuffer, rcdSize)
+        verifyRecord(pRcdBuffer, rcdSize, startRcdNbr, rdLength)
+        dbgMemDump(@"Record we read", pRcdBuffer, rcdSize <# RCD_DUMP_BYTES)
+        pBlock := flash.TEST_getHead4kBlock(pFilename)
+        dbgMemDump(@"Records file Head block", pBlock, SPLICE_DUMP_BYTES)
+
+        startTest(@"Close read file")
+        status := closeHandle(handle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+
+DAT { test strings and record messages }
+
+    testString01     BYTE "This is a test string", 0
+    testString02     BYTE "This is a test", 0
+    testString03     BYTE "This is a test string, how fun!", 0
+    testString04     BYTE "this is something!", 0
+    testString05     BYTE "I wonder what?", 0
+    testString06     BYTE "Tiny", 0
+    testString07     BYTE "Longer", 0
+    testString08     BYTE "Ok, let's get really long with this string!", 0
+    testString09     BYTE "Members: Jenny, Jisoo, Lisa, Rose", 0
+    testString10     BYTE "BlackPink - Blinks", 0
+
+                ALIGNL
+    stringIdTable    ' 1st table-entry must follow immediately
+                LONG    @testString01
+                LONG    @testString02
+                LONG    @testString03
+                LONG    @testString04
+                LONG    @testString05
+                LONG    @testString06
+                LONG    @testString07
+                LONG    @testString08
+                LONG    @testString09
+                LONG    @testString10
+    stringIdTableEnd ' last entry must be immediately above this line
+    stringIdCt       BYTE    (@stringIdTableEnd - @stringIdTable) >> 2   ' div by 4, a LONG per entry
+
+    rcdHeader        BYTE    "Record #"
+    rcdNbrText       BYTE    0[RCD_NUMBER_BYTES]
+    readMsg          BYTE    "Read() Rcd #"
+    readNbr          BYTE    0[RCD_NUMBER_BYTES]
+    idMsg            BYTE    "recordID Rcd #"
+    idNbr            BYTE    0[RCD_NUMBER_BYTES]
+    crcMsg           BYTE    "recordCRC Rcd #"
+    crcNbr           BYTE    0[RCD_NUMBER_BYTES]
 
 CON
   MAX_FILE_BLOCKS = 50
@@ -740,11 +1336,6 @@ pub dbgMemDumpAbs(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, las
         ' emit last line
         dbgMemDumpRowAbs(pCurrByte, lastRowByteCount)
 
-pri dbgMemDumpRowAbs(pBytes, lenBytes)
-' emit address followed by bytes
-    debug(" ", uhex_long_(pBytes), ": ", uhex_byte_array_(pBytes, lenBytes))
-
-
 pub dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar, offset
 
     if pMessage
@@ -768,10 +1359,6 @@ pub dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRo
         ' emit last line
         dbgMemDumpRow(pCurrByte, lastRowByteCount, offset)
 
-pri dbgMemDumpRow(pBytes, lenBytes, offset)
-' emit address followed by bytes
-    debug(" ", uhex_long_(offset), ": ", uhex_byte_array_(pBytes, lenBytes))
-
 pub record_crc(p_record_buffer, record_length) : crc
 ' Calculate and return the CRC for this pointed to block
 '
@@ -791,6 +1378,342 @@ pub dumpFileHeads() | blockID, byteCount, pBlock
             debug(" ")  ' blank line
         else
             quit                                                      'no more files, quit
+
+
+pri initIfNotAlready()
+' Reset the calling cog's counters the first time it uses the harness, and seed its random generator.
+
+    if varSignature[cogId()] <> TEST_SIGNATURE
+        numberTests[cogId()] := 0
+        subTestPer[cogId()] := 1
+        passCount[cogId()] := 0
+        failCount[cogId()] := 0
+        passCountSub[cogId()] := 0
+        failCountSub[cogId()] := 0
+        varSignature[cogId()] := TEST_SIGNATURE
+        if harnessLock < 0
+            harnessLock := locknew()                    ' the first cog to use the harness allocates the lock
+        debug("* init VAR")
+        flash.TEST_enableRTdebug()                      ' turn on extra debug output
+        setRandomSeed(GETRND())
+
+
+pri acquireHarnessLock()
+' Wait for the lock that protects the handle holder table.
+
+    if harnessLock >= 0
+        repeat while locktry(harnessLock) == 0
+
+
+pri releaseHarnessLock()
+' Give back the lock that protects the handle holder table.
+
+    if harnessLock >= 0
+        lockrel(harnessLock)
+
+
+pri releaseCogHandles() | slotIdx
+' Forget every handle the calling cog holds.
+'
+' @local slotIdx - holder table entry being examined
+
+    acquireHarnessLock()
+    repeat slotIdx from 0 to HOLDER_SLOTS - 1
+        if handleHolder[slotIdx] == cogId() + 1
+            handleHolder[slotIdx] := NO_HOLDER
+    releaseHarnessLock()
+
+
+pri emitResult(pProgramName, passes, total, bPassed) | pVerdict
+' Show the RESULT line the runner reads, then end the debug session.
+'
+' @param pProgramName - address of zstring with the program name
+' @param passes - tests that passed
+' @param total - tests started
+' @param bPassed - TRUE when no test failed and the counts agree
+' @local pVerdict - address of the verdict text
+
+    pVerdict := bPassed ? @"PASS" : @"FAIL"
+    debug("RESULT: ", zstr_(pVerdict), " ", zstr_(pProgramName), " ", udec_(passes), "/", udec_(total))
+    debug(DEBUG_END_SESSION)
+
+
+pri firstRecordInFile(pFilename, totalRecordsWritten, rcdSize, circularLenBytes) : startRcdNbr | lenBytes, status, recordCount, recordInCircular
+' Check the file size and work out the number of the first record the file still holds.
+'
+' @param pFilename - address of zstring with file name
+' @param totalRecordsWritten - records written to the file since it was created
+' @param rcdSize - bytes in a record
+' @param circularLenBytes - circular length the file was opened with
+' @returns startRcdNbr - number of the first record the file still holds, from 1
+' @local lenBytes - bytes in the file
+' @local status - status of the size query
+' @local recordCount - whole records in the file
+' @local recordInCircular - records the circular length holds
+
+    startTest(@"Determine size of file in records")
+    lenBytes := flash.file_size(pFilename)
+    status := flash.error()
+    evaluateResultNegError(status, flash.SUCCESS)
+
+    recordCount := lenBytes / rcdSize                   ' ignore fraction at front of file
+    debug("  ")
+    if lenBytes > 0
+        debug(" ------------------ ")
+    debug("ENTRY verify records: file size ", udec(lenBytes, recordCount, totalRecordsWritten))
+
+    recordInCircular := (circularLenBytes + (rcdSize - 1)) / rcdSize
+    debug("   (Circular Buffer limit is ", udec_(recordInCircular), " records)")
+
+    ' a read starts at the tail minus the circular limit
+    if totalRecordsWritten > recordInCircular
+        startRcdNbr := totalRecordsWritten - recordInCircular + 1
+    else
+        startRcdNbr := 1
+    debug("   Read should start with record #", udec_(startRcdNbr))
+
+
+pri openCircularForRead(pFilename, circularLenBytes) : handle | status
+' Open a circular file for read and check that the handle is usable.
+'
+' @param pFilename - address of zstring with file name
+' @param circularLenBytes - circular length the file was written with
+' @returns handle - handle open_circular() returned, or a negative error code
+' @local status - the error open_circular() reported, if any
+
+    startTest(@"Open File for read")
+    handle := flash.open_circular(pFilename, "r", circularLenBytes)
+    status := handle < 0 ? handle : flash.SUCCESS
+    evaluateResultNegError(status, flash.SUCCESS)
+
+    startTest(@"validate handle")
+    evaluateHandle(handle, @"open_circular(,'r')")
+
+
+pri seekAndVerifyRecord(handle, pFilename, seekOffset, recordNbr, startRcdNbr, pRcdBuffer, rcdSize) | endPosition, status, rdLength, bRecordGood
+' Seek to a position, read a record there and verify it; show the block boundary when it fails.
+'
+' @param handle - handle of the open circular file
+' @param pFilename - address of zstring with file name
+' @param seekOffset - byte position to seek to
+' @param recordNbr - number of the record expected there
+' @param startRcdNbr - number of the first record the file still holds
+' @param pRcdBuffer - address of the buffer to read the record into
+' @param rcdSize - bytes in a record
+' @local endPosition - position seek() reported
+' @local status - status of the latest driver call
+' @local rdLength - bytes read() returned
+' @local bRecordGood - TRUE when the record passed its checks
+
+    endPosition := flash.seek(handle, seekOffset, flash.SK_FILE_START)
+    evaluateSubValue(endPosition, @"seek()", seekOffset)
+    status := flash.error()
+    evaluateSubStatus(status, @"seek()", flash.SUCCESS)
+    rdLength := flash.read(handle, pRcdBuffer, rcdSize)
+    bRecordGood := verifyRecord(pRcdBuffer, rcdSize, recordNbr, rdLength)
+    ifnot bRecordGood
+        dumpBlocksAtSplice(pFilename, recordNbr - startRcdNbr, pRcdBuffer, rcdSize, rcdSize <# RCD_DUMP_BYTES, SPLICE_DUMP_BYTES)
+
+
+pri setMsgRcdNbr(rcdNumber)
+' Put a record number into the three messages the record checks show on failure.
+'
+' @param rcdNumber - record number, from 0 through 999
+
+    writeNumberText(@readNbr, rcdNumber)
+    writeNumberText(@idNbr, rcdNumber)
+    writeNumberText(@crcNbr, rcdNumber)
+
+
+pri writeNumberText(pDest, number) | textIdx
+' Write a number as decimal text with no leading zeros, and a terminating zero.
+'
+' @param pDest - address of the buffer, RCD_NUMBER_BYTES long
+' @param number - number to write, from 0 through 999
+' @local textIdx - position of the next character
+
+    textIdx := 0
+    if number >= DECIMAL_BASE * DECIMAL_BASE
+        BYTE[pDest][textIdx++] := "0" + (number / (DECIMAL_BASE * DECIMAL_BASE))
+    if number >= DECIMAL_BASE
+        BYTE[pDest][textIdx++] := "0" + ((number / DECIMAL_BASE) +// DECIMAL_BASE)
+    BYTE[pDest][textIdx++] := "0" + (number +// DECIMAL_BASE)
+    BYTE[pDest][textIdx] := 0
+
+
+pri writeValueFile(pFilename, count, valueBytes, startingFileCount, startingBlockCount) | handle, status, testValue, blocksUsed, pEntryName, pWriteTitle, pAllWrittenTitle, pCallName
+' Write the values 1 through count, each valueBytes wide, to a new file; close it and check the file and filesystem statistics.
+'
+' @param pFilename - address of zstring with file name
+' @param count - number of values to write
+' @param valueBytes - VALUE_BYTE, VALUE_WORD or VALUE_LONG
+' @param startingFileCount - files in the filesystem before the call, or SKIP_FS_STATS to skip the filesystem check
+' @param startingBlockCount - blocks in use before the call
+' @local handle - handle of the file being written
+' @local status - status of the latest driver call
+' @local testValue - value most recently written
+' @local blocksUsed - blocks the written file occupies
+' @local pEntryName - address of the name of the calling test method
+' @local pWriteTitle - address of the title of the write test
+' @local pAllWrittenTitle - address of the title of the written-count test
+' @local pCallName - address of the name of the driver write call
+
+    case valueBytes
+        VALUE_BYTE:
+            pEntryName := @"testWriteBytes"
+            pWriteTitle := @"Write N BYTEs"
+            pAllWrittenTitle := @"ensure all bytes written"
+            pCallName := @"wr_byte()"
+        VALUE_WORD:
+            pEntryName := @"testWriteWords"
+            pWriteTitle := @"Write N WORDs"
+            pAllWrittenTitle := @"ensure all words written"
+            pCallName := @"wr_word()"
+        other:
+            pEntryName := @"testWriteLongs"
+            pWriteTitle := @"Write N LONGs"
+            pAllWrittenTitle := @"ensure all longs written"
+            pCallName := @"wr_long()"
+
+    debug("- ", zstr_(pEntryName), "(", zstr_(pFilename), ", ", udec_(count), ")")
+    startTest(@"Open File for write")
+    handle, status := openWaitOnHandle(pFilename, "w")
+    evaluateResultNegError(status, flash.SUCCESS)
+
+    startTest(@"validate handle")
+    evaluateHandle(handle, @"open(,'w')")
+    if handle >= FIRST_HANDLE
+        startTest(pWriteTitle)
+        setCheckCountPerTest(1)
+        testValue := 0
+        repeat count
+            testValue++
+            case valueBytes
+                VALUE_BYTE:
+                    status := flash.wr_byte(handle, testValue)
+                VALUE_WORD:
+                    status := flash.wr_word(handle, testValue)
+                other:
+                    status := flash.wr_long(handle, testValue)
+            evaluateSubStatus(status, pCallName, flash.SUCCESS)
+            if status <> flash.SUCCESS
+                quit
+
+        startTest(pAllWrittenTitle)
+        evaluateSingleValue(testValue, pCallName, count)
+
+        startTest(@"ensure no errors on writes")
+        evaluateResultNegError(status, flash.SUCCESS)
+
+        showPendingCommitChain(handle)
+
+        startTest(@"Close written file")
+        status := closeHandle(handle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+        showFileDetails(pFilename)
+
+        blocksUsed := blockCountForFileSize(count * valueBytes)
+        if startingFileCount <> SKIP_FS_STATS
+            startTest(@"Ensure expected file system changes")
+            evaluateFSStats(@"post file write", startingFileCount + 1, startingBlockCount + blocksUsed)
+
+        startTest(@"Ensure expected file stats")
+        evaluateFileStats(pFilename, blocksUsed, count * valueBytes)
+
+
+pri verifyValueFile(pFilename, count, valueBytes) | handle, status, expectedValue, readValue, pReadTitle, pNoErrorTitle, pPastEndTitle, pCallName
+' Read back a file written by writeValueFile(), check each value and the end of file, and close the file.
+'
+' @param pFilename - address of zstring with file name
+' @param count - number of values the file holds
+' @param valueBytes - VALUE_BYTE, VALUE_WORD or VALUE_LONG
+' @local handle - handle of the file being read
+' @local status - status of the latest driver call
+' @local expectedValue - value the next entry must hold
+' @local readValue - value the driver read call returned
+' @local pReadTitle - address of the title of the read test
+' @local pNoErrorTitle - address of the title of the read-error test
+' @local pPastEndTitle - address of the title of the read-past-end test
+' @local pCallName - address of the name of the driver read call
+
+    case valueBytes
+        VALUE_BYTE:
+            pReadTitle := @"read expected N BYTEs"
+            pNoErrorTitle := @"ensure no errors on read BYTEs"
+            pPastEndTitle := @"BAD: read one more BYTE than written"
+            pCallName := @"rd_byte()"
+        VALUE_WORD:
+            pReadTitle := @"read expected N WORDs"
+            pNoErrorTitle := @"ensure no errors on read WORDs"
+            pPastEndTitle := @"BAD: read one more WORD than written"
+            pCallName := @"rd_word()"
+        other:
+            pReadTitle := @"read expected N LONGs"
+            pNoErrorTitle := @"ensure no errors on read LONGs"
+            pPastEndTitle := @"BAD: read one more LONG than written"
+            pCallName := @"rd_long()"
+
+    startTest(@"Open File for read")
+    handle, status := openWaitOnHandle(pFilename, "r")
+    evaluateResultNegError(status, flash.SUCCESS)
+
+    startTest(@"validate handle")
+    evaluateHandle(handle, @"open(,'r')")
+    if handle >= FIRST_HANDLE
+        startTest(pReadTitle)
+        setCheckCountPerTest(1)
+        expectedValue := 0
+        repeat count
+            expectedValue++
+            readValue, status := readValueOf(handle, valueBytes)
+            if status <> flash.SUCCESS
+                quit
+            evaluateSubValue(readValue, pCallName, expectedValue)
+
+        startTest(pNoErrorTitle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+        startTest(pPastEndTitle)
+        readValue, status := readValueOf(handle, valueBytes)
+        if valueBytes <> VALUE_LONG
+            status := readValue                         ' a BYTE or WORD read reports the end of file as its return value
+        evaluateResultNegError(status, flash.E_END_OF_FILE)
+
+        startTest(@"Close read file")
+        status := closeHandle(handle)
+        evaluateResultNegError(status, flash.SUCCESS)
+
+
+pri readValueOf(handle, valueBytes) : readValue, readStatus
+' Read one value and report whether the read failed.
+' A BYTE or WORD read returns a negative error code on failure; a LONG can hold any value, so only error() reports a failed read.
+'
+' @param handle - handle of the open file
+' @param valueBytes - VALUE_BYTE, VALUE_WORD or VALUE_LONG
+' @returns readValue - the value read, or a negative error code for a BYTE or WORD
+' @returns readStatus - SUCCESS, or the error the read reported
+
+    case valueBytes
+        VALUE_BYTE:
+            readValue := flash.rd_byte(handle)
+            readStatus := readValue < 0 ? readValue : flash.SUCCESS
+        VALUE_WORD:
+            readValue := flash.rd_word(handle)
+            readStatus := readValue < 0 ? readValue : flash.SUCCESS
+        other:
+            readValue := flash.rd_long(handle)
+            readStatus := flash.error()
+
+
+pri dbgMemDumpRowAbs(pBytes, lenBytes)
+' emit address followed by bytes
+    debug(" ", uhex_long_(pBytes), ": ", uhex_byte_array_(pBytes, lenBytes))
+
+
+pri dbgMemDumpRow(pBytes, lenBytes, offset)
+' emit address followed by bytes
+    debug(" ", uhex_long_(offset), ": ", uhex_byte_array_(pBytes, lenBytes))
 
 
 con { license }
