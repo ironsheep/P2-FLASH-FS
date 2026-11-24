@@ -38,7 +38,9 @@ freeBlocks          LONG    0
 fileCount           LONG    0
 handle              LONG    0
 handle1             LONG    0
-badHandle           LONG    0
+noHandle            LONG    0
+closeResult         LONG    0
+badHandle          LONG    0
 status              LONG    0
 desiredId           LONG    0
 fileSize            LONG    0
@@ -57,6 +59,8 @@ sigCount            LONG    0
 sigBuffer           LONG    0[utils.SIG_BUFFER_LONGS]
 
 PUB go()
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+
     ' Ensure all handle calls fail before mounted
     utils.startTestGroup(@"Attempting things while not mounted")
     utils.startTest(@"Unmount()")
@@ -244,49 +248,53 @@ PUB go()
 
     utils.startTest(@"format()")
     status := flash.format()                            ' Comment out this line to not erase all files
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"mount()")
     status := flash.mount()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showChipAndDriverVersion()
 
     utils.startTest(@"open() OK")
     handle := flash.open(@testfile, "A")
     status := flash.error()
-    utils.evaluateSubStatus(handle, @"open()", 0)
-    utils.evaluateSubStatus(status, @"open()", flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    utils.startTest(@"validate handle")
+    utils.evaluateHandle(handle, @"open(,'A')")
 
     utils.startTest(@"open_circular() OK")
     handle1 := flash.open_circular(@testfile2, "A", 8192)
     status := flash.error()
-    utils.evaluateSubValue(handle1, @"open_circular()", 1)
-    utils.evaluateSubStatus(status, @"open_circular()", flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    utils.startTest(@"validate handle")
+    utils.evaluateHandle(handle1, @"open_circular(,'A')")
 
     ' all opens should fail from here
     utils.startTest(@"open() No handles")
-    handle := flash.open(@testfile3, "R")
+    noHandle := flash.open(@testfile3, "R")
     status := flash.error()
-    utils.evaluateSubStatus(handle, @"open()", flash.E_NO_HANDLE)
+    utils.evaluateSubStatus(noHandle, @"open()", flash.E_NO_HANDLE)
     utils.evaluateSubStatus(status, @"open()", flash.E_NO_HANDLE)
 
     utils.startTest(@"open_circular() No handles")
-    handle := flash.open_circular(@testfile3, "R", 8192)
+    noHandle := flash.open_circular(@testfile3, "R", 8192)
     status := flash.error()
-    utils.evaluateSubStatus(handle, @"open_circular()", flash.E_NO_HANDLE)
+    utils.evaluateSubStatus(noHandle, @"open_circular()", flash.E_NO_HANDLE)
     utils.evaluateSubStatus(status, @"open_circular()", flash.E_NO_HANDLE)
 
     utils.startTest(@"close() without writing should leave no file")
-    handle := flash.close(0)                            ' first file opened is 0
+    closeResult := utils.closeHandle(handle)            ' the handle the first open returned
     status := flash.error()
-    utils.evaluateSubStatus(handle, @"close()", flash.SUCCESS)
+    utils.evaluateSubStatus(closeResult, @"close()", flash.SUCCESS)
     utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
 
     utils.startTest(@"close() (circular) without writing should leave no file")
-    handle := flash.close(1)                            ' second file opened is 1
+    closeResult := utils.closeHandle(handle1)           ' the handle the second open returned
     status := flash.error()
-    utils.evaluateSubStatus(handle, @"close()", flash.SUCCESS)
+    utils.evaluateSubStatus(closeResult, @"close()", flash.SUCCESS)
     utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
 
     utils.startTest(@"directory() should be empty if no files")
@@ -384,9 +392,8 @@ PUB go()
     utils.ShowStats()                   ' should have empty filesystem
     utils.showFiles()
 
-    utils.ShowTestEndCounts()
-
     debug("* Test Complete")
+    utils.ShowTestResult(@"RT_mount_handle_basics_tests")
 
 
 

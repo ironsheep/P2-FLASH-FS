@@ -76,11 +76,6 @@ bValue          LONG    0
 handle          LONG    0
 testValue       LONG    0
 recordNbr       LONG    0
-rdLength        LONG    0
-pBlock          LONG    0
-calcCRC         LONG    0
-sizeUnused      LONG    0
-endPosition     LONG    0
 writeLength     LONG    0
 
 expectedFileSize    LONG    0
@@ -88,6 +83,8 @@ expectedFileBlocks  LONG    0
 allocatedFileSize   LONG    0
 
 PUB go()
+
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
     utils.startTest(@"Check Flash Mount-ability")
     utils.setCheckCountPerTest(2)
@@ -98,11 +95,11 @@ PUB go()
 
     utils.startTest(@"Format Flash")
     status := flash.format()      ' Comment out this line to not erase all files
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"Mount Flash FS")
     status := flash.mount()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.ShowStats()                                   ' should have empty filesystem
     utils.showFiles()
@@ -135,21 +132,21 @@ PUB go()
     '     A1 - write less than 8kb                      - close as file -> end with file less than limit
     utils.startTestGroup(@"A1 Append 6KB circular to empty file")
     testAppendRecords(@testfileA1, 6, 0, 0)             ' this creates file (6,144 = 2 blocks)
-    testVerifyRecords(@testfileA1, 6)                   ' this verifies all of file
+    utils.testVerifyRecords(@testfileA1, 6, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies all of file
 
     utils.showFiles()
 
     '     A2 - write 8kb                                - close as file -> end with file at limit
     utils.startTestGroup(@"A2 Append 8KB circular to empty file")
     testAppendRecords(@testfileA2, 8, 1, 2)             ' this creates file (8,192 = 3 blocks)
-    testVerifyRecords(@testfileA2, 8)                   ' this verifies all of file
+    utils.testVerifyRecords(@testfileA2, 8, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies all of file
 
     utils.showFiles()
 
     '     A3 - write more than 8kb (12kb)               - (move head, canceling prior head and block(s)) moves head into chain, lops off head part of chain -> end with file at limit
     utils.startTestGroup(@"A3 Append 12KB circular to empty file")
     testAppendRecords(@testfileA3, 12, 2, 5)            ' this creates file (12,132 = 4 blocks, froncated to 3 blocks)
-    testVerifyRecords(@testfileA3, 12)                  ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileA3, 12, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -158,7 +155,7 @@ PUB go()
     utils.startTestGroup(@"B1 Append 5KB circular to 3kb file")
     testAppendRecords(@testfileB1, 3, 3, 8) ' this creates file (3,072 = 1 block)
     testAppendRecords(@testfileB1, 5, 4, 9) ' this appends to file (8,192 = 3 blocks)
-    testVerifyRecords(@testfileB1, 8) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileB1, 8, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -166,7 +163,7 @@ PUB go()
     utils.startTestGroup(@"B2 Append 8KB circular to 3kb file")
     testAppendRecords(@testfileB2, 3, 4, 11) ' this creates file (3,072 = 1 block)
     testAppendRecords(@testfileB2, 8, 5, 12) ' this appends to file (11,264 = 3 blocks)
-    testVerifyRecords(@testfileB2, 11) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileB2, 11, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -174,9 +171,9 @@ PUB go()
     utils.startTestGroup(@"B3 Append 11KB circular to 3kb file")
     testAppendRecords(@testfileB3, 3, 5, 14) ' this creates file (3,072 = 1 block)
     testAppendRecords(@testfileB3, 11, 6, 15) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
-    testVerifyRecords(@testfileB3, 14) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileB3, 14, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
     utils.startTestGroup(@"B3a Seek within file that was append 11KB circular to 3kb file")
-    testVerifySeekRecords(@testfileB3, 14) ' this verifies seeks within last 8k of file
+    utils.testVerifySeekRecords(@testfileB3, 14, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies seeks within last 8k of file
 
     utils.showFiles()
 
@@ -184,7 +181,7 @@ PUB go()
     utils.startTestGroup(@"B4 Append 14KB circular to 3kb file")
     testAppendRecords(@testfileB4, 3, 6, 17) ' this creates file (3,072 = 1 block)
     testAppendRecords(@testfileB4, 14, 7, 18) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
-    testVerifyRecords(@testfileB4, 17) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileB4, 17, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -193,7 +190,7 @@ PUB go()
     utils.startTestGroup(@"C1 Append 4KB circular to 8kb file")
     testAppendRecords(@testfileC1, 8, 7, 20) ' this creates file (8,192 = 3 blocks)
     testAppendRecords(@testfileC1, 4, 8, 23) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
-    testVerifyRecords(@testfileC1, 12) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileC1, 12, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -201,7 +198,7 @@ PUB go()
     utils.startTestGroup(@"C2 Append 6KB circular to 8kb file")
     testAppendRecords(@testfileC2, 8, 8, 23) ' this creates file (8,192 = 3 blocks)
     testAppendRecords(@testfileC2, 6, 9, 26) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
-    testVerifyRecords(@testfileC2, 14) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileC2, 14, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -209,7 +206,7 @@ PUB go()
     utils.startTestGroup(@"C3 Append 9KB circular to 8kb file")
     testAppendRecords(@testfileC3, 8, 9, 26) ' this creates file (8,192 = 3 blocks)
     testAppendRecords(@testfileC3, 9, 10, 29) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
-    testVerifyRecords(@testfileC3, 17) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileC3, 17, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -218,7 +215,7 @@ PUB go()
     utils.startTestGroup(@"D1 Append 6KB circular to 11kb file")
     testAppendRecords(@testfileD1, 11, 10, 29) ' this creates file (11,264 = 3 blocks)
     testAppendRecords(@testfileD1, 6, 11, 32) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
-    testVerifyRecords(@testfileD1, 17) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileD1, 17, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
@@ -226,33 +223,31 @@ PUB go()
     utils.startTestGroup(@"D2 Append 9KB circular to 11kb file")
     testAppendRecords(@testfileD2, 11, 11, 32) ' this creates file (11,264 = 3 blocks)
     testAppendRecords(@testfileD2, 9, 12, 35) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
-    testVerifyRecords(@testfileD2, 20) ' this verifies last 8k of file
+    utils.testVerifyRecords(@testfileD2, 20, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
     '     E1 - write more than 8kb (9kb)                - circular is small enough to fit in data block but not filename so 2-block chain lives after froncate!
     utils.startTestGroup(@"E1 Append 3.4kb circular to 4.0kb file")
     testAppendSecRecords(@testfileE1, 12, 12, 35) ' this creates file (4_032 = 2 blocks) [3956 + 76 in next block]
-    testVerifySecRecords(@testfileE1, 12) ' this verifies all of file
+    utils.testVerifyRecords(@testfileE1, 12, @secRecord, SEC_RECORD_LEN, SEC_CIRCULAR_LEN_IN_BYTES) ' this verifies all of file
     testAppendSecRecords(@testfileE1, 10, 13, 37) ' this appends to file (7_412 = 2 blocks) (updates 2nd block, truncates to 2 blocks with all data in 2nd block)
-    testVerifySecRecords(@testfileE1, 22) ' this verifies last active 3_400 bytes of file
+    utils.testVerifyRecords(@testfileE1, 22, @secRecord, SEC_RECORD_LEN, SEC_CIRCULAR_LEN_IN_BYTES) ' this verifies last active 3_400 bytes of file
 
     '     E2 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
     utils.startTestGroup(@"E2 Append 3.4kb circular to 4.8kb file")
     testAppendSecRecords(@testfileE2, 12, 13, 37) ' this creates file (4_032 = 2 blocks) [3956 + 76 in next block]
-    'testVerifySecRecords(@testfileE1, 12) ' this verifies all of file
     testAppendSecRecords(@testfileE2, 22, 14, 39) ' this appends to file (11_424 = 3 blocks) (updates 2nd block, adds 3rd, truncates to 2 blocks with all data in 2nd block)
-    testVerifySecRecords(@testfileE2, 34) ' this verifies last active 3_400 bytes of file
+    utils.testVerifyRecords(@testfileE2, 34, @secRecord, SEC_RECORD_LEN, SEC_CIRCULAR_LEN_IN_BYTES) ' this verifies last active 3_400 bytes of file
 
     utils.showFiles()
 
     utils.startTest(@"Unmount Flash")
     status := flash.unmount()      ' Comment out this line to not erase all files
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-
-    utils.ShowTestEndCounts()
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     debug("* Test Complete")
+    utils.ShowTestResult(@"RT_read_write_circular_tests")
 
 PRI testAppendRecords(pFilename, recordCount, initialFileCount, initialBlocks) | lenBytes, startingRcdCt, maxAllocatedBytes, minWrittenBytes, filesAdded, blocksAdded, startingBlocks, pEffortMsg
 
@@ -263,7 +258,7 @@ PRI testAppendRecords(pFilename, recordCount, initialFileCount, initialBlocks) |
         utils.startTest(@"Determine size of file in records")
         lenBytes := flash.file_size(pFilename)
         status := flash.error()
-        utils.evaluateResultNegError(handle, flash.SUCCESS)
+        utils.evaluateResultNegError(status, flash.SUCCESS)
 
         startingRcdCt := ((lenBytes + (RECORD_LEN-1)) / RECORD_LEN) + 1
 
@@ -295,7 +290,7 @@ PRI testAppendRecords(pFilename, recordCount, initialFileCount, initialBlocks) |
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := flash.open_circular(pFilename, "a", CIRCULAR_LEN_IN_BYTES)
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open_circular(,'a')")
 
     utils.startTest(@"Write Records")
     utils.setCheckCountPerTest(2)
@@ -320,7 +315,7 @@ PRI testAppendRecords(pFilename, recordCount, initialFileCount, initialBlocks) |
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
@@ -346,7 +341,7 @@ PRI testAppendSecRecords(pFilename, recordCount, initialFileCount, initialBlocks
         utils.startTest(@"Determine size of file in records")
         lenBytes := flash.file_size(pFilename)
         status := flash.error()
-        utils.evaluateResultNegError(handle, flash.SUCCESS)
+        utils.evaluateResultNegError(status, flash.SUCCESS)
 
         startingRcdCt := ((lenBytes + (SEC_RECORD_LEN-1)) / SEC_RECORD_LEN) + 1
 
@@ -398,7 +393,7 @@ PRI testAppendSecRecords(pFilename, recordCount, initialFileCount, initialBlocks
         '  open file for append
     utils.startTest(@"Open File for write")
     handle := flash.open_circular(pFilename, "a", SEC_CIRCULAR_LEN_IN_BYTES)
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open_circular(,'a')")
 
     utils.startTest(@"Write Records")
     utils.setCheckCountPerTest(2)
@@ -423,7 +418,7 @@ PRI testAppendSecRecords(pFilename, recordCount, initialFileCount, initialBlocks
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     'blocksAdded := expectedFileBlocks - startingBlocks
@@ -439,356 +434,6 @@ PRI testAppendSecRecords(pFilename, recordCount, initialFileCount, initialBlocks
     utils.evaluateFileStatsRange(pFilename, expectedFileBlocks, minWrittenBytes, expectedFileSize)
 
 
-
-DAT ' verifyMessages
-
-readMsg       BYTE  "Read() Rcd #"
-readNbr       BYTE  "xx",0
-idMsg         BYTE  "recordID Rcd #"
-idNbr         BYTE  "xx",0
-crcMsg        BYTE  "recordCRC Rcd #"
-crcNbr        BYTE  "xx",0
-
-PRI setMsgRcdNbr(rcdNumber) | units, tens
-  tens := (rcdNumber / 10) + $30
-  units := (rcdNumber +// 10) + $30
-  if(tens == $30)
-    ' no leading zero
-    BYTE[@readNbr][0] := units
-    BYTE[@readNbr][1] := 0
-    BYTE[@idNbr][0] := units
-    BYTE[@idNbr][1] := 0
-    BYTE[@crcNbr][0] := units
-    BYTE[@crcNbr][1] := 0
-  else
-    BYTE[@readNbr][0] := tens
-    BYTE[@readNbr][1] := units
-    BYTE[@idNbr][0] := tens
-    BYTE[@idNbr][1] := units
-    BYTE[@crcNbr][0] := tens
-    BYTE[@crcNbr][1] := units
-
-PRI testVerifyRecords(pFilename, totalRecordsWritten) | recordCount, lenBytes, startRcdNbr, recordInCircular
-
-    '  get total file size
-    utils.startTest(@"Determine size of file in records")
-    lenBytes := flash.file_size(pFilename)
-    status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-
-    recordCount := lenBytes / RECORD_LEN                ' ignore fraction at front of file
-
-    debug("  ")
-    if lenBytes > 0
-      debug(" ------------------ ")
-    debug("ENTRY testVerifyRecords(): file size ", udec(lenBytes, recordCount, totalRecordsWritten))
-
-    recordInCircular := (CIRCULAR_LEN_IN_BYTES + (RECORD_LEN-1)) / RECORD_LEN
-    debug("   (Circular Buffer limit is ", udec_(recordInCircular), " records)")
-
-    ' read should start at tail - file limit (8KB in our tests)
-    if totalRecordsWritten > recordInCircular
-        startRcdNbr := totalRecordsWritten - recordInCircular + 1
-    else
-        startRcdNbr := 1
-    debug("   Read should start with record #", udec_(startRcdNbr))
-
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle := flash.open_circular(pFilename, "r", CIRCULAR_LEN_IN_BYTES)
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    '    seek to various locations and read longs validating for correct value
-
-    utils.startTest(@"read expected RECORDs")
-    utils.setCheckCountPerTest(3)
-    repeat recordNbr from startRcdNbr to totalRecordsWritten
-        setMsgRcdNbr(recordNbr)
-        rdLength := flash.read(handle, @record, RECORD_LEN)
-        ' ensure length is same as expected
-        utils.evaluateSubValue(rdLength, @readMsg, RECORD_LEN)
-        if rdLength <> RECORD_LEN
-            status := flash.error()
-            quit
-        ' ensure record ID is same as expected
-        utils.evaluateSubValue(recordID, @idMsg, recordNbr)
-        ' ensure record CRC is same as expected
-        calcCRC := utils.record_crc(@record, RECORD_LEN)
-        utils.evaluateSubValue(calcCRC, @crcMsg, recordCRC)
-        ' IF WE HAVE a CRC error then show buffers!
-        if calcCRC <> recordCRC
-          dumpBlocksAtSplice(pFilename, recordNbr - startRcdNbr, totalRecordsWritten, @record, RECORD_LEN)
-
-    utils.startTest(@"ensure no errors on reads")
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-    '  read past end of file to verify read returns error
-    utils.startTest(@"BAD: read one more Record than written")
-    utils.setCheckCountPerTest(2)
-    rdLength := flash.read(handle, @record, RECORD_LEN)
-    utils.evaluateSubValue(rdLength, @"read()", 0)
-    status := flash.error()
-    utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
-
-    '  close file
-    utils.startTest(@"Close read file")
-    status := flash.close(handle)
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-
-PRI testVerifySecRecords(pFilename, totalRecordsWritten) | recordCount, lenBytes, startRcdNbr, recordInCircular
-
-    '  get total file size
-    utils.startTest(@"Determine size of file in records")
-    lenBytes := flash.file_size(pFilename)
-    status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-
-    recordCount := lenBytes / SEC_RECORD_LEN                ' ignore fraction at front of file
-
-    debug("  ")
-    if lenBytes > 0
-      debug(" ------------------ ")
-    debug("ENTRY testVerifySecRecords(): file size ", udec(lenBytes, recordCount, totalRecordsWritten))
-
-    recordInCircular := (SEC_CIRCULAR_LEN_IN_BYTES + (SEC_RECORD_LEN-1)) / SEC_RECORD_LEN
-    debug("   (Circular Buffer limit is ", udec_(recordInCircular), " records)")
-
-    ' read should start at tail - file limit (8KB in our tests)
-    if totalRecordsWritten > recordInCircular
-        startRcdNbr := totalRecordsWritten - recordInCircular + 1
-    else
-        startRcdNbr := 1
-    debug("   Read should start with record #", udec_(startRcdNbr))
-
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle := flash.open_circular(pFilename, "r", SEC_CIRCULAR_LEN_IN_BYTES)
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    '    seek to various locations and read longs validating for correct value
-
-    utils.startTest(@"read expected SEC RECORDs")
-    utils.setCheckCountPerTest(3)
-    repeat recordNbr from startRcdNbr to totalRecordsWritten
-        setMsgRcdNbr(recordNbr)
-        rdLength := flash.read(handle, @secRecord, SEC_RECORD_LEN)
-        ' ensure length is same as expected
-        utils.evaluateSubValue(rdLength, @readMsg, SEC_RECORD_LEN)
-        if rdLength <> SEC_RECORD_LEN
-            status := flash.error()
-            quit
-        ' ensure record ID is same as expected
-        utils.evaluateSubValue(secRecordID, @idMsg, recordNbr)
-        ' ensure record CRC is same as expected
-        calcCRC := utils.record_crc(@secRecord, SEC_RECORD_LEN)
-        utils.evaluateSubValue(calcCRC, @crcMsg, secRecordCRC)
-        ' IF WE HAVE a CRC error then show buffers!
-        if calcCRC <> secRecordCRC
-          dumpSecBlocksAtSplice(pFilename, recordNbr - startRcdNbr, totalRecordsWritten, @secRecord, SEC_RECORD_LEN)
-
-    utils.startTest(@"ensure no errors on reads")
-      ' ensure length is same as expected
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-    '  read past end of file to verify read returns error
-    utils.startTest(@"BAD: read one more Record than written")
-    utils.setCheckCountPerTest(2)
-    rdLength := flash.read(handle, @secRecord, SEC_RECORD_LEN)
-    utils.evaluateSubValue(rdLength, @"read()", 0)
-    status := flash.error()
-    utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
-
-    '  close file
-    utils.startTest(@"Close read file")
-    status := flash.close(handle)
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-
-PRI dumpBlocksAtSplice(pFilename, rcdNbr, totalRecordsWritten, pRcdBuffer, rcdSize) | fileOffset, p_buffer, p_buffer2, blkAddr, blkAddr2
-
-    fileOffset := rcdNbr * rcdSize
-    p_buffer, p_buffer2, blkAddr, blkAddr2  := flash.TEST_get4kBlockAndNextAtOffset(pFilename, fileOffset)
-
-    if p_buffer
-      ' dump record
-      utils.dbgMemDump(@"Record HEAD", pRcdBuffer, 128)
-      utils.dbgMemDump(@"Record TAIL", @BYTE[pRcdBuffer][rcdSize-128], 128)
-      debug("  ")
-      ' dump first block tail
-      debug("/* [", uhex_word_(blkAddr),"]")
-      utils.dbgMemDump(@"lead-buffer TAIL", @BYTE[p_buffer][4096-256], 256)
-      ' dump second block head
-      if p_buffer2
-          debug("  ")
-          debug("/* [", uhex_word_(blkAddr2),"]")
-          utils.dbgMemDump(@"trail-buffer HEAD", p_buffer2, 256)
-      else
-          debug("- no following block")
-    else
-        debug("- dumpBlocksAtSplice() FILE NOT FOUND [", zstr_(pFilename), "]")
-
-
-PRI dumpSecBlocksAtSplice(pFilename, rcdNbr, totalRecordsWritten, pRcdBuffer, rcdSize) | fileOffset, p_buffer, p_buffer2, blkAddr, blkAddr2
-
-    fileOffset := rcdNbr * rcdSize
-    p_buffer, p_buffer2, blkAddr, blkAddr2  := flash.TEST_get4kBlockAndNextAtOffset(pFilename, fileOffset)
-
-    if p_buffer
-      ' dump record
-      utils.dbgMemDump(@"SecRecord HEAD", pRcdBuffer, 64)
-      utils.dbgMemDump(@"SecRecord TAIL", @BYTE[pRcdBuffer][rcdSize-64], 64)
-      debug("  ")
-      ' dump 1st block tail
-      debug("/* [", uhex_word_(blkAddr),"]")
-      utils.dbgMemDump(@"lead-buffer TAIL", @BYTE[p_buffer][4096-192], 192)
-      ' dump 2nd block head
-      if p_buffer2
-          debug("  ")
-          debug("/* [", uhex_word_(blkAddr2),"]")
-          utils.dbgMemDump(@"trail-buffer HEAD", p_buffer2, 192)
-      else
-          debug("- no following block")
-    else
-        debug("- dumpBlocksAtSplice() FILE NOT FOUND [", zstr_(pFilename), "]")
-
-
-PRI testVerifySeekRecords(pFilename, totalRecordsWritten) | recordCount, lenBytes, startRcdNbr, recordInCircular
-
-    '  get total file size
-    utils.startTest(@"Determine size of file in records")
-    lenBytes := flash.file_size(pFilename)
-    status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-
-    recordCount := lenBytes / RECORD_LEN                ' ignore fraction at front of file
-
-    debug(" ")
-    debug("****  At VerifySeek: file size in bytes = ", udec_(lenBytes), " bytes, (", udec_(recordCount), " records), wrote total of ", udec_(totalRecordsWritten), " records")
-
-    recordInCircular := (CIRCULAR_LEN_IN_BYTES + (RECORD_LEN-1)) / RECORD_LEN
-    debug("   Circular Buffer contains = ", udec_(recordInCircular), " records")
-
-    ' read should start at tail - file limit (8KB in our tests)
-    if totalRecordsWritten > recordInCircular
-        startRcdNbr := totalRecordsWritten - recordInCircular + 1
-    else
-        startRcdNbr := 1
-    debug("   Read should start with record #", udec_(startRcdNbr))
-
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle := flash.open_circular(pFilename, "r", CIRCULAR_LEN_IN_BYTES)
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    '    seek to various locations and read longs validating for correct value
-
-    ' seek to 3
-    utils.startTest(@"seek to 3 then read expected RECORD")
-    utils.setCheckCountPerTest(5)
-    recordNbr := startRcdNbr + 2
-    endPosition := flash.seek(handle, RECORD_LEN * 2, flash.SK_FILE_START)
-    utils.evaluateSubValue(endPosition, @"seek()", RECORD_LEN * 2)
-    status := flash.error()
-    utils.evaluateSubStatus(handle, @"seek()", flash.SUCCESS)
-    rdLength := flash.read(handle, @record, RECORD_LEN)
-    verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
-
-   ' seek to zero
-    utils.startTest(@"seek to zero then read expected RECORD")
-    recordNbr := startRcdNbr
-    endPosition := flash.seek(handle, 0, flash.SK_FILE_START)
-    utils.evaluateSubValue(endPosition, @"seek()", 0)
-    status := flash.error()
-    utils.evaluateSubStatus(handle, @"seek()", flash.SUCCESS)
-    rdLength := flash.read(handle, @record, RECORD_LEN)
-    verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
-
-   ' seek to n-1
-    utils.startTest(@"seek to N-1 then read expected RECORD")
-    recordNbr := totalRecordsWritten
-    endPosition := flash.seek(handle, (totalRecordsWritten - startRcdNbr) * RECORD_LEN, flash.SK_FILE_START)
-    utils.evaluateSubValue(endPosition, @"seek()", (totalRecordsWritten - startRcdNbr) * RECORD_LEN)
-    status := flash.error()
-    utils.evaluateSubStatus(handle, @"seek()", flash.SUCCESS)
-    rdLength := flash.read(handle, @record, RECORD_LEN)
-    verifyRecord(@record, RECORD_LEN, recordNbr, rdLength)
-
-    '  read past end of file to verify read returns error
-    utils.startTest(@"BAD: read one more Record than written")
-    utils.setCheckCountPerTest(2)
-    rdLength := flash.read(handle, @record, RECORD_LEN)
-    utils.evaluateSubValue(rdLength, @"read()", 0)
-    status := flash.error()
-    utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
-
-    '  close file
-    utils.startTest(@"Close read file")
-    status := flash.close(handle)
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-
-PRI testVerifyRecordsWDump(pFilename, totalRecordsWritten) | recordCount, lenBytes, startRcdNbr, recordInCircular
-
-    '  get total file size
-    utils.startTest(@"Determine size of file in records")
-    lenBytes := flash.file_size(pFilename)
-    status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-
-    recordCount := lenBytes / RECORD_LEN                ' ignore fraction at front of file
-
-    debug(" ")
-    debug("****  At Verify: file size in bytes = ", udec_(lenBytes), " bytes, (", udec_(recordCount), " records), wrote total of ", udec_(totalRecordsWritten), " records")
-
-    recordInCircular := (CIRCULAR_LEN_IN_BYTES + (RECORD_LEN-1)) / RECORD_LEN
-    debug("   Circular Buffer contains = ", udec_(recordInCircular), " records")
-
-    ' read should start at tail - file limit (8KB in our tests)
-    if totalRecordsWritten > recordInCircular
-        startRcdNbr := totalRecordsWritten - recordInCircular + 1
-    else
-        startRcdNbr := 1
-    debug("   Read should start with record #", udec_(startRcdNbr))
-
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle := flash.open_circular(pFilename, "r", CIRCULAR_LEN_IN_BYTES)
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
-    '    seek to various locations and read longs validating for correct value
-
-    utils.startTest(@"read expected RECORDs Dump")
-    utils.setCheckCountPerTest(3)
-    recordNbr := startRcdNbr
-    rdLength := flash.read(handle, @record, RECORD_LEN)
-    status := flash.error()
-    ' ensure length is same as expected
-    utils.evaluateSubValue(rdLength, @"read()", RECORD_LEN)
-    ' ensure record ID is same as expected
-    utils.evaluateSubValue(recordID, @"recordID", recordNbr)
-    ' ensure record CRC is same as expected
-    calcCRC := utils.record_crc(@record, RECORD_LEN)
-    utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
-
-     ' dump record
-    utils.dbgMemDump(@"Record we read (128 Byte)", @record, 128)
-   ' AUGH dump head block to see if content is correct
-    pBlock := flash.TEST_getHead4kBlock(pFilename)
-    ' dump head block
-    utils.dbgMemDump(@"Records file Head block", pBlock, 256)
-    status := flash.SUCCESS ' clear our temp use
-
-    debug("* DONE halt for eval")
-    repeat
-
-
-
-PRI verifyRecord(pRcd, rcdSize, expectedId, readLength)
-    ' ensure length is same as expected
-    Debug("   -- Verifying Rcd # ", udec_(expectedId))
-    utils.evaluateSubValue(readLength, @"read()", rcdSize)
-    ' ensure record ID is same as expected
-    utils.evaluateSubValue(recordID, @"recordID", expectedId)
-    ' ensure record CRC is same as expected
-    calcCRC := utils.record_crc(@record, rcdSize)
-    utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
 
 con { license }
 

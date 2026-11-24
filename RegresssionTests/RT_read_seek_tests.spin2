@@ -43,64 +43,64 @@ byteOffset          LONG    0
 fileSizeBlocks      LONG    0
 endPosition         LONG    0
 
-PUB go() | nbrLongs
+PUB go() | nbrLongs, pFailedCall
 
+    pFailedCall := @"format()"
     status := flash.format()      ' Comment out this line to not erase all files
-    if status <> flash.SUCCESS
-        utils.showError(@"format()", status)
-        return
+    if status == flash.SUCCESS
+        pFailedCall := @"mount()"
+        status := flash.mount()
 
-    status := flash.mount()
-    if status <> flash.SUCCESS
-        utils.showError(@"mount()", status)
-        return
+    if status == flash.SUCCESS
+        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-    utils.ShowStats()                   ' should have empty filesystem
-    utils.showFiles()
+        utils.ShowStats()                   ' should have empty filesystem
+        utils.showFiles()
 
-    utils.showChipAndDriverVersion()
+        utils.showChipAndDriverVersion()
 
-    utils.startTest(@"BAD: Read when file doesn't exist")
-    handle := flash.open(@testfile,"r")
-    utils.evaluateResultNegError(handle, flash.E_FILE_NOT_FOUND)
+        utils.startTest(@"BAD: Read when file doesn't exist")
+        handle := flash.open(@testfile,"r")
+        utils.evaluateResultNegError(handle, flash.E_FILE_NOT_FOUND)
 
-    ' fill head block with longs (only block file)
-    utils.startTestGroup(@"Head block only - filled with longs")
-    nbrLongs := flash.LONGS_IN_HEAD_BLOCK
-    writeAddressedLongs(@testfile, nbrLongs, 0, 0)
-    verifyAddressedLongs(@testfile, nbrLongs)
+        ' fill head block with longs (only block file)
+        utils.startTestGroup(@"Head block only - filled with longs")
+        nbrLongs := flash.LONGS_IN_HEAD_BLOCK
+        writeAddressedLongs(@testfile, nbrLongs, 0, 0)
+        verifyAddressedLongs(@testfile, nbrLongs)
 
-    ' fill head block + 2 longs with longs (2 block file)
-    utils.startTestGroup(@"Head block + body block - head full, body has 2 longs")
-    nbrLongs := flash.LONGS_IN_HEAD_BLOCK + 2
-    writeAddressedLongs(@testfile2, nbrLongs, 1, 1)
-    verifyAddressedLongs(@testfile2, nbrLongs)
+        ' fill head block + 2 longs with longs (2 block file)
+        utils.startTestGroup(@"Head block + body block - head full, body has 2 longs")
+        nbrLongs := flash.LONGS_IN_HEAD_BLOCK + 2
+        writeAddressedLongs(@testfile2, nbrLongs, 1, 1)
+        verifyAddressedLongs(@testfile2, nbrLongs)
 
-    ' fill head block + body block + 2 longs with longs (3 block file)
-    utils.startTestGroup(@"Head block + 2x body block - head full, body full, 2nd body has 2 longs")
-    nbrLongs := flash.LONGS_IN_HEAD_BLOCK + flash.LONGS_IN_BODY_BLOCK + 2
-    writeAddressedLongs(@testfile3, nbrLongs, 2, 3)
-    verifyAddressedLongs(@testfile3, nbrLongs)
+        ' fill head block + body block + 2 longs with longs (3 block file)
+        utils.startTestGroup(@"Head block + 2x body block - head full, body full, 2nd body has 2 longs")
+        nbrLongs := flash.LONGS_IN_HEAD_BLOCK + flash.LONGS_IN_BODY_BLOCK + 2
+        writeAddressedLongs(@testfile3, nbrLongs, 2, 3)
+        verifyAddressedLongs(@testfile3, nbrLongs)
 
-     ' fill head block + 2x body block with longs (full 3 block file)
-    utils.startTestGroup(@"Head block + 2x body block - all blocks full")
-    nbrLongs := flash.LONGS_IN_HEAD_BLOCK + (flash.LONGS_IN_BODY_BLOCK * 2)
-    writeAddressedLongs(@testfile4, nbrLongs, 3, 6)
-    verifyAddressedLongs(@testfile4, nbrLongs)
+        ' fill head block + 2x body block with longs (full 3 block file)
+        utils.startTestGroup(@"Head block + 2x body block - all blocks full")
+        nbrLongs := flash.LONGS_IN_HEAD_BLOCK + (flash.LONGS_IN_BODY_BLOCK * 2)
+        writeAddressedLongs(@testfile4, nbrLongs, 3, 6)
+        verifyAddressedLongs(@testfile4, nbrLongs)
 
-    utils.startTestGroup(@"Seek position-relative tests")
-    verifyRelativeSeekLongs(@testfile4, nbrLongs)
+        utils.startTestGroup(@"Seek position-relative tests")
+        verifyRelativeSeekLongs(@testfile4, nbrLongs)
 
-    utils.startTestGroup(@"New file_size for handle and max seek tests")
-    verifyMaxSeek(@testfile4)
+        utils.startTestGroup(@"New file_size for handle and max seek tests")
+        verifyMaxSeek(@testfile4)
 
-    utils.showFiles()
-
-    'utils.dumpFileHeads()
-
-    utils.ShowTestEndCounts()
+        utils.showFiles()
+    else
+        utils.showError(pFailedCall, status)
+        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
+        utils.evaluateResultNegError(status, flash.SUCCESS)
 
     debug("* Test Complete")
+    utils.ShowTestResult(@"RT_read_seek_tests")
 
 
 pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount) | dumpSize
@@ -112,7 +112,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
     '  ensure returns SUCCESS
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open(,'w')")
 
     '  attempt seek and verify that seek on write-only file returns error
     utils.startTest(@"BAD: seek on write-only file")
@@ -139,7 +139,7 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFileDetails(pFilename)
@@ -174,14 +174,15 @@ pri writeAddressedLongs(pFilename, count, startingFileCount, startingBlockCount)
 
 
 
-pri verifyAddressedLongs(pFilename, count) | relativeOfs
+pri verifyAddressedLongs(pFilename, count)
     '  open file for read
     utils.startTest(@"Open File for read")
-    utils.setCheckCountPerTest(2)
     handle := flash.open(pFilename,"r")
-    utils.evaluateSubValue(handle, @"Open()", 0)
     status := flash.error()
-    utils.evaluateSubStatus(handle, @"Open()", flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    utils.startTest(@"validate handle")
+    utils.evaluateHandle(handle, @"open(,'r')")
 
     '    seek to various locations and read longs validating for correct value
     utils.startTest(@"read 1st LONG")
@@ -200,7 +201,7 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
     utils.startTest(@"read 20 longs randomly ensure offset is value of LONG")
     utils.setCheckCountPerTest(2)
     repeat 20
-        byteOffset := (GETRND() +// count) * 4
+        byteOffset := utils.randomBelow(count) * 4
         'debug("  Offset: ", udec_(byteOffset), " (", udec_(byteOffset / 4), " of ", udec_(count), ")")
         endPosition := flash.seek(handle, byteOffset, flash.SK_FILE_START)
         utils.evaluateSubValue(endPosition, @"seek()", byteOffset)
@@ -239,18 +240,19 @@ pri verifyAddressedLongs(pFilename, count) | relativeOfs
 
     '  close file
     utils.startTest(@"Close file we were reading")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, relativeOfs
 
     utils.startTest(@"Open File for read")
-    utils.setCheckCountPerTest(2)
     handle := flash.open(pFilename,"r")
-    utils.evaluateSubValue(handle, @"open()", 0)
     status := flash.error()
-    utils.evaluateSubStatus(status, @"open()", flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    utils.startTest(@"validate handle")
+    utils.evaluateHandle(handle, @"open(,'r')")
 
     '    seek to various locations and read longs validating for correct value
     utils.startTest(@"read 1st LONG")
@@ -268,7 +270,7 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
 
     utils.startTest(@"initial seek before reads")
     utils.setCheckCountPerTest(2)
-    priorByteOfs := (GETRND() +// longsInFile) * 4
+    priorByteOfs := utils.randomBelow(longsInFile) * 4
     'debug("  filePos: ", sdec_(priorByteOfs))
     endPosition := flash.seek(handle, priorByteOfs, flash.SK_FILE_START)
     utils.evaluateSubValue(endPosition, @"seek()", priorByteOfs)
@@ -278,7 +280,7 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
     utils.startTest(@"read 10 longs seeking relative to current location")
     utils.setCheckCountPerTest(1)
     repeat 10
-        newByteOfs := (GETRND() +// longsInFile) * 4
+        newByteOfs := utils.randomBelow(longsInFile) * 4
         relativeOfs := newByteOfs -  priorByteOfs
         'debug("  rndOffset: ", udec_(newByteOfs), " [relOffset: ", sdec_(relativeOfs), " fm prior: ", udec_(priorByteOfs), "] (", udec_(newByteOfs / 4), " of ", udec_(longsInFile), ")")
         endPosition := flash.seek(handle, relativeOfs, flash.SK_CURRENT_POSN)
@@ -320,18 +322,19 @@ pri verifyRelativeSeekLongs(pFilename, longsInFile) | priorByteOfs, newByteOfs, 
 
     '  close file
     utils.startTest(@"Close file we were reading")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
 pri verifyMaxSeek(pFilename) | lenBytes, hLenBytes
 
     utils.startTest(@"Open File for read")
-    utils.setCheckCountPerTest(2)
     handle := flash.open(pFilename,"r")
     status := flash.error()
-    utils.evaluateSubValue(handle, @"open()", 0)
-    utils.evaluateSubStatus(status, @"open()", flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    utils.startTest(@"validate handle")
+    utils.evaluateHandle(handle, @"open(,'r')")
 
     utils.startTest(@"Determine size of file (by handle) in bytes ")
     hLenBytes := flash.file_size_for_handle(handle)
@@ -341,12 +344,13 @@ pri verifyMaxSeek(pFilename) | lenBytes, hLenBytes
     utils.startTest(@"Determine size of file (by name) in bytes")
     lenBytes := flash.file_size(pFilename)
     status := flash.error()
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.startTest(@"Ensure the sizes match")
     utils.evaluateResultNegError(hLenBytes, lenBytes)
 
     utils.startTest(@"Seek to end of file returning position and ckeck length returned is file size")
+    utils.setCheckCountPerTest(2)
     endPosition := flash.seek(handle, POSX, flash.SK_FILE_START)
     status := flash.error()
     utils.evaluateSubValue(endPosition, @"seek()", lenBytes)
@@ -354,7 +358,7 @@ pri verifyMaxSeek(pFilename) | lenBytes, hLenBytes
 
     '  close file
     utils.startTest(@"Close file we were reading")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 

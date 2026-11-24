@@ -46,39 +46,41 @@ recordEnd
 writeLength     LONG    0
 
 
-PUB go() | status, handle, testValue, expectedValue, pFilename, bytePattern
+PUB go() | status, pFailedCall
 
+    pFailedCall := @"format()"
     status := flash.format()      ' Comment out this line to not erase all files
-    if status < 0
-        utils.showError(@"format()", status)
-        return
+    if status == flash.SUCCESS
+        pFailedCall := @"mount()"
+        status := flash.mount()
 
-    status := flash.mount()
-    if status < 0
-        utils.showError(@"mount()", status)
-        return
+    if status == flash.SUCCESS
+        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-    utils.ShowStats()                                   ' should have empty filesystem
-    utils.showFiles()
+        utils.ShowStats()                               ' should have empty filesystem
+        utils.showFiles()
 
-    utils.showChipAndDriverVersion()
+        utils.showChipAndDriverVersion()
 
-    testWriteRecords(@testfile, 10, 1, 0)
-    testWriteRecords(@testfile2, 45, 2, 1)                 ' tail last record in 2nd block
-    testWriteRecords(@testfile3, 92, 3, 3)                 ' tail of last record in 3rd block
-
-    utils.ShowTestEndCounts()
+        testWriteRecords(@testfile, 10, 1, 0)
+        testWriteRecords(@testfile2, 45, 2, 1)             ' tail last record in 2nd block
+        testWriteRecords(@testfile3, 92, 3, 3)             ' tail of last record in 3rd block
+    else
+        utils.showError(pFailedCall, status)
+        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
+        utils.evaluateResultNegError(status, flash.SUCCESS)
 
     debug("* Test Complete")
+    utils.ShowTestResult(@"RT_read_write_block_tests")
 
-pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | status, handle, testValue, expectedValue, recordNbr, wrLength, rdLength, pBlock, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
+pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | status, handle, testValue, recordNbr, rdLength, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
     ' ----------------------------------
     ' TEST
         '  open file for write
-    '  ensure returns SUCCESS
+    '  ensure returns a handle that no cog holds
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open(,'w')")
 
     utils.startTest(@"Write Records")
     utils.setCheckCountPerTest(2)
@@ -105,7 +107,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 {
@@ -149,7 +151,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open(,'r')")
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
@@ -180,7 +182,7 @@ pri testWriteRecords(pFilename, recordCount, fileCount, blocksAllocated) | statu
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     utils.showFiles()

@@ -48,17 +48,27 @@ writeLength     LONG    0
 recordsThisTest LONG    0
 
 
-PUB go() | status, handle, testValue, expectedValue, bytePattern, endPosn, recordOffset, expectedFileBlocks, expectedFileSize
+PUB go() | status, pFailedCall
 
+    pFailedCall := @"format()"
     status := flash.format()      ' Comment out this line to not erase all files
-    if status < 0
-        utils.showError(@"format()", status)
-        return
+    if status == flash.SUCCESS
+        pFailedCall := @"mount()"
+        status := flash.mount()
 
-    status := flash.mount()
-    if status < 0
-        utils.showError(@"mount()", status)
-        return
+    if status == flash.SUCCESS
+        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+        runTests()
+    else
+        utils.showError(pFailedCall, status)
+        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
+        utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    debug("* Test Complete")
+    utils.ShowTestResult(@"RT_read_modify_write_tests")
+
+
+PRI runTests() | status, handle, recordOffset, expectedFileBlocks, expectedFileSize
 
     utils.ShowStats()                                   ' should have empty filesystem
     utils.showFiles()
@@ -150,8 +160,8 @@ PUB go() | status, handle, testValue, expectedValue, bytePattern, endPosn, recor
     utils.showFiles()
 
     ' ------------------------------------------
-    ' TEST #4  W+ (new file over the top of old)
-    utils.startTestGroup(@"TEST #4  W+ (file exists) - replace earliest span")
+    ' TEST #4  W (new file over the top of old, then replace three records)
+    utils.startTestGroup(@"TEST #4  W (file exists) - rewrite the file, replace first, middle and last")
     recordsThisTest := 32
     expectedFileSize := recordsThisTest * RECORD_LEN
     expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
@@ -174,11 +184,6 @@ PUB go() | status, handle, testValue, expectedValue, bytePattern, endPosn, recor
 
     utils.ShowStats()
     utils.showFiles()
-
-    utils.ShowTestEndCounts()
-
-    debug("* Test Complete")
-    repeat
 
 
 PRI seekAwayFromWrite(handle, seekOffset) | status, endPosn
@@ -259,41 +264,16 @@ PRI setMsgRcdNbr(rcdNumber) | units, tens
     BYTE[@crcNbr][1] := units
 
 
-PRI dumpBlocksAtSplice(pFilename, rcdNbr, totalRecordsWritten, pRcdBuffer, rcdSize) | fileOffset, p_buffer, p_buffer2, blkAddr, blkAddr2
-
-    fileOffset := (rcdNbr - 1) * rcdSize
-    p_buffer, p_buffer2, blkAddr, blkAddr2 := flash.TEST_get4kBlockAndNextAtOffset(pFilename, fileOffset)
-
-    if p_buffer
-      ' dump record
-      utils.dbgMemDump(@"Record HEAD", pRcdBuffer, 128)
-      utils.dbgMemDump(@"Record TAIL", @BYTE[pRcdBuffer][rcdSize-128], 128)
-      debug("  ")
-      ' dump first block tail
-      debug("/* [", uhex_word_(blkAddr),"]")
-      utils.dbgMemDump(@"lead-buffer TAIL", @BYTE[p_buffer][4096-256], 256)
-      ' dump second block head
-      if p_buffer2
-          debug("  ")
-          debug("/* [", uhex_word_(blkAddr2),"]")
-          utils.dbgMemDump(@"trail-buffer HEAD", p_buffer2, 256)
-      else
-          debug("- no following block")
-    else
-        debug("- dumpBlocksAtSplice() FILE NOT FOUND [", zstr_(pFilename), "]")
-
-
-
-PRI testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | status, handle, testValue, expectedValue, recordNbr, wrLength, rdLength, pBlock, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
+PRI testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | status, handle, recordNbr, expectedFileSize, expectedFileBlocks, sizeUnused, allocatedFileSize
     ' ----------------------------------
     ' TEST
         '  open file for write
     debug("  ")
     debug(" ---------- Write Records ------------ ")
-    '  ensure returns SUCCESS
+    '  ensure returns a handle that no cog holds
     utils.startTest(@"Open File for write")
     handle := flash.open(pFilename,"w")
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open(,'w')")
 
     utils.startTest(@"Write Records")
     utils.setCheckCountPerTest(2)
@@ -318,7 +298,7 @@ PRI testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | stat
 
     '  close file
     utils.startTest(@"Close written file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     expectedFileSize := recordCount * RECORD_LEN
@@ -342,14 +322,14 @@ PRI testWriteRecords(pFilename, recordCount, initialFiles, initialBlocks) | stat
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
-PRI testVerifyRecords(pFilename, recordCount) | status, handle, testValue, expectedValue, recordNbr, wrLength, rdLength, pBlock, expectedFileSize, expectedFileBlocks, calcCRC, sizeUnused, allocatedFileSize
+PRI testVerifyRecords(pFilename, recordCount) | status, handle, recordNbr, rdLength, calcCRC
 
     debug("  ")
     debug(" ------------ Verify Original Records ---------------- ")
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open(,'r')")
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
@@ -369,7 +349,7 @@ PRI testVerifyRecords(pFilename, recordCount) | status, handle, testValue, expec
         utils.evaluateSubValue(calcCRC, @crcMsg, recordCRC)
         ' IF WE HAVE a CRC error then show buffers!
         if calcCRC <> recordCRC
-          dumpBlocksAtSplice(pFilename, recordNbr, recordCount, @record, RECORD_LEN)
+          utils.dumpBlocksAtSplice(pFilename, recordNbr - 1, @record, RECORD_LEN, utils.RCD_DUMP_BYTES, utils.SPLICE_DUMP_BYTES)
 
     utils.startTest(@"ensure no errors on reads")
     utils.evaluateResultNegError(status, flash.SUCCESS)
@@ -385,11 +365,11 @@ PRI testVerifyRecords(pFilename, recordCount) | status, handle, testValue, expec
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
 
-PRI testReplaceRecordWithinFile(pFilename, maxRecords, recordNumber) : handle | status, newRecordNbr, recordOffset
+PRI testReplaceRecordWithinFile(pFilename, maxRecords, recordNumber) : handle | status, newRecordNbr
     debug("  ")
     debug(" ----------- Overwrite single Record ----------- ")
     '  open file for modify writes
@@ -400,26 +380,24 @@ PRI testReplaceRecordWithinFile(pFilename, maxRecords, recordNumber) : handle | 
     if status <> flash.SUCCESS
       handle := flash.E_NO_HANDLE
       debug("* ERROR filed to open file for modify")
-      return
+    else
+      ' replace first, random middle and last records
+      ' - FIRST
+      utils.startTest(@"Write Record")
+      newRecordNbr := recordNumber + maxRecords
+      buildRecord(newRecordNbr)
+      replaceRecord(handle, recordNumber)
 
+      status := flash.error()
+      utils.startTest(@"ensure no errors on Record writes")
+      utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    ' replace first, random middle and last records
-    ' - FIRST
-    utils.startTest(@"Write Record")
-    newRecordNbr := recordNumber + maxRecords
-    buildRecord(newRecordNbr)
-    replaceRecord(handle, recordNumber)
-
-    status := flash.error()
-    utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-    '  dump commit chain
-    utils.showPendingCommitChain(handle)
+      '  dump commit chain
+      utils.showPendingCommitChain(handle)
 
 
 
-PRI testReplaceWithinFile(pFilename, maxRecords) : handle | status, recordNbr, recordOffset, newRecordNbr
+PRI testReplaceWithinFile(pFilename, maxRecords) : handle | status, recordNbr, newRecordNbr
 
     debug("  ")
     debug(" ----------- Overwrite 1st/mid/last Records ----------- ")
@@ -431,37 +409,35 @@ PRI testReplaceWithinFile(pFilename, maxRecords) : handle | status, recordNbr, r
     if status <> flash.SUCCESS
       handle := flash.E_NO_HANDLE
       debug("* ERROR filed to open file for modify")
-      return
+    else
+      ' replace first, random middle and last records
+      ' - FIRST
+      utils.startTest(@"Write 1st Record")
+      recordNbr := 1
+      newRecordNbr := recordNbr + maxRecords
+      buildRecord(newRecordNbr)
+      replaceRecord(handle, recordNbr)
 
+      ' - MID-somewhere
+      utils.startTest(@"Write Mid Record")
+      recordNbr := maxRecords / 2
+      newRecordNbr := recordNbr + maxRecords
+      buildRecord(newRecordNbr)
+      replaceRecord(handle, recordNbr)
 
-    ' replace first, random middle and last records
-    ' - FIRST
-    utils.startTest(@"Write 1st Record")
-    recordNbr := 1
-    newRecordNbr := recordNbr + maxRecords
-    buildRecord(newRecordNbr)
-    replaceRecord(handle, recordNbr)
+      ' - LAST
+      utils.startTest(@"Write LAST Record")
+      recordNbr := maxRecords
+      newRecordNbr := recordNbr + maxRecords
+      buildRecord(newRecordNbr)
+      replaceRecord(handle, recordNbr)
 
-    ' - MID-somewhere
-    utils.startTest(@"Write Mid Record")
-    recordNbr := maxRecords / 2
-    newRecordNbr := recordNbr + maxRecords
-    buildRecord(newRecordNbr)
-    replaceRecord(handle, recordNbr)
+      status := flash.error()
+      utils.startTest(@"ensure no errors on Record writes")
+      utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    ' - LAST
-     utils.startTest(@"Write LAST Record")
-   recordNbr := maxRecords
-    newRecordNbr := recordNbr + maxRecords
-    buildRecord(newRecordNbr)
-    replaceRecord(handle, recordNbr)
-
-    status := flash.error()
-    utils.startTest(@"ensure no errors on Record writes")
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-    '  dump commit chain
-    utils.showPendingCommitChain(handle)
+      '  dump commit chain
+      utils.showPendingCommitChain(handle)
 
 
 PRI testVerifyRecordsAfterReplace(pFilename, recordCount, initialFiles, initialBlocks) | handle, recordNbr, rdLength, status, calcCRC, testRecordNbr, expectedFileSize, expectedFileBlocks
@@ -471,7 +447,7 @@ PRI testVerifyRecordsAfterReplace(pFilename, recordCount, initialFiles, initialB
     '  open file for read
     utils.startTest(@"Open File for read")
     handle := flash.open(pFilename,"r")
-    utils.evaluateResultNegError(handle, flash.SUCCESS)
+    utils.evaluateHandle(handle, @"open(,'r')")
     '    seek to various locations and read longs validating for correct value
 
     utils.startTest(@"read expected RECORDs")
@@ -492,14 +468,14 @@ PRI testVerifyRecordsAfterReplace(pFilename, recordCount, initialFiles, initialB
         utils.evaluateSubValue(calcCRC, @crcMsg, recordCRC)
         ' IF WE HAVE a CRC error then show buffers!
         if calcCRC <> recordCRC
-          dumpBlocksAtSplice(pFilename, recordNbr, recordCount, @record, RECORD_LEN)
+          utils.dumpBlocksAtSplice(pFilename, recordNbr - 1, @record, RECORD_LEN, utils.RCD_DUMP_BYTES, utils.SPLICE_DUMP_BYTES)
 
     utils.startTest(@"ensure no errors on reads")
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  close file
     utils.startTest(@"Close read file")
-    status := flash.close(handle)
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
     '  get filesystem stats and verify against expectation
