@@ -2911,6 +2911,13 @@ CON { constants exposed for regression testing }
 
      TEST_CORRUPT_BIT = %0000_0100                                  ' a reserved bit of the first byte of a block, covered by the block CRC
 
+     ' The counts TEST_setElectionCounts() places in the entries of the lock election:
+     '  TEST_COUNT_UNSET  - the count every entry holds at power-up, before any cog has entered the election
+     '  TEST_COUNT_LOWEST - the lowest count an entry can hold, the one a cog leaves when getct() read $8000_0000
+     TEST_COUNT_UNSET = POSX
+     TEST_COUNT_LOWEST = NEGX
+     TEST_ELECTION_ENTRIES = 8                                      ' entries of the lock election, one for each cog
+
 DAT { regression testing buffers and such }
 
    blockForUser         BYTE    0[4096]
@@ -3343,6 +3350,43 @@ PUB TEST_changeBlock(blockOp, block_address, p_source, cycle_bits) : status | BY
         lockrel(fsLock)                                                         ' release the lock, we're done with it
 
     LONG[@errorCode][cogid()] := status
+
+
+PUB TEST_setElectionCounts(countValue)
+'' TEST METHOD: place one count in every entry of the election that decides which cog creates the lock
+''
+'' The election runs only while no cog has created the lock. Each cog that enters it writes getct() into
+'' its own entry, then the cog whose entry is lowest creates the lock and the others wait for it to exist
+'' (can_acquire_lock(), setup_semaphore()); on a tie the lower cog number wins. So the entries the other
+'' cogs hold decide whether a cog wins: with TEST_COUNT_LOWEST in every entry a cog that enters loses to the
+'' lowest-numbered other cog (cog 0 alone could tie and win, when getct() reads $8000_0000 as it enters),
+'' and with TEST_COUNT_UNSET in every entry the election is as it is at power-up. Nothing else is changed
+'' and the lock is not taken.
+''
+'' @param countValue - the count to place in all TEST_ELECTION_ENTRIES entries
+
+    longfill(@fsCogCts, countValue, TEST_ELECTION_ENTRIES)
+
+
+PUB TEST_blockStateOf(block_address) : stateBits
+'' TEST METHOD: return the block state the driver's table holds for one block, read without taking the lock
+''
+'' The table is read as it stands, so a call made while another cog builds the tables in mount() or
+'' can_mount() sees the table part way through that build. The table exists once the first mount() or
+'' can_mount() has built it.
+''
+'' @param block_address - the block offset within the file system
+'' @returns stateBits - B_FREE, B_TEMP, B_HEAD or B_BODY, or E_TEST_BAD_BLOCK_ARG if block_address is
+'' .. outside 0..BLOCKS-1 or no table has been built yet
+
+    if block_address < 0 or block_address > BLOCKS - 1                         ' refuse an address outside the file system
+        stateBits := E_TEST_BAD_BLOCK_ARG
+    elseif BlockState == 0                                                      ' the field pointer is set by the first table build
+        stateBits := E_TEST_BAD_BLOCK_ARG
+    else
+        stateBits := field[BlockState][block_address]
+
+    LONG[@errorCode][cogid()] := stateBits < 0 ? stateBits : SUCCESS
 
 
 PUB TEST_dumpMountMap(pFileBlocks, pFragments): fileLen, badLen | bReady, bFileFound, blockCount, blkIdx, block_address, blockTypeBits, badBlockCount, fileCount, LONG signature[2], bad_count, dupe_count, dupeIdCount

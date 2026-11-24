@@ -1,0 +1,789 @@
+'' =================================================================================================
+''
+''   File....... RT_mount_state_tests.spin2
+''   Purpose.... This object exercises the mount state of the flash filesystem: mounted() and null(),
+''               can_mount() on a clean flash, on a flash with a bad block and while mounted, the handle
+''               pool after every open mode, unmount() with a writer of each kind still open, mount()
+''               from two cogs at once, and mount() from another cog after an unmount
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... NOV 2026
+''   Updated.... 24 NOV 2026
+''
+'' =================================================================================================
+
+{ Every expectation is the contract, never what the driver happens to do.  mounted() reports whether
+  the filesystem is mounted, and null() changes nothing.  can_mount() is TRUE when a mount() would change
+  no block, so it is TRUE while the filesystem is mounted, and FALSE once a block's CRC no longer
+  matches.  close() gives every handle back whatever mode opened it, so the pool holds MAX_FILES_OPEN
+  handles again after every mode.  unmount() commits each writer still open, so every byte written
+  before it is in the file after the next mount().
+
+  The last two groups start other cogs that call mount().  Every wait for them is bounded by this
+  program's own time limit: a worker that has not returned by then is recorded as a failure and stopped,
+  and the run goes on.  The main cog makes every check, because the harness counts tests per cog.
+  - A table build clears the block-state table and fills it again from the flash.  While other cogs
+    mount, the main cog reads the table entry of a file's head block without the lock, over and over.
+    The first case shows that this sampler sees a single mount() from another cog build the tables.
+  - Two cogs are then released together after an unmount.  While no cog has created the lock, a
+    mount() runs the lock election, which waits 10 ms before any cog can mark the filesystem mounted,
+    so two cogs released together both find it not mounted.  Only one of them may build the tables, so
+    once the first mount() has returned the entry of the head block must keep its state.
+  - Before an unmount every entry of the lock election is given the lowest count an earlier mount can
+    leave in it.  A mount() from another cog after the unmount must still return.  This case runs last;
+    after it the election entries are put back as they are at power-up, and no lock is held.
+}
+
+CON
+
+     _CLKFREQ        = 320_000_000
+
+{
+    ' debug via serial to RPi (using RPi gateway pins)
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
+'}
+
+OBJ
+    flash : "flash_fs"
+    utils : "RT_utilities"
+
+CON ' ---- Test Geometry ----
+
+    FILE_BYTES = 100                                    ' bytes of each one-block file, and of each writer's write
+    BASE_BYTES = 200                                    ' bytes of the file the append and read-modify-write writers start from
+    OVERWRITE_BYTES = 50                                ' bytes the read-modify-write writer replaces, from the first byte
+    CIRC_LIMIT_BYTES = 1000                             ' limit of a circular handle, more than any file of the cases holds
+    DATA_BUF_BYTES = BASE_BYTES + FILE_BYTES            ' bytes the largest file of the cases holds
+    BASE_SEED = 1                                       ' first data byte of a file written before a case
+    WRITER_SEED = $40                                   ' first data byte a writer writes
+    BYTE_MASK = $FF                                     ' keeps a value to one byte
+    NO_SOURCE = 0                                       ' block image address of a block hook operation that programs no image
+    NO_CYCLE = 0                                        ' lifecycle of a block hook operation that writes no lifecycle
+    HANDLE_SLOTS = flash.MAX_FILES_OPEN #> 1            ' handles the pool cases record as held
+    NAME_DIGIT_RADIX = 10                               ' radix of the number in the names of the pool files
+    POOL_TENS_OFFSET = 4                                ' offset of the tens digit in the pool file name
+    POOL_ONES_OFFSET = 5                                ' offset of the ones digit in the pool file name
+
+CON ' ---- Worker Cogs ----
+
+    RACE_WORKERS = 2                                    ' cogs released together to call mount()
+    SOLO_WORKERS = 1                                    ' cogs of a case that starts one worker
+    WORKER_STACK_LONGS = 512                            ' stack of each worker cog
+    WORKER_START_MS = 2_000                             ' time the worker cogs have to start and report ready
+    WORKER_WAIT_MS = 5_000                              ' time the workers' mount() calls have to return
+    WORKER_POLL_MS = 10                                 ' pause between looks at the workers' ready flags
+    NO_STATUS = 1                                       ' a status no call returns, held until a worker records one
+    NO_COG = -1                                         ' cog number of a worker that did not start
+
+CON ' ---- Writers and Open Modes ----
+
+    ' The writers unmount() finds open:
+    '  WRITER_WRITE    - open() "w" of a new file
+    '  WRITER_APPEND   - open() "a" of a file of BASE_BYTES
+    '  WRITER_MODIFY   - open() "r+" of a file of BASE_BYTES, replacing its first OVERWRITE_BYTES
+    '  WRITER_CIRCULAR - open_circular() "a" of a new file
+    #0, WRITER_WRITE, WRITER_APPEND, WRITER_MODIFY, WRITER_CIRCULAR
+
+    ' The open modes of the pool cases, in the order they run:
+    '  POOL_READ, POOL_READ_EXT, POOL_APPEND - open() "r", "r+" and "a" of an existing file
+    '  POOL_CIRC_READ, POOL_CIRC_APPEND      - open_circular() "r" and "a" of an existing file
+    '  POOL_WRITE, POOL_WRITE_EXT            - open() "w" and "w+", which may replace the file, so they run last
+    '  POOL_MODES                            - the number of modes
+    #0, POOL_READ, POOL_READ_EXT, POOL_APPEND, POOL_CIRC_READ, POOL_CIRC_APPEND, POOL_WRITE, POOL_WRITE_EXT, POOL_MODES
+
+DAT ' ---- Worker Flags and Stacks ----
+
+raceStart       LONG    FALSE                           ' set by the main cog to release the workers
+raceReady       LONG    FALSE[RACE_WORKERS]             ' set by each worker once it waits for raceStart
+raceDone        LONG    FALSE[RACE_WORKERS]             ' set by each worker once its mount() returned
+raceStatus      LONG    NO_STATUS[RACE_WORKERS]         ' what each worker's mount() returned
+raceCogs        LONG    NO_COG[RACE_WORKERS]            ' cog of each worker, or NO_COG when it did not start
+raceHeadAddr    LONG    0                               ' head block of the file whose table entry the sampler reads
+crcHeadAddr     LONG    0                               ' the one block of the file the can_mount() case corrupts
+bCrcSetUp       LONG    FALSE                           ' TRUE when that file was written and its block found
+heldHandles     LONG    0[HANDLE_SLOTS]                 ' handles the pool cases hold
+workerStacks    LONG    0[WORKER_STACK_LONGS * RACE_WORKERS] ' one stack for each worker cog
+
+DAT ' ---- Files and Buffers ----
+
+missingFile     BYTE    "ms_missing.bin", 0             ' a name no file has
+crcFile         BYTE    "ms_crc.bin", 0                 ' a one-block file whose block the can_mount() case corrupts
+raceFile        BYTE    "ms_race.bin", 0                ' a one-block file whose head block the sampler watches
+spareFile       BYTE    "ms_spare.bin", 0               ' the name opened when every handle is in use
+writerNewFile   BYTE    "ms_write.bin", 0               ' the new file of the "w" writer
+writerAddFile   BYTE    "ms_append.bin", 0              ' the file of the "a" writer
+writerModFile   BYTE    "ms_modify.bin", 0              ' the file of the "r+" writer
+writerCircFile  BYTE    "ms_circular.bin", 0            ' the new file of the circular writer
+poolFile        BYTE    "pool00.bin", 0                 ' template of the names of the files the pool cases open
+
+writeBuf        BYTE    0[DATA_BUF_BYTES]               ' what a file is written from
+expectBuf       BYTE    0[DATA_BUF_BYTES]               ' what a file must hold
+readBuf         BYTE    0[DATA_BUF_BYTES]               ' what a file is read into
+
+
+PUB go() | status, pFailedCall
+'' Run every mount state test, then show the result.
+''
+
+' Local Variables:
+' @local status - status of the format and mount that start the run
+' @local pFailedCall - address of the name of the call that failed
+
+    pFailedCall := @"format()"
+    status := flash.format()      ' Comment out this line to not erase all files
+    if status == flash.SUCCESS
+        pFailedCall := @"mount()"
+        status := flash.mount()
+
+    if status == flash.SUCCESS
+        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+
+        utils.showChipAndDriverVersion()
+        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+
+        testMountedAndNull()
+        testCanMount()
+        testHandlePool()
+        testUnmountWriters()
+        debug("* The next cases start other cogs that call mount(); a worker that has not returned in time is stopped")
+        testConcurrentMount()
+        testMountFromOtherCog()
+    else
+        utils.showError(pFailedCall, status)
+        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
+        utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    debug("* Test Complete")
+    utils.ShowTestResult(@"RT_mount_state_tests")
+
+
+PRI testMountedAndNull() | pending, status
+' mounted() follows mount() and unmount(), and null() changes neither mounted() nor a pending error().
+
+' Local Variables:
+' @local pending - code the open of a missing file left in error()
+' @local status - what unmount() and mount() returned
+
+    utils.startTestGroup(@"mounted() and null()")
+
+    utils.startTest(@"mounted() is TRUE after mount()")
+    utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
+
+    utils.startTest(@"null() leaves mounted() and a pending error() as they were")
+    pending := flash.open(@missingFile, flash.FILEMODE_READ)   ' opening a file that does not exist leaves E_FILE_NOT_FOUND pending
+    flash.null()
+    utils.evaluateSubStatus(pending, @"the pending code", flash.E_FILE_NOT_FOUND)
+    utils.evaluateSubStatus(flash.error(), @"error() after null()", flash.E_FILE_NOT_FOUND)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after null()", TRUE)
+
+    utils.startTest(@"mounted() is FALSE after unmount()")
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted()", FALSE)
+
+    utils.startTest(@"mounted() is TRUE again after the next mount()")
+    mountAndCheck(flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
+
+
+PRI testCanMount() | bCanMount, status
+' can_mount() while mounted, on a clean unmounted flash, and on a flash with a block whose CRC does not match.
+
+' Local Variables:
+' @local bCanMount - what can_mount() returned
+' @local status - what unmount() returned
+
+    utils.startTestGroup(@"can_mount()")
+
+    utils.startTest(@"can_mount() is TRUE while the filesystem is mounted")
+    bCanMount := flash.can_mount()                      ' a mount() of a mounted filesystem changes no block
+    utils.evaluateSubValue(bCanMount, @"can_mount() while mounted", TRUE)
+    utils.evaluateSubValue(flash.mounted(), @"the filesystem is still mounted", TRUE)
+
+    utils.startTest(@"can_mount() is TRUE on a clean flash and leaves it unmounted")
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    bCanMount := flash.can_mount()
+    utils.evaluateSubValue(bCanMount, @"can_mount() of a clean flash", TRUE)
+    utils.evaluateSubValue(flash.mounted(), @"the filesystem is still not mounted", FALSE)
+    mountAndCheck(flash.SUCCESS)
+
+    setUpCrcBlock()
+    corruptCrcBlock()
+    repairCrcBlock()
+
+
+PRI setUpCrcBlock() | bWritten, pBuff, pBuff2
+' Write the one-block file and find its block, as one test; bCrcSetUp tells the later steps whether it worked.
+
+' Local Variables:
+' @local bWritten - TRUE when the file was written and closed
+' @local pBuff - buffer of the file's first block the block hook returned
+' @local pBuff2 - buffer of the file's second block, 0 when it has none
+
+    utils.startTest(@"set up: write a one-block file and find its block")
+    fillPattern(@writeBuf, FILE_BYTES, BASE_SEED)
+    bWritten := writeNewFile(@crcFile, @writeBuf, FILE_BYTES)
+    pBuff, pBuff2, crcHeadAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@crcFile, 0)
+    bCrcSetUp := bWritten and pBuff > 0 and pBuff2 == 0
+    utils.evaluateSubValue(bWritten, @"the file is written", TRUE)
+    utils.evaluateSubValue(bCrcSetUp, @"the file has one block", TRUE)
+
+
+PRI corruptCrcBlock() | status, pBlock, bCanMount
+' Unmount, clear a reserved bit of the one-block file's block and read it back, then check can_mount() is FALSE, as one test.
+
+' Local Variables:
+' @local status - what unmount() and the block hook returned
+' @local pBlock - address of the block as read back, or an error code
+' @local bCanMount - what can_mount() returned
+
+    utils.startTest(@"can_mount() is FALSE once a block's CRC no longer matches")
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    utils.evaluateSubValue(bCrcSetUp, @"the file was set up", TRUE)
+    if bCrcSetUp
+        status := flash.TEST_changeBlock(flash.TEST_BLK_CORRUPT, crcHeadAddr, NO_SOURCE, NO_CYCLE)
+        utils.evaluateSubStatus(status, @"clear a reserved bit of the block", flash.SUCCESS)
+        pBlock := flash.TEST_readBlock(crcHeadAddr)
+        utils.evaluateSubValue(pBlock > 0, @"the block was read back", TRUE)
+        if pBlock > 0
+            utils.evaluateSubValue((BYTE[pBlock] & flash.TEST_CORRUPT_BIT) == 0, @"the reserved bit of the block is clear", TRUE)
+        bCanMount := flash.can_mount()
+        utils.evaluateSubValue(bCanMount, @"can_mount() with the CRC broken", FALSE)
+        utils.evaluateSubValue(flash.mounted(), @"the filesystem is still not mounted", FALSE)
+
+
+PRI repairCrcBlock() | status, bCanMount
+' mount() cancels the block whose CRC does not match and reports it, then a further can_mount() is TRUE, as one test.
+
+' Local Variables:
+' @local status - what unmount() returned
+' @local bCanMount - what can_mount() returned
+
+    utils.startTest(@"mount() removes the block, then can_mount() is TRUE")
+    mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)           ' a block whose CRC does not match is cancelled and reported
+    utils.evaluateSubValue(flash.exists(@crcFile), @"the file of the removed block is gone", FALSE)
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    bCanMount := flash.can_mount()
+    utils.evaluateSubValue(bCanMount, @"can_mount() after the repair", TRUE)
+    mountAndCheck(flash.SUCCESS)
+
+
+PRI testHandlePool() | modeIdx
+' Open every handle and close it again in every open mode, then check the pool holds every handle.
+
+' Local Variables:
+' @local modeIdx - number of the open mode being used
+
+    utils.startTestGroup(@"the handle pool after every open mode")
+    setUpPoolFiles()
+    repeat POOL_MODES with modeIdx
+        poolModeCase(modeIdx)
+    poolRefillCase()
+
+
+PRI setUpPoolFiles() | slotIdx, bWritten
+' Write a one-block file for each handle, as one test.
+
+' Local Variables:
+' @local slotIdx - number of the handle the file is for
+' @local bWritten - TRUE when the file was written and closed
+
+    utils.startTest(@"set up: write a file for each handle")
+    fillPattern(@writeBuf, FILE_BYTES, BASE_SEED)
+    repeat flash.MAX_FILES_OPEN with slotIdx
+        setPoolName(slotIdx)
+        bWritten := writeNewFile(@poolFile, @writeBuf, FILE_BYTES)
+        utils.evaluateSubValue(bWritten, @"a pool file is written", TRUE)
+
+
+PRI poolModeCase(modeIdx) | slotIdx, status
+' Open a pool file with every handle in one mode, then close every one, as one test.
+
+' @param modeIdx - the open mode, one of the POOL_ values
+
+' Local Variables:
+' @local slotIdx - number of the handle being opened or closed
+' @local status - what close() returned
+
+    utils.startTest(poolModeName(modeIdx))
+    repeat flash.MAX_FILES_OPEN with slotIdx
+        setPoolName(slotIdx)
+        heldHandles[slotIdx] := openPoolMode(@poolFile, modeIdx)
+        utils.evaluateSubValue(isUsableHandle(heldHandles[slotIdx]), @"the open returned a usable handle", TRUE)
+        utils.evaluateSubValue(isNewHandle(slotIdx), @"the handle differs from the handles already held", TRUE)
+    repeat flash.MAX_FILES_OPEN with slotIdx
+        status := utils.closeHandle(heldHandles[slotIdx])
+        utils.evaluateSubStatus(status, @"close() gives the handle back", flash.SUCCESS)
+
+
+PRI poolRefillCase() | slotIdx, handle, status
+' Open a file with every handle once more, check one further open finds no handle, then close every one, as one test.
+
+' Local Variables:
+' @local slotIdx - number of the handle being opened or closed
+' @local handle - what the open with every handle in use returned
+' @local status - what close() returned
+
+    utils.startTest(@"after every mode, MAX_FILES_OPEN opens succeed again and one more finds no handle")
+    repeat flash.MAX_FILES_OPEN with slotIdx
+        setPoolName(slotIdx)
+        heldHandles[slotIdx] := flash.open(@poolFile, flash.FILEMODE_APPEND)
+        utils.evaluateSubValue(isUsableHandle(heldHandles[slotIdx]), @"open(,a) returned a usable handle", TRUE)
+        utils.evaluateSubValue(isNewHandle(slotIdx), @"the handle differs from the handles already held", TRUE)
+    handle := flash.open(@spareFile, flash.FILEMODE_APPEND) ' every handle is in use, so this open finds none
+    utils.evaluateSubStatus(handle, @"open(,a) with every handle in use", flash.E_NO_HANDLE)
+    repeat flash.MAX_FILES_OPEN with slotIdx
+        status := utils.closeHandle(heldHandles[slotIdx])
+        utils.evaluateSubStatus(status, @"close() gives the handle back", flash.SUCCESS)
+
+
+PRI testUnmountWriters()
+' unmount() with a writer of each kind still open, then mount(): every byte the writer wrote is in the file.
+
+    utils.startTestGroup(@"unmount() with a writer still open, then mount()")
+    unmountWriterCase(@"unmount() with an open(,w) writer of a new file open", @writerNewFile, WRITER_WRITE)
+    unmountWriterCase(@"unmount() with an open(,a) writer of an existing file open", @writerAddFile, WRITER_APPEND)
+    unmountWriterCase(@"unmount() with an open(,r+) writer of an existing file open", @writerModFile, WRITER_MODIFY)
+    unmountWriterCase(@"unmount() with an open_circular(,a) writer of a new file open", @writerCircFile, WRITER_CIRCULAR)
+
+
+PRI unmountWriterCase(pTitle, pFilename, writerKind) | bReady, writeCount, handle, writtenCount, status, fileBytes
+' Open one writer and write to it, unmount with it still open, mount, and check the file holds every byte written, as one test.
+
+' @param pTitle - address of zstring naming the test
+' @param pFilename - address of zstring with the file name
+' @param writerKind - the writer, one of the WRITER_ values
+
+' Local Variables:
+' @local bReady - TRUE when the file the writer starts from is in place
+' @local writeCount - bytes the writer writes
+' @local handle - handle of the writer
+' @local writtenCount - what write() returned
+' @local status - what unmount() and mount() returned
+' @local fileBytes - bytes the file must hold after the mount
+
+    utils.startTest(pTitle)
+    bReady := TRUE
+    if writerKind == WRITER_APPEND or writerKind == WRITER_MODIFY
+        fillPattern(@writeBuf, BASE_BYTES, BASE_SEED)
+        bReady := writeNewFile(pFilename, @writeBuf, BASE_BYTES)
+    utils.evaluateSubValue(bReady, @"the file the writer starts from is in place", TRUE)
+
+    writeCount := writerKind == WRITER_MODIFY ? OVERWRITE_BYTES : FILE_BYTES
+    fillPattern(@writeBuf, writeCount, WRITER_SEED)
+    handle := openWriter(pFilename, writerKind)
+    writtenCount := 0
+    if isUsableHandle(handle)
+        writtenCount := flash.write(handle, @writeBuf, writeCount)
+    utils.evaluateSubValue(isUsableHandle(handle), @"the writer opened", TRUE)
+    utils.evaluateSubValue(writtenCount, @"bytes write() took", writeCount)
+
+    status := flash.unmount()                           ' the writer is still open
+    utils.evaluateSubStatus(status, @"unmount() with the writer open", flash.SUCCESS)
+    mountAndCheck(flash.SUCCESS)
+
+    fileBytes := expectWriterFile(writerKind)
+    utils.evaluateSubValue(flash.file_size(pFilename), @"file_size() after the mount", fileBytes)
+    utils.evaluateSubValue(fileHolds(pFilename, fileBytes), @"the file holds every byte written", TRUE)
+
+
+PRI openWriter(pFilename, writerKind) : handle
+' Open a file as one kind of writer.
+
+' @param pFilename - address of zstring with the file name
+' @param writerKind - the writer, one of the WRITER_ values
+' @returns handle - handle from the open, or a negative error code
+
+    case writerKind
+        WRITER_WRITE: handle := flash.open(pFilename, flash.FILEMODE_WRITE)
+        WRITER_APPEND: handle := flash.open(pFilename, flash.FILEMODE_APPEND)
+        WRITER_MODIFY: handle := flash.open(pFilename, flash.FILEMODE_READ_EXTENDED)
+        other: handle := flash.open_circular(pFilename, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES)
+
+
+PRI expectWriterFile(writerKind) : fileBytes
+' Fill the expected-content buffer with what a writer's file must hold after the unmount and mount.
+
+' @param writerKind - the writer, one of the WRITER_ values
+' @returns fileBytes - bytes the file must hold
+
+    case writerKind
+        WRITER_APPEND:
+            fillPattern(@expectBuf, BASE_BYTES, BASE_SEED)
+            fillPattern(@expectBuf + BASE_BYTES, FILE_BYTES, WRITER_SEED)
+            fileBytes := BASE_BYTES + FILE_BYTES
+        WRITER_MODIFY:
+            fillPattern(@expectBuf, BASE_BYTES, BASE_SEED)
+            fillPattern(@expectBuf, OVERWRITE_BYTES, WRITER_SEED)
+            fileBytes := BASE_BYTES
+        other:
+            fillPattern(@expectBuf, FILE_BYTES, WRITER_SEED)
+            fileBytes := FILE_BYTES
+
+
+PRI testConcurrentMount()
+' mount() from two cogs released together, after a check that the table sampler sees a table build.
+
+    utils.startTestGroup(@"mount() from two cogs at once")
+    setUpRace()
+    soloMountCase()
+    raceCase()
+
+
+PRI setUpRace() | bWritten, pBuff, pBuff2, stateBits, status
+' Write the one-block file the sampler watches, find its head block and its table state, then unmount, as one test.
+
+' Local Variables:
+' @local bWritten - TRUE when the file was written and closed
+' @local pBuff - buffer of the file's first block the block hook returned
+' @local pBuff2 - buffer of the file's second block, 0 when it has none
+' @local stateBits - table state of the head block while mounted
+' @local status - what unmount() returned
+
+    utils.startTest(@"set up: write a one-block file, find its head block, then unmount")
+    fillPattern(@writeBuf, FILE_BYTES, BASE_SEED)
+    bWritten := writeNewFile(@raceFile, @writeBuf, FILE_BYTES)
+    pBuff, pBuff2, raceHeadAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@raceFile, 0)
+    stateBits := flash.TEST_blockStateOf(raceHeadAddr)
+    utils.evaluateSubValue(bWritten, @"the file is written", TRUE)
+    utils.evaluateSubValue(pBuff > 0 and pBuff2 == 0, @"the file has one block", TRUE)
+    utils.evaluateSubValue(stateBits, @"table state of its head block while mounted", flash.B_HEAD)
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the unmount", FALSE)
+
+
+PRI soloMountCase() | startedCount, readyCount, doneCount, bLeftAny
+' One other cog calls mount() while the main cog samples the table: the sampler sees the build, as one test.
+
+' Local Variables:
+' @local startedCount - worker cogs that started
+' @local readyCount - workers that were waiting when the main cog released them
+' @local doneCount - workers whose mount() returned before the time limit
+' @local bLeftAny - TRUE when a sample of the head block's entry was not B_HEAD
+
+    utils.startTest(@"the table sampler sees one mount() from another cog build the tables")
+    flash.TEST_setElectionCounts(flash.TEST_COUNT_UNSET)    ' a lock election, if one runs, is as at power-up, so the worker wins it
+    startedCount, readyCount, doneCount, bLeftAny, _ := runMountWorkers(SOLO_WORKERS)
+    utils.evaluateSubValue(startedCount, @"worker cogs started", SOLO_WORKERS)
+    utils.evaluateSubValue(readyCount, @"workers waiting when released", SOLO_WORKERS)
+    utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", SOLO_WORKERS)
+    utils.evaluateSubStatus(raceStatus[0], @"mount() of the worker", flash.SUCCESS)
+    utils.evaluateSubValue(bLeftAny, @"the head block's entry changed while the tables were built", TRUE)
+    utils.evaluateSubValue(flash.TEST_blockStateOf(raceHeadAddr), @"table state of the head block after the mount", flash.B_HEAD)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the worker's mount()", TRUE)
+
+
+PRI raceCase() | status, startedCount, readyCount, doneCount, bLeftAfterFirst, workerIdx
+' Two cogs released together call mount() while no cog has created the lock: only one may build the tables, as one test.
+
+' Local Variables:
+' @local status - what unmount() returned
+' @local startedCount - worker cogs that started
+' @local readyCount - workers that were waiting when the main cog released them
+' @local doneCount - workers whose mount() returned before the time limit
+' @local bLeftAfterFirst - TRUE when a sample of the head block's entry taken after the first mount() returned was not B_HEAD
+' @local workerIdx - number of the worker whose status is checked
+
+    utils.startTest(@"two cogs released together call mount(): the tables are built once")
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    flash.TEST_setElectionCounts(flash.TEST_COUNT_UNSET)    ' a lock election, if one runs, is as at power-up, so one of the two wins it
+    startedCount, readyCount, doneCount, _, bLeftAfterFirst := runMountWorkers(RACE_WORKERS)
+    utils.evaluateSubValue(startedCount, @"worker cogs started", RACE_WORKERS)
+    utils.evaluateSubValue(readyCount, @"workers waiting when released", RACE_WORKERS)
+    utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", RACE_WORKERS)
+    repeat RACE_WORKERS with workerIdx
+        utils.evaluateSubStatus(raceStatus[workerIdx], @"mount() of a worker", flash.SUCCESS)
+    ' once one mount() has returned the tables are built; a second build would clear them and fill them again
+    utils.evaluateSubValue(bLeftAfterFirst, @"the head block's entry changed after the first mount() returned", FALSE)
+    utils.evaluateSubValue(flash.TEST_blockStateOf(raceHeadAddr), @"table state of the head block after both mounts", flash.B_HEAD)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the workers' mount()", TRUE)
+
+
+PRI testMountFromOtherCog() | status, startedCount, readyCount, doneCount
+' mount() from another cog after an unmount returns, whatever counts the lock election holds from earlier mounts.
+
+' Local Variables:
+' @local status - what unmount() returned
+' @local startedCount - worker cogs that started
+' @local readyCount - workers that were waiting when the main cog released them
+' @local doneCount - workers whose mount() returned before the time limit
+
+    utils.startTestGroup(@"mount() from another cog after an unmount")
+    utils.startTest(@"mount() from another cog after an unmount returns")
+    flash.TEST_setElectionCounts(flash.TEST_COUNT_LOWEST)   ' every entry holds the lowest count an earlier mount can leave in it
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount() from the main cog", flash.SUCCESS)
+    startedCount, readyCount, doneCount, _, _ := runMountWorkers(SOLO_WORKERS)
+    utils.evaluateSubValue(startedCount, @"worker cogs started", SOLO_WORKERS)
+    utils.evaluateSubValue(readyCount, @"workers waiting when released", SOLO_WORKERS)
+    utils.evaluateSubValue(doneCount, @"mount() calls that returned before the time limit", SOLO_WORKERS)
+    utils.evaluateSubStatus(raceStatus[0], @"mount() of the worker", flash.SUCCESS)
+    utils.evaluateSubValue(flash.mounted(), @"mounted() after the worker's mount()", TRUE)
+    flash.TEST_setElectionCounts(flash.TEST_COUNT_UNSET)    ' leave the election as it is at power-up
+
+
+PRI runMountWorkers(workerCount) : startedCount, readyCount, doneCount, bLeftAny, bLeftAfterFirst | workerIdx, waitLimit, bLeft
+' Start worker cogs that each call mount() once, release them together, and sample the head block's table entry until every
+' started worker has returned or the time limit has passed; a worker still running then is stopped.
+
+' @param workerCount - workers to start, at most RACE_WORKERS
+' @returns startedCount - worker cogs that started
+' @returns readyCount - workers that were waiting when the main cog released them
+' @returns doneCount - workers whose mount() returned before the time limit
+' @returns bLeftAny - TRUE when a sample of the entry was not B_HEAD
+' @returns bLeftAfterFirst - TRUE when a sample taken after the first mount() returned was not B_HEAD
+
+' Local Variables:
+' @local workerIdx - number of the worker being started, counted or stopped
+' @local waitLimit - time at which the wait being made ends
+' @local bLeft - TRUE when the sample just taken was not B_HEAD
+
+    raceStart := FALSE
+    repeat RACE_WORKERS with workerIdx
+        raceReady[workerIdx] := FALSE
+        raceDone[workerIdx] := FALSE
+        raceStatus[workerIdx] := NO_STATUS
+        raceCogs[workerIdx] := NO_COG
+
+    startedCount := 0
+    repeat workerCount with workerIdx
+        raceCogs[workerIdx] := cogspin(NEWCOG, mountWorker(workerIdx), @workerStacks[workerIdx * WORKER_STACK_LONGS])
+        if raceCogs[workerIdx] >= 0
+            startedCount++
+        else
+            raceCogs[workerIdx] := NO_COG
+
+    readyCount := 0
+    waitLimit := getms() + WORKER_START_MS
+    repeat
+        readyCount := countSet(@raceReady, workerCount)
+        if readyCount == startedCount or getms() - waitLimit > 0    ' signed difference, so a wrap of the millisecond count is harmless
+            quit
+        waitms(WORKER_POLL_MS)
+
+    bLeftAny := FALSE
+    bLeftAfterFirst := FALSE
+    doneCount := 0
+    raceStart := TRUE                                   ' every waiting worker leaves its wait within one pass of its loop
+    waitLimit := getms() + WORKER_WAIT_MS
+    repeat                                              ' no pause: a table build lasts far longer than one pass of this loop
+        doneCount := countSet(@raceDone, workerCount)
+        bLeft := flash.TEST_blockStateOf(raceHeadAddr) <> flash.B_HEAD
+        bLeftAny := bLeftAny or bLeft
+        bLeftAfterFirst := bLeftAfterFirst or (bLeft and doneCount > 0)
+        if doneCount == startedCount or getms() - waitLimit > 0
+            quit
+
+    repeat workerCount with workerIdx
+        if raceCogs[workerIdx] <> NO_COG and not raceDone[workerIdx]
+            debug("* worker ", sdec_(workerIdx), " in cog ", sdec_(raceCogs[workerIdx]), " has not returned from mount(): stopping it")
+            cogstop(raceCogs[workerIdx])
+
+
+PRI mountWorker(workerIdx)
+' Run in its own cog: report ready, wait for the main cog's release, call mount(), and record what it returned.
+
+' @param workerIdx - number of this worker, the index of its flags
+
+    raceReady[workerIdx] := TRUE
+    repeat until raceStart
+    raceStatus[workerIdx] := flash.mount()
+    raceDone[workerIdx] := TRUE
+
+
+PRI countSet(pFlags, flagCount) : setCount | flagIdx
+' Count the flags of a list of LONG flags that are TRUE.
+
+' @param pFlags - address of the first flag
+' @param flagCount - flags in the list
+' @returns setCount - flags that are TRUE
+
+' Local Variables:
+' @local flagIdx - number of the flag being looked at
+
+    setCount := 0
+    repeat flagCount with flagIdx
+        if LONG[pFlags][flagIdx] == TRUE
+            setCount++
+
+
+PRI mountAndCheck(expectedStatus) | status, errCode
+' Call mount() and check its status and the error() it leaves.
+
+' @param expectedStatus - the status mount() must return and leave in error()
+
+' Local Variables:
+' @local status - what mount() returned
+' @local errCode - error() after mount()
+
+    status := flash.mount()
+    errCode := flash.error()
+    utils.evaluateSubStatus(status, @"mount()", expectedStatus)
+    utils.evaluateSubStatus(errCode, @"error() after mount()", expectedStatus)
+
+
+PRI openPoolMode(pFilename, modeIdx) : handle
+' Open a file in one of the modes of the pool cases.
+
+' @param pFilename - address of zstring with the file name
+' @param modeIdx - the open mode, one of the POOL_ values
+' @returns handle - handle from the open, or a negative error code
+
+    case modeIdx
+        POOL_READ: handle := flash.open(pFilename, flash.FILEMODE_READ)
+        POOL_READ_EXT: handle := flash.open(pFilename, flash.FILEMODE_READ_EXTENDED)
+        POOL_APPEND: handle := flash.open(pFilename, flash.FILEMODE_APPEND)
+        POOL_CIRC_READ: handle := flash.open_circular(pFilename, flash.FILEMODE_READ, CIRC_LIMIT_BYTES)
+        POOL_CIRC_APPEND: handle := flash.open_circular(pFilename, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES)
+        POOL_WRITE: handle := flash.open(pFilename, flash.FILEMODE_WRITE)
+        other: handle := flash.open(pFilename, flash.FILEMODE_WRITE_EXTENDED)
+
+
+PRI poolModeName(modeIdx) : pName
+' Give the title of the pool case of one open mode.
+
+' @param modeIdx - the open mode, one of the POOL_ values
+' @returns pName - address of zstring with the title
+
+    case modeIdx
+        POOL_READ: pName := @"open(,r) with every handle, then close() of each"
+        POOL_READ_EXT: pName := @"open(,r+) with every handle, then close() of each"
+        POOL_APPEND: pName := @"open(,a) with every handle, then close() of each"
+        POOL_CIRC_READ: pName := @"open_circular(,r) with every handle, then close() of each"
+        POOL_CIRC_APPEND: pName := @"open_circular(,a) with every handle, then close() of each"
+        POOL_WRITE: pName := @"open(,w) with every handle, then close() of each"
+        other: pName := @"open(,w+) with every handle, then close() of each"
+
+
+PRI setPoolName(slotIdx)
+' Put the number of a handle slot, as two digits, in the name of the pool file of that slot.
+
+' @param slotIdx - number of the handle slot, from 0 to 99
+
+    BYTE[@poolFile][POOL_TENS_OFFSET] := "0" + (slotIdx / NAME_DIGIT_RADIX)
+    BYTE[@poolFile][POOL_ONES_OFFSET] := "0" + (slotIdx +// NAME_DIGIT_RADIX)
+
+
+PRI isUsableHandle(handle) : bUsable
+' Tell whether a value is one of the handles open() hands out.
+
+' @param handle - value open() returned
+' @returns bUsable - TRUE when the value is inside the range of handles
+
+    bUsable := handle >= utils.FIRST_HANDLE and handle < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
+
+
+PRI isNewHandle(slotIdx) : bNew | priorIdx
+' Tell whether the handle held in a slot differs from the handles held in the slots before it.
+
+' @param slotIdx - number of the slot to compare
+' @returns bNew - TRUE when no earlier slot holds the same handle
+
+' Local Variables:
+' @local priorIdx - number of the earlier slot being compared
+
+    bNew := TRUE
+    repeat slotIdx with priorIdx
+        if heldHandles[priorIdx] == heldHandles[slotIdx]
+            bNew := FALSE
+
+
+PRI writeNewFile(pFilename, pBuffer, byteCount) : bWritten | handle, writeCount, status
+' Write bytes to a file opened with "w" and close it.
+
+' @param pFilename - address of zstring with the file name
+' @param pBuffer - address of the bytes to write
+' @param byteCount - number of bytes to write
+' @returns bWritten - TRUE when every byte was written and the close succeeded
+
+' Local Variables:
+' @local handle - handle of the file
+' @local writeCount - what write() returned
+' @local status - what close() returned
+
+    bWritten := FALSE
+    handle := flash.open(pFilename, flash.FILEMODE_WRITE)
+    if isUsableHandle(handle)
+        writeCount := flash.write(handle, pBuffer, byteCount)
+        status := utils.closeHandle(handle)
+        bWritten := writeCount == byteCount and status == flash.SUCCESS
+
+
+PRI fileHolds(pFilename, byteCount) : bHolds | handle, readCount, byteIdx
+' Read a whole file and tell whether it holds the bytes of the expected-content buffer, and nothing more.
+
+' @param pFilename - address of zstring with the file name
+' @param byteCount - bytes the file must hold
+' @returns bHolds - TRUE when the size and every byte match
+
+' Local Variables:
+' @local handle - handle of the file
+' @local readCount - what read() returned
+' @local byteIdx - offset of the byte being compared
+
+    bHolds := FALSE
+    if flash.file_size(pFilename) == byteCount
+        bytefill(@readBuf, 0, DATA_BUF_BYTES)
+        handle := flash.open(pFilename, flash.FILEMODE_READ)
+        if isUsableHandle(handle)
+            readCount := flash.read(handle, @readBuf, byteCount)
+            utils.closeHandle(handle)
+            bHolds := readCount == byteCount
+            repeat byteCount with byteIdx
+                if readBuf[byteIdx] <> expectBuf[byteIdx]
+                    bHolds := FALSE
+                    quit
+
+
+PRI fillPattern(pDest, byteCount, seed) | byteIdx
+' Fill a buffer with the pattern of the cases: each byte is the seed plus its offset, kept to one byte.
+
+' @param pDest - address of the buffer to fill
+' @param byteCount - bytes to fill
+' @param seed - value of the first byte
+
+' Local Variables:
+' @local byteIdx - offset of the byte being filled
+
+    repeat byteCount with byteIdx
+        BYTE[pDest][byteIdx] := (seed + byteIdx) & BYTE_MASK
+
+
+con { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Copyright (c) 2023 Iron Sheep Productions, LLC
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}
