@@ -2900,7 +2900,6 @@ DAT { regression testing buffers and such }
 
    blockForUser         BYTE    0[4096]
    block2ForUser        BYTE    0[4096]
-   signatures           LONG    0[MAX_FILE_LEN_IN_BLOCKS*2]                     ' we now keep sig[0] and sig[1] in list
 
 
 CON { methods supporting regression testing }
@@ -2937,203 +2936,233 @@ PUB TEST_count_file_bytes(p_filename) : bytes_used, bytes_free, block_count | si
 
 
 PUB TEST_getHead4kBlock(p_filename) : p_buffer | signature
-
 '' TEST METHOD: Return the named file's head block
 ''
+'' The block is read into a buffer shared by every TEST method that returns a block, so this method is for
+'' use by one cog at a time: the returned buffer is valid only until the next such call from any cog.
+''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns p_buffer - address of a 4KB buffer containing the head block
+'' @returns p_buffer - address of a 4KB buffer containing the head block, or a negative error code:
+'' .. E_NOT_MOUNTED if the file system is NOT mounted, E_FILE_NOT_FOUND if the file doesn't exist
 
 ' Local Variables:
 ' @local signature - temporary storage for a block state bits
 
-    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
+    p_buffer := E_NOT_MOUNTED
+    if fsMounted
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-    p_buffer := @blockForUser
-    if signature := get_file_head_signature(p_filename)                         'if file doesn't exist...
-      flash_read_block_addr(field[IDToBlock][signature.[19..8]], @blockForUser, $000, $FFF)   'read head block into buffer
-    else
-        p_buffer := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+        p_buffer := @blockForUser
+        if signature := get_file_head_signature(p_filename)                     ' if file exists...
+            flash_read_block_addr(field[IDToBlock][signature.[19..8]], @blockForUser, $000, $FFF)   'read head block into buffer
+        else
+            p_buffer := E_FILE_NOT_FOUND
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+
+    if p_buffer < 0
+        LONG[@errorCode][cogid()] := p_buffer
 
 
 PUB TEST_get4kBlockAndNextAtOffset(p_filename, file_position) : p_buffer, p_buffer2, blkAddr1, blkAddr2 | signature, block_id
-
-'' TEST METHOD: Return the named file's head block
+'' TEST METHOD: Return the file block holding a given file position, and the block that follows it
+''
+'' The blocks are read into buffers shared by every TEST method that returns a block, so this method is for
+'' use by one cog at a time: the returned buffers are valid only until the next such call from any cog.
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns p_buffer - address of a 4KB buffer containing the head block
+'' @param file_position - byte position within the file
+'' @returns p_buffer - address of a 4KB buffer containing the block holding file_position, 0 if the file is not
+'' .. found or the file system is NOT mounted (error() then holds E_NOT_MOUNTED)
+'' @returns p_buffer2 - address of a 4KB buffer containing the next block, 0 if there is no next block
+'' @returns blkAddr1 - block address of the block in p_buffer
+'' @returns blkAddr2 - block address of the block in p_buffer2, 0 if there is no next block
 
 ' Local Variables:
 ' @local signature - temporary storage for a block state bits
+' @local block_id - ID of the block being read
 
-    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
+    p_buffer := 0
+    p_buffer2 := 0
+    blkAddr1 := 0
+    blkAddr2 := 0
+    if fsMounted
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-    if signature := get_file_head_signature(p_filename)                         'if file exists...
-
-      p_buffer := @blockForUser
-      p_buffer2 := @block2ForUser
-
-      block_id, _, _ := locate_file_byte(signature.[19..8], file_position)      'locate byte in file
-      blkAddr1 := field[IDToBlock][block_id]
-      flash_read_block_id(block_id, p_buffer, $000, $FFF)                       'read lead block into buffer
-      if LONG[p_buffer].[0]                                                     'if NOT last block
-        block_id := LONG[p_buffer].[31..20]
-        blkAddr2 := field[IDToBlock][block_id]
-        flash_read_block_id(block_id, p_buffer2, $000, $FFF)     '..read next block into buffer
-      else
-        p_buffer2 := 0
-        blkAddr2 := 0
-
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+        if signature := get_file_head_signature(p_filename)                     ' if file exists...
+            p_buffer := @blockForUser
+            block_id, _, _ := locate_file_byte(signature.[19..8], file_position) ' locate byte in file
+            blkAddr1 := field[IDToBlock][block_id]
+            flash_read_block_id(block_id, p_buffer, $000, $FFF)                 ' read lead block into buffer
+            if LONG[p_buffer].[0]                                               ' if NOT last block
+                p_buffer2 := @block2ForUser
+                block_id := LONG[p_buffer].[31..20]
+                blkAddr2 := field[IDToBlock][block_id]
+                flash_read_block_id(block_id, p_buffer2, $000, $FFF)            ' ..read next block into buffer
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+    else
+        LONG[@errorCode][cogid()] := E_NOT_MOUNTED
 
 
 PUB TEST_getTail4kBlock(p_filename) : p_buffer | signature, block_address
-
-'' TEST METHOD: Return the named file's head block
+'' TEST METHOD: Return the named file's tail block
+''
+'' The block is read into a buffer shared by every TEST method that returns a block, so this method is for
+'' use by one cog at a time: the returned buffer is valid only until the next such call from any cog.
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns p_buffer - address of a 4KB buffer containing the head block
+'' @returns p_buffer - address of a 4KB buffer containing the tail block, or a negative error code:
+'' .. E_NOT_MOUNTED if the file system is NOT mounted, E_FILE_NOT_FOUND if the file doesn't exist
 
 ' Local Variables:
 ' @local signature - temporary storage for a block state bits
-    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
+' @local block_address - address of the block being read
 
-    p_buffer := @blockForUser
-    if signature := get_file_head_signature(p_filename)                         'if file doesn't exist...
-      ' locate tail
-      block_address := field[IDToBlock][signature.[19..8]]                      'get this block address
-      if signature.[0]                                                          ' if not last block, exit loop
-          repeat
-              ifnot signature.[0]                                               ' if last block, exit loop
-                quit
-              block_address := field[IDToBlock][signature.[31..20]]             'get next block address
-              flash_read_block_addr(block_address, @signature, $000, $003)      'read the first long of the head/body block
+    p_buffer := E_NOT_MOUNTED
+    if fsMounted
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-      flash_read_block_addr(block_address, @blockForUser, $000, $FFF)           'read head block into buffer
-      debug("returning: id=", udec_word_(signature.[19..8]), " addr=", uhex_word(block_address))
-    else
-        p_buffer := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
+        p_buffer := @blockForUser
+        if signature := get_file_head_signature(p_filename)                     ' if file exists...
+            ' locate tail
+            block_address := field[IDToBlock][signature.[19..8]]                ' get this block address
+            if signature.[0]                                                    ' if not last block, walk to the tail
+                repeat
+                    ifnot signature.[0]                                         ' if last block, exit loop
+                        quit
+                    block_address := field[IDToBlock][signature.[31..20]]       ' get next block address
+                    flash_read_block_addr(block_address, @signature, $000, $003) ' read the first long of the head/body block
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+            flash_read_block_addr(block_address, @blockForUser, $000, $FFF)     ' read tail block into buffer
+            if showRTdebug
+                debug("returning: id=", udec_word_(signature.[19..8]), " addr=", uhex_word(block_address))
+        else
+            p_buffer := E_FILE_NOT_FOUND
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+
+    if p_buffer < 0
+        LONG[@errorCode][cogid()] := p_buffer
 
 
-PUB TEST_getFileBlockSignatures(p_filename) : p_sigLong, sigCount | signature[2], block_address, bIsHeadSig
-
-'' TEST METHOD: return the named file's list block signatures for blocks allocated to the file
+PUB TEST_getFileBlockSignatures(p_filename, p_sigLong) : sigCount | signature[2], block_address, bIsHeadSig
+'' TEST METHOD: copy the named file's block signatures, for the blocks allocated to the file, into a caller's array
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns p_sigLong - address of a long array containing the block signatures
-'' @returns sigCount - the number of signatures in the array
+'' @param p_sigLong - address of a long array of at least MAX_FILE_LEN_IN_BLOCKS * 2 longs to receive the signatures
+'' @returns sigCount - the number of longs placed in the array (two per block: signature, data offset),
+'' .. 0 if the file doesn't exist or the file system is NOT mounted (error() then holds E_NOT_MOUNTED)
 
 ' Local Variables:
 ' @local signature - temporary storage for a block state bits
 ' @local block_address - the block offset within the file system
+' @local bIsHeadSig - true while reading the file's head block
 
-    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
+    sigCount := 0
+    if fsMounted
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-    p_sigLong := @signatures
-    if signature := get_file_head_signature(p_filename)                         'if file doesn't exist...
+        if signature := get_file_head_signature(p_filename)                     ' if file exists...
+            block_address := field[IDToBlock][signature.[19..8]]                ' get this block address
+            bIsHeadSig := true
+            repeat
+                flash_read_block_addr(block_address, @signature, $000, $007)    ' read the first long of the head/body block
+                LONG[p_sigLong][sigCount++] := bIsHeadSig ? signature : signature[0] ' place this signature in list
+                LONG[p_sigLong][sigCount++] := signature[1]                     ' place the dataOffset in list
+                ifnot signature.[0]                                             ' if last block, exit loop
+                    quit
+                if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                       ' if filled table, exit loop
+                    quit
+                bIsHeadSig := false
+                block_address := field[IDToBlock][signature.[31..20]]           ' get next block address
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+    else
+        LONG[@errorCode][cogid()] := E_NOT_MOUNTED
 
-      block_address := field[IDToBlock][signature.[19..8]]                      'get this block address
-      bIsHeadSig := true
-      repeat
-          flash_read_block_addr(block_address, @signature, $000, $007)          'read the first long of the head/body block
-          LONG[@signatures][sigCount++] := bIsHeadSig ? signature : signature[0] ' place this signature in list
-          LONG[@signatures][sigCount++] := signature[1]                         ' place the dataOffset in list
-          ifnot signature.[0]                                                   ' if last block, exit loop
-              quit
-          if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                             ' if filled table, exit loop
-              quit
-          bIsHeadSig := false
-          block_address := field[IDToBlock][signature.[31..20]]                 'get next block address
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
-
-
-PUB TEST_getCommitBlockSignatures(handle) : p_sigLong, sigCount  | pBuff, endPtr, signature[2], block_address, lastSignature[2], lastBlockId
-
-'' TEST METHOD: Return pending-commit chain signatures
+PUB TEST_getCommitBlockSignatures(handle, p_sigLong) : sigCount | pBuff, endPtr, signature[2], block_address, lastSignature[2], lastBlockId
+'' TEST METHOD: copy the pending-commit chain signatures for a handle into a caller's array
 ''
 '' @param handle - a handle to an open file
-'' @returns p_sigLong - address of a long array containing the block signatures
-'' @returns sigCount - the number of signatures in the array
+'' @param p_sigLong - address of a long array of at least MAX_FILE_LEN_IN_BLOCKS * 2 longs to receive the signatures
+'' @returns sigCount - the number of longs placed in the array (two per block: signature, data offset),
+'' .. 0 if the file system is NOT mounted or the handle is not valid (error() then holds E_NOT_MOUNTED or E_BAD_HANDLE)
 
 ' Local Variables:
+' @local pBuff - address of the handle's in-memory block buffer
+' @local endPtr - end-of-data offset within the handle's tail block
 ' @local signature - temporary storage for a block state bits
 ' @local block_address - the block offset within the file system
+' @local lastSignature - signature and data offset of the in-memory (tail) block
+' @local lastBlockId - ID of the in-memory (tail) block
 
 ' NOTE: !!! INTERNAL USE !!!   signature.[4..2] are unused - we use .[3] herein to indicate modified!
 
+    sigCount := 0
     ifnot fsMounted
         LONG[@errorCode][cogid()] := E_NOT_MOUNTED
-        return 0, 0
     elseif handle < 0 or handle > MAX_FILES_OPEN - 1
         LONG[@errorCode][cogid()] := E_BAD_HANDLE
-        return 0, 0
-
-    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
-
-    endPtr := hSeekPtr[handle] <> NOT_ENABLED ? hSeekPtr[handle] : hEndPtr[handle]
-
-    pBuff := buffer_pointer(handle)                                             'get block buffer pointer
-    'debug("TEST_gtCommitBlockSignatures() ENTRY")
-    p_sigLong := @signatures
-    if hChainBlockAddr[handle] == 0
-        'debug("TEST_gtCommitBlockSignatures() NO head block")
-        ' no commit chain (must be single block write)
-        ' in this case return signature from in-memory buffer[handle]
-        signature[0] := LONG[pBuff]
-        signature[0].[3] := hModified[handle] ? 0 : 1                           ' special FLAG for this routine (block is modified)
-        signature[1] := LONG[pBuff][1]
-        ifnot signature.[0]                                                     ' if is tail block
-            signature[0].[31..20] := endPtr
-        lastSignature := 0
     else
-        'debug("TEST_gtCommitBlockSignatures() head block")
-        ' NOTE: hChainBlockAddr[handle] ' has block address of head of commit chain
-        lastSignature[0] := LONG[pBuff]
-        lastSignature[0].[3] := hModified[handle] ? 0 : 1                       ' special FLAG for this routine (block is modified)
-        lastSignature[1] := LONG[pBuff][1]
-        ifnot lastSignature.[0]  ' if is tail block
-            lastSignature[0].[31..20] := endPtr
-        lastBlockId := lastSignature[0].[19..8]
-        flash_read_block_addr(hChainBlockAddr[handle], @signature, $000, $007)  'if so, read first long of block to get ID
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-    repeat
-        LONG[@signatures][sigCount++] := signature[0]                           ' place this signature in list
-        LONG[@signatures][sigCount++] := signature[1]                           ' place this data offset in list
-        ifnot signature.[0]                                                     ' if last block, exit loop
-            quit
-        if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                               ' if filled table, exit loop
-            quit
-        if signature.[0] == 1 and signature.[31..20] == lastBlockId             ' if more block pointing to last in memory block
-            LONG[@signatures][sigCount++] := lastSignature[0]                   ' place final buffer signature in list
-            LONG[@signatures][sigCount++] := lastSignature[1]                   ' place final data offset in list
-            quit
-        block_address := field[IDToBlock][signature.[31..20]]                   'get next block address
-        flash_read_block_addr(block_address, @signature, $000, $007)            'read the first long of the head/body block
+        endPtr := hSeekPtr[handle] <> NOT_ENABLED ? hSeekPtr[handle] : hEndPtr[handle]
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+        pBuff := buffer_pointer(handle)                                         ' get block buffer pointer
+        if hChainBlockAddr[handle] == 0
+            ' no commit chain (must be single block write)
+            ' in this case return signature from in-memory buffer[handle]
+            signature[0] := LONG[pBuff]
+            signature[0].[3] := hModified[handle] ? 0 : 1                       ' special FLAG for this routine (block is modified)
+            signature[1] := LONG[pBuff][1]
+            ifnot signature.[0]                                                 ' if is tail block
+                signature[0].[31..20] := endPtr
+            lastSignature := 0
+        else
+            ' NOTE: hChainBlockAddr[handle] has block address of head of commit chain
+            lastSignature[0] := LONG[pBuff]
+            lastSignature[0].[3] := hModified[handle] ? 0 : 1                   ' special FLAG for this routine (block is modified)
+            lastSignature[1] := LONG[pBuff][1]
+            ifnot lastSignature.[0]                                             ' if is tail block
+                lastSignature[0].[31..20] := endPtr
+            lastBlockId := lastSignature[0].[19..8]
+            flash_read_block_addr(hChainBlockAddr[handle], @signature, $000, $007) ' read first long of block to get ID
+
+        repeat
+            LONG[p_sigLong][sigCount++] := signature[0]                         ' place this signature in list
+            LONG[p_sigLong][sigCount++] := signature[1]                         ' place this data offset in list
+            ifnot signature.[0]                                                 ' if last block, exit loop
+                quit
+            if sigCount >= MAX_FILE_LEN_IN_BLOCKS - 1                           ' if filled table, exit loop
+                quit
+            if signature.[0] == 1 and signature.[31..20] == lastBlockId         ' if more block pointing to last in memory block
+                LONG[p_sigLong][sigCount++] := lastSignature[0]                 ' place final buffer signature in list
+                LONG[p_sigLong][sigCount++] := lastSignature[1]                 ' place final data offset in list
+                quit
+            block_address := field[IDToBlock][signature.[31..20]]               ' get next block address
+            flash_read_block_addr(block_address, @signature, $000, $007)        ' read the first long of the head/body block
+
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
 
 
 PUB TEST_getBlockAddressForId(blockID, possHandle) : block_address
-
 '' TEST METHOD: Return block address associated with block ID
 ''
 '' @param blockID - the ID of the block
 '' @param possHandle - possible handle of file
 '' @returns block_address - the address the ID currently maps to, or 0 if block ID is not in use
+'' .. or the file system is NOT mounted (error() then holds E_NOT_MOUNTED)
 
-  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
+    block_address := 0
+    if fsMounted
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-  if field[IDValid][blockID]
-
-    if possHandle >= 0 and hChainBlockID[possHandle] == blockID
-      block_address := hChainBlockAddr[possHandle]
+        if field[IDValid][blockID]
+            if possHandle >= 0 and hChainBlockID[possHandle] == blockID
+                block_address := hChainBlockAddr[possHandle]
+            else
+                block_address := field[IDToBlock][blockID]
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
     else
-      block_address := field[IDToBlock][blockID]
-
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+        LONG[@errorCode][cogid()] := E_NOT_MOUNTED
 
 
 PUB TEST_filename_for_handle(handle) : pStr
@@ -3164,121 +3193,123 @@ PUB TEST_enableRTdebug()
    showRTdebug := TRUE
 
 PUB TEST_filename_for_block_addr(block_address, pFilename, maxBytes) : status | BYTE filenameBffr[$088]
-
-'' return filename for given head block address
+'' TEST METHOD: return filename for given head block address
+''
+'' This reads the block straight from flash and uses none of the driver's tables, so it works whether or
+'' not the file system is mounted; the lock is created here if no cog has created it yet.
 ''
 '' @param block_address - address of file head block
 '' @param pFilename - address of location to place zstring
 '' @param maxBytes - max bytes at target location
-'' @returns status - SUCCESS (0) or error code
+'' @returns status - SUCCESS (0) or E_NO_LOCK_AVAIL
 
 ' Local Variables:
-' @local BYTE -
+' @local filenameBffr - the head block's header bytes, which hold the filename
 
-    if fsMounted
-        return (LONG[@errorCode][cogid()] := SUCCESS)                        ' return T if already mounted
-
+    status := SUCCESS
     if fsLock == -1                                                             ' don't acquire lock if already have it
-        if setup_semaphore() < 0
-            return LONG[@errorCode][cogid()]
+        status := setup_semaphore()
 
-    LONG[@errorCode][cogid()] := SUCCESS                                        ' preset to success
-    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
+    if status == SUCCESS
+        LONG[@errorCode][cogid()] := SUCCESS                                    ' preset to success
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-    flash_read_block_addr(block_address, @filenameBffr, $000, $087)             'yes, read first byte of block
-    strcopy(pFilename, @BYTE[@filenameBffr][8], maxBytes - 1)
+        flash_read_block_addr(block_address, @filenameBffr, $000, $087)         ' read the head block's header bytes
+        strcopy(pFilename, @BYTE[@filenameBffr][8], maxBytes - 1)
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
 
 
-PUB TEST_dumpMountMap(pFileBlocks, pFragments): fileLen, badLen | bFileFound, blockCount, blkIdx, block_address, blockTypeBits, badBlockCount, fileCount, LONG signature[2], bad_count, dupe_count, dupeIdCount
-
-'' mount non-destructively and dump all findings... so we can visually verify
+PUB TEST_dumpMountMap(pFileBlocks, pFragments): fileLen, badLen | bReady, bFileFound, blockCount, blkIdx, block_address, blockTypeBits, badBlockCount, fileCount, LONG signature[2], bad_count, dupe_count, dupeIdCount
+'' TEST METHOD: scan the flash as mount would, without changing any block, and list all findings
 ''
-'' @param pFileBlocks - address of place to put list of file blocks (3 longs per entry)
-'' @param pFragments - address of place to put list of bad blocks (those not in files) (3 longs per entry)
-'' @returns fileLen - number of files found
+'' The scan rebuilds the driver's block tables from scratch, so it runs only while the file system is NOT
+'' mounted. When the file system is mounted nothing is scanned: both lists come back empty and the result
+'' is 0, 0 with error() holding SUCCESS. The tables are ready for use only after can_mount() or mount() has run once.
+''
+'' @param pFileBlocks - address of place to put list of file blocks (3 longs per entry, 0 ends each file's entries and the list)
+'' @param pFragments - address of place to put list of bad blocks (those not in files) (3 longs per entry, 0 ends the list)
+'' @returns fileLen - number of files found, or E_NO_LOCK_AVAIL if the lock could not be created
 '' @returns badLen - number of bad blocks found
 
 ' Local Variables:
-' @local bFileFound -
-' @local blockCount -
-' @local blkIdx -
-' @local block_address -
-' @local blockTypeBits -
-' @local badBlockCount -
-' @local fileCount -
-' @local LONG -
-' @local signature[2] -
-' @local bad_count -
-' @local dupe_count -
+' @local bReady - true when the file system is not mounted and the lock is available
+' @local bFileFound - true when a head block starts a complete file
+' @local blockCount - longs placed in the file list for the file just traced
+' @local blkIdx - next free long in the list being filled
+' @local block_address - the block offset within the file system
+' @local blockTypeBits - first byte of the block being checked
+' @local badBlockCount - count of blocks in no file
+' @local fileCount - count of files found
+' @local signature - first two longs of the block being listed
+' @local bad_count - bad blocks found by the check of one block
+' @local dupe_count - duplicate IDs found by the check of one block
+' @local dupeIdCount - count of duplicate ID blocks found
 
-    if fsMounted
-        return (LONG[@errorCode][cogid()] := SUCCESS), 0                           ' return T if already mounted
-
-    if fsLock == -1                                                             ' don't acquire lock if already have it
-        if setup_semaphore() < 0
-            return LONG[@errorCode][cogid()], 0
-
+    fileLen := 0
+    badLen := 0
+    LONG[pFileBlocks][0] := 0                                                   ' empty lists unless the scan below fills them
+    LONG[pFragments][0] := 0
     LONG[@errorCode][cogid()] := SUCCESS                                        ' preset to success
 
-    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
+    bReady := not fsMounted                                                     ' mounted: the scan would clobber the live tables
+    if bReady and fsLock == -1                                                  ' don't acquire lock if already have it
+        if setup_semaphore() < 0
+            bReady := false
+            fileLen := LONG[@errorCode][cogid()]
 
-    bytefill(@hStatus, 0, MAX_FILES_OPEN)                                       'clear handles
+    if bReady
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
-    bytefill(@IDToBlocks,0,ID_TO_BLOCKS_SZ)                                     'clear ID-to-block translation table
-    bytefill(@IDValids, 0, FLAGS_SIZE)                                          'clear ID flags
-    bytefill(@BlockStates, 0, STATES_SIZE)                                      'clear block states to B_FREE
+        bytefill(@hStatus, 0, MAX_FILES_OPEN)                                   ' clear handles
 
-    'debug("mntCk: - locating duplicate blocks...")
-    repeat BLOCKS with block_address                                            'check each block and fix any duplicate IDs
-        bad_count, dupe_count := check_block_read_only(block_address)
-        badBlockCount += bad_count
-        dupeIdCount += dupe_count
+        bytefill(@IDToBlocks,0,ID_TO_BLOCKS_SZ)                                 ' clear ID-to-block translation table
+        bytefill(@IDValids, 0, FLAGS_SIZE)                                      ' clear ID flags
+        bytefill(@BlockStates, 0, STATES_SIZE)                                  ' clear block states to B_FREE
 
-    debug("dmm: (1) ", udec(dupeIdCount, badBlockCount))
+        repeat BLOCKS with block_address                                        ' check each block and count any duplicate IDs
+            bad_count, dupe_count := check_block_read_only(block_address)
+            badBlockCount += bad_count
+            dupeIdCount += dupe_count
 
-    'debug("mntCk: - locating files...")
-    repeat BLOCKS with block_address                                            'trace head blocks and cancel any broken files
-        if field[BlockState][block_address] == B_TEMP                           'is this a valid block?
-            flash_read_block_addr(block_address, @blockTypeBits, $000, $000)    'yes, read first byte of block
-            ifnot blockTypeBits.[1]                                             'is this a head block?
-                'debug("mnt: - head block ", uhex_word(block_address))
-                bFileFound, blockCount := TEST_trace_n_set(block_address, true, @LONG[pFileBlocks][blkIdx])
-                ifnot bFileFound                                                    'yes, trace file, set block states to B_HEAD/B_BODY
-                    trace_file_set_flags(block_address, false)                  'if error, retrace file, return block states to B_TEMP
-                else
-                    fileCount++
-                    blkIdx += blockCount
+        if showRTdebug
+            debug("dmm: (1) ", udec(dupeIdCount, badBlockCount))
 
-    LONG[pFileBlocks][blkIdx] := 0
-    fileLen := fileCount
-    debug("dmm: (2) ", udec(fileCount, blkIdx))
+        repeat BLOCKS with block_address                                        ' trace head blocks and cancel any broken files
+            if field[BlockState][block_address] == B_TEMP                       ' is this a valid block?
+                flash_read_block_addr(block_address, @blockTypeBits, $000, $000) ' yes, read first byte of block
+                ifnot blockTypeBits.[1]                                         ' is this a head block?
+                    bFileFound, blockCount := TEST_trace_n_set(block_address, true, @LONG[pFileBlocks][blkIdx])
+                    ifnot bFileFound                                            ' yes, trace file, set block states to B_HEAD/B_BODY
+                        trace_file_set_flags(block_address, false)              ' if error, retrace file, return block states to B_TEMP
+                    else
+                        fileCount++
+                        blkIdx += blockCount
 
-    'debug("mntCk: - clearing dead blocks...")
-    blkIdx := 0
-    badBlockCount := 0
-    repeat BLOCKS with block_address                                            'cancel sTEMP blocks that didn't become sHEAD/sBODY blocks
-        if field[BlockState][block_address] == B_TEMP                           'is this an B_TEMP block?
-            flash_read_block_addr(block_address, @signature, $000, $007)        'if so, read first long of block to get ID
-            field[IDValid][signature.[19..8]]~                                  '..cancel ID flag (bit := 0)
-            field[BlockState][block_address] := B_FREE                          '..return block state to B_FREE
-            badBlockCount++                                                     '..would cancel block to inhibit future CRC checks
-            'debug(" -- found dead block...")
-            LONG[pFragments][blkIdx++] := block_address
-            LONG[pFragments][blkIdx++] := signature[0]
-            LONG[pFragments][blkIdx++] := signature[1]
+        LONG[pFileBlocks][blkIdx] := 0
+        fileLen := fileCount
+        if showRTdebug
+            debug("dmm: (2) ", udec(fileCount, blkIdx))
 
-    LONG[pFragments][blkIdx] := 0
-    badLen := badBlockCount
+        blkIdx := 0
+        badBlockCount := 0
+        repeat BLOCKS with block_address                                        ' list B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
+            if field[BlockState][block_address] == B_TEMP                       ' is this an B_TEMP block?
+                flash_read_block_addr(block_address, @signature, $000, $007)    ' if so, read first long of block to get ID
+                field[IDValid][signature.[19..8]]~                              ' ..cancel ID flag (bit := 0)
+                field[BlockState][block_address] := B_FREE                      ' ..return block state to B_FREE
+                badBlockCount++                                                 ' ..count the block as bad
+                LONG[pFragments][blkIdx++] := block_address
+                LONG[pFragments][blkIdx++] := signature[0]
+                LONG[pFragments][blkIdx++] := signature[1]
 
-    debug("dmm: (3) ", udec(badBlockCount, blkIdx))
+        LONG[pFragments][blkIdx] := 0
+        badLen := badBlockCount
 
-    'debug("mntCk: - mount test done")
-    'debug("mntCk: - ", udec(badBlockCount, dupeIdCount, fileCount))
+        if showRTdebug
+            debug("dmm: (3) ", udec(badBlockCount, blkIdx))
 
-    lockrel(fsLock)              ' release the lock, we're done with it
-    'debug("- lock released")
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
 
 pri TEST_trace_n_set(block_address, set, pFileBlocks) : valid, lenLongs | signature[2], block_id
 

@@ -49,6 +49,12 @@ snLo                LONG    0
 endPosition         LONG    0
 writeLength         LONG    0
 filename            BYTE    0[127+1]
+pBlock              LONG    0
+pBlock2             LONG    0
+blkAddr1            LONG    0
+blkAddr2            LONG    0
+sigCount            LONG    0
+sigBuffer           LONG    0[utils.SIG_BUFFER_LONGS]
 
 PUB go()
     ' Ensure all handle calls fail before mounted
@@ -194,6 +200,43 @@ PUB go()
     utils.evaluateSubStatus(rdCount, @"rd_str()", 0)
     status := flash.error()
     utils.evaluateSubStatus(status, @"rd_str()", flash.E_NOT_MOUNTED)
+
+    ' the test hooks read the driver's tables, so each must refuse to run while not mounted
+    utils.startTest(@"TEST_getHead4kBlock()")
+    pBlock := flash.TEST_getHead4kBlock(@testfile)
+    utils.evaluateSubStatus(pBlock, @"TEST_getHead4kBlock()", flash.E_NOT_MOUNTED)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"TEST_getHead4kBlock()", flash.E_NOT_MOUNTED)
+
+    utils.startTest(@"TEST_get4kBlockAndNextAtOffset()")
+    pBlock, pBlock2, blkAddr1, blkAddr2 := flash.TEST_get4kBlockAndNextAtOffset(@testfile, 0)
+    utils.evaluateSubValue(pBlock, @"TEST_get4kBlockAndNextAtOffset()", 0)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"TEST_get4kBlockAndNextAtOffset()", flash.E_NOT_MOUNTED)
+
+    utils.startTest(@"TEST_getTail4kBlock()")
+    pBlock := flash.TEST_getTail4kBlock(@testfile)
+    utils.evaluateSubStatus(pBlock, @"TEST_getTail4kBlock()", flash.E_NOT_MOUNTED)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"TEST_getTail4kBlock()", flash.E_NOT_MOUNTED)
+
+    utils.startTest(@"TEST_getFileBlockSignatures()")
+    sigCount := flash.TEST_getFileBlockSignatures(@testfile, @sigBuffer)
+    utils.evaluateSubValue(sigCount, @"TEST_getFileBlockSignatures()", 0)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"TEST_getFileBlockSignatures()", flash.E_NOT_MOUNTED)
+
+    utils.startTest(@"TEST_getCommitBlockSignatures()")
+    sigCount := flash.TEST_getCommitBlockSignatures(badHandle, @sigBuffer)
+    utils.evaluateSubValue(sigCount, @"TEST_getCommitBlockSignatures()", 0)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"TEST_getCommitBlockSignatures()", flash.E_NOT_MOUNTED)
+
+    utils.startTest(@"TEST_getBlockAddressForId()")
+    blkAddr1 := flash.TEST_getBlockAddressForId(1, -1)
+    utils.evaluateSubValue(blkAddr1, @"TEST_getBlockAddressForId()", 0)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"TEST_getBlockAddressForId()", flash.E_NOT_MOUNTED)
 
 
     ' Ensure all open calls fail when no more handles

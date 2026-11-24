@@ -14,6 +14,7 @@ CON
 
   FILES_OPEN = 2 ' ensure is same default as FLASH F/S!!!
   TEST_SIGNATURE = $12345678
+  SIG_BUFFER_LONGS = flash.MAX_FILE_LEN_IN_BLOCKS * 2 ' longs the driver's signature hooks fill, per cog
 
 OBJ
     flash : "flash_fs" | MAX_FILES_OPEN = FILES_OPEN
@@ -29,6 +30,7 @@ VAR { test stats vars }
   LONG    failCountSub[8]
 
   LONG    varSignature[8]
+  LONG    sigBuffer[8 * SIG_BUFFER_LONGS]    ' one signature list per cog
 
   BYTE    versionString[10]  '  "flash_fs v"
   BYTE    vDigits[5+1]       ' "x.x.x", 0
@@ -351,7 +353,8 @@ pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount, st
         debug("  # getFnFmHndl Error: ", zstr_(flash.string_for_error(status)))
     debug(" ")  ' blank line
     debug("  File: [", zstr_(pFilename), "] pending commit")
-    pSignatureAr, signatureCount := flash.TEST_getCommitBlockSignatures(handle)
+    pSignatureAr := @sigBuffer[cogId() * SIG_BUFFER_LONGS]
+    signatureCount := flash.TEST_getCommitBlockSignatures(handle, pSignatureAr)
     if signatureCount > 0
         debug("  # ", udec_(signatureCount / 2), " Blocks in chain:")
         showSignatureChain(pSignatureAr, signatureCount, handle)
@@ -361,7 +364,8 @@ pub showPendingCommitChain(handle) | pFilename, pSignatureAr, signatureCount, st
 
 pub showFileChain(pFilename) | pSignatureAr, signatureCount
     debug("  File: [", zstr_(pFilename), "]")
-    pSignatureAr, signatureCount := flash.TEST_getFileBlockSignatures(pFilename)
+    pSignatureAr := @sigBuffer[cogId() * SIG_BUFFER_LONGS]
+    signatureCount := flash.TEST_getFileBlockSignatures(pFilename, pSignatureAr)
     if signatureCount > 0
         debug("  # ", udec_(signatureCount / 2), " Blocks in file:")
         showSignatureChain(pSignatureAr, signatureCount, -1)
@@ -416,8 +420,10 @@ pub showMountSignatures() | fileLen, badLen, fileCt, blockIdx
       quit
 
 
-PUB bytesSkipped(pFilename) : bytes_skipped | pSignatureAr, signatureCount, dataOfs
-    pSignatureAr, signatureCount := flash.TEST_getFileBlockSignatures(pFilename)
+PUB bytesSkipped(pFilename) : bytes_skipped | pSignatureAr, signatureCount
+    bytes_skipped := 0
+    pSignatureAr := @sigBuffer[cogId() * SIG_BUFFER_LONGS]
+    signatureCount := flash.TEST_getFileBlockSignatures(pFilename, pSignatureAr)
     if signatureCount > 0
         bytes_skipped := LONG[pSignatureAr][0+1].[11..0]
 
