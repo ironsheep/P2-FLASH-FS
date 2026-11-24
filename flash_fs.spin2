@@ -2896,6 +2896,21 @@ CON { constants exposed for regression testing }
 
      MAX_FILE_LEN_IN_BLOCKS = 16 ' not real, just our limit for passing data back to UT's
 
+     ' status of a block hook given a block address outside 0..BLOCKS-1, or an operation it does not have
+     E_TEST_BAD_BLOCK_ARG = -99
+
+     ' The operations TEST_changeBlock() performs on one block:
+     '  TEST_BLK_PROGRAM  - erase the block, then program it from an image, leaving it inactive
+     '  TEST_BLK_ACTIVATE - write a lifecycle into the block
+     '  TEST_BLK_CANCEL   - cancel the block
+     '  TEST_BLK_CORRUPT  - clear TEST_CORRUPT_BIT in the first byte, so the stored CRC no longer matches
+     TEST_BLK_PROGRAM = 1
+     TEST_BLK_ACTIVATE = 2
+     TEST_BLK_CANCEL = 3
+     TEST_BLK_CORRUPT = 4
+
+     TEST_CORRUPT_BIT = %0000_0100                                  ' a reserved bit of the first byte of a block, covered by the block CRC
+
 DAT { regression testing buffers and such }
 
    blockForUser         BYTE    0[4096]
@@ -3245,6 +3260,89 @@ PUB TEST_filename_for_block_addr(block_address, pFilename, maxBytes) : status | 
         strcopy(pFilename, @BYTE[@filenameBffr][8], maxBytes - 1)
 
         lockrel(fsLock)                                                         ' release the lock, we're done with it
+
+
+PUB TEST_readBlock(block_address) : p_buffer | status
+'' TEST METHOD: read one block of the file system straight from the flash
+''
+'' This reads the flash directly and uses none of the driver's tables, so it works whether or not the file
+'' system is mounted; the lock is created here if no cog has created it yet. The block is read into a buffer
+'' shared by every TEST method that returns a block, so this method is for use by one cog at a time: the
+'' returned buffer is valid only until the next such call from any cog.
+''
+'' @param block_address - the block offset within the file system
+'' @returns p_buffer - address of a 4KB buffer containing the block, or a negative error code:
+'' .. E_TEST_BAD_BLOCK_ARG if block_address is outside 0..BLOCKS-1, E_NO_LOCK_AVAIL if the lock could not be created
+
+' Local Variables:
+' @local status - SUCCESS, or the reason the block was not read
+
+    status := SUCCESS
+    if block_address < 0 or block_address > BLOCKS - 1                         ' refuse an address outside the file system
+        status := E_TEST_BAD_BLOCK_ARG
+    elseif fsLock == -1                                                         ' don't acquire lock if already have it
+        status := setup_semaphore()
+
+    if status == SUCCESS
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
+
+        flash_read_block_addr(block_address, @blockForUser, $000, BLOCK_SIZE - 1) ' read the whole block into the buffer
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+        p_buffer := @blockForUser
+    else
+        p_buffer := status
+
+    LONG[@errorCode][cogid()] := status
+
+
+PUB TEST_changeBlock(blockOp, block_address, p_source, cycle_bits) : status | BYTE firstByte
+'' TEST METHOD: program, activate, cancel or corrupt one block of the file system, straight on the flash
+''
+'' Only the flash changes: the driver's tables are not updated, so call this while the file system is NOT
+'' mounted and let the next can_mount() or mount() read the result. The lock is created here if no cog has
+'' created it yet. The block address and the operation are checked before any flash command is sent, so a
+'' block address outside 0..BLOCKS-1 never reaches the flash and no call can write below the file system
+'' or past its end.
+''
+'' @param blockOp - the operation: TEST_BLK_PROGRAM erases the block and programs it from p_source with
+'' .. cycle_bits installed for the CRC, leaving the block inactive; TEST_BLK_ACTIVATE writes cycle_bits into
+'' .. the block; TEST_BLK_CANCEL cancels the block; TEST_BLK_CORRUPT clears TEST_CORRUPT_BIT in the first byte
+'' .. of the block, so its stored CRC no longer matches while its lifecycle stays as it was
+'' @param block_address - the block offset within the file system
+'' @param p_source - address of a 4KB block image, used by TEST_BLK_PROGRAM only; the image is copied, not changed
+'' @param cycle_bits - lifeCycle bit-pattern to place into block, used by TEST_BLK_PROGRAM and TEST_BLK_ACTIVATE only
+'' @returns status - SUCCESS (0) if the operation was performed, E_TEST_BAD_BLOCK_ARG if block_address is
+'' .. outside 0..BLOCKS-1 or blockOp is not one of the operations (nothing is sent to the flash), or
+'' .. E_NO_LOCK_AVAIL if the lock could not be created
+
+' Local Variables:
+' @local firstByte - first byte of the block, read for TEST_BLK_CORRUPT
+
+    status := SUCCESS
+    if block_address < 0 or block_address > BLOCKS - 1                         ' refuse an address outside the file system
+        status := E_TEST_BAD_BLOCK_ARG
+    elseifnot lookdown(blockOp : TEST_BLK_PROGRAM, TEST_BLK_ACTIVATE, TEST_BLK_CANCEL, TEST_BLK_CORRUPT)
+        status := E_TEST_BAD_BLOCK_ARG                                          ' refuse an operation this method does not have
+    elseif fsLock == -1                                                         ' don't acquire lock if already have it
+        status := setup_semaphore()
+
+    if status == SUCCESS
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
+
+        case blockOp
+            TEST_BLK_PROGRAM:
+                bytemove(@block2ForUser, p_source, BLOCK_SIZE)                  ' programming installs the lifecycle and CRC in the image it is given
+                flash_program_block(block_address, @block2ForUser, cycle_bits)
+            TEST_BLK_ACTIVATE:
+                flash_activate_block(block_address, cycle_bits)
+            TEST_BLK_CANCEL:
+                flash_cancel_block(block_address)
+            other:
+                flash_read_block_addr(block_address, @firstByte, $000, $000)    ' read first byte of block
+                flash_program_bit(block_address, firstByte & !TEST_CORRUPT_BIT) ' clear the reserved bit, nothing else
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+
+    LONG[@errorCode][cogid()] := status
 
 
 PUB TEST_dumpMountMap(pFileBlocks, pFragments): fileLen, badLen | bReady, bFileFound, blockCount, blkIdx, block_address, blockTypeBits, badBlockCount, fileCount, LONG signature[2], bad_count, dupe_count, dupeIdCount
