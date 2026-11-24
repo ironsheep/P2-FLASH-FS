@@ -3169,6 +3169,29 @@ PUB TEST_getBlockAddressForId(blockID, possHandle) : block_address
         LONG[@errorCode][cogid()] := E_NOT_MOUNTED
 
 
+PUB TEST_getHandleStatusDump(p_buffer, guardBytes) : byteCount
+'' TEST METHOD: copy the handle status bytes, and the bytes on each side of them, into a caller's buffer
+''
+'' The copy holds guardBytes bytes that precede the handle status array, the MAX_FILES_OPEN handle status
+'' bytes, then guardBytes bytes that follow them, so a write just outside the array shows as a difference
+'' between two dumps. The array is the one of the object instance this method is called through.
+''
+'' @param p_buffer - address of a buffer of at least (guardBytes * 2) + MAX_FILES_OPEN bytes
+'' @param guardBytes - number of bytes to copy on each side of the handle status array
+'' @returns byteCount - the number of bytes placed in the buffer, 0 if the file system is NOT mounted
+'' .. (error() then holds E_NOT_MOUNTED)
+
+    byteCount := 0
+    if fsMounted
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
+
+        byteCount := guardBytes + MAX_FILES_OPEN + guardBytes
+        bytemove(p_buffer, @hStatus - guardBytes, byteCount)
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+    else
+        LONG[@errorCode][cogid()] := E_NOT_MOUNTED
+
+
 PUB TEST_filename_for_handle(handle) : pStr
 
 '' TEST METHOD: return pointer to filename associated with handle
