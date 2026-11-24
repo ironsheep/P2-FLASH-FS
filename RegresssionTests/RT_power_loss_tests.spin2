@@ -6,7 +6,8 @@
 ''               activated, and a block whose CRC no longer matches.  For each it checks that
 ''               can_mount() reports it without changing any block, that mount() repairs it with the
 ''               right status, that the files which should survive read back whole, and that a second
-''               mount is clean
+''               mount is clean.  It also checks that a block move during create_file() leaves the
+''               new file whole across a mount
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -42,6 +43,13 @@
   - after a cancel in a chain delete or a format: the blocks not yet cancelled that no chain reaches
     are orphans;
   - after the last step of an operation: nothing to repair.
+
+  create_file() writes its head block first and activates it only after the last block, and every block
+  it takes for a body block can be a block move.  A move copies an active block with the next lifecycle and
+  activates the copy, so a move of the still-inactive head would keep a copy whose CRC is not the one the
+  head's activation needs, and the next mount would cancel the file.  The block-move group names one free
+  block for the allocations: the head block is written there, and the next allocation picks it again.  The
+  file must then mount, read back whole, and leave can_mount() TRUE.
 
   The hook refusal cases run last: a hook that did not check its address would write the flash below
   the filesystem.  They use the activate operation with the inactive lifecycle, which writes a byte of
@@ -84,6 +92,8 @@ CON ' ---- Test Geometry ----
     NOT_A_BLOCK_OP = 0                                  ' an operation the block hook does not have
     NO_SOURCE = 0                                       ' block image address of a hook operation that programs no image
     NO_CYCLE = 0                                        ' lifecycle of a hook operation that writes no lifecycle
+    MOVED_FILE_BYTES = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + BODY_TAIL_BYTES ' bytes of the file made with create_file(): three blocks
+    MOVED_FILL = $6C                                    ' fill value of the file made with create_file()
 
 CON ' ---- Block Format ----
 
@@ -119,6 +129,7 @@ DAT ' ---- Files ----
 keepFile        BYTE    "pl_keep.bin", 0                ' a two-block file no case touches
 targetFile      BYTE    "pl_target.bin", 0              ' a two-block file whose blocks the cases copy
 crcFile         BYTE    "pl_crc.bin", 0                 ' a one-block file whose block one case corrupts
+movedFile       BYTE    "pl_moved.bin", 0               ' a three-block file made with create_file() while a block is named
 
 DAT ' ---- Block Addresses and State ----
 
@@ -167,6 +178,7 @@ PUB go() | status, pFailedCall
         testOrphanBody()
         testInactiveHead()
         testBadCrcBlock()
+        testMovedNewHead()
         debug("* The next calls give the block hooks addresses outside the filesystem")
         testHookRefusals()
     else
@@ -435,6 +447,62 @@ PRI mountBadCrc()
         mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)       ' a block cancelled for its CRC is a bad block removed
         readInto(crcHeadAddr, @copyBuf)
         utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the block is cancelled", TRUE)
+
+
+PRI testMovedNewHead()
+' create_file() with one free block named for the allocations: its head block is written there and picked again while still inactive; the file must survive a mount whole.
+
+    utils.startTestGroup(@"a block move during create_file() and the new file's inactive head block")
+    createWithNamedBlock()
+    movedHeadMountStep()
+
+
+PRI createWithNamedBlock() | status, namedAddr, setStatus, clearStatus, headAddr
+' Format, name a free block for the allocations, make a three-block file with create_file() and clear the name, as one test; bSetUp tells the next step whether it worked.
+
+' Local Variables:
+' @local status - what format() and create_file() returned
+' @local namedAddr - the free block named for the allocations
+' @local setStatus - what naming the block returned
+' @local clearStatus - what clearing the name returned
+' @local headAddr - the block that holds the new file's head block after create_file()
+
+    utils.startTest(@"create_file() of a three-block file while the block allocations are named to take one free block")
+    bSetUp := FALSE
+    status := flash.format()
+    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+    namedAddr := findFreeBlock(NO_BLOCK)
+    utils.evaluateSubValue(flash.TEST_blockStateOf(namedAddr), @"the named block is free", flash.B_FREE)
+
+    setStatus := flash.TEST_setTargetBlock(namedAddr)
+    ' the head block is written to the free named block, and each body block's allocation picks the named block again
+    status := flash.create_file(@movedFile, MOVED_FILL, MOVED_FILE_BYTES)
+    clearStatus := flash.TEST_setTargetBlock(flash.NOT_ENABLED)
+    _, _, headAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@movedFile, 0)
+    debug("  named block ", uhex_word_(namedAddr), ", the new file's head block is at block ", uhex_word_(headAddr))
+
+    utils.evaluateSubStatus(setStatus, @"name the block", flash.SUCCESS)
+    utils.evaluateSubStatus(status, @"create_file()", flash.SUCCESS)
+    utils.evaluateSubStatus(clearStatus, @"clear the name", flash.SUCCESS)
+    utils.evaluateSubValue(flash.TEST_blockStateOf(namedAddr) <> flash.B_FREE, @"the named block holds a block of the new file", TRUE)
+    bSetUp := status == flash.SUCCESS and setStatus == flash.SUCCESS and clearStatus == flash.SUCCESS
+
+
+PRI movedHeadMountStep() | status
+' Unmount, then check can_mount() is TRUE, mount() returns SUCCESS and the new file reads back whole, as one test.
+
+' Local Variables:
+' @local status - what unmount() returned
+
+    utils.startTest(@"the file made while a block was named survives an unmount and a mount, and reads back whole")
+    utils.evaluateSubValue(bSetUp, @"the file was made", TRUE)
+    if bSetUp
+        status := flash.unmount()
+        utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+        utils.evaluateSubValue(flash.can_mount(), @"can_mount()", TRUE)
+        mountAndCheck(flash.SUCCESS)                    ' a head block whose CRC matches its active lifecycle keeps the whole file
+        utils.evaluateSubValue(flash.exists(@movedFile), @"the file exists", TRUE)
+        utils.evaluateSubValue(fillMatches(@movedFile, MOVED_FILE_BYTES, MOVED_FILL), @"the file reads back whole", TRUE)
 
 
 PRI testHookRefusals()
@@ -835,6 +903,40 @@ PRI fileMatches(pName, byteCount, seed) : bMatches | handle, readCount, byteIdx
                 if dataBuf[byteIdx] <> (seed + byteIdx) & BYTE_MASK
                     bMatches := FALSE
                     quit
+
+
+PRI fillMatches(pName, byteCount, fillValue) : bMatches | handle, readCount, chunkBytes, doneBytes, byteIdx
+' Read a whole file through the data buffer, one buffer at a time, and tell whether every byte is the fill value and the size matches.
+
+' @param pName - address of zstring with the file name
+' @param byteCount - bytes the file must hold
+' @param fillValue - the value every byte must hold
+' @returns bMatches - TRUE when the size and every byte match
+
+' Local Variables:
+' @local handle - handle of the file
+' @local readCount - what read() returned for one buffer
+' @local chunkBytes - bytes asked for in one read()
+' @local doneBytes - bytes read and compared so far
+' @local byteIdx - offset of the byte being compared
+
+    bMatches := FALSE
+    if flash.file_size(pName) == byteCount
+        handle := flash.open(pName, flash.FILEMODE_READ)
+        if isUsableHandle(handle)
+            bMatches := TRUE
+            doneBytes := 0
+            repeat while bMatches and doneBytes < byteCount
+                chunkBytes := (byteCount - doneBytes) <# FILE_BYTES
+                bytefill(@dataBuf, !fillValue, chunkBytes)      ' a byte read() did not write cannot match
+                readCount := flash.read(handle, @dataBuf, chunkBytes)
+                bMatches := readCount == chunkBytes
+                repeat chunkBytes with byteIdx
+                    if dataBuf[byteIdx] <> fillValue
+                        bMatches := FALSE
+                        quit
+                doneBytes += chunkBytes
+            utils.closeHandle(handle)
 
 
 PRI fillPattern(byteCount, seed) | byteIdx

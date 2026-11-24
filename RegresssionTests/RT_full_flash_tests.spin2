@@ -7,7 +7,8 @@
 ''               at the first refusal. The fixed mode fills the flash with ordinary write() calls and
 ''               probes every route to E_DRIVE_FULL: open(), a write that runs out of blocks,
 ''               open_circular(), create_file() and rename(), then the edge cases of append, r+ rewrite,
-''               circular close, rename and create_file with exactly the free blocks and one block more.
+''               circular close, rename and create_file with exactly the free blocks and one block more,
+''               and create_file() running out inside its block loop with its space checks skipped.
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -109,8 +110,9 @@ CON ' ---- Fixed Mode Steps ----
     '  STEP_CIRCULAR     - circular close with the trim out of blocks
     '  STEP_RENAME       - rename with one free block and with none
     '  STEP_CREATE       - create_file with one block too many and with exactly enough
+    '  STEP_CREATE_LOOP  - create_file with its space checks skipped, running out inside its block loop
     '  STEP_COUNT        - the number of steps
-    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_RENAME, STEP_CREATE, STEP_COUNT
+    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
 
 CON ' ---- Case Sizes ----
 
@@ -316,6 +318,7 @@ PRI runFixed() | stepIdx
             STEP_CIRCULAR: testCircular()
             STEP_RENAME: testRename()
             STEP_CREATE: testCreate()
+            STEP_CREATE_LOOP: testCreateInLoop()
 
     utils.startTestGroup(@"end of the run")
     utils.startTest(@"the sector below the filesystem is unchanged and no block program was refused")
@@ -787,6 +790,34 @@ PRI testCreate() | status
     expectValue(@"free blocks after create_file()", freeBlockCount(), NO_BLOCKS)
     bytefill(@modelBuf, CREATE_FILL, CREATE_BYTES)
     checkFileHolds(@otherFile, @modelBuf, CREATE_BYTES)
+    checkWitness()
+
+
+PRI testCreateInLoop() | status
+' Make a file one byte over the free blocks with create_file()'s space checks skipped, so it runs out inside its block loop.
+
+' Local Variables:
+' @local status - status of each call that should succeed
+
+    utils.startTestGroup(@"create_file running out inside its block loop")
+
+    utils.startTest(@"create_file() past its space checks gives E_DRIVE_FULL part way and leaves no block or block ID taken")
+    clearWorkspace()
+    expectStatus(@"pad of the workspace", padTo(CREATE_BLOCKS, @padFile), flash.SUCCESS)
+    expectValue(@"free blocks before the create_file()", freeBlockCount(), CREATE_BLOCKS)
+    flash.TEST_skipCreateChecks()
+    ' with its checks skipped, create_file() writes blocks of a file that needs one block more than are free, and runs out part way
+    expectFull(@"create_file() with its space checks skipped", flash.create_file(@otherFile, CREATE_FILL, CREATE_BYTES + ONE_BYTE))
+    expectValue(@"exists() of the file", flash.exists(@otherFile), FALSE)
+    expectValue(@"free blocks after the refused create_file()", freeBlockCount(), CREATE_BLOCKS)
+    ' every block and block ID the refused call took is free again, so a file of exactly the free blocks can be made
+    status := flash.create_file(@otherFile, CREATE_FILL, CREATE_BYTES)
+    expectStatus(@"create_file() of exactly the free blocks", status, flash.SUCCESS)
+    status := flash.delete(@otherFile)
+    expectStatus(@"delete() of that file", status, flash.SUCCESS)
+    remountChecks()
+    expectValue(@"free blocks after mount()", freeBlockCount(), CREATE_BLOCKS)
+    expectValue(@"exists() of the file after mount()", flash.exists(@otherFile), FALSE)
     checkWitness()
 
 

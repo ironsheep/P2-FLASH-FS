@@ -136,6 +136,8 @@ CON { PRIVATE driver constants }
   H_READ_WRITE     = H_READ | H_WRITE                           ' (Any) File is open for reading and/or writing
   H_READ_ONLY      = H_READ                                     ' Existing File is open for reading only
 
+  NEXT_BLOCK_SPARE = 1                                          ' free blocks a written block that has a next block leaves for it
+
   NOT_ENABLED      = -1                                         ' this feature is NOT enabled (e.g., seeking)
   NOT_VALID        = -30                                        ' this value is not initialized
 
@@ -184,6 +186,15 @@ hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                       
 hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                          'handle: 4KB buffer for file data
 
 tmpBlockBuffer  BYTE     0[BLOCK_SIZE]                                          'buffer used for copying blocks
+
+' FALSE in normal operation. While TRUE, the next create_file() skips its free-ID and free-block checks;
+' create_file() clears it on entry, so it covers one call. Only a regression-test method sets it.
+fsSkipCreateChecks LONG  false
+
+' NOT_ENABLED in normal operation. Otherwise a block address that next_block_address() takes, in place of a
+' random pick, whenever that block is not B_TEMP; the name is cleared when the block is moved to a free block.
+' Only a regression-test method sets it.
+fsTargetBlock   LONG    NOT_ENABLED
 
 VAR ' ---- per-instance state ----
 
@@ -734,9 +745,12 @@ PUB close(handle) : status
   'debug("close(", sdec_(handle), ") EXIT freed sem #", udec_(fsLock))
 
 
-PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_address, cur_block_address, next_cycle_bits
+PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_address, cur_block_address
 
 '' Rename a file named {p_cur_filename} to {p_new_filename}
+''
+'' A rename needs a free block ID and one free block for the new head block, and both are checked before anything
+'' changes: on E_DRIVE_FULL the file keeps its old name and the flash is unchanged.
 ''
 '' @param p_cur_filename - address of a zstring containing the existing filename
 '' @param p_new_filename - address of a zstring containing the new filename
@@ -751,48 +765,53 @@ PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
 ' @local signature - block state bits of block being renamed
 ' @local new_block_address - the block offset within the file system for the new block
 ' @local cur_block_address - the block offset within the file system for the old block
-' @local next_cycle_bits - active lifecycle bits for new block indicating block is newer than block containing the old filename
 
   ifnot fsMounted
-    return (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
-
-  repeat while locktry(fsLock) == 0                                            ' lock for exlusive use
-
-  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
-
-  if is_file_open(p_cur_filename, H_READ_WRITE)                                 'if old file is open, abort
-    status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
-
-  elseif is_file_open(p_new_filename, H_READ_WRITE)                             'if new file is open, abort
-    status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
-
-  elseifnot available_blocks()                                                  ' if no more blocks , abort
-    status :=  (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
-
-  elseif get_file_head_signature(p_new_filename)                                'if new file exists, abort
-    status := (LONG[@errorCode][cogid()] := E_FILE_EXISTS)
-
-  elseifnot signature := get_file_head_signature(p_cur_filename)                'if old file doesn't exist, abort
-    status := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
-
+    status := (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
   else
-    ' a file rename consists of replacing the current head block of the file with a new head block containing the new filename
-    ' then cancelling the old head block
-    new_block_address := next_block_address()                                   'get a new block to use for renaming (may move head block)
-    cur_block_address := field[IDToBlock][signature.[19..8]]                    'get head block of file to rename (AddressOfNextBlock may have changed lookup)
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
-    flash_read_block_addr(cur_block_address, @tmpBlockBuffer, $000, $FFF)       'read head block of file to rename
-    LONG[@tmpBlockBuffer][1].[31..12] := filename_crc(p_new_filename)           'install new filename CRC
-    bytefill(@tmpBlockBuffer + $008, $E5, FILENAME_SIZE)                        'clear filename space to prevent old trailing chrs
-    strcopy(@tmpBlockBuffer + $008, p_new_filename, FILENAME_SIZE - 1)          'copy new filename into filename space
-    flash_activate_updated_block(new_block_address, @tmpBlockBuffer)            'program updated block
-    flash_cancel_block(cur_block_address)                                       'cancel old block
+    status := LONG[@errorCode][cogid()] := SUCCESS                              ' new operation clear any prior error code
 
-    field[IDToBlock][signature.[19..8]] := new_block_address                    'update IDToBlock
-    field[BlockState][new_block_address] := B_HEAD                              'make new block HEAD
-    field[BlockState][cur_block_address] := B_FREE                              'make old block FREE
+    if is_file_open(p_cur_filename, H_READ_WRITE)                               'if old file is open, abort
+      status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
 
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+    elseif is_file_open(p_new_filename, H_READ_WRITE)                           'if new file is open, abort
+      status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
+
+    elseifnot available_blocks()                                                'if no block ID is free, abort
+      status :=  (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
+
+    elseifnot blocks_free()                                                     'if no block is free for the new head block, abort
+      status :=  (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
+
+    elseif get_file_head_signature(p_new_filename)                              'if new file exists, abort
+      status := (LONG[@errorCode][cogid()] := E_FILE_EXISTS)
+
+    elseifnot signature := get_file_head_signature(p_cur_filename)              'if old file doesn't exist, abort
+      status := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)
+
+    else
+      ' a file rename consists of replacing the current head block of the file with a new head block containing the new filename
+      ' then cancelling the old head block
+      new_block_address := next_block_address(0)                                'get a new block to use for renaming (may move head block)
+      if new_block_address < 0                                                  'no free block: nothing was changed, error() holds E_DRIVE_FULL
+        status := new_block_address
+      else
+        cur_block_address := field[IDToBlock][signature.[19..8]]                'get head block of file to rename (a block move may have changed it)
+
+        flash_read_block_addr(cur_block_address, @tmpBlockBuffer, $000, $FFF)   'read head block of file to rename
+        LONG[@tmpBlockBuffer][1].[31..12] := filename_crc(p_new_filename)       'install new filename CRC
+        bytefill(@tmpBlockBuffer + $008, $E5, FILENAME_SIZE)                    'clear filename space to prevent old trailing chrs
+        strcopy(@tmpBlockBuffer + $008, p_new_filename, FILENAME_SIZE - 1)      'copy new filename into filename space
+        flash_activate_updated_block(new_block_address, @tmpBlockBuffer)        'program updated block
+        flash_cancel_block(cur_block_address)                                   'cancel old block
+
+        field[IDToBlock][signature.[19..8]] := new_block_address                'update IDToBlock
+        field[BlockState][new_block_address] := B_HEAD                          'make new block HEAD
+        field[BlockState][cur_block_address] := B_FREE                          'make old block FREE
+
+    lockrel(fsLock)                                                             ' release the lock, we're done with it
 
 
 PUB delete(p_filename) : status | signature
@@ -828,9 +847,14 @@ PUB delete(p_filename) : status | signature
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
-PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_block_id, block_id, block_address, notHead, dataOffset, isLast, currOffset, NextID_EndPtr
+PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_block_id, block_id, block_address, notHead, dataOffset, isLast, currOffset, NextID_EndPtr, bSkipChecks
 
 '' Make a file of a byte_count size filled with fill_value bytes - "open read/write extended" to rewrite contents
+''
+'' The file needs a free block ID and a free block for each of its blocks. A free block ID, and every block the
+'' file needs, are checked before anything changes. If the block IDs still run out part way, every block already
+'' written for the file is cancelled and freed again with its block ID: on E_DRIVE_FULL the file is not created and
+'' the flash holds nothing of it.
 ''
 '' @param p_filename - address of a zstring containing the filename
 '' @param fill_value - initial value for all bytes in the new file
@@ -844,62 +868,86 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
 ' Local Variables:
 ' @local signature - temporary block state bits
 ' @local head_block_id - the head block id for this new file
-' @local block_id - temporary block id
+' @local block_id - ID of the block being written, which has no block yet when the loop stops short
 ' @local block_address - the block offset within the file system
 ' @local notHead - T/F where T means is not first block in file
 ' @local dataOffset - temp integer containing the initial data offset
 ' @local isLast - T/F where T means this is last block
 ' @local currOffset - temporary block offset
 ' @local NextID_EndPtr - temporary nextID/EndPtr value
+' @local bSkipChecks - TRUE when this call skips the free-ID and free-block checks
+
+  bSkipChecks := fsSkipCreateChecks                                             'take the one-call skip of the space checks..
+  fsSkipCreateChecks := false                                                   '..and clear it, whatever this call returns
 
   ifnot fsMounted
-    return (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
-
-  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
-
-  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
-
-  if is_File_Open(p_filename, H_READ_WRITE)                                     'if file is open, abort
-    status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
-
-  elseifnot available_blocks()                                                  ' if no more blocks , abort
-    status :=  (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
-
-  elseif signature := get_file_head_signature(p_filename)                       'if file exists, abort
-    status := (LONG[@errorCode][cogid()] := E_FILE_EXISTS)
-
+    status := (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
   else
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
-    block_id := head_block_id := next_available_block_id()                      'get initial ID
+    status := LONG[@errorCode][cogid()] := SUCCESS                              ' new operation clear any prior error code
 
-    repeat
-      block_address := next_block_address()                                     'get a new block now (may alter BlockBuff and IDToBlock)
-      ifnot notHead                                                             'if HEAD block..
-        build_head_block(@tmpBlockBuffer, p_filename, 0)                        '..build head block in buffer
-        dataOffset := $088                                                      '..set data start for head block
-      else                                                                      'if BODY block..
-        dataOffset := $004                                                      '..set data start for body block
-      bytefill(@tmpBlockBuffer + dataOffset, fill_value, BLOCK_SIZE - dataOffset) '..clear buffer for body block
-      if isLast := byte_count <= (currOffset += $FFC - dataOffset)              'if last block.. (update position and check if last block)
-        NextID_EndPtr := byte_count - currOffset + $FFC                         '..get EndPtr
-      else                                                                      'if not last block..
-        NextID_EndPtr := next_available_block_id()                              '..get NextID
-      LONG[@tmpBlockBuffer].[0] := !isLast                                      'set more/last bit
-      LONG[@tmpBlockBuffer].[1] := notHead                                      'set head/body bit
-      LONG[@tmpBlockBuffer].[19..8] := block_id                                 'set ThisID
-      LONG[@tmpBlockBuffer].[31..20] := NextID_EndPtr                           'set NextID or EndPtr
-      flash_program_block(block_address, @tmpBlockBuffer, %011)                 'program block
-      if notHead                                                                'if not head block..
-        flash_activate_block(block_address, %011)                               '..activate body block
-      field[IDToBlock][block_id] := block_address                               'set IDToBlock
-      field[BlockState][block_address] := notHead ? B_BODY : B_HEAD             'set block state to head/body, set notHead
-      block_id := NextID_EndPtr                                                 'switch to next ID
-      notHead := true
-    until isLast                                                                'loop until last block done
+    if is_File_Open(p_filename, H_READ_WRITE)                                   'if file is open, abort
+      status := (LONG[@errorCode][cogid()] := E_FILE_OPEN)
 
-    flash_activate_block(field[IDToBlock][head_block_id], %011)                 'now activate head block to activate file
+    elseif not bSkipChecks and not available_blocks()                           'if no block ID is free, abort
+      status :=  (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
 
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+    elseif not bSkipChecks and blocks_free() < size_in_blocks(byte_count)       'if too few blocks are free for the whole file, abort
+      status :=  (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
+
+    elseif signature := get_file_head_signature(p_filename)                     'if file exists, abort
+      status := (LONG[@errorCode][cogid()] := E_FILE_EXISTS)
+
+    else
+      notHead := false
+      currOffset := 0
+      block_id := head_block_id := next_available_block_id()                    'get initial ID
+      if block_id < 0                                                           'no free block ID: nothing was changed, error() holds E_DRIVE_FULL
+        status := block_id
+      else
+        repeat
+          block_address := next_block_address(0)                                'get a new block now (may alter tmpBlockBuffer and IDToBlock)
+          if block_address < 0                                                  'no free block: error() holds E_DRIVE_FULL
+            status := block_address
+            quit
+          ifnot notHead                                                         'if HEAD block..
+            build_head_block(@tmpBlockBuffer, p_filename, 0)                    '..build head block in buffer
+            dataOffset := $088                                                  '..set data start for head block
+          else                                                                  'if BODY block..
+            dataOffset := $004                                                  '..set data start for body block
+          bytefill(@tmpBlockBuffer + dataOffset, fill_value, BLOCK_SIZE - dataOffset) '..clear buffer for body block
+          if isLast := byte_count <= (currOffset += $FFC - dataOffset)          'if last block.. (update position and check if last block)
+            NextID_EndPtr := byte_count - currOffset + $FFC                     '..get EndPtr
+          else                                                                  'if not last block..
+            NextID_EndPtr := next_available_block_id()                          '..get NextID
+            if NextID_EndPtr < 0                                                '..no free block ID: the block taken for this block is not written
+              field[BlockState][block_address] := B_FREE
+              status := NextID_EndPtr
+              quit
+          LONG[@tmpBlockBuffer].[0] := !isLast                                  'set more/last bit
+          LONG[@tmpBlockBuffer].[1] := notHead                                  'set head/body bit
+          LONG[@tmpBlockBuffer].[19..8] := block_id                             'set ThisID
+          LONG[@tmpBlockBuffer].[31..20] := NextID_EndPtr                       'set NextID or EndPtr
+          flash_program_block(block_address, @tmpBlockBuffer, %011)             'program block
+          field[IDToBlock][block_id] := block_address                           'set IDToBlock
+          if notHead                                                            'if not head block..
+            flash_activate_block(block_address, %011)                           '..activate body block
+            field[BlockState][block_address] := B_BODY                          '..an active body block is B_BODY
+          block_id := NextID_EndPtr                                             'switch to next ID
+          notHead := true
+        until isLast                                                            'loop until last block done
+
+        if status == SUCCESS
+          block_address := field[IDToBlock][head_block_id]
+          flash_activate_block(block_address, %011)                             'now activate head block to activate file
+          field[BlockState][block_address] := B_HEAD                            'the head block is B_HEAD only once it is active
+        else                                                                    'stopped short: undo every block this call wrote
+          if notHead                                                            'if the head block was written..
+            delete_chain_from_id(head_block_id, block_id, 2, false)             '..cancel and free the head through the block that leads to block_id
+          field[IDValid][block_id]~                                             'release the ID that got no block
+
+    lockrel(fsLock)                                                             ' release the lock, we're done with it
 
 
 PUB exists(p_filename) : bool
@@ -1006,12 +1054,14 @@ PUB file_size_unused(p_filename) : size_in_bytes_unused | signature
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
-PUB seek(handle, position, whence) : end_position | file_length, file_position, block_id, pBuff
+PUB seek(handle, position, whence) : end_position | file_length, file_position, seekStatus
 
 '' Postion seek file pointer to position within the file or at the end of the file
 '' -- use 0, SK_FILE_START for position to seek to the START of the file
 '' -- use POSX, SK_FILE_START (largest positive LONG value) for position to seek to the current END of the file
 '' -- use +/- value, SK_CURRENT_POSN to move RELATIVE to the current position within the file
+'' -- in "r+"/"w+" mode a modified block is rewritten before the seek leaves it; with no free block for that
+''    the position does not change and E_DRIVE_FULL is returned
 ''
 '' @param handle - a handle to an open file
 '' @param position - position (in bytes) within the file (0 to length-1, posx)
@@ -1022,64 +1072,62 @@ PUB seek(handle, position, whence) : end_position | file_length, file_position, 
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_BAD_SEEK_ARG if invalid whence value,
 '' .. E_FILE_MODE if the file is not open in a mode supporting seeks,
-'' .. E_FILE_SEEK if attempted seek past either end of file (and didn't use POSX for tail)
+'' .. E_FILE_SEEK if attempted seek past either end of file (and didn't use POSX for tail),
+'' .. E_DRIVE_FULL if a modified block could not be rewritten
 
 ' Local Variables:
 ' @local file_length - temporary for calculated file length
 ' @local file_position - temporary for calculated seek position
+' @local seekStatus - SUCCESS, or the reason the position was not set
 
   ifnot fsMounted
-    return (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
+    end_position := (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
   elseif handle < 0 or handle > MAX_FILES_OPEN - 1
-    return (LONG[@errorCode][cogid()] := E_BAD_HANDLE)
+    end_position := (LONG[@errorCode][cogid()] := E_BAD_HANDLE)
   elseif whence <> SK_FILE_START and whence <> SK_CURRENT_POSN
-    return (LONG[@errorCode][cogid()] := E_BAD_SEEK_ARG)
+    end_position := (LONG[@errorCode][cogid()] := E_BAD_SEEK_ARG)
   elseif whence == SK_FILE_START and position < 0
     'debug("seek() early out")
-    return (LONG[@errorCode][cogid()] := E_FILE_SEEK)
-
-  case hStatus[handle]                                                          'get handle
-    H_READ:                                                                     'READ?
-      {okay, direct access allowed}
-    H_READWRITE:                                                                'WRITE and MODIFY?
-      {okay, direct access allowed}
-    other:
-      return (LONG[@errorCode][cogid()] := E_FILE_MODE)                         ' no, abort with error (open mode does not support seeking)
-
-  repeat while locktry(fsLock) == 0                                             ' lock for exlusive use
-
-  LONG[@errorCode][cogid()] := SUCCESS                                          ' new operation clear any prior error code
-      ' for SK_FILE_START
-
-  if whence == SK_FILE_START                                                    ' if seeking from current position
-      ' for SK_FILE_START
-    file_position := position
+    end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)
+  elseif hStatus[handle] <> H_READ and hStatus[handle] <> H_READWRITE           'only READ, and WRITE and MODIFY, allow direct access
+    end_position := (LONG[@errorCode][cogid()] := E_FILE_MODE)                  ' no, abort with error (open mode does not support seeking)
   else
-    ' for SK_CURRENT_POSN, we need to calculate the adjusted position
-    file_position := hSeekPtr[handle] <> NOT_ENABLED ? hSeekFileOffset[handle] : hEndPtr[handle] ' if seek mode enabled, use seek pointer, else use 0
-    file_position += position                                                   ' calculate the adjusted position
+    repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
 
-  file_length, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]]) ' get the file length
+    LONG[@errorCode][cogid()] := SUCCESS                                        ' new operation clear any prior error code
 
-  if file_length > 0 and position == POSX                                       ' if have file length and attempting to seek beyond, limit to end of file
-    file_position := file_length
+    if whence == SK_FILE_START                                                  ' if seeking from current position
+        ' for SK_FILE_START
+      file_position := position
+    else
+      ' for SK_CURRENT_POSN, we need to calculate the adjusted position
+      file_position := hSeekPtr[handle] <> NOT_ENABLED ? hSeekFileOffset[handle] : hEndPtr[handle] ' if seek mode enabled, use seek pointer, else use 0
+      file_position += position                                                 ' calculate the adjusted position
 
-  'debug("seek(", sdec_(position), "), ", sdec(file_position), udec(file_length))
+    file_length, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]]) ' get the file length
 
-  if file_length < 0
-    end_position := (LONG[@errorCode][cogid()] := file_length)                  ' error, return the error code instead of a SUCCESS status
-  elseif hCircularLength[handle] > 0 and (file_position < 0 or file_position > hCircularLength[handle]) ' if circular file and position is out of range
-   'debug("seek() circular out")
-   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                   ' abort with error
-  elseif file_position >= 0 and file_position <= file_length                    ' is position within file? ( allow length + 1 for append )
-    'debug("seek(", udec_(file_position), "), FSize=(", udec_(file_length), ") going to location, offset=(", sdec_(position), ")")
-    seek_no_locks(handle, file_position)
-    end_position := file_position                                               ' no, return SUCCESS
-  else
-   'debug("seek() file-range out")
-   end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                   ' no, abort with error
+    if file_length > 0 and position == POSX                                     ' if have file length and attempting to seek beyond, limit to end of file
+      file_position := file_length
 
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+    'debug("seek(", sdec_(position), "), ", sdec(file_position), udec(file_length))
+
+    if file_length < 0
+      end_position := (LONG[@errorCode][cogid()] := file_length)                ' error, return the error code instead of a SUCCESS status
+    elseif hCircularLength[handle] > 0 and (file_position < 0 or file_position > hCircularLength[handle]) ' if circular file and position is out of range
+     'debug("seek() circular out")
+     end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                 ' abort with error
+    elseif file_position >= 0 and file_position <= file_length                  ' is position within file? ( allow length + 1 for append )
+      'debug("seek(", udec_(file_position), "), FSize=(", udec_(file_length), ") going to location, offset=(", sdec_(position), ")")
+      seekStatus := seek_no_locks(handle, file_position)
+      if seekStatus < 0                                                         ' the position was not set: error() holds the reason
+        end_position := seekStatus
+      else
+        end_position := file_position                                           ' no, return SUCCESS
+    else
+     'debug("seek() file-range out")
+     end_position := (LONG[@errorCode][cogid()] := E_FILE_SEEK)                 ' no, abort with error
+
+    lockrel(fsLock)                                                             ' release the lock, we're done with it
 
 
 PUB write(handle, p_buffer, count) : bytes_written | checkValue, byteIndex, wr_value, wr_status
@@ -1530,85 +1578,116 @@ PRI finish_open_read(p_filename, max_file_length) : handle | signature, block_id
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
-PRI finish_open_write(p_filename, max_file_length) : handle | signature, ptr
+PRI finish_open_write(p_filename, max_file_length) : handle | signature, head_block_id
 
 ' Open a file for (re)writing, returning handle if success
 ' -- (overwrites existing file, if you wish to prevent overwrite, use exists() to check!)
+' -- a new file takes a free block ID for its head block before anything else changes; with none free,
+'    no handle is taken and E_DRIVE_FULL is returned
 '
 ' @param p_filename - address of a zstring containing the filename
+' @param max_file_length - the circular file length limit in bytes, 0 for a file with no limit
 ' @returns handle - handle to open file if successful,
-' .. or E_NO_HANDLE if no handle is available
+' .. or E_DRIVE_FULL if a new file has no free block ID for its head block
 
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
-' @local ptr - the address of the 4KB buffer for the file associated with this handle
+' @local head_block_id - the head block id of a new file
     'debug("* finish_open_write(", zstr_(p_filename), ", bytes=", udec_(max_file_length), ") - ENTRY")
 
-  handle := new_handle(p_filename)            'get new handle, abort if no handle available
-  hCircularLength[handle] := max_file_length           'set size limit if non-zero
+  head_block_id := 0
+  ifnot signature := get_file_head_signature(p_filename)                        'a new file needs a free block ID first
+    head_block_id := next_available_block_id()
 
-  if signature := get_file_head_signature(p_filename)
-    'file already exists, overwrite it
-    start_write(handle, H_APPEND, signature.[19..8], next_active_cycle(signature.[7..5]))
-  else                          'else, write it
-    start_write(handle, H_WRITE, next_available_block_id(), %011)
-    ' NO, we don't write empty files!
-    ' hModified[handle]~~                 'force first block to be written in case no data
-    'debug("open() WRITE ", uhex_word(hEndPtr[handle], handle))
+  if head_block_id < 0                                                          'no free block ID: nothing was changed, error() holds E_DRIVE_FULL
+    handle := head_block_id
+  else
+    handle := new_handle(p_filename)                                            'get new handle (the caller checked one is free)
+    hCircularLength[handle] := max_file_length                                  'set size limit if non-zero
+
+    if signature
+      'file already exists, overwrite it
+      start_write(handle, H_APPEND, signature.[19..8], next_active_cycle(signature.[7..5]))
+    else                          'else, write it
+      start_write(handle, H_WRITE, head_block_id, %011)
+      ' NO, we don't write empty files!
+      ' hModified[handle]~~                 'force first block to be written in case no data
+      'debug("open() WRITE ", uhex_word(hEndPtr[handle], handle))
 
   'debug(" -- open_write() freed sem #", udec_(fsLock))
   lockrel(fsLock)                                                             ' release the lock, we're done with it
 
 
-PRI finish_open_append(p_filename, max_file_length) : handle | signature, end_block_address, endPtr, bytes_used, ptr
+PRI finish_open_append(p_filename, max_file_length) : handle | signature, head_block_id
 
 ' Open for append, returning handle if success
 ' -- NOTE: this is called only if file already exists
 ' -- (if it didn't exist finish_open_write() would have been called instead)
+' -- a new file takes a free block ID for its head block before anything else changes; with none free,
+'    no handle is taken and E_DRIVE_FULL is returned
 '
 ' @param p_filename - address of a zstring containing the filename
+' @param max_file_length - the circular file length limit in bytes, 0 for a file with no limit
 ' @returns handle - handle to open file if successful,
-' .. or E_NO_HANDLE if no handle is available
+' .. or E_DRIVE_FULL if a new file has no free block ID for its head block
+
+' Local Variables:
+' @local signature - the block state bits of the block being checked
+' @local head_block_id - the head block id of a new file
 
   'debug("* finish_open_append(", zstr_(p_filename), ", bytes=", udec_(max_file_length), ") - ENTRY")
 
-  'debug("finish_open_append() get handle")
+  head_block_id := 0
+  ifnot signature := get_file_head_signature(p_filename)                        'a new file needs a free block ID first
+    head_block_id := next_available_block_id()
 
-  handle := new_handle(p_filename)                                              'get new handle, set error() if no handle available
-  hCircularLength[handle] := max_file_length                                    'set size limit if non-zero
+  if head_block_id < 0                                                          'no free block ID: nothing was changed, error() holds E_DRIVE_FULL
+    handle := head_block_id
+  else
+    'debug("finish_open_append() get handle")
+    handle := new_handle(p_filename)                                            'get new handle (the caller checked one is free)
+    hCircularLength[handle] := max_file_length                                  'set size limit if non-zero
 
-  if signature := get_file_head_signature(p_filename)                           'if file already exists, append it
-    start_modify(handle, H_APPEND, signature.[19..8], $FFFFFF, true)
-  else                          'else, write it
-    start_write(handle, H_WRITE, next_available_block_id(), %011)
-    ' NO, we don't write empty files!
-    'hModified[handle]~~                                                        'force first block to be written in case no data
+    if signature                                                                'if file already exists, append it
+      start_modify(handle, H_APPEND, signature.[19..8], $FFFFFF, true)
+    else                          'else, write it
+      start_write(handle, H_WRITE, head_block_id, %011)
+      ' NO, we don't write empty files!
+      'hModified[handle]~~                                                      'force first block to be written in case no data
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id
 ' Open an existing file for reading and writing within current file boundaries, returns handle
+' -- a new file takes a free block ID for its head block before anything else changes; with none free,
+'    no handle is taken and E_DRIVE_FULL is returned
 '
 ' @param p_filename - address of a zstring containing the filename
-' @returns handle - handle to open file
+' @returns handle - handle to open file, or E_DRIVE_FULL if a new file has no free block ID for its head block
 
 ' Local Variables:
 ' @local signature - the block state bits of the block being checked
 ' @local head_block_id - id of block being checked
 
-handle := new_handle(p_filename)                                                'get new handle, abort if no handle available
-if signature := get_file_head_signature(p_filename)                             'if file already exists
-  ' file exists, allow modification and append-only extension (no gaps)
-  start_modify(handle, H_READWRITE, signature.[19..8], 0, true)
-else
-  ' file DOES NOT exist, create it, allow modification after append-only extension (no gaps)
-  ' no starting block-id means create new head!
-  head_block_id := next_available_block_id()                                    'get initial ID
-  build_head_block(buffer_pointer(handle), filename_pointer(handle), head_block_id) 'build head block in buffer
-  start_modify(handle, H_READWRITE, head_block_id, 0, false)                    'go to start of file
+  head_block_id := 0
+  ifnot signature := get_file_head_signature(p_filename)                        'a new file needs a free block ID first
+    head_block_id := next_available_block_id()                                  'get initial ID
 
-lockrel(fsLock)                                                               ' release the lock, we're done with it
+  if head_block_id < 0                                                          'no free block ID: nothing was changed, error() holds E_DRIVE_FULL
+    handle := head_block_id
+  else
+    handle := new_handle(p_filename)                                            'get new handle (the caller checked one is free)
+    if signature                                                                'if file already exists
+      ' file exists, allow modification and append-only extension (no gaps)
+      start_modify(handle, H_READWRITE, signature.[19..8], 0, true)
+    else
+      ' file DOES NOT exist, create it, allow modification after append-only extension (no gaps)
+      ' no starting block-id means create new head!
+      build_head_block(buffer_pointer(handle), filename_pointer(handle), head_block_id) 'build head block in buffer
+      start_modify(handle, H_READWRITE, head_block_id, 0, false)                'go to start of file
+
+  lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
 PRI exists_no_lock(p_filename) : bool
@@ -1800,27 +1879,33 @@ PRI start_modify(handle, open_mode, head_block_id, file_position, bFileExists) |
     'debug(" -- ", uhex_word(hChainBlockAddr[handle]), udec(block_id), uhex_word(hEndPtr[handle]), udec(hSeekFileOffset[handle]))
 
 
-PRI rd_byte_no_locks(handle) : byte_value | pBuff, signature, isSeeking, endPtr
+PRI rd_byte_no_locks(handle) : byte_value | pBuff, signature, isSeeking, endPtr, status
 
 ' Read next BYTE from file associated with handle
 '  -- negative value indicates error or end of file
+'
+' In modify mode a modified block is rewritten before the next block is read. With no free block for the rewrite
+' the read stops where it is, the block stays in the buffer still modified, and the result is E_DRIVE_FULL.
 
 ' @param handle - the handle to the file from which to read a byte
-' @returns value - the next byte [0-255] from the file, or:
+' @returns byte_value - the next byte [0-255] from the file, or:
 ' .. E_END_OF_FILE if no more data,
 ' .. E_FILE_MODE if read not allowed for this file,
+' .. E_DRIVE_FULL if a modified block could not be rewritten
 
 ' Local Variables:
-' @local ptr - the address of the 4KB buffer for the file associated with this handle
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
 ' @local signature - the block state bits of the block being checked
 ' @local isSeeking - temporary variable T/F where T we use hSeekPtr vs hEndPtr
 ' @local endPtr - temporary variable value of whichever Ptr we are using
+' @local status - SUCCESS, or the reason no byte is read
 
   isSeeking := (hSeekPtr[handle] <> NOT_ENABLED) ? true : false                 ' is seek pointer in use?
   endPtr := isSeeking ? hSeekPtr[handle] : hEndPtr[handle]
 
   pBuff := buffer_pointer(handle)                                               ' get buffer pointer
   signature := LONG[pBuff]                                                      ' get first long
+  status := SUCCESS
 
   case hStatus[handle]
 
@@ -1828,41 +1913,55 @@ PRI rd_byte_no_locks(handle) : byte_value | pBuff, signature, isSeeking, endPtr
       ifnot signature.[0]                                                       ' if last block ...
         if endPtr == LONG[pBuff].[31..20]                                       ' ..if no more data, return error code
           'debug("* rdByte EOF")
-          return  (LONG[@errorCode][cogid()] := E_END_OF_FILE)
+          status := E_END_OF_FILE
       else                                                                      ' not last block...
         if endPtr == $FFC                                                       ' else, if no more data...
           if hStatus[handle] & H_MODIFY                                         '..and if modify mode..
-            if hModified[handle]~                                               '..and if block was modified (post-clears)..
-              rewrite_block(handle)                                             '..then rewrite block (might move a block)
-          flash_read_block_addr(field[IDToBlock][signature.[31..20]], pBuff, $000, $FFF) ' load next block
-          endPtr := $004                                                        ' point to first data byte
+            if hModified[handle]                                                '..and if block was modified..
+              status := rewrite_block(handle)                                   '..then rewrite block (might move a block)
+              if status == SUCCESS
+                hModified[handle]~
+          if status == SUCCESS
+            flash_read_block_addr(field[IDToBlock][signature.[31..20]], pBuff, $000, $FFF) ' load next block
+            endPtr := $004                                                      ' point to first data byte
 
     other:                      'other mode?
       'debug("* rdByte FILE MODE ERR")
-      return (LONG[@errorCode][cogid()] := E_FILE_MODE)                         'read not allowed, abort
+      status := E_FILE_MODE                                                     'read not allowed, abort
 
-  byte_value := BYTE[pBuff][endPtr++]                                           ' get data byte to return and increment pointer
-  if isSeeking
-    hSeekPtr[handle] := endPtr                                                  ' point to start of data in body block
-    hSeekFileOffset[handle]++                                                   ' we moved keep track
+  if status <> SUCCESS
+    byte_value := (LONG[@errorCode][cogid()] := status)
   else
-    hEndPtr[handle] := endPtr                                                   ' point to start of data in body block
-    'debug("+ rd_byte() ", uhex_word(hEndPtr[handle], handle))
-  'debug("rd_byte() [",uhex_byte_(byte_value),"]")
+    byte_value := BYTE[pBuff][endPtr++]                                         ' get data byte to return and increment pointer
+    if isSeeking
+      hSeekPtr[handle] := endPtr                                                ' point to start of data in body block
+      hSeekFileOffset[handle]++                                                 ' we moved keep track
+    else
+      hEndPtr[handle] := endPtr                                                 ' point to start of data in body block
+      'debug("+ rd_byte() ", uhex_word(hEndPtr[handle], handle))
+    'debug("rd_byte() [",uhex_byte_(byte_value),"]")
 
 
 PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeeking, endPtr
 
 ' Write a byte to a file that is open for write or rewrite
 '
+' A full block is written to the flash only when the next block can follow it: a free block ID for the next block,
+' and a free block left over for it once this one is written. Otherwise the byte is not written, the full block
+' stays in the buffer for close() to write, and the status is E_DRIVE_FULL. In modify mode a modified block that
+' cannot be rewritten for lack of a free block stays in the buffer, still modified, with the same status.
+'
 ' @param handle - handle to a file that is open for write or rewrite
 ' @param byte_value - value to write to the file
 ' @returns status - 0 (SUCCESS) if successful,
-' .. E_BAD_HANDLE if the handle is not valid
+' .. E_FILE_MODE if the file is not open for writing,
+' .. E_DRIVE_FULL if the flash has no room for the block the byte needs
 
 ' Local Variables:
-' @local ptr - the address of the 4KB buffer for the file associated with this handle
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
 ' @local nextBlockID - block ID of the next block to write to the file
+' @local isSeeking - temporary variable T/F where T we use hSeekPtr vs hEndPtr
+' @local endPtr - temporary variable value of whichever Ptr we are using
 
   isSeeking := (hSeekPtr[handle] <> NOT_ENABLED) ? true : false                 ' is seek pointer in use?
   endPtr := isSeeking ? hSeekPtr[handle] : hEndPtr[handle]
@@ -1873,20 +1972,28 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
   case hStatus[handle]
     H_WRITE, H_APPEND:                                                          'write/rewrite/append mode?
       if endPtr == $FFC                                                         'if current block full..
-        long[pBuff].[0]~~                                                       '..make more block
         nextBlockID := next_available_block_id()                                '..get next ID to link to
-        write_block(handle, nextBlockID)                                        '..write current full body block with NextID link
-        bytefill(pBuff, $FF, BLOCK_SIZE)                                        '..erase block buffer to build new body block
-        long[pBuff].[0]~                                                        '..make last block
-        long[pBuff].[19..8] := nextBlockID                                      '..set ID
-        endPtr := $004                                                          '..point to start of data in new block
+        if nextBlockID < 0                                                      '..no free block ID: error() holds E_DRIVE_FULL
+          status := nextBlockID
+        else
+          status := write_block(handle, nextBlockID, true)                      '..write current full block with NextID link
+          if status < 0                                                         '..no free block for it and the next: error() holds E_DRIVE_FULL
+            field[IDValid][nextBlockID]~                                        '....release the ID that got no block
+          else
+            bytefill(pBuff, $FF, BLOCK_SIZE)                                    '..erase block buffer to build new body block
+            long[pBuff].[0]~                                                    '..make last block
+            long[pBuff].[19..8] := nextBlockID                                  '..set ID
+            endPtr := $004                                                      '..point to start of data in new block
 
     H_READWRITE:                                                                'modify mode?
       if endPtr == $FFC                                                         '..and if block full
-        if hModified[handle]~                                                   '..and if block was modified
-          rewrite_block(handle)                                                 '..then rewrite block (might move a block)
-        flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)            '..read next block
-        endPtr := $004                                                          '..point to start of data in next block
+        if hModified[handle]                                                    '..and if block was modified
+          status := rewrite_block(handle)                                       '..then rewrite block (might move a block)
+          if status == SUCCESS
+            hModified[handle]~
+        if status == SUCCESS
+          flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)          '..read next block
+          endPtr := $004                                                        '..point to start of data in next block
 
     other:                                                                      'other mode?
       status := E_FILE_MODE                                                     'write not allowed, abort
@@ -1903,28 +2010,38 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
         '    debug("+ wr_byte() ", uhex_word(hEndPtr[handle], handle))
 
 
-PRI seek_no_locks(handle, file_position) | pBuff, block_id, endPtr, fileOffset
+PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fileOffset
 
 ' seek file associted with handle to new position
 '
+' In modify mode a modified block is rewritten before another block is read. With no free block for the rewrite
+' the position does not change, the block stays in the buffer still modified, and the status is E_DRIVE_FULL.
+'
 ' @param handle - handle to open file
 ' @param file_position - desired file postion
+' @returns status - 0 (SUCCESS) if the position was set, E_DRIVE_FULL if a modified block could not be rewritten
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
 ' @local block_id - temporary block id
+' @local endPtr - offset within the located block of the byte at file_position
+' @local fileOffset - the position within the file that was located
 
+    status := SUCCESS
     pBuff := buffer_pointer(handle)                                             'get block buffer pointer
     block_id, endPtr, fileOffset := locate_file_byte(hHeadBlockID[handle], file_position) 'locate byte in file
     'debug("seek_no_locks() ", udec(block_id, file_position, fileOffset), uhex_word(endPtr))
     if hStatus[handle] & H_MODIFY                                               'if modify mode..
       if block_id <> long[pBuff].[19..8]                                        '..and if different block block ID
-        if hModified[handle]~                                                   '..and if block was modified (post-clears)
-          rewrite_block(handle)                                                 '..then rewrite block (might move a block)
+        if hModified[handle]                                                    '..and if block was modified
+          status := rewrite_block(handle)                                       '..then rewrite block (might move a block)
+          if status == SUCCESS
+            hModified[handle]~
 
-    hSeekFileOffset[handle] := fileOffset                                      ' we moved keep track
-    hSeekPtr[handle] := hEndPtr[handle] := endPtr                               ' point to start of data in body block
-    flash_read_block_id(block_id, pBuff, $000, $FFF)                            'read new block into buffer
+    if status == SUCCESS
+      hSeekFileOffset[handle] := fileOffset                                     ' we moved keep track
+      hSeekPtr[handle] := hEndPtr[handle] := endPtr                             ' point to start of data in body block
+      flash_read_block_id(block_id, pBuff, $000, $FFF)                          'read new block into buffer
 
 
 PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_id, chain_block_id, chainState
@@ -1932,38 +2049,52 @@ PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_
 ' Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
 ' . (do all the close operations, caller has locked and will release)
 '
+' A file open for writing is committed by activating the first block its handle wrote. That needs one free block
+' for the last block, which is still in the buffer. With no free block the last block is not written and nothing is
+' activated, so the file stays as it was at its last commit (a new file is not created) and the status is
+' E_DRIVE_FULL. A circular file is committed first and then trimmed; with no free block for the trim it stays
+' committed and whole, and the status is E_DRIVE_FULL. A modified block of a file open for read/write that cannot
+' be rewritten keeps its last written contents on the flash, and the status is E_DRIVE_FULL.
+'
 ' @param handle - a handle to an open file
 ' @returns status - 0 (SUCCESS) if successful,
-' .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
-' .. E_BAD_HANDLE if the handle is not valid
+' .. E_DRIVE_FULL if the flash has no free block for the last block, the trim or the rewrite
 
-  LONG[@errorCode][cogid()] := SUCCESS                                          'new operation clear any prior error code
+' Local Variables:
+' @local open_mode - the mode the handle is open in
+' @local chain_block_address - the block offset within the file system of the first block the handle wrote
+' @local head_block_id - the head block id of the file
+' @local chain_block_id - the block id of the first block the handle wrote
+' @local chainState - the block state the first block the handle wrote takes once active
+
+  status := LONG[@errorCode][cogid()] := SUCCESS                                'new operation clear any prior error code
 
   if hModified[handle]                                                          ' if modified
     open_mode := hStatus[handle]                                                'get file open mode for handle
     case open_mode
       H_WRITE, H_APPEND:                                                        'write/rewrite/append mode?
-        write_block(handle, hEndPtr[handle])                                    'write updated last block with EndPtr
+        status := write_block(handle, hEndPtr[handle], false)                   'write updated last block with EndPtr
 
-        head_block_id := hHeadBlockID[handle]                                   'get head ID
-        chain_block_id := hChainBlockID[handle]                                 'get fork ID
-        chain_block_address := hChainBlockAddr[handle]                          'get fork block
-        chainState := chain_block_id == head_block_id ? B_HEAD : B_BODY         'get fork block state
+        if status == SUCCESS                                                    'commit only once the last block is written
+          head_block_id := hHeadBlockID[handle]                                 'get head ID
+          chain_block_id := hChainBlockID[handle]                               'get fork ID
+          chain_block_address := hChainBlockAddr[handle]                        'get fork block
+          chainState := chain_block_id == head_block_id ? B_HEAD : B_BODY       'get fork block state
 
-        flash_activate_block(chain_block_address, hChainLifeCycle[handle])      'replace old head block if rewrite or old last block if append
+          flash_activate_block(chain_block_address, hChainLifeCycle[handle])    'replace old head block if rewrite or old last block if append
 
-        if open_mode & H_FORK                                                   'if append..
-          delete_chain_from_id(chain_block_id, 0, 0, True)                      '..delete old fork block through end of file, keeping first ID valid
+          if open_mode & H_FORK                                                 'if append..
+            delete_chain_from_id(chain_block_id, 0, 0, True)                    '..delete old fork block through end of file, keeping first ID valid
 
-        field[BlockState][chain_block_address] := chainState                    'change new fork block status from sTEMP to sHEAD/sBODY
-        field[IDToBlock][chain_block_id] := chain_block_address                 'update IDToBlock to point to new fork block
+          field[BlockState][chain_block_address] := chainState                  'change new fork block status from sTEMP to sHEAD/sBODY
+          field[IDToBlock][chain_block_id] := chain_block_address               'update IDToBlock to point to new fork block
 
-        if hCircularLength[handle]                                              'if size limit non-zero..
-          froncate_file(head_block_id, hCircularLength[handle])                 '..froncate file to size limit
+          if hCircularLength[handle]                                            'if size limit non-zero..
+            status := froncate_file(head_block_id, hCircularLength[handle])     '..froncate file to size limit
 
       H_READWRITE:                                                              'modify mode?
         if hModified[handle]~                                                   '..and if block was modified (post-clears)
-          rewrite_block(handle)                                                 '..rewrite block
+          status := rewrite_block(handle)                                       '..rewrite block
 
   hEndPtr[handle] := 0                                                          ' no valid end pointer any more
   hSeekPtr[handle] := NOT_ENABLED                                               ' Ensure seek mode is disabled for this handle
@@ -1973,45 +2104,58 @@ PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_
   hChainLifeCycle[handle] := 0
   hModified[handle]~                                                            ' clear modified flag
 
-PRI write_block(handle, NextID_EndPtr) | pBuff, block_id, block_address
+PRI write_block(handle, NextID_EndPtr, bHasNext) : status | pBuff, block_id, block_address
 
 ' Write current block in buffer to next avail. block address
 '
+' A block with a next block is written only while a free block is left over for that next block. With no block
+' for it, nothing is changed: the buffer, the tables and the flash are as they were.
+'
 ' @param handle - a reference to a file open for write
 ' @param NextID_EndPtr - the next block id, -OR- the pointer to end of data in last block
+' @param bHasNext - TRUE when NextID_EndPtr is the next block id, FALSE when this is the last block
+' @returns status - 0 (SUCCESS) if the block was written, E_DRIVE_FULL if the flash has no room for it
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
 ' @local block_id - temporary block id
 ' @local block_address - the block offset within the file system
 
-  pBuff := buffer_pointer(handle)                                               'get block buffer pointer
-  long[pBuff].[31..20] := NextID_EndPtr                                         'set NextID/EndPtr
-  block_id := long[pBuff].[19..8]                                               'get block ID of block
+  status := SUCCESS
+  block_address := next_block_address(bHasNext ? NEXT_BLOCK_SPARE : 0)          'get a new block, keeping one for the next block (may alter IDToBlock)
 
-  block_address := next_block_address()                                         'get a new block (may alter IDToBlock)
+  if block_address < 0                                                          'no free block: error() holds E_DRIVE_FULL
+    status := block_address
+  else
+    pBuff := buffer_pointer(handle)                                             'get block buffer pointer
+    long[pBuff].[0] := bHasNext                                                 'set more/last bit
+    long[pBuff].[31..20] := NextID_EndPtr                                       'set NextID/EndPtr
+    block_id := long[pBuff].[19..8]                                             'get block ID of block
 
-  'if block_id == hHeadBlockID[handle]
-    ' FIXME: TODO: should this also mark B_HEAD?
+    ' the first block the handle writes stays B_TEMP until close activates it, so no block move can take it
 
-  if showRTdebug
-    debug("* wr_block() ", uhex_word(block_address), udec(block_id), uhex_word(NextID_EndPtr))
+    if showRTdebug
+      debug("* wr_block() ", uhex_word(block_address), udec(block_id), uhex_word(NextID_EndPtr))
 
-  if block_id == hChainBlockID[handle]                                          'if this is the head of commit chain block
-    flash_program_block(block_address, pBuff, hChainLifeCycle[handle])          '..program block with chain head cycle
-    hChainBlockAddr[handle] := block_address          '..remember the block so that it can be activated on close
-  else                                                                          'else, this is a body block
-    flash_program_block(block_address, pBuff, %011)                             '..program body block with new cycle
-    flash_activate_block(block_address, %011)                                   '..activate block
-    field[BlockState][block_address] := B_BODY                                  '..change block state from sTEMP to sBODY
-    field[IDToBlock][block_id] := block_address                                 '..set IDToBlock
+    if block_id == hChainBlockID[handle]                                        'if this is the head of commit chain block
+      flash_program_block(block_address, pBuff, hChainLifeCycle[handle])        '..program block with chain head cycle
+      hChainBlockAddr[handle] := block_address                                  '..remember the block so that it can be activated on close
+    else                                                                        'else, this is a body block
+      flash_program_block(block_address, pBuff, %011)                           '..program body block with new cycle
+      flash_activate_block(block_address, %011)                                 '..activate block
+      field[BlockState][block_address] := B_BODY                                '..change block state from sTEMP to sBODY
+      field[IDToBlock][block_id] := block_address                               '..set IDToBlock
 
 
-PRI rewrite_block(handle) | pBuff, block_id, block_address, oldBlockAddress
+PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAddress
 
 ' Write block over existing (issed mew lifeCycle to make heigher priority
 '
+' With no free block for the new copy nothing is changed: the old copy stays on the flash and the buffer keeps
+' the modified block.
+'
 ' @param handle - a reference to a file open for read/modify/write
+' @returns status - 0 (SUCCESS) if the block was rewritten, E_DRIVE_FULL if the flash has no free block for it
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
@@ -2019,16 +2163,21 @@ PRI rewrite_block(handle) | pBuff, block_id, block_address, oldBlockAddress
 ' @local block_address - the block offset within the file system
 ' @local oldBlockAddress - original block address for this block
 
-  pBuff := buffer_pointer(handle)                                               'get block buffer pointer
-  block_id := long[pBuff].[19..8]                                               'get block ID
+  status := SUCCESS
+  block_address := next_block_address(0)                                        'get a new block (may alter IDToBlock)
 
-  block_address := next_block_address()                                         'get a new block (may alter IDToBlock)
-  flash_activate_updated_block(block_address, pBuff)                            'program updated block
+  if block_address < 0                                                          'no free block: error() holds E_DRIVE_FULL
+    status := block_address
+  else
+    pBuff := buffer_pointer(handle)                                             'get block buffer pointer
+    block_id := long[pBuff].[19..8]                                             'get block ID
 
-  oldBlockAddress := field[IDToBlock][block_id]\block_address                   'get the old block -AND- update IDToBlock to new block
-  flash_cancel_block(oldBlockAddress)                                           'cancel the old block
+    flash_activate_updated_block(block_address, pBuff)                          'program updated block
 
-  field[BlockState][block_address] := field[BlockState][oldBlockAddress]\B_FREE 'copy old block state to new -AND- free old
+    oldBlockAddress := field[IDToBlock][block_id]\block_address                 'get the old block -AND- update IDToBlock to new block
+    flash_cancel_block(oldBlockAddress)                                         'cancel the old block
+
+    field[BlockState][block_address] := field[BlockState][oldBlockAddress]\B_FREE 'copy old block state to new -AND- free old
 
 
 PRI filename_pointer(handle) : p_filename
@@ -2071,12 +2220,16 @@ PRI ensure_handle_mode(handle, open_mode_bits) : status
 
 CON ' >>>  parameter type (block_id)  <<<
 
-PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address, new_head_block_id, block_offset, body_signature, delete_mode, prior_block_id, data_offset
+PRI froncate_file(head_block_id, limit_in_bytes) : status | size_in_bytes, block_address, new_head_block_id, block_offset, body_signature, delete_mode, prior_block_id, data_offset
 
 ' Remove leading block(s) from file that exceeds the circular size limit
 '
+' The trim writes a new head block first. With no free block for it nothing is changed and the file stays whole.
+'
 ' @param head_block_id - block id of file
 ' @param limit_in_bytes - the file size limit in bytes
+' @returns status - 0 (SUCCESS) if the file is within the limit or was trimmed to it, E_DRIVE_FULL if the flash
+' .. has no free block for the new head block
 
 ' Local Variables:
 ' @local size_in_bytes - current length of file in bytes
@@ -2088,12 +2241,16 @@ PRI froncate_file(head_block_id, limit_in_bytes) | size_in_bytes, block_address,
 ' @local prior_block_id - former head block id
 ' @local data_offset - temporary offset in block
 
+  status := SUCCESS
   size_in_bytes := count_file_bytes_id(head_block_id)                                                   'get size of file
 
   ' if have extra blocks beyond limit requested at open, then remove them
   if size_in_bytes > limit_in_bytes                                                                     'if file is oversize..
+    block_address := next_block_address(0)                                                              'get a new block now (may alter tmpBlockBuffer and IDToBlock)
+    if block_address < 0                                                                                'no free block: the file stays whole, error() holds E_DRIVE_FULL
+      status := block_address
 
-      block_address := next_block_address()                                                             'get a new block now (may alter tmpBlockBuffer and IDToBlock)
+  if size_in_bytes > limit_in_bytes and status == SUCCESS                                               'if file is oversize and has its new head block..
 
       new_head_block_id, block_offset, _ := locate_file_byte(head_block_id, size_in_bytes - limit_in_bytes) 'find block with start of data (might be head block)
       if showRTdebug
@@ -2522,11 +2679,19 @@ PRI available_blocks() : bool | blk8Idx
     'debug("available_blocks() EXIT")
 
 
-PRI next_block_address() : block_address | blockFreeCount, freeBlockAddress, freeIndex, next_cycle_bits
+PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockAddress, freeIndex, next_cycle_bits
 
 ' Return the address of the next block to which we should write
 '
-' @returns block_address - E_DRIVE_FULL if no free block is available, otherwise the address of the next block to use
+' The block is picked at random from the blocks that are not B_TEMP. A B_HEAD/B_BODY block that is picked is first
+' moved to a free block: the copy is given the next lifecycle and activated at once. A block written but not yet
+' activated is kept B_TEMP until it is activated, so a move only ever copies an active block. While fsTargetBlock
+' names a block that is not B_TEMP, that block is taken in place of the random pick. On E_DRIVE_FULL no table and
+' no block is changed.
+'
+' @param spareBlocks - free blocks that must remain once this block is taken (0 when none need to)
+' @returns block_address - the address of the next block to use, now B_TEMP, or E_DRIVE_FULL if no more than
+' .. spareBlocks blocks are free
 
 ' Local Variables:
 ' @local blockFreeCount - the count of free blocks
@@ -2534,34 +2699,41 @@ PRI next_block_address() : block_address | blockFreeCount, freeBlockAddress, fre
 ' @local freeIndex - a counter of free blocks
 ' @local next_cycle_bits - the next lifecycle bits to use for the new block
 
-  ifnot blockFreeCount := blocks_free()                                         'if no free block exists, abort with error
-        return (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
-
-  repeat                                                                        'randomly pick an B_FREE/B_HEAD/B_BODY (not an B_TEMP) block
+  blockFreeCount := blocks_free()
+  if blockFreeCount <= spareBlocks                                              'if no free block can be taken, fail with E_DRIVE_FULL
+    block_address := (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
+  else
+    block_address := fsTargetBlock                                              'a named block is taken while it is not B_TEMP
+    if block_address <> NOT_ENABLED
+      if field[BlockState][block_address] == B_TEMP
+        block_address := NOT_ENABLED
+    if block_address == NOT_ENABLED
+      repeat                                                                    'randomly pick an B_FREE/B_HEAD/B_BODY (not an B_TEMP) block
         block_address := abs getrnd() // BLOCKS                                 '(random block selection results in +-5% wear leveling)
-  until field[BlockState][block_address] <> B_TEMP
+      until field[BlockState][block_address] <> B_TEMP
 
-  if field[BlockState][block_address] == B_FREE                                 'if the block is B_FREE, change its state to B_TEMP and exit
-        field[BlockState][block_address] := B_TEMP
-        return
-
-  ' now we are using head or body so we have to move it!
-  freeIndex := abs getrnd() // blockFreeCount                                   'randomly pick an B_FREE block to move the B_HEAD/B_BODY block to
-  repeat BLOCKS with freeBlockAddress                                           'block is sHEAD/sBODY, must relocate it to an sFREE block
+    if field[BlockState][block_address] == B_FREE                               'if the block is B_FREE, change its state to B_TEMP
+      field[BlockState][block_address] := B_TEMP
+    else
+      ' now we are using head or body so we have to move it!
+      if block_address == fsTargetBlock                                         'a named block stays named until it is moved
+        fsTargetBlock := NOT_ENABLED
+      freeIndex := abs getrnd() // blockFreeCount                               'randomly pick an B_FREE block to move the B_HEAD/B_BODY block to
+      repeat BLOCKS with freeBlockAddress                                       'block is sHEAD/sBODY, must relocate it to an sFREE block
         ifnot field[BlockState][freeBlockAddress]                               'if the block is B_FREE
           ifnot freeIndex--
             quit
 
-  ' evict this block!
-  'debug("* nbaddr() evicting block ", uhex_word(block_address, freeBlockAddress))
-  flash_read_block_addr(block_address, @tmpBlockBuffer, $000, $FFF)             'read the B_HEAD/B_BODY block
-  next_cycle_bits := next_active_cycle(LONG[@tmpBlockBuffer].[7..5])            'advance its lifecycle
-  flash_program_block(freeBlockAddress, @tmpBlockBuffer, next_cycle_bits)       'program the B_FREE block with the B_HEAD/B_BODY data
-  flash_activate_block(freeBlockAddress, next_cycle_bits)                       'activate the B_FREE block, now superior to the original block
-  flash_cancel_block(block_address)                                             'cancel the original block to complete the move
+      ' evict this block!
+      'debug("* nbaddr() evicting block ", uhex_word(block_address, freeBlockAddress))
+      flash_read_block_addr(block_address, @tmpBlockBuffer, $000, $FFF)         'read the B_HEAD/B_BODY block
+      next_cycle_bits := next_active_cycle(LONG[@tmpBlockBuffer].[7..5])        'advance its lifecycle
+      flash_program_block(freeBlockAddress, @tmpBlockBuffer, next_cycle_bits)   'program the B_FREE block with the B_HEAD/B_BODY data
+      flash_activate_block(freeBlockAddress, next_cycle_bits)                   'activate the B_FREE block, now superior to the original block
+      flash_cancel_block(block_address)                                         'cancel the original block to complete the move
 
-  field[IDToBlock][LONG[@tmpBlockBuffer].[19..8]] := freeBlockAddress             'update IDToBlock table
-  field[BlockState][freeBlockAddress] := field[BlockState][block_address]\B_TEMP  'free block gets curr block state, -AND- set new block to B_TEMP
+      field[IDToBlock][LONG[@tmpBlockBuffer].[19..8]] := freeBlockAddress         'update IDToBlock table
+      field[BlockState][freeBlockAddress] := field[BlockState][block_address]\B_TEMP 'free block gets curr block state, -AND- set new block to B_TEMP
 
 
 PRI setup_semaphore() : status
@@ -3472,6 +3644,37 @@ PUB TEST_blockStateOf(block_address) : stateBits
         stateBits := field[BlockState][block_address]
 
     LONG[@errorCode][cogid()] := stateBits < 0 ? stateBits : SUCCESS
+
+
+PUB TEST_skipCreateChecks()
+'' TEST METHOD: make the next create_file() call skip its free-ID and free-block checks
+''
+'' create_file() checks that a block ID and every block the file needs are free before it changes anything. The
+'' next create_file() call after this one skips both checks, so a file too big for the free space runs out inside
+'' the block loop instead. That call clears the skip, whatever it returns.
+''
+
+    fsSkipCreateChecks := TRUE
+
+
+PUB TEST_setTargetBlock(block_address) : status
+'' TEST METHOD: name a block that the block allocations take in place of a random pick
+''
+'' While a block is named, every block allocation whose free-block check passes takes the named block if its
+'' state is not B_TEMP: a free named block becomes the new block and stays named, and a B_HEAD/B_BODY named block
+'' is moved to a free block, which clears the name. NOT_ENABLED clears the name. The lock is not taken.
+''
+'' @param block_address - the block offset within the file system, or NOT_ENABLED
+'' @returns status - SUCCESS (0) if the name was set or cleared, E_TEST_BAD_BLOCK_ARG if block_address is neither
+'' .. NOT_ENABLED nor inside 0..BLOCKS-1 (the name is then left as it was)
+
+    status := SUCCESS
+    if block_address <> NOT_ENABLED and (block_address < 0 or block_address > BLOCKS - 1)
+        status := E_TEST_BAD_BLOCK_ARG                                          ' refuse an address outside the file system
+    else
+        fsTargetBlock := block_address
+
+    LONG[@errorCode][cogid()] := status
 
 
 PUB TEST_dumpMountMap(pFileBlocks, pFragments): fileLen, badLen | bReady, bFileFound, blockCount, blkIdx, block_address, blockTypeBits, badBlockCount, fileCount, LONG signature[2], bad_count, dupe_count, dupeIdCount
