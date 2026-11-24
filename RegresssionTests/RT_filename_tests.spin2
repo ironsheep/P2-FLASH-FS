@@ -16,8 +16,8 @@
 
 { A name has at most FILENAME_SIZE - 1 characters: the name field of a head block holds FILENAME_SIZE
   bytes, the last one the terminator.  A name that cannot be stored whole must be refused, and a
-  refused call changes nothing.  A refusal is any negative return, and a refusal of exists() is FALSE
-  with a negative error().
+  refused call changes nothing.  A refusal returns E_BAD_FILENAME, and a refusal of exists() is FALSE
+  with error() holding E_BAD_FILENAME.
 
   directory() is given a buffer of FILENAME_SIZE bytes.  The test buffer has one more byte after
   that, set to a guard value before every call: a driver that stays inside the buffer leaves the
@@ -506,7 +506,7 @@ PRI badNameCase(pubIdx, pBadName) | returned, errCode, filesBefore, filesAfter
     _, _, filesAfter := flash.stats()
 
     utils.evaluateSubValue(isRefusal(pubIdx, returned), @"the call was refused", TRUE)
-    utils.evaluateSubValue(errCode < 0, @"error() holds a negative code", TRUE)
+    utils.evaluateSubStatus(errCode, @"error() holds E_BAD_FILENAME", flash.E_BAD_FILENAME)
     utils.evaluateSubValue(filesAfter, @"files in the directory", filesBefore)
     utils.evaluateSubValue(flash.exists(@sourceFile), @"the file rename() could rename is still there", TRUE)
     flash.delete(pBadName)                              ' removes the entry a driver that accepts the name makes
@@ -539,7 +539,7 @@ PRI callWithBadName(pubIdx, pBadName) : returned, errCode
 
 
 PRI isRefusal(pubIdx, returned) : bRefused
-' Tell whether a return value is a refusal: FALSE from exists(), a negative code from every other call.
+' Tell whether a return value is a refusal for a bad name: FALSE from exists(), E_BAD_FILENAME from every other call.
 
 ' @param pubIdx - number of the call that was made, one of the NP_ values
 ' @param returned - what the call returned
@@ -548,7 +548,7 @@ PRI isRefusal(pubIdx, returned) : bRefused
     if pubIdx == NP_EXISTS
         bRefused := returned == FALSE
     else
-        bRefused := returned < 0
+        bRefused := returned == flash.E_BAD_FILENAME
 
 
 PRI badNamePointer(kindIdx) : pName
@@ -590,7 +590,7 @@ PRI namePubTitle(pubIdx) : pTitle
         NP_RENAME_NEW: pTitle := @"rename() with the bad name as the new name is refused and renames nothing"
         NP_DELETE: pTitle := @"delete() is refused"
         NP_CREATE_FILE: pTitle := @"create_file() is refused and makes no directory entry"
-        NP_EXISTS: pTitle := @"exists() answers FALSE and sets a negative error()"
+        NP_EXISTS: pTitle := @"exists() answers FALSE and sets error() to E_BAD_FILENAME"
         NP_FILE_SIZE: pTitle := @"file_size() is refused"
         other: pTitle := @"file_size_unused() is refused"
 

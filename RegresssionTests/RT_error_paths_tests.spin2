@@ -59,6 +59,7 @@ CON ' ---- Test Geometry ----
     BEFORE_FIRST_BYTE = -1                              ' a file position before the first byte
     WHENCE_PAST_LAST = flash.SK_CURRENT_POSN + 1        ' the first seek whence above the valid ones
     NO_BYTES = 0                                        ' a transfer count of zero, and the return of a call that moved nothing
+    UNTOUCHED_BYTE = $C3                                ' value set in the first byte of a buffer a call must leave alone
     TAIL_TEXT_BYTES = 4                                 ' bytes of the last string of the string file, which has no terminator
     TRUNCATE_BUF_BYTES = 4                              ' string buffer size that holds less than the string
     STRING_BUF_BYTES = 16                               ' string buffer size that holds every string of the string file
@@ -199,7 +200,7 @@ PUB go() | status, pFailedCall
         testStringReads()
         testSeekCodes()
         testWriteFromOtherCog()
-        testCountProbes()
+        testTransferCounts()
         testCreateFileLength()
         testBadHandles()
         testNeverOpenedHandle()
@@ -950,39 +951,44 @@ PRI writeWorker()
     workDone := TRUE
 
 
-PRI testCountProbes() | handle, byteCount, errCode
-' Measure, without checking, what read(), write() and rd_str() do with a count of zero, and what read() does with a count below zero.
-' Nothing here is a test: each measurement is printed.
+PRI testTransferCounts() | handle
+' read(), write() and rd_str() with a count of zero move nothing and succeed, and with a count below zero move nothing and refuse.
 
 ' Local Variables:
 ' @local handle - handle of the file being used
-' @local byteCount - what the call returned
-' @local errCode - error() after the call
 
-    debug(" ")
-    debug("* Measured, not checked: read(), write() and rd_str() with a count of zero, and read() with a count below zero")
+    utils.startTestGroup(@"read(), write() and rd_str() with a count of zero or below")
 
-    handle := flash.open(@dataFile, flash.FILEMODE_READ)
-    byteCount := flash.read(handle, @readBuf, NO_BYTES)
-    errCode := flash.error()
-    debug("*   read() count zero: returned ", sdec_(byteCount), ", error() ", sdec_(errCode))
-    flash.seek(handle, 0, flash.SK_FILE_START)
-    byteCount := flash.read(handle, @readBuf, NEGATIVE_COUNT)
-    errCode := flash.error()
-    debug("*   read() count below zero: returned ", sdec_(byteCount), ", error() ", sdec_(errCode))
-    utils.closeHandle(handle)
+    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a file for the read counts")
+    utils.startTest(@"read() with a count of zero moves no bytes and succeeds")
+    readBuf[0] := UNTOUCHED_BYTE
+    checkValue(flash.read(handle, @readBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
+    utils.evaluateSubValue(readBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+    utils.startTest(@"read() with a count below zero moves no bytes and refuses")
+    readBuf[0] := UNTOUCHED_BYTE
+    checkValue(flash.read(handle, @readBuf, NEGATIVE_COUNT), NO_BYTES, flash.E_BAD_FILE_LENGTH)
+    utils.evaluateSubValue(readBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+    utils.startTest(@"close() of the file the read counts used")
+    closeSub(handle)
 
-    handle := flash.open(@stringFile, flash.FILEMODE_READ)
-    byteCount := flash.rd_str(handle, @stringBuf, NO_BYTES)
-    errCode := flash.error()
-    debug("*   rd_str() count zero: returned ", sdec_(byteCount), ", error() ", sdec_(errCode))
-    utils.closeHandle(handle)
+    handle := openFor(@stringFile, flash.FILEMODE_READ, @"open(,r) a file for the rd_str counts")
+    utils.startTest(@"rd_str() with a count of zero moves no bytes and succeeds")
+    stringBuf[0] := UNTOUCHED_BYTE
+    checkValue(flash.rd_str(handle, @stringBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
+    utils.evaluateSubValue(stringBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+    utils.startTest(@"rd_str() with a count below zero moves no bytes and refuses")
+    checkValue(flash.rd_str(handle, @stringBuf, NEGATIVE_COUNT), NO_BYTES, flash.E_BAD_FILE_LENGTH)
+    utils.evaluateSubValue(stringBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+    utils.startTest(@"close() of the file the rd_str counts used")
+    closeSub(handle)
 
-    handle := flash.open(@newFile, flash.FILEMODE_WRITE)
-    byteCount := flash.write(handle, @dataBuf, NO_BYTES)
-    errCode := flash.error()
-    debug("*   write() count zero: returned ", sdec_(byteCount), ", error() ", sdec_(errCode))
-    utils.closeHandle(handle)
+    handle := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a file for the write counts")
+    utils.startTest(@"write() with a count of zero moves no bytes and succeeds")
+    checkValue(flash.write(handle, @dataBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
+    utils.startTest(@"write() with a count below zero moves no bytes and returns E_BAD_FILE_LENGTH")
+    checkValue(flash.write(handle, @dataBuf, NEGATIVE_COUNT), flash.E_BAD_FILE_LENGTH, flash.E_BAD_FILE_LENGTH)
+    utils.startTest(@"close() of the file the write counts used")
+    closeSub(handle)
 
 
 PRI testCreateFileLength()
