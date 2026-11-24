@@ -185,6 +185,12 @@ hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                          
 
 tmpBlockBuffer  BYTE     0[BLOCK_SIZE]                                          'buffer used for copying blocks
 
+VAR ' ---- per-instance state ----
+
+  ' count of block programs refused for a block address outside 0..BLOCKS-1; per object instance (VAR, not DAT)
+  ' so it lies outside the DAT tables above, and it is incremented only when a program is refused
+  LONG fsRefusedBlocks
+
 
 CON ' --- Public Methods ---
 
@@ -2704,29 +2710,35 @@ PRI flash_program_block(block_address, p_buffer, cycle_bits) | pageIndex
 
 ' Write block in memory at block_address to physical block
 '
+' A block_address outside 0..BLOCKS-1 is refused before any command reaches the chip: nothing is
+' sent to the flash and fsRefusedBlocks is incremented.
+'
 ' @param block_address - the block offset within the file system
 ' @param p_buffer - memory location from which to get the data
 ' @param cycle_bits - lifeCycle bit-pattern to place into block
 
 ' Local Variables:
 ' @local pageIndex - index [0-15] of 256-Byte page within 4KB block
-  if showRTdebug
-    debug("- program_block() ", uhex_word(block_address))
+  if block_address < 0 or block_address > BLOCKS - 1                            'refuse a block outside the file system, before any command reaches the chip
+    fsRefusedBlocks++
+  else
+    if showRTdebug
+      debug("- program_block() ", uhex_word(block_address))
 
-  flash_command($06, 1)                                                         'enable write
-  flash_command($20 | (FIRST_BLOCK + block_address) << 20, 4)                   'erase 4KB block
+    flash_command($06, 1)                                                       'enable write
+    flash_command($20 | (FIRST_BLOCK + block_address) << 20, 4)                 'erase 4KB block
 
-  BYTE[p_buffer].[7..5] := cycle_bits                                           'install lifecycle for CRC computation
-  LONG[p_buffer + $FFC] := block_crc(p_buffer)                                  'compute and install CRC
-  BYTE[p_buffer].[7..5]~~                                                       'remove lifecycle (:= %111), block will be inactive until activated
+    BYTE[p_buffer].[7..5] := cycle_bits                                         'install lifecycle for CRC computation
+    LONG[p_buffer + $FFC] := block_crc(p_buffer)                                'compute and install CRC
+    BYTE[p_buffer].[7..5]~~                                                     'remove lifecycle (:= %111), block will be inactive until activated
 
-  flash_wait()                                                                  'wait for erasure to complete (~45ms)
+    flash_wait()                                                                'wait for erasure to complete (~45ms)
 
-  repeat 16 with pageIndex                                                      'program 16 pages within 4KB block
-    flash_command($06, 1)                                                                'enable write
-    flash_command($02 | (FIRST_BLOCK + block_address) << 20 | pageIndex << 16, 4)        'program
-    flash_send(p_buffer + pageIndex << 8, 256)                                           'send 256 bytes
-    flash_wait()                                                                'wait for programming to complete (~400us)
+    repeat 16 with pageIndex                                                    'program 16 pages within 4KB block
+      flash_command($06, 1)                                                     'enable write
+      flash_command($02 | (FIRST_BLOCK + block_address) << 20 | pageIndex << 16, 4)  'program
+      flash_send(p_buffer + pageIndex << 8, 256)                                'send 256 bytes
+      flash_wait()                                                              'wait for programming to complete (~400us)
 
 
 PRI flash_activate_block(block_address, cycle_bits)
@@ -2757,13 +2769,19 @@ PRI flash_program_bit(block_address, bit_pattern)
 
 ' Write new bit_pattern into 1st byte of block (this contains the life-cycle bits) this is our most atomic operation
 '
+' A block_address outside 0..BLOCKS-1 is refused before any command reaches the chip: nothing is
+' sent to the flash and fsRefusedBlocks is incremented.
+'
 ' @param block_address - the block offset within the file system
 ' @param bit_pattern - the value to be placed in first byte of block
 
-  flash_command($06, 1)                                                         'enable write
-  flash_command($02 | (FIRST_BLOCK + block_address) << 20, 4)                   'program
-  flash_send(@bit_pattern, 1)                                                   'send byte with bit pattern
-  flash_wait()                                                                  'wait for programming to complete
+  if block_address < 0 or block_address > BLOCKS - 1                            'refuse a block outside the file system, before any command reaches the chip
+    fsRefusedBlocks++
+  else
+    flash_command($06, 1)                                                       'enable write
+    flash_command($02 | (FIRST_BLOCK + block_address) << 20, 4)                 'program
+    flash_send(@bit_pattern, 1)                                                 'send byte with bit pattern
+    flash_wait()                                                                'wait for programming to complete
 
 
 PRI flash_wait()| statusBits
@@ -2910,6 +2928,8 @@ CON { constants exposed for regression testing }
      TEST_BLK_CORRUPT = 4
 
      TEST_CORRUPT_BIT = %0000_0100                                  ' a reserved bit of the first byte of a block, covered by the block CRC
+
+     TEST_BLOCK_BELOW_FS = -4                                       ' relative block just below the file system: flash sector $07C000, in the boot image area
 
      ' The counts TEST_setElectionCounts() places in the entries of the lock election:
      '  TEST_COUNT_UNSET  - the count every entry holds at power-up, before any cog has entered the election
@@ -3347,6 +3367,71 @@ PUB TEST_changeBlock(blockOp, block_address, p_source, cycle_bits) : status | BY
             other:
                 flash_read_block_addr(block_address, @firstByte, $000, $000)    ' read first byte of block
                 flash_program_bit(block_address, firstByte & !TEST_CORRUPT_BIT) ' clear the reserved bit, nothing else
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+
+    LONG[@errorCode][cogid()] := status
+
+
+PUB TEST_refusedBlockCount() : refusedCount
+'' TEST METHOD: return the number of block programs this object instance has refused
+''
+'' The count rises by one each time flash_program_block() or flash_program_bit() is given a block address
+'' outside 0..BLOCKS-1. It belongs to the object instance, so read it through the instance that made the calls.
+''
+'' @returns refusedCount - block programs refused so far
+
+    refusedCount := fsRefusedBlocks
+
+
+PUB TEST_readBelowFsCrc() : status, crc
+'' TEST METHOD: read the flash sector just below the file system and return its CRC, a read only
+''
+'' The sector is relative block TEST_BLOCK_BELOW_FS ($07C000), outside the file system. The read command does
+'' not change the flash, so this is safe on any board. The CRC is computed as block_crc() computes it, over the
+'' first BLOCK_SIZE - 4 bytes. The lock is created here if no cog has created it yet.
+''
+'' @returns status - SUCCESS (0) if the sector was read, or E_NO_LOCK_AVAIL if the lock could not be created
+'' @returns crc - the CRC of the sector, 0 when status is not SUCCESS
+
+    status := SUCCESS
+    crc := 0
+    if fsLock == -1                                                             ' don't acquire lock if already have it
+        status := setup_semaphore()
+
+    if status == SUCCESS
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
+
+        flash_read_block_addr(TEST_BLOCK_BELOW_FS, @blockForUser, $000, BLOCK_SIZE - 1) ' read the whole sector into the buffer
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+        crc := block_crc(@blockForUser)
+
+    LONG[@errorCode][cogid()] := status
+
+
+PUB TEST_programBelowFs(blockOp) : status
+'' TEST METHOD: hand relative block TEST_BLOCK_BELOW_FS to a flash programming primitive, which must refuse it
+''
+'' This exists to prove the range check of flash_program_block() and flash_program_bit(): it calls the primitive
+'' directly with a block address outside 0..BLOCKS-1, which TEST_changeBlock() never does. Each call that is
+'' refused raises TEST_refusedBlockCount() by one. Call this while the file system is NOT mounted.
+''
+'' @param blockOp - the primitive: TEST_BLK_PROGRAM calls flash_program_block(), TEST_BLK_CORRUPT calls flash_program_bit()
+'' @returns status - SUCCESS (0) if the primitive was called, E_TEST_BAD_BLOCK_ARG if blockOp is neither of those,
+'' .. or E_NO_LOCK_AVAIL if the lock could not be created
+
+    status := SUCCESS
+    if not lookdown(blockOp : TEST_BLK_PROGRAM, TEST_BLK_CORRUPT)
+        status := E_TEST_BAD_BLOCK_ARG                                          ' refuse an operation this method does not have
+    elseif fsLock == -1                                                         ' don't acquire lock if already have it
+        status := setup_semaphore()
+
+    if status == SUCCESS
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
+
+        if blockOp == TEST_BLK_PROGRAM
+            flash_program_block(TEST_BLOCK_BELOW_FS, @block2ForUser, 0)
+        else
+            flash_program_bit(TEST_BLOCK_BELOW_FS, 0)
         lockrel(fsLock)                                                         ' release the lock, we're done with it
 
     LONG[@errorCode][cogid()] := status
