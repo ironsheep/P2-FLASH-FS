@@ -3,7 +3,8 @@
 ''   File....... RT_power_loss_tests.spin2
 ''   Purpose.... This object builds, straight on the flash, the block states a power cut can leave: a
 ''               duplicate ID, an orphan body block, a head block that was programmed and never
-''               activated, and a block whose CRC no longer matches.  For each it checks that
+''               activated, a block whose CRC no longer matches, and blocks whose CRC matches but
+''               whose ID, NextID, EndPtr or data offset is out of range.  For each it checks that
 ''               can_mount() reports it without changing any block, that mount() repairs it with the
 ''               right status, that the files which should survive read back whole, and that a second
 ''               mount is clean.  It also checks that a block move during create_file() leaves the
@@ -30,6 +31,9 @@
     can_mount(), whatever else it holds: it is never checked, used, cancelled or reported;
   - an active block whose CRC does not match is cancelled by mount(), which reports
     E_BAD_BLOCKS_REMOVED, and can_mount() is FALSE;
+  - an active block whose CRC matches but whose ID or NextID is not a block ID, whose EndPtr lies
+    outside its data area, or whose head data offset skips past its EndPtr, is a bad block too: mount() cancels it and reports E_BAD_BLOCKS_REMOVED,
+    can_mount() is FALSE, and an older copy of its ID is kept as the only good one;
   - two active blocks with one ID: mount() keeps the newer lifecycle and cancels the older one,
     returning SUCCESS; can_mount() is FALSE because mount() changes a block;
   - an active block that no file chain reaches (an orphan, or a block of a broken chain) is cancelled
@@ -121,6 +125,15 @@ CON ' ---- Test Geometry ----
     NO_CYCLE = 0                                        ' lifecycle of a hook operation that writes no lifecycle
     MOVED_FILE_BYTES = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + BODY_TAIL_BYTES ' bytes of the file made with create_file(): three blocks
     MOVED_FILL = $6C                                    ' fill value of the file made with create_file()
+    OUT_OF_RANGE_ID = flash.BLOCKS                      ' the first value past the last block ID: no table has an entry for it
+    BAD_HEAD_END_PTR = flash.ADDR_HEAD_DATA - 1         ' an EndPtr just before the data area of a head block
+    BAD_DATA_OFFSET = ONE_BLOCK_BYTES + 1               ' a data offset past the bytes the one-block file holds: its EndPtr falls before the data it skips
+
+    ' The field of a block a bad copy changes:
+    '  FIELD_THIS_ID     - the block's own ID
+    '  FIELD_NEXT        - the NextID of a block with a next block, the EndPtr of a last block
+    '  FIELD_DATA_OFFSET - the data offset of a head block, in the low bits of its filename CRC word
+    #0, FIELD_THIS_ID, FIELD_NEXT, FIELD_DATA_OFFSET
 
 CON ' ---- Block Format ----
 
@@ -139,6 +152,10 @@ CON ' ---- Block Format ----
     BODY_BIT = 1
     CRC_BYTES = 4
     FIRST_DATA_BYTE = 1                                 ' first byte after the byte that holds the lifecycle
+    ' The data offset of a head block: the low bits of its filename CRC word, the second long of the block
+    DATA_OFFSET_LONG = flash.ADDR_HEAD_FN_CRC / 4       ' the long, counted from 0, that holds the filename CRC word
+    DATA_OFFSET_TOP = 11
+    DATA_OFFSET_BOTTOM = 0
     BLOCK_CRC_POLY = $AD0424F3 rev 31                   ' polynomial of the block CRC
 
     ' Lifecycles: an active block has one zero bit, the three active values follow each other in the
@@ -230,6 +247,7 @@ crcHeadAddr     LONG    0                               ' the one block of the o
 targetHeadId    LONG    0                               ' block ID of the target file's head block
 targetBodyId    LONG    0                               ' block ID of the target file's body block
 copyAddr        LONG    0                               ' block a case programmed
+sourceAddr      LONG    0                               ' block a case copied into copyAddr with one field changed
 secondCopyAddr  LONG    0                               ' second block a case programmed
 copyCycle       LONG    0                               ' lifecycle the copy was given
 touchedCount    LONG    0                               ' blocks in touchedAddr
@@ -275,6 +293,10 @@ PUB go() | status, pFailedCall
         testOrphanBody()
         testInactiveHead()
         testBadCrcBlock()
+        testOutOfRangeId()
+        testOutOfRangeNextId()
+        testOutOfRangeEndPtr()
+        testOutOfRangeDataOffset()
         testMovedNewHead()
         testFaults()
         testRecoveryFaults()
@@ -548,6 +570,111 @@ PRI mountBadCrc()
         mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)       ' a block cancelled for its CRC is a bad block removed
         readInto(crcHeadAddr, @copyBuf)
         utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the block is cancelled", TRUE)
+
+
+PRI testOutOfRangeId()
+' A copy of the target file's body block whose ID is past the last block ID, its CRC good: can_mount() is FALSE, mount() cancels it as a bad block and returns E_BAD_BLOCKS_REMOVED, and every file survives.
+
+    utils.startTestGroup(@"a block whose ID is past the last block ID")
+    setUpFiles()
+    buildFieldCopy(@"copy the body block of the target file with an ID past the last one, activate it and read it back", targetBodyAddr, FIELD_THIS_ID, OUT_OF_RANGE_ID)
+    canMountStep(@"can_mount() is FALSE for a block whose ID is past the last one and changes no block", FALSE)
+    mountFieldCopy(@"mount() cancels the block whose ID is past the last one and returns E_BAD_BLOCKS_REMOVED")
+    survivorsStep(TRUE)
+    secondMountStep()
+
+
+PRI testOutOfRangeNextId()
+' A copy of the target file's head block with the next lifecycle and a NextID past the last block ID, its CRC good: can_mount() is FALSE, mount() cancels the copy as a bad block, keeps the older head and returns E_BAD_BLOCKS_REMOVED, and every file survives.
+
+    utils.startTestGroup(@"a newer head block whose NextID is past the last block ID")
+    setUpFiles()
+    buildFieldCopy(@"copy the head block of the target file with the next lifecycle and a NextID past the last block ID, activate it and read it back", targetHeadAddr, FIELD_NEXT, OUT_OF_RANGE_ID)
+    canMountStep(@"can_mount() is FALSE for a block whose NextID is past the last block ID and changes no block", FALSE)
+    mountFieldCopy(@"mount() cancels the head block whose NextID is past the last block ID, keeps the older head and returns E_BAD_BLOCKS_REMOVED")
+    survivorsStep(TRUE)
+    secondMountStep()
+
+
+PRI testOutOfRangeEndPtr()
+' A copy of the one-block file's block with the next lifecycle and an EndPtr before its data area, its CRC good: can_mount() is FALSE, mount() cancels the copy as a bad block, keeps the older block and returns E_BAD_BLOCKS_REMOVED, and every file survives.
+
+    utils.startTestGroup(@"a newer last block whose EndPtr lies before its data area")
+    setUpFiles()
+    buildFieldCopy(@"copy the one-block file's block with the next lifecycle and an EndPtr before its data area, activate it and read it back", crcHeadAddr, FIELD_NEXT, BAD_HEAD_END_PTR)
+    canMountStep(@"can_mount() is FALSE for a block whose EndPtr lies before its data area and changes no block", FALSE)
+    mountFieldCopy(@"mount() cancels the block whose EndPtr lies before its data area, keeps the older block and returns E_BAD_BLOCKS_REMOVED")
+    survivorsStep(TRUE)
+    secondMountStep()
+
+
+PRI testOutOfRangeDataOffset()
+' A copy of the one-block file's block with the next lifecycle and a data offset past the bytes it holds, its CRC good: can_mount() is FALSE, mount() cancels the copy as a bad block, keeps the older block and returns E_BAD_BLOCKS_REMOVED, and every file survives.
+
+    utils.startTestGroup(@"a newer head block whose data offset skips past its EndPtr")
+    setUpFiles()
+    buildFieldCopy(@"copy the one-block file's block with the next lifecycle and a data offset past the bytes it holds, activate it and read it back", crcHeadAddr, FIELD_DATA_OFFSET, BAD_DATA_OFFSET)
+    canMountStep(@"can_mount() is FALSE for a head block whose data offset skips past its EndPtr and changes no block", FALSE)
+    mountFieldCopy(@"mount() cancels the head block whose data offset skips past its EndPtr, keeps the older block and returns E_BAD_BLOCKS_REMOVED")
+    survivorsStep(TRUE)
+    secondMountStep()
+
+
+PRI buildFieldCopy(pTitle, copiedAddr, fieldSel, fieldValue) | pBlock, status, actStatus
+' Copy a block of the files to a free block with the next lifecycle and one control field changed, activate the copy and read it back, as one test.
+
+' @param pTitle - address of zstring naming the test
+' @param copiedAddr - the block to copy
+' @param fieldSel - the field the copy changes: FIELD_THIS_ID, FIELD_NEXT or FIELD_DATA_OFFSET
+' @param fieldValue - the value the copy holds in that field
+
+' Local Variables:
+' @local pBlock - address of a block read back
+' @local status - what the program operation returned
+' @local actStatus - what the activate operation returned
+
+    utils.startTest(pTitle)
+    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+    if bSetUp
+        sourceAddr := copiedAddr
+        readInto(sourceAddr, @sourceBuf)
+        copyCycle := nextCycle(cycleOf(@sourceBuf))
+        copyAddr := findFreeBlock(NO_BLOCK)
+        bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
+        setField(@copyBuf, fieldSel, fieldValue)
+        ' programming computes the CRC over the changed field, so only the field is out of range
+        status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
+        actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, copyAddr, NO_SOURCE, copyCycle)
+        debug("  block ", uhex_word_(sourceAddr), " copied to block ", uhex_word_(copyAddr), " with a field set to ", uhex_word_(fieldValue))
+        utils.evaluateSubStatus(status, @"program the copy", flash.SUCCESS)
+        utils.evaluateSubStatus(actStatus, @"activate the copy", flash.SUCCESS)
+
+        pBlock := readInto(copyAddr, @copyBuf)
+        utils.evaluateSubValue(pBlock > 0, @"the copy was read back", TRUE)
+        utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the copy is the next one", copyCycle)
+        utils.evaluateSubValue(fieldOf(@copyBuf, fieldSel), @"the copy holds the changed field", fieldValue)
+        utils.evaluateSubValue(isCrcGood(@copyBuf), @"the copy's CRC matches", TRUE)
+
+        readInto(sourceAddr, @copyBuf)
+        utils.evaluateSubValue(cycleOf(@copyBuf), @"the copied block keeps its lifecycle", cycleOf(@sourceBuf))
+        utils.evaluateSubValue(isActive(cycleOf(@sourceBuf)), @"the copied block is active", TRUE)
+
+        setTouched(sourceAddr, copyAddr, NO_BLOCK, NO_BLOCK)
+
+
+PRI mountFieldCopy(pTitle)
+' mount() cancels the copy with the field out of range, reports it, and keeps the block it was copied from, as one test.
+
+' @param pTitle - address of zstring naming the test
+
+    utils.startTest(pTitle)
+    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+    if bSetUp
+        mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)       ' a block with a field out of range is a bad block removed
+        readInto(copyAddr, @copyBuf)
+        utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the copy is cancelled", TRUE)
+        readInto(sourceAddr, @copyBuf)
+        utils.evaluateSubValue(cycleOf(@copyBuf), @"the copied block keeps its lifecycle", cycleOf(@sourceBuf))
 
 
 PRI testMovedNewHead()
@@ -1429,6 +1556,32 @@ PRI idOf(pBlock) : blockId
 ' @returns blockId - the ID the block carries
 
     blockId := LONG[pBlock].[ID_TOP..ID_BOTTOM]
+
+
+PRI fieldOf(pBlock, fieldSel) : fieldValue
+' Give one control field of a block image.
+
+' @param pBlock - address of a block image
+' @param fieldSel - the field: FIELD_THIS_ID, FIELD_NEXT or FIELD_DATA_OFFSET
+' @returns fieldValue - the value the block holds in that field
+
+    case fieldSel
+        FIELD_THIS_ID: fieldValue := LONG[pBlock].[ID_TOP..ID_BOTTOM]
+        FIELD_NEXT: fieldValue := LONG[pBlock].[NEXT_TOP..NEXT_BOTTOM]
+        other: fieldValue := LONG[pBlock][DATA_OFFSET_LONG].[DATA_OFFSET_TOP..DATA_OFFSET_BOTTOM]
+
+
+PRI setField(pBlock, fieldSel, fieldValue)
+' Change one control field of a block image.
+
+' @param pBlock - address of a block image
+' @param fieldSel - the field: FIELD_THIS_ID, FIELD_NEXT or FIELD_DATA_OFFSET
+' @param fieldValue - the value to place in that field
+
+    case fieldSel
+        FIELD_THIS_ID: LONG[pBlock].[ID_TOP..ID_BOTTOM] := fieldValue
+        FIELD_NEXT: LONG[pBlock].[NEXT_TOP..NEXT_BOTTOM] := fieldValue
+        other: LONG[pBlock][DATA_OFFSET_LONG].[DATA_OFFSET_TOP..DATA_OFFSET_BOTTOM] := fieldValue
 
 
 PRI nextCycle(cycle) : newerCycle

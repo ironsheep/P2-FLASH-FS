@@ -323,7 +323,7 @@ PRI testCopyFile(pOldFilename, pNewFilename) | rdHandle, wrHandle, rdStatus, wrS
 
 
 PRI testOldFormatRelativeSeek(pFilename, totalRecordsWritten) | oldHandle, bytesRead, firstRecord, nextRecord, recordIdx, readLength
-' Read records from an old format circular file, then seek relative to the current position and check the position and the record read.
+' Read records from an old format circular file, then seek relative to the current position and check the position and the record read; the handle's size and the end of the file are the bytes the limit keeps.
 '
 ' @param pFilename - address of zstring with the name of an old format file longer than the circular limit
 ' @param totalRecordsWritten - records written to the file since it was created
@@ -345,6 +345,8 @@ PRI testOldFormatRelativeSeek(pFilename, totalRecordsWritten) | oldHandle, bytes
     utils.startTest(@"relative seek after reads reports the offset and keeps the place")
     utils.setCheckCountPerTest(1)
     if oldHandle >= utils.FIRST_HANDLE
+        ' the handle reads the file from the first byte the limit keeps, so its size is the limit, as its seek positions count
+        utils.evaluateSubValue(flash.file_size_for_handle(oldHandle), @"file_size_for_handle() is the bytes the limit keeps", CIRCULAR_LEN_IN_BYTES)
         repeat OLD_FORMAT_READ_RECORDS with recordIdx
             readLength := flash.read(oldHandle, @record, RECORD_LEN)
             utils.verifyRecord(@record, RECORD_LEN, nextRecord, readLength)
@@ -364,6 +366,9 @@ PRI testOldFormatRelativeSeek(pFilename, totalRecordsWritten) | oldHandle, bytes
         nextRecord++
         readLength := flash.read(oldHandle, @record, RECORD_LEN)
         utils.verifyRecord(@record, RECORD_LEN, nextRecord, readLength)
+
+        ' the end of the file, counted from the first byte the limit keeps, is the size the handle reports
+        utils.evaluateSubValue(flash.seek(oldHandle, posx, flash.SK_FILE_START), @"seek(POSX, SK_FILE_START) is the bytes the limit keeps", CIRCULAR_LEN_IN_BYTES)
     else
         utils.evaluateSubValue(oldHandle, @"usable handle", utils.FIRST_HANDLE)
 

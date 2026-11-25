@@ -131,21 +131,21 @@ PUB go()
     '   A - Cases with NO starting file (0kb)
     '     A1 - write less than 8kb                      - close as file -> end with file less than limit
     utils.startTestGroup(@"A1 Append 6KB circular to empty file")
-    testAppendRecords(@testfileA1, 6, 0, 0)             ' this creates file (6,144 = 2 blocks)
+    testAppendRecords(@testfileA1, 0, 6, 0, 0)          ' this creates file (6,144 = 2 blocks)
     utils.testVerifyRecords(@testfileA1, 6, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies all of file
 
     utils.showFiles()
 
     '     A2 - write 8kb                                - close as file -> end with file at limit
     utils.startTestGroup(@"A2 Append 8KB circular to empty file")
-    testAppendRecords(@testfileA2, 8, 1, 2)             ' this creates file (8,192 = 3 blocks)
+    testAppendRecords(@testfileA2, 0, 8, 1, 2)          ' this creates file (8,192 = 3 blocks)
     utils.testVerifyRecords(@testfileA2, 8, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies all of file
 
     utils.showFiles()
 
     '     A3 - write more than 8kb (12kb)               - (move head, canceling prior head and block(s)) moves head into chain, lops off head part of chain -> end with file at limit
     utils.startTestGroup(@"A3 Append 12KB circular to empty file")
-    testAppendRecords(@testfileA3, 12, 2, 5)            ' this creates file (12,132 = 4 blocks, froncated to 3 blocks)
+    testAppendRecords(@testfileA3, 0, 12, 2, 5)         ' this creates file (12,132 = 4 blocks, froncated to 3 blocks)
     utils.testVerifyRecords(@testfileA3, 12, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
@@ -153,24 +153,24 @@ PUB go()
     '   B - Cases with SHORTer starting file (3kb)
     '     B1 - write amount that will still fit in 8kb  - close as file -> end with file at limit (tail gets replaced) -> end with file less than limit
     utils.startTestGroup(@"B1 Append 5KB circular to 3kb file")
-    testAppendRecords(@testfileB1, 3, 3, 8) ' this creates file (3,072 = 1 block)
-    testAppendRecords(@testfileB1, 5, 4, 9) ' this appends to file (8,192 = 3 blocks)
+    testAppendRecords(@testfileB1, 0, 3, 3, 8) ' this creates file (3,072 = 1 block)
+    testAppendRecords(@testfileB1, 3, 5, 4, 9) ' this appends to file (8,192 = 3 blocks)
     utils.testVerifyRecords(@testfileB1, 8, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
     '     B2 - write amount that will fill 8kb          - close as file -> end with file at limit (tail gets replaced) -> end with file at limit
     utils.startTestGroup(@"B2 Append 8KB circular to 3kb file")
-    testAppendRecords(@testfileB2, 3, 4, 11) ' this creates file (3,072 = 1 block)
-    testAppendRecords(@testfileB2, 8, 5, 12) ' this appends to file (11,264 = 3 blocks)
+    testAppendRecords(@testfileB2, 0, 3, 4, 11) ' this creates file (3,072 = 1 block)
+    testAppendRecords(@testfileB2, 3, 8, 5, 12) ' this appends to file (11,264 = 3 blocks)
     utils.testVerifyRecords(@testfileB2, 11, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
     '     B3 - write 8kb                                - moved head of file to head of chain, remove orig file -> end with file at limit
     utils.startTestGroup(@"B3 Append 11KB circular to 3kb file")
-    testAppendRecords(@testfileB3, 3, 5, 14) ' this creates file (3,072 = 1 block)
-    testAppendRecords(@testfileB3, 11, 6, 15) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testAppendRecords(@testfileB3, 0, 3, 5, 14) ' this creates file (3,072 = 1 block)
+    testAppendRecords(@testfileB3, 3, 11, 6, 15) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     utils.testVerifyRecords(@testfileB3, 14, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
     utils.startTestGroup(@"B3a Seek within file that was append 11KB circular to 3kb file")
     utils.testVerifySeekRecords(@testfileB3, 14, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies seeks within last 8k of file
@@ -179,8 +179,8 @@ PUB go()
 
     '     B4 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
     utils.startTestGroup(@"B4 Append 14KB circular to 3kb file")
-    testAppendRecords(@testfileB4, 3, 6, 17) ' this creates file (3,072 = 1 block)
-    testAppendRecords(@testfileB4, 14, 7, 18) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testAppendRecords(@testfileB4, 0, 3, 6, 17) ' this creates file (3,072 = 1 block)
+    testAppendRecords(@testfileB4, 3, 14, 7, 18) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     utils.testVerifyRecords(@testfileB4, 17, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
@@ -188,24 +188,24 @@ PUB go()
     '   C - Cases with 8kb starting file (multi-block file)
     '     C1 - write more than 8kb (3kb)                - move head into file, (remove orig file, remove from of chain prior to head) -> end with file at limit
     utils.startTestGroup(@"C1 Append 4KB circular to 8kb file")
-    testAppendRecords(@testfileC1, 8, 7, 20) ' this creates file (8,192 = 3 blocks)
-    testAppendRecords(@testfileC1, 4, 8, 23) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testAppendRecords(@testfileC1, 0, 8, 7, 20) ' this creates file (8,192 = 3 blocks)
+    testAppendRecords(@testfileC1, 8, 4, 8, 23) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     utils.testVerifyRecords(@testfileC1, 12, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
     '     C2 - write more than 8kb (6kb)                - move head into file, append tail to file (removed front block(s) of orig file) -> end with file at limit
     utils.startTestGroup(@"C2 Append 6KB circular to 8kb file")
-    testAppendRecords(@testfileC2, 8, 8, 23) ' this creates file (8,192 = 3 blocks)
-    testAppendRecords(@testfileC2, 6, 9, 26) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testAppendRecords(@testfileC2, 0, 8, 8, 23) ' this creates file (8,192 = 3 blocks)
+    testAppendRecords(@testfileC2, 8, 6, 9, 26) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     utils.testVerifyRecords(@testfileC2, 14, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
     '     C3 - write more than 8kb (9kb)                - move head into middle of chain (remove orig file, remove from of chain prior to head) -> end with file at limit
     utils.startTestGroup(@"C3 Append 9KB circular to 8kb file")
-    testAppendRecords(@testfileC3, 8, 9, 26) ' this creates file (8,192 = 3 blocks)
-    testAppendRecords(@testfileC3, 9, 10, 29) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testAppendRecords(@testfileC3, 0, 8, 9, 26) ' this creates file (8,192 = 3 blocks)
+    testAppendRecords(@testfileC3, 8, 9, 10, 29) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     utils.testVerifyRecords(@testfileC3, 17, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
@@ -213,31 +213,31 @@ PUB go()
     '   D - Cases with LONGer starting file (11kb)
     '     D1 - write 6k                                 - move head into file, append tail to file (removed front block(s) of orig file) -> end with file at limit
     utils.startTestGroup(@"D1 Append 6KB circular to 11kb file")
-    testAppendRecords(@testfileD1, 11, 10, 29) ' this creates file (11,264 = 3 blocks)
-    testAppendRecords(@testfileD1, 6, 11, 32) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testAppendRecords(@testfileD1, 0, 11, 10, 29) ' this creates file (11,264 = 3 blocks)
+    testAppendRecords(@testfileD1, 11, 6, 11, 32) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     utils.testVerifyRecords(@testfileD1, 17, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
     '     D2 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
     utils.startTestGroup(@"D2 Append 9KB circular to 11kb file")
-    testAppendRecords(@testfileD2, 11, 11, 32) ' this creates file (11,264 = 3 blocks)
-    testAppendRecords(@testfileD2, 9, 12, 35) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
+    testAppendRecords(@testfileD2, 0, 11, 11, 32) ' this creates file (11,264 = 3 blocks)
+    testAppendRecords(@testfileD2, 11, 9, 12, 35) ' this appends to file (truncates to 12,132 last 8,192 valid = 3 blocks)
     utils.testVerifyRecords(@testfileD2, 20, @record, RECORD_LEN, CIRCULAR_LEN_IN_BYTES) ' this verifies last 8k of file
 
     utils.showFiles()
 
     '     E1 - write more than 8kb (9kb)                - circular is small enough to fit in data block but not filename so 2-block chain lives after froncate!
     utils.startTestGroup(@"E1 Append 3.4kb circular to 4.0kb file")
-    testAppendSecRecords(@testfileE1, 12, 12, 35) ' this creates file (4_032 = 2 blocks) [3956 + 76 in next block]
+    testAppendSecRecords(@testfileE1, 0, 12, 12, 35) ' this creates file (4_032 = 2 blocks) [3956 + 76 in next block]
     utils.testVerifyRecords(@testfileE1, 12, @secRecord, SEC_RECORD_LEN, SEC_CIRCULAR_LEN_IN_BYTES) ' this verifies all of file
-    testAppendSecRecords(@testfileE1, 10, 13, 37) ' this appends to file (7_412 = 2 blocks) (updates 2nd block, truncates to 2 blocks with all data in 2nd block)
+    testAppendSecRecords(@testfileE1, 12, 10, 13, 37) ' this appends to file (7_412 = 2 blocks) (updates 2nd block, truncates to 2 blocks with all data in 2nd block)
     utils.testVerifyRecords(@testfileE1, 22, @secRecord, SEC_RECORD_LEN, SEC_CIRCULAR_LEN_IN_BYTES) ' this verifies last active 3_400 bytes of file
 
     '     E2 - write more than 8kb (9kb)                - move head into middle of chain, (remove orig file, remove from of chain prior to head) -> end with file at limit
     utils.startTestGroup(@"E2 Append 3.4kb circular to 4.8kb file")
-    testAppendSecRecords(@testfileE2, 12, 13, 37) ' this creates file (4_032 = 2 blocks) [3956 + 76 in next block]
-    testAppendSecRecords(@testfileE2, 22, 14, 39) ' this appends to file (11_424 = 3 blocks) (updates 2nd block, adds 3rd, truncates to 2 blocks with all data in 2nd block)
+    testAppendSecRecords(@testfileE2, 0, 12, 13, 37) ' this creates file (4_032 = 2 blocks) [3956 + 76 in next block]
+    testAppendSecRecords(@testfileE2, 12, 22, 14, 39) ' this appends to file (11_424 = 3 blocks) (updates 2nd block, adds 3rd, truncates to 2 blocks with all data in 2nd block)
     utils.testVerifyRecords(@testfileE2, 34, @secRecord, SEC_RECORD_LEN, SEC_CIRCULAR_LEN_IN_BYTES) ' this verifies last active 3_400 bytes of file
 
     utils.showFiles()
@@ -249,27 +249,45 @@ PUB go()
     debug("* Test Complete")
     utils.ShowTestResult(@"RT_read_write_circular_tests")
 
-PRI testAppendRecords(pFilename, recordCount, initialFileCount, initialBlocks) | lenBytes, startingRcdCt, maxAllocatedBytes, minWrittenBytes, filesAdded, blocksAdded, startingBlocks, pEffortMsg
+PRI testAppendRecords(pFilename, recordsWritten, recordCount, initialFileCount, initialBlocks) | priorBytes, lenBytes, startingRcdCt, maxAllocatedBytes, minWrittenBytes, filesAdded, blocksAdded, startingBlocks, pEffortMsg
+' Append records to a circular file with open_circular(,a), then check the filesystem and file stats.
+' The records are numbered on from the records earlier calls wrote, never from file_size(): a trimmed
+' circular file holds only the newest bytes written to it, up to its limit.
 
-    startingRcdCt := 1
+' @param pFilename - address of zstring with file name
+' @param recordsWritten - records earlier calls wrote to the file, 0 when the file does not exist yet
+' @param recordCount - records this call appends
+' @param initialFileCount - files in the filesystem before this call
+' @param initialBlocks - blocks in use before this call
+
+' Local Variables:
+' @local priorBytes - bytes earlier calls wrote to the file
+' @local lenBytes - size file_size() reports for the file before this call
+' @local startingRcdCt - number of the first record this call writes
+' @local maxAllocatedBytes - bytes the blocks of a file at the circular limit can hold
+' @local minWrittenBytes - fewest bytes the file may hold after this call
+' @local filesAdded - files this call adds to the filesystem
+' @local blocksAdded - blocks this call adds to the filesystem
+' @local startingBlocks - blocks the file holds before this call
+' @local pEffortMsg - address of zstring describing the write
+
+    startingRcdCt := recordsWritten + 1
+    priorBytes := recordsWritten * RECORD_LEN
     lenBytes := 0
-    if flash.exists(pFilename)
-        '  get total file size
+    if recordsWritten > 0
         utils.startTest(@"Determine size of file in records")
         lenBytes := flash.file_size(pFilename)
-        status := flash.error()
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
-        startingRcdCt := ((lenBytes + (RECORD_LEN-1)) / RECORD_LEN) + 1
+        ' a circular file holds the newest bytes written to it, up to its limit
+        utils.evaluateSingleValue(lenBytes, @"file_size()", priorBytes <# CIRCULAR_LEN_IN_BYTES)
 
     debug("  ")
     debug(" ------------------ ")
     debug("ENTRY testAppendRecords(", udec_(recordCount), ", start: fils=", udec_(initialFileCount), ", blks=", udec_(initialBlocks), "): ")
-    debug("   size: ", udec_(lenBytes), " bytes, ", udec_(startingRcdCt-1), " records, write [", udec_(startingRcdCt),"-", udec_(startingRcdCt + recordCount - 1), "]")
+    debug("   size: ", udec_(lenBytes), " bytes, ", udec_(recordsWritten), " records, write [", udec_(startingRcdCt),"-", udec_(startingRcdCt + recordCount - 1), "]")
 
-    filesAdded := lenBytes == 0 ? 1 : 0
+    filesAdded := recordsWritten == 0 ? 1 : 0
 
-    if lenBytes == 0 ' are we creating new?
+    if recordsWritten == 0 ' are we creating new?
         maxAllocatedBytes := utils.bytesAllocatedFor(CIRCULAR_LEN_IN_BYTES)
         startingBlocks := 0
         minWrittenBytes := ((recordCount * RECORD_LEN) < CIRCULAR_LEN_IN_BYTES) ? (recordCount * RECORD_LEN) : CIRCULAR_LEN_IN_BYTES
@@ -277,11 +295,13 @@ PRI testAppendRecords(pFilename, recordCount, initialFileCount, initialBlocks) |
         pEffortMsg := @"Wrote new file"
     else
         minWrittenBytes := CIRCULAR_LEN_IN_BYTES
-        expectedFileSize := (startingRcdCt - 1 + recordCount) * RECORD_LEN
+        expectedFileSize := (recordsWritten + recordCount) * RECORD_LEN
         if expectedFileSize > CIRCULAR_LEN_IN_BYTES
             expectedFileSize := CIRCULAR_LEN_IN_BYTES
 
-        startingBlocks := utils.blockCountForFileSize(lenBytes)
+        ' each append here follows one write whose trim, if it had one, kept the first byte it keeps in the
+        ' head block, so the file still holds every block the bytes written filled
+        startingBlocks := utils.blockCountForFileSize(priorBytes)
         pEffortMsg := @"Appended to existing file, now"
 
     ' ----------------------------------
@@ -332,27 +352,47 @@ PRI testAppendRecords(pFilename, recordCount, initialFileCount, initialBlocks) |
     utils.evaluateFileStatsRange(pFilename, expectedFileBlocks, minWrittenBytes, expectedFileSize)
 
 
-PRI testAppendSecRecords(pFilename, recordCount, initialFileCount, initialBlocks) | lenBytes, startingRcdCt, maxAllocatedBytes, minWrittenBytes, filesAdded, blocksAdded, startingBlocks, pEffortMsg, totalBytes, bytesInLastBlock
+PRI testAppendSecRecords(pFilename, recordsWritten, recordCount, initialFileCount, initialBlocks) | priorBytes, lenBytes, startingRcdCt, maxAllocatedBytes, minWrittenBytes, filesAdded, blocksAdded, startingBlocks, pEffortMsg, totalBytes, bytesInLastBlock
+' Append short records to a circular file with open_circular(,a), then check the filesystem and file stats.
+' The records are numbered on from the records earlier calls wrote, never from file_size(): a trimmed
+' circular file holds only the newest bytes written to it, up to its limit.
 
-    startingRcdCt := 1
+' @param pFilename - address of zstring with file name
+' @param recordsWritten - records earlier calls wrote to the file, 0 when the file does not exist yet
+' @param recordCount - records this call appends
+' @param initialFileCount - files in the filesystem before this call
+' @param initialBlocks - blocks in use before this call
+
+' Local Variables:
+' @local priorBytes - bytes earlier calls wrote to the file
+' @local lenBytes - size file_size() reports for the file before this call
+' @local startingRcdCt - number of the first record this call writes
+' @local maxAllocatedBytes - bytes the blocks of a file of the bytes written can hold
+' @local minWrittenBytes - fewest bytes the file may hold after this call
+' @local filesAdded - files this call adds to the filesystem
+' @local blocksAdded - blocks this call adds to the filesystem
+' @local startingBlocks - blocks the file holds before this call
+' @local pEffortMsg - address of zstring describing the write
+' @local totalBytes - bytes written to the file once this call is done
+' @local bytesInLastBlock - bytes of totalBytes in the last block they fill
+
+    startingRcdCt := recordsWritten + 1
+    priorBytes := recordsWritten * SEC_RECORD_LEN
     lenBytes := 0
-    if flash.exists(pFilename)
-        '  get total file size
+    if recordsWritten > 0
         utils.startTest(@"Determine size of file in records")
         lenBytes := flash.file_size(pFilename)
-        status := flash.error()
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
-        startingRcdCt := ((lenBytes + (SEC_RECORD_LEN-1)) / SEC_RECORD_LEN) + 1
+        ' a circular file holds the newest bytes written to it, up to its limit
+        utils.evaluateSingleValue(lenBytes, @"file_size()", priorBytes <# SEC_CIRCULAR_LEN_IN_BYTES)
 
     debug("  ")
     debug(" ------------------ ")
     debug("ENTRY testAppendRecords(", udec_(recordCount), ", start: fils=", udec_(initialFileCount), ", blks=", udec_(initialBlocks), "): ")
-    debug("   size: ", udec_(lenBytes), " bytes, ", udec_(startingRcdCt-1), " records, write [", udec_(startingRcdCt),"-", udec_(startingRcdCt + recordCount - 1), "]")
+    debug("   size: ", udec_(lenBytes), " bytes, ", udec_(recordsWritten), " records, write [", udec_(startingRcdCt),"-", udec_(startingRcdCt + recordCount - 1), "]")
 
-    filesAdded := lenBytes == 0 ? 1 : 0
+    filesAdded := recordsWritten == 0 ? 1 : 0
 
-    if lenBytes == 0 ' are we creating new?
+    if recordsWritten == 0 ' are we creating new?
 
         ' allocate blocks for entire commit chain
         totalBytes := recordCount * SEC_RECORD_LEN
@@ -370,15 +410,17 @@ PRI testAppendSecRecords(pFilename, recordCount, initialFileCount, initialBlocks
         blocksAdded := expectedFileBlocks
         pEffortMsg := @"Wrote new file"
     else
-        startingBlocks := utils.blockCountForFileSize(lenBytes)
+        ' each append here follows one write whose trim kept the first byte it keeps in the head block, so
+        ' the file still holds every block the bytes written filled
+        startingBlocks := utils.blockCountForFileSize(priorBytes)
         minWrittenBytes := SEC_CIRCULAR_LEN_IN_BYTES
-        expectedFileSize := (startingRcdCt - 1 + recordCount) * SEC_RECORD_LEN
+        expectedFileSize := (recordsWritten + recordCount) * SEC_RECORD_LEN
         if expectedFileSize > SEC_CIRCULAR_LEN_IN_BYTES
             expectedFileSize := SEC_CIRCULAR_LEN_IN_BYTES
 
         ' NOTE if our expected size (circular) doesn't fix in last block then add first block data to expected size
         ' FIXME: TODO: this only works for 2 block files!
-        totalBytes := lenBytes + (recordCount * SEC_RECORD_LEN)
+        totalBytes := priorBytes + (recordCount * SEC_RECORD_LEN)
         bytesInLastBlock := utils.bytesInLastBlock(totalBytes)
         expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
         if(bytesInLastBlock > SEC_CIRCULAR_LEN_IN_BYTES and (bytesInLastBlock - SEC_CIRCULAR_LEN_IN_BYTES) < 128 + 8)

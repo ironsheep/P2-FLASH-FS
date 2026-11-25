@@ -4,7 +4,7 @@
 ''   Purpose.... This object exercises the edges of seek() in the flash filesystem: positions before the
 ''               first byte, the end of a file and of an empty file, relative seeks, invalid whence values,
 ''               append handles, circular limits, seeks after an edit through a read/modify/write handle,
-''               and the size of a circular file after it has been trimmed to its limit
+''               and the sizes and seek range of a circular file after it has been trimmed to its limit
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -70,6 +70,8 @@ CON ' ---- Test Geometry ----
     TRIM_LIMIT_DEEP = 5000                              ' limit that keeps the data from deep inside the second block
     TRIM_SKIP_IN_SECOND = 10                            ' bytes of the second block the other limit leaves out
     TRIM_LIMIT_EDGE = TRIM_WRITE_BYTES - (flash.BYTES_IN_HEAD_BLOCK + TRIM_SKIP_IN_SECOND) ' limit that keeps the data from just inside the second block
+    TRIM_TAIL_UNUSED = flash.BYTES_IN_BODY_BLOCK - TRIM_TAIL_BYTES ' bytes the last block of the trimmed file has not yet used
+    NOT_LISTED = -1                                     ' the size directorySize() gives a file directory() does not list
     CHUNK_BYTES = 1000                                  ' bytes moved by one write or read of the streaming checks
 
     ' bytes an r+ handle adds past the end of a file and has not flushed
@@ -100,6 +102,7 @@ oneByte         BYTE    0                               ' receives a single byte
 modelBuf        BYTE    0[TWO_BLOCK_BYTES]              ' what the file under test should hold
 readBuf         BYTE    0[TWO_BLOCK_BYTES]              ' what was read back from the file
 chunkBuf        BYTE    0[CHUNK_BYTES]                  ' one chunk of a streamed write or read
+dirName         BYTE    0[flash.FILENAME_SIZE]          ' receives each filename directory() lists
 
 
 PUB go() | status, pFailedCall
@@ -334,7 +337,7 @@ PRI testSameBlockSeekEdit()
 
 
 PRI testTrimmedCircularSize()
-' Write a circular file past its limit and close it: the file holds the newest bytes up to the limit, and its size and seek range match.
+' Write a circular file past its limit and close it: the file holds the newest bytes up to the limit, and every size the driver reports and the seek range agree with them.
 
     utils.startTestGroup(@"size of a trimmed circular file")
     trimCase(@"open_circular(,a) with a limit that keeps data from deep inside the second block", TRIM_LIMIT_DEEP)
@@ -470,7 +473,7 @@ PRI editSeekCase(pTitle, fileBytes, otherOffset) | handle
 
 
 PRI trimCase(pTitle, limitBytes) | handle, firstKept, readable, mismatchIdx, fileSize
-' Write a circular file past its limit, close it, and compare what can be read, the size and the seek range with the bytes written.
+' Write a circular file past its limit, close it, and compare what can be read, each size and the seek range with the bytes written, then append to it again.
 
 ' @param pTitle - address of zstring naming the open
 ' @param limitBytes - limit the circular handle is opened with
@@ -505,12 +508,51 @@ PRI trimCase(pTitle, limitBytes) | handle, firstKept, readable, mismatchIdx, fil
     utils.evaluateSubValue(fileSize, @"file_size()", readable)
     debug("* file_size() ", sdec_(fileSize), ", bytes readable ", sdec_(readable), ", difference ", sdec_(fileSize - readable))
 
+    utils.startTest(@"file_size_unused() and directory() agree with the bytes that can be read")
+    ' the trim leaves the last block as it was written, so its unused bytes are those the tail left
+    utils.evaluateSubValue(flash.file_size_unused(@circFile), @"file_size_unused()", TRIM_TAIL_UNUSED)
+    utils.evaluateSubValue(directorySize(@circFile), @"size directory() lists", readable)
+
     handle := openChecked(@circFile, flash.FILEMODE_READ, @"open(,r) to seek in the trimmed file")
     utils.startTest(@"seek reaches the last readable byte and not past it")
     if requireHandle(handle)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle() of the read handle", readable)
+        utils.evaluateSubValue(flash.seek(handle, posx, flash.SK_FILE_START), @"seek() to POSX", readable)
         utils.evaluateSubValue(flash.seek(handle, readable, flash.SK_FILE_START), @"seek() to the end of the readable bytes", readable)
         utils.evaluateSubStatus(flash.seek(handle, readable + 1, flash.SK_FILE_START), @"seek() one byte past the readable bytes", flash.E_FILE_SEEK)
         closeAndCheck(handle)
+
+    handle := openCircularChecked(@circFile, flash.FILEMODE_APPEND, limitBytes, @"open_circular(,a) to append to the trimmed file")
+    utils.startTest(@"file_size_for_handle() of an append handle counts the readable bytes and the bytes appended")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle() at open", readable)
+        utils.evaluateSubValue(writePattern(handle, APPEND_BYTES), @"bytes written", APPEND_BYTES)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle() after the write", readable + APPEND_BYTES)
+        closeAndCheck(handle)
+        ' the close trims the file to its limit again
+        utils.evaluateSubValue(flash.file_size(@circFile), @"file_size() after the second trim", limitBytes)
+
+
+PRI directorySize(pFilename) : fileBytes | blockId, entryBytes, status
+' Look a file up in the list directory() gives, and return the size it lists for the file.
+
+' @param pFilename - address of zstring with the file name
+' @returns fileBytes - the size directory() lists for the file, or NOT_LISTED when it does not list the file
+
+' Local Variables:
+' @local blockId - the block ID directory() goes on from, advanced by each call
+' @local entryBytes - the size directory() gave with the filename it listed last
+' @local status - what directory() returned
+
+    fileBytes := NOT_LISTED
+    blockId := 0
+    repeat
+        status := flash.directory(@blockId, @dirName, @entryBytes)
+        if status <> flash.SUCCESS or BYTE[@dirName][0] == 0  ' a failed call, or the end of the list
+            quit
+        if strcomp(@dirName, pFilename)
+            fileBytes := entryBytes
+            quit
 
 
 PRI freshFilesystem() | status
