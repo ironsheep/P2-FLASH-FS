@@ -7,8 +7,8 @@
 ''               at the first refusal. The fixed mode fills the flash with ordinary write() calls and
 ''               probes every route to E_DRIVE_FULL: open(), a write that runs out of blocks (from this
 ''               cog and from another cog), open_circular(), create_file() and rename(), then the edge
-''               cases of append, r+ rewrite, circular close, the close of a new file that finds no block
-''               left for it, a flush that finds no block and a later close that commits the file, an
+''               cases of append, r+ rewrite, circular close, the close of a file whose last block finds
+''               no block left for it, a flush that finds no block and a later close that commits the file, an
 ''               r+ read that must rewrite a modified block to go on, the flush of an r+ handle whose
 ''               rewrite finds no block, the flush of a circular file whose trim finds no block and the
 ''               later close that trims it, an
@@ -88,6 +88,7 @@ CON ' ---- Block Arithmetic ----
   BODY_BYTES	= flash.BYTES_IN_BODY_BLOCK					  ' bytes a body block holds
   ONE_BLOCK	= 1								  ' blocks of the smallest file
   NO_BLOCKS	= 0								  ' blocks free on a full filesystem
+  NO_BLOCK_IDS	= 0								  ' block IDs free or taken by a call that takes none
   NO_BYTES	= 0								  ' bytes written by a call that wrote none
   ONE_BYTE	= 1								  ' bytes of a call that finds no room for it
   FIRST_OFFSET	= 0								  ' pattern offset of the first byte of a file
@@ -118,8 +119,8 @@ CON ' ---- Fixed Mode Steps ----
     '  STEP_APPEND       - append with one free block
     '  STEP_RMW          - r+ rewrite with one free block
     '  STEP_CIRCULAR     - circular close with the trim out of blocks
-    '  STEP_NEW_CLOSE    - the close of a new "w", "a" or "w+" file with no block left for it
-    '  STEP_FLUSH        - the flush of a "w" file with no block left for it, then its close once a block is free
+    '  STEP_NEW_CLOSE    - the close of a "w" or "a" file over an existing file and of a new "w+" file with no block left for its last block
+    '  STEP_FLUSH        - the flush of a "w" file over an existing file and of a new "w+" file with no block left for it, then its close once a block is free
     '  STEP_RMW_READ     - an r+ read that must rewrite a modified block with no block free, then the read once one is
     '  STEP_FLUSH_RMW    - the flush of an r+ handle with no block for the rewrite, then its close once a block is free
     '  STEP_FLUSH_CIRC   - the flush of a circular file with no block for the trim, then its close once a block is free
@@ -158,7 +159,9 @@ CON ' ---- Case Sizes ----
   CIRC_BYTES		= HEAD_BYTES + ((CIRC_BLOCKS - ONE_BLOCK) * BODY_BYTES)      ' bytes that fill the circular file's blocks
   CIRC_LIMIT_BYTES	= 1000							     ' length limit of the circular file, below what it holds
   RENAME_BYTES		= 64							     ' bytes of the file that is renamed
-  NEW_CLOSE_BYTES	= 64							     ' bytes of the new file whose close finds no block, all in its head block
+  NEW_CLOSE_BYTES	= 64							     ' bytes a handle writes in one block and holds in its buffer when the commit finds no block
+  NEW_SPAN_BYTES	= HEAD_BYTES + NEW_CLOSE_BYTES				     ' bytes of the new "w+" file, a full head block and the start of a second block
+  NEW_SPAN_BLOCKS	= 2							     ' blocks the new "w+" file has written when its last block is still to be rewritten
   ONE_BLOCK_ID		= 1							     ' block IDs the open of a new file takes, for its head block
   CREATE_BLOCKS		= 3							     ' blocks create_file() has free in its case
   CREATE_BYTES		= HEAD_BYTES + ((CREATE_BLOCKS - ONE_BLOCK) * BODY_BYTES)    ' bytes that fill those blocks
@@ -187,7 +190,7 @@ CON ' ---- Test Data ----
   SEED_CIRC	      = 17     ' pattern of the circular file
   SEED_RENAME	      = 19     ' pattern of the file that is renamed
   SEED_EXACT	      = 21     ' pattern of the file that fills the workspace exactly
-  SEED_NEW_CLOSE      = 23     ' pattern of the new file whose close finds no block
+  SEED_NEW_CLOSE      = 23     ' pattern of the bytes whose commit finds no block
   CREATE_FILL	      = $5A    ' fill value of the files made with create_file()
   MAIN_FILL	      = $C3    ' fill value of the main file
   PAD_FILL	      = $3C    ' fill value of the files that pad the workspace
@@ -350,7 +353,7 @@ PRI runFixed() | stepIdx
       STEP_APPEND: testAppend()
       STEP_RMW: testRewrite()
       STEP_CIRCULAR: testCircular()
-      STEP_NEW_CLOSE: testNewFileClose()
+      STEP_NEW_CLOSE: testLastBlockClose()
       STEP_FLUSH: testFlushFull()
       STEP_RMW_READ: testReadRewriteFull()
       STEP_FLUSH_RMW: testFlushRewriteFull()
@@ -768,22 +771,27 @@ PRI testCircular() | handle, status, writeCount, closeStatus, closeError
     expectStatus(@"error() after close()", closeError, flash.SUCCESS)
   checkWitness()
 
-PRI testNewFileClose()
-' Close a new file whose bytes are all still in its buffer after another file took every free block, in each mode that makes a new file.
+PRI testLastBlockClose()
+' Close a file whose last block is still in its buffer after another file took every free block: "w" and "a" over a file that exists, and a new "w+" file.
 
-  utils.startTestGroup(@"close of a new file with no block left for it")
-  newFileCloseCase(@"open(,w) of a new file, then close() with no free block", flash.FILEMODE_WRITE)
-  newFileCloseCase(@"open(,a) of a new file, then close() with no free block", flash.FILEMODE_APPEND)
-  newFileCloseCase(@"open(,w+) of a new file, then close() with no free block", flash.FILEMODE_WRITE_EXTENDED)
+  utils.startTestGroup(@"close with no block left for the last block")
+  lastBlockCloseCase(@"open(,w) over an existing file, then close() with no free block for its last block", flash.FILEMODE_WRITE)
+  lastBlockCloseCase(@"open(,a) of an existing file, then close() with no free block for its last block", flash.FILEMODE_APPEND)
+  lastBlockCloseCase(@"open(,w+) of a new file, then close() with no free block for its last block", flash.FILEMODE_WRITE_EXTENDED)
 
-PRI newFileCloseCase(pTitle, mode) | handle, status, writeCount, freeIdsBefore, freeIdsAtClose, closeStatus, closeError
-' Open a new file and write bytes that stay in its buffer, pad the workspace to no free block, then close the file, as one test.
+PRI lastBlockCloseCase(pTitle, mode) | bNewFile, writeBytes, idsTaken, handle, status, writeCount, freeIdsBefore, freeIdsAtClose, closeStatus, closeError
+' Open a file so that no block ID is free once another file takes every free block, write bytes whose last block stays in the buffer, pad the workspace, then close the file, as one test.
+' -- "w" and "a" start from an existing file, whose block IDs the handle reuses, so the open takes none
+' -- "w+" starts a new file, which takes a block ID for its head block, and writes past it so that its last block is a body block that is rewritten at close
 
 ' @param pTitle - address of zstring naming the test
-' @param mode - open mode that makes a new file: "w", "a" or "w+"
+' @param mode - open mode: "w" or "a" over an existing file, or "w+" of a new file
 
 ' Local Variables:
-' @local handle - handle of the new file
+' @local bNewFile - TRUE when the file is a new "w+" file
+' @local writeBytes - bytes the handle writes
+' @local idsTaken - block IDs the open takes
+' @local handle - handle of the file
 ' @local status - status of the open
 ' @local writeCount - what write() returned
 ' @local freeIdsBefore - free block IDs before the open
@@ -793,26 +801,48 @@ PRI newFileCloseCase(pTitle, mode) | handle, status, writeCount, freeIdsBefore, 
 
   utils.startTest(pTitle)
   clearWorkspace()
+  bNewFile := mode == flash.FILEMODE_WRITE_EXTENDED
+  if bNewFile
+    writeBytes := NEW_SPAN_BYTES
+    idsTaken := ONE_BLOCK_ID
+    fillPattern(@writeBuf, FIRST_OFFSET, writeBytes, SEED_NEW_CLOSE)
+  else
+    writeBytes := NEW_CLOSE_BYTES
+    idsTaken := NO_BLOCK_IDS
+    fillPattern(@modelBuf, FIRST_OFFSET, RENAME_BYTES, SEED_RENAME)
+    expectStatus(@"write of the existing file", writeBufferFile(@caseFile, @modelBuf, RENAME_BYTES), flash.SUCCESS)
+    if mode == flash.FILEMODE_APPEND
+      fillPattern(@writeBuf, RENAME_BYTES, writeBytes, SEED_RENAME)
+    else
+      fillPattern(@writeBuf, FIRST_OFFSET, writeBytes, SEED_NEW_CLOSE)
   freeIdsBefore := flash.TEST_freeBlockIdCount()
-  fillPattern(@writeBuf, FIRST_OFFSET, NEW_CLOSE_BYTES, SEED_NEW_CLOSE)
   handle, status := utils.openWaitOnHandle(@caseFile, mode)
-  expectStatus(@"open() of the new file", status, flash.SUCCESS)
+  expectStatus(@"open()", status, flash.SUCCESS)
   if status == flash.SUCCESS
-    expectValue(@"free block IDs once the open took one for the head block", flash.TEST_freeBlockIdCount(), freeIdsBefore - ONE_BLOCK_ID)
-    ' the bytes fit the head block, so nothing of the file is written to the flash before close()
-    writeCount := flash.write(handle, @writeBuf, NEW_CLOSE_BYTES)
-    expectValue(@"bytes write() returned", writeCount, NEW_CLOSE_BYTES)
-    ' another file takes every free block, so close() finds none for the head block
+    expectValue(@"free block IDs once the open took the IDs it needs", flash.TEST_freeBlockIdCount(), freeIdsBefore - idsTaken)
+    ' the last block of the file is in the buffer, so nothing of it is written to the flash before close()
+    writeCount := flash.write(handle, @writeBuf, writeBytes)
+    expectValue(@"bytes write() returned", writeCount, writeBytes)
+    ' another file takes every free block, and every block ID with it, so close() finds no block for the last block
     expectStatus(@"pad of the workspace", padTo(NO_BLOCKS, @padFile), flash.SUCCESS)
     expectValue(@"free blocks before close()", freeBlockCount(), NO_BLOCKS)
     freeIdsAtClose := flash.TEST_freeBlockIdCount()
+    expectValue(@"free block IDs before close()", freeIdsAtClose, NO_BLOCK_IDS)
     closeStatus := utils.closeHandle(handle)
     closeError := flash.error()
     expectStatus(@"close()", closeStatus, flash.E_DRIVE_FULL)
     expectStatus(@"error() after close()", closeError, flash.E_DRIVE_FULL)
-    ' the file is not created, so no committed block uses the head block ID and the close gives it back
-    expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + ONE_BLOCK_ID)
-  expectValue(@"exists() of the file", flash.exists(@caseFile), FALSE)
+    ' a new file is not created, so no committed block uses its head block ID and the close gives it back; the IDs of a file that exists are kept
+    expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + idsTaken)
+  if bNewFile
+    expectValue(@"exists() of the file", flash.exists(@caseFile), FALSE)
+    ' the blocks the failed close left written are not part of any file, so the next mount() frees them
+    remountChecks()
+    expectValue(@"free blocks after mount()", freeBlockCount(), NEW_SPAN_BLOCKS)
+    expectValue(@"exists() of the file after mount()", flash.exists(@caseFile), FALSE)
+  else
+    expectValue(@"free blocks after close()", freeBlockCount(), NO_BLOCKS)
+    checkFileHolds(@caseFile, @modelBuf, RENAME_BYTES)
   checkWitness()
 
 PRI otherCogWrite(handle) | pending, workerCog, waitLimit
@@ -851,19 +881,23 @@ PRI writeWorker()
   workDone := TRUE
 
 PRI testFlushFull()
-' Flush a "w" file whose bytes are all in its buffer on a full drive, for a new file and for a file that exists.
+' Flush a file whose last block is in its buffer on a full drive: a "w" file over a file that exists, and a new "w+" file.
 
   utils.startTestGroup(@"flush with no block left for the commit")
-  flushFullCase(@"flush() of a new file with no free block fails and keeps the bytes, and close() commits them once a block is free", FALSE)
+  flushFullCase(@"flush() of a new w+ file with no free block for its last block fails and keeps the bytes, and close() commits them once a block is free", FALSE)
   flushFullCase(@"flush() over an existing file with no free block fails and keeps the old file, and close() replaces it once a block is free", TRUE)
 
-PRI flushFullCase(pTitle, bExisting) | handle, status, writeCount, closeStatus, closeError
-' Write bytes that stay in the buffer, take every free block, flush, free the blocks again and close, as one test.
+PRI flushFullCase(pTitle, bExisting) | mode, writeBytes, handle, status, writeCount, closeStatus, closeError
+' Write bytes whose last block stays in the buffer, take every free block, flush, free the blocks again and close, as one test.
+' -- a file that exists is replaced by a "w" handle, which takes no block ID, and its bytes fit one block
+' -- a new "w+" file takes a block ID for its head block and writes past it, so that its last block is a body block that is rewritten at the commit
 
 ' @param pTitle - address of zstring naming the test
-' @param bExisting - TRUE to open over a file that exists, FALSE to open a new file
+' @param bExisting - TRUE to open "w" over a file that exists, FALSE to open a new "w+" file
 
 ' Local Variables:
+' @local mode - open mode of the handle
+' @local writeBytes - bytes the handle writes
 ' @local handle - handle of the file
 ' @local status - status of the open
 ' @local writeCount - what write() returned
@@ -873,17 +907,23 @@ PRI flushFullCase(pTitle, bExisting) | handle, status, writeCount, closeStatus, 
   utils.startTest(pTitle)
   clearWorkspace()
   if bExisting
+    mode := flash.FILEMODE_WRITE
+    writeBytes := NEW_CLOSE_BYTES
     fillPattern(@modelBuf, FIRST_OFFSET, RENAME_BYTES, SEED_RENAME)
     expectStatus(@"write of the existing file", writeBufferFile(@caseFile, @modelBuf, RENAME_BYTES), flash.SUCCESS)
-  fillPattern(@writeBuf, FIRST_OFFSET, NEW_CLOSE_BYTES, SEED_NEW_CLOSE)
-  handle, status := utils.openWaitOnHandle(@caseFile, flash.FILEMODE_WRITE)
-  expectStatus(@"open(,w)", status, flash.SUCCESS)
+  else
+    mode := flash.FILEMODE_WRITE_EXTENDED
+    writeBytes := NEW_SPAN_BYTES
+  fillPattern(@writeBuf, FIRST_OFFSET, writeBytes, SEED_NEW_CLOSE)
+  handle, status := utils.openWaitOnHandle(@caseFile, mode)
+  expectStatus(@"open()", status, flash.SUCCESS)
   if status == flash.SUCCESS
-    ' the bytes fit the head block, so nothing of the file is written to the flash before the commit
-    writeCount := flash.write(handle, @writeBuf, NEW_CLOSE_BYTES)
-    expectValue(@"bytes write() returned", writeCount, NEW_CLOSE_BYTES)
+    ' the last block of the file is in the buffer, so it is not written to the flash before the commit
+    writeCount := flash.write(handle, @writeBuf, writeBytes)
+    expectValue(@"bytes write() returned", writeCount, writeBytes)
     expectStatus(@"pad of the workspace", padTo(NO_BLOCKS, @padFile), flash.SUCCESS)
     expectValue(@"free blocks before flush()", freeBlockCount(), NO_BLOCKS)
+    expectValue(@"free block IDs before flush()", flash.TEST_freeBlockIdCount(), NO_BLOCK_IDS)
     expectFull(@"flush()", flash.flush(handle))
     if bExisting
       expectValue(@"file_size() of the file the flush did not replace", flash.file_size(@caseFile), RENAME_BYTES)
@@ -894,7 +934,7 @@ PRI flushFullCase(pTitle, bExisting) | handle, status, writeCount, closeStatus, 
     closeError := flash.error()
     expectStatus(@"close()", closeStatus, flash.SUCCESS)
     expectStatus(@"error() after close()", closeError, flash.SUCCESS)
-  checkFileHolds(@caseFile, @writeBuf, NEW_CLOSE_BYTES)
+  checkFileHolds(@caseFile, @writeBuf, writeBytes)
   checkWitness()
 
 PRI buildEditModel()
@@ -1021,10 +1061,10 @@ PRI testFlushCircularFull() | handle, status, writeCount, closeStatus, closeErro
   checkWitness()
 
 PRI testUnmountFailure() | writeHandle, readHandle, status, writeCount, unmountStatus, unmountError
-' Unmount with a new file whose close finds no block on the lower handle and a read handle on the higher one.
+' Unmount with a "w" file over an existing file, whose close finds no block, on the lower handle and a read handle on the higher one.
 
 ' Local Variables:
-' @local writeHandle - handle of the new file, whose bytes are all in its buffer
+' @local writeHandle - handle of the "w" file, whose last block is in its buffer
 ' @local readHandle - handle of a survivor opened to read, whose close succeeds
 ' @local status - status of each open and of the mount
 ' @local writeCount - what write() returned
@@ -1032,15 +1072,19 @@ PRI testUnmountFailure() | writeHandle, readHandle, status, writeCount, unmountS
 ' @local unmountError - error() after unmount()
 
   utils.startTestGroup(@"unmount with a close that fails")
-  utils.startTest(@"unmount() keeps the failure of the first close in its status and in error(), and closes the next handle too")
+  utils.startTest(@"unmount() keeps the failure of the first close in its status and in error(), closes the next handle too, and keeps the file the failed close would have replaced")
   clearWorkspace()
+  fillPattern(@modelBuf, FIRST_OFFSET, RENAME_BYTES, SEED_RENAME)
+  expectStatus(@"write of the existing file", writeBufferFile(@caseFile, @modelBuf, RENAME_BYTES), flash.SUCCESS)
   fillPattern(@writeBuf, FIRST_OFFSET, NEW_CLOSE_BYTES, SEED_NEW_CLOSE)
   writeHandle, status := utils.openWaitOnHandle(@caseFile, flash.FILEMODE_WRITE)
-  expectStatus(@"open(,w) of the new file", status, flash.SUCCESS)
+  expectStatus(@"open(,w) over the existing file", status, flash.SUCCESS)
   if status == flash.SUCCESS
+    ' the bytes fit one block and stay in the buffer, so nothing of the new file is on the flash before the close
     writeCount := flash.write(writeHandle, @writeBuf, NEW_CLOSE_BYTES)
     expectValue(@"bytes write() returned", writeCount, NEW_CLOSE_BYTES)
     expectStatus(@"pad of the workspace", padTo(NO_BLOCKS, @padFile), flash.SUCCESS)
+    expectValue(@"free blocks before unmount()", freeBlockCount(), NO_BLOCKS)
     readHandle, status := utils.openWaitOnHandle(@survivorOne, flash.FILEMODE_READ)
     expectStatus(@"open(,r) of a survivor", status, flash.SUCCESS)
     ' unmount() closes the handles in order, so the close that fails comes before the close that succeeds
@@ -1054,7 +1098,7 @@ PRI testUnmountFailure() | writeHandle, readHandle, status, writeCount, unmountS
     utils.releaseHandle(readHandle)
     status := flash.mount()
     expectStatus(@"mount()", status, flash.SUCCESS)
-    expectValue(@"exists() of the file that was not committed", flash.exists(@caseFile), FALSE)
+    checkFileHolds(@caseFile, @modelBuf, RENAME_BYTES)
   checkWitness()
 
 PRI testRename() | status
