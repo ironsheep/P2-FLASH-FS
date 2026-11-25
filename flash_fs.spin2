@@ -3768,7 +3768,7 @@ PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockA
       block_address := NOT_ENABLED
   if block_address == NOT_ENABLED
     repeat RANDOM_PICK_TRIES                                                    'randomly pick an B_FREE/B_HEAD/B_BODY (not an B_TEMP) block
-      pickAddress := abs getrnd() // BLOCKS                                     '(random block selection results in +-5% wear leveling)
+      pickAddress := getrnd() +// BLOCKS                                        '(random block selection results in +-5% wear leveling; the unsigned remainder is never negative)
       if field[BlockState][pickAddress] <> B_TEMP
         block_address := pickAddress
         quit
@@ -3795,7 +3795,7 @@ PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockA
       ' now we are using head or body so we have to move it!
       if block_address == fsTargetBlock                                         'a named block stays named until it is moved
         fsTargetBlock := NOT_ENABLED
-      freeIndex := abs getrnd() // blockFreeCount                               'randomly pick an B_FREE block to move the B_HEAD/B_BODY block to
+      freeIndex := getrnd() +// blockFreeCount                                  'randomly pick an B_FREE block to move the B_HEAD/B_BODY block to
       repeat BLOCKS with freeBlockAddress                                       'block is sHEAD/sBODY, must relocate it to an sFREE block
         ifnot field[BlockState][freeBlockAddress]                               'if the block is B_FREE
           ifnot freeIndex--
