@@ -23,7 +23,7 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -35,51 +35,51 @@ CON
 '}
 
 OBJ
-    flash : "flash_fs"
-    utils : "RT_utilities"
+  flash   : "flash_fs"
+  utils   : "RT_utilities"
 
 CON ' ---- Test Geometry ----
 
-    ' file sizes and offsets, chosen against the block layout: a head block holds
-    ' BYTES_IN_HEAD_BLOCK bytes and each body block BYTES_IN_BODY_BLOCK bytes
-    SMALL_BYTES = 300                                   ' a file that fits in the head block
-    SMALL_EDIT_BYTES = 120                              ' bytes written over, or after, a small file
-    SMALL_MIDDLE = 100                                  ' an offset inside a small file
-    EDIT_BYTES = 20                                     ' bytes of one in-place edit
-    EXTENSION_BYTES = 50                                ' bytes written past the end of a file
-    STRADDLE_BYTES = 40                                 ' bytes written across the end of a small file
-    TAIL_BYTES = 100                                    ' bytes in the third block of the model file
-    MODEL_BYTES = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + TAIL_BYTES
-    EXPECT_BYTES = SMALL_BYTES + SMALL_EDIT_BYTES       ' a small file with an edit appended
+  ' file sizes and offsets, chosen against the block layout: a head block holds
+  ' BYTES_IN_HEAD_BLOCK bytes and each body block BYTES_IN_BODY_BLOCK bytes
+  SMALL_BYTES		= 300								' a file that fits in the head block
+  SMALL_EDIT_BYTES	= 120								' bytes written over, or after, a small file
+  SMALL_MIDDLE		= 100								' an offset inside a small file
+  EDIT_BYTES		= 20								' bytes of one in-place edit
+  EXTENSION_BYTES	= 50								' bytes written past the end of a file
+  STRADDLE_BYTES	= 40								' bytes written across the end of a small file
+  TAIL_BYTES		= 100								' bytes in the third block of the model file
+  MODEL_BYTES		= flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + TAIL_BYTES
+  EXPECT_BYTES		= SMALL_BYTES + SMALL_EDIT_BYTES				' a small file with an edit appended
 
-    OFFSET_IN_HEAD = 500                                ' inside the head block
-    OFFSET_IN_HEAD_LATER = 1000                         ' another offset inside the head block
-    OFFSET_IN_BODY = flash.BYTES_IN_HEAD_BLOCK + 1000   ' inside the first body block
-    OFFSET_IN_TAIL = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + 50 ' inside the third block
-    RELATIVE_SKIP = 4                                   ' bytes a relative seek moves forward
-    FLUSH_ROUNDS = 3                                    ' write-then-flush repetitions
-    STRING_BUF_BYTES = 32                               ' room for the string the string file holds
+  OFFSET_IN_HEAD	= 500								' inside the head block
+  OFFSET_IN_HEAD_LATER	= 1000								' another offset inside the head block
+  OFFSET_IN_BODY	= flash.BYTES_IN_HEAD_BLOCK + 1000				' inside the first body block
+  OFFSET_IN_TAIL	= flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + 50	' inside the third block
+  RELATIVE_SKIP		= 4								' bytes a relative seek moves forward
+  FLUSH_ROUNDS		= 3								' write-then-flush repetitions
+  STRING_BUF_BYTES	= 32								' room for the string the string file holds
 
 CON ' ---- Test Data ----
 
-    ' the byte of a pattern is its offset, its 256-byte page number and the seed, so a block
-    ' that lands in the wrong place or a stale page shows as a differing byte
-    PATTERN_PAGE_SHIFT = 8                              ' 256-byte pages
-    BYTE_MASK = $FF                                     ' keeps a pattern value to one byte
-    SEED_ORIGINAL = 1                                   ' pattern of the content a file starts with
-    SEED_REPLACEMENT = 2                                ' pattern of the content that replaces or follows it
-    SEED_GUARD = 3                                      ' pattern of the file that must stay untouched
-    SEED_EXTENSION = 4                                  ' pattern of bytes written past the end
-    EDIT_FLIP = $5A                                     ' bits an in-place edit inverts in each byte
-    POISON_BYTE = $A5                                   ' value read buffers are filled with before a read
-    NO_MISMATCH = -1                                    ' firstMismatch() result when the buffers agree
-    STRING_TAIL_ONE = $11                               ' bytes that follow the string in the string file
-    STRING_TAIL_TWO = $22
-    STRING_TAIL_THREE = $33
+  ' the byte of a pattern is its offset, its 256-byte page number and the seed, so a block
+  ' that lands in the wrong place or a stale page shows as a differing byte
+  PATTERN_PAGE_SHIFT	     = 8		   ' 256-byte pages
+  BYTE_MASK		     = $FF		   ' keeps a pattern value to one byte
+  SEED_ORIGINAL		     = 1		   ' pattern of the content a file starts with
+  SEED_REPLACEMENT	     = 2		   ' pattern of the content that replaces or follows it
+  SEED_GUARD		     = 3		   ' pattern of the file that must stay untouched
+  SEED_EXTENSION	     = 4		   ' pattern of bytes written past the end
+  EDIT_FLIP		     = $5A		   ' bits an in-place edit inverts in each byte
+  POISON_BYTE		     = $A5		   ' value read buffers are filled with before a read
+  NO_MISMATCH		     = -1		   ' firstMismatch() result when the buffers agree
+  STRING_TAIL_ONE	     = $11		   ' bytes that follow the string in the string file
+  STRING_TAIL_TWO	     = $22
+  STRING_TAIL_THREE	     = $33
 
-    ' the upper-case spellings of the extended modes, packed as the driver packs "r+" and "w+"
-    MODE_READ_EXTENDED_UPPER = "R" | ("+" << 8)         ' "R+"
-    MODE_WRITE_EXTENDED_UPPER = "W" | ("+" << 8)        ' "W+"
+  ' the upper-case spellings of the extended modes, packed as the driver packs "r+" and "w+"
+  MODE_READ_EXTENDED_UPPER   = "R" | ("+" << 8)    ' "R+"
+  MODE_WRITE_EXTENDED_UPPER  = "W" | ("+" << 8)    ' "W+"
 
 CON ' ---- Mode Outcomes ----
 
@@ -89,28 +89,27 @@ CON ' ---- Mode Outcomes ----
     '  OUTCOME_WRITTEN   - the file holds only the bytes the case wrote
     '  OUTCOME_APPENDED  - the file holds its starting content followed by the bytes written
     '  OUTCOME_MODIFIED  - the file keeps its length, the bytes written replace its first bytes
-    #0, OUTCOME_ABSENT, OUTCOME_UNCHANGED, OUTCOME_WRITTEN, OUTCOME_APPENDED, OUTCOME_MODIFIED
+  #0, OUTCOME_ABSENT, OUTCOME_UNCHANGED, OUTCOME_WRITTEN, OUTCOME_APPENDED, OUTCOME_MODIFIED
 
-DAT ' ---- Files and Buffers ----
+DAT  ' ---- Files and Buffers ----
 
-modelFile       BYTE    "rmw_model.bin", 0
-guardFile       BYTE    "rmw_guard.bin", 0
-missingFile     BYTE    "rmw_missing.bin", 0
-stringFile      BYTE    "rmw_string.bin", 0
+  modelFile	 BYTE  "rmw_model.bin", 0
+  guardFile	 BYTE  "rmw_guard.bin", 0
+  missingFile	 BYTE  "rmw_missing.bin", 0
+  stringFile	 BYTE  "rmw_string.bin", 0
 
 ' the string file holds the zstring, then the tail bytes
-stringContent   BYTE    "alpha-bravo", 0
-stringTail      BYTE    STRING_TAIL_ONE, STRING_TAIL_TWO, STRING_TAIL_THREE
+  stringContent  BYTE  "alpha-bravo", 0
+  stringTail	 BYTE  STRING_TAIL_ONE, STRING_TAIL_TWO, STRING_TAIL_THREE
 stringEnd
 
-stringBuf       BYTE    0[STRING_BUF_BYTES]             ' receives the string read from the string file
-modelBuf        BYTE    0[MODEL_BYTES]                  ' what the file under test should hold
-readBuf         BYTE    0[MODEL_BYTES]                  ' what was read back from the file
-guardBuf        BYTE    0[MODEL_BYTES]                  ' what the guard file should hold
-origBuf         BYTE    0[SMALL_BYTES]                  ' a small file's starting content
-editBuf         BYTE    0[SMALL_EDIT_BYTES]             ' the bytes a mode case writes
-expectBuf       BYTE    0[EXPECT_BYTES]                 ' what a mode case's file should hold
-
+  stringBuf	 BYTE  0[STRING_BUF_BYTES]    ' receives the string read from the string file
+  modelBuf	 BYTE  0[MODEL_BYTES]	      ' what the file under test should hold
+  readBuf	 BYTE  0[MODEL_BYTES]	      ' what was read back from the file
+  guardBuf	 BYTE  0[MODEL_BYTES]	      ' what the guard file should hold
+  origBuf	 BYTE  0[SMALL_BYTES]	      ' a small file's starting content
+  editBuf	 BYTE  0[SMALL_EDIT_BYTES]    ' the bytes a mode case writes
+  expectBuf	 BYTE  0[EXPECT_BYTES]	      ' what a mode case's file should hold
 
 PUB go() | status, pFailedCall
 '' Run every open-mode and read/modify/write test, then show the result.
@@ -120,42 +119,41 @@ PUB go() | status, pFailedCall
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
 
-    pFailedCall := @"format()"
-    status := flash.format()      ' Comment out this line to not erase all files
-    if status == flash.SUCCESS
-        pFailedCall := @"mount()"
-        status := flash.mount()
+  pFailedCall := @"format()"
+  status := flash.format()			' Comment out this line to not erase all files
+  if status == flash.SUCCESS
+    pFailedCall := @"mount()"
+    status := flash.mount()
 
-    if status == flash.SUCCESS
-        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+  if status == flash.SUCCESS
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-        utils.showChipAndDriverVersion()
-        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+    utils.showChipAndDriverVersion()
+    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
 
-        testModeStrings()
-        testWriteRows()
-        testWritePlusRows()
-        testAppendRows()
-        testReadPlusRows()
-        testReadRows()
-        testReadWriteSeekCycle()
-        testReadsOnReadPlus()
-        testFlushRemount()
-        testWritePlusFlushSeek()
-        testSeekAfterWrite()
-        testSeekPastEnd()
-        testExtendInBlock()
-        testNewFileNeighbor()
-        testNewFileReadSeekRewrite()
-        testExtendAcrossBlock()
-    else
-        utils.showError(pFailedCall, status)
-        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
-        utils.evaluateResultNegError(status, flash.SUCCESS)
+    testModeStrings()
+    testWriteRows()
+    testWritePlusRows()
+    testAppendRows()
+    testReadPlusRows()
+    testReadRows()
+    testReadWriteSeekCycle()
+    testReadsOnReadPlus()
+    testFlushRemount()
+    testWritePlusFlushSeek()
+    testSeekAfterWrite()
+    testSeekPastEnd()
+    testExtendInBlock()
+    testNewFileNeighbor()
+    testNewFileReadSeekRewrite()
+    testExtendAcrossBlock()
+  else
+    utils.showError(pFailedCall, status)
+    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    debug("* Test Complete")
-    utils.ShowTestResult(@"RT_rmw_extended_tests")
-
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_rmw_extended_tests")
 
 PRI testModeStrings() | handle, writeCount
 ' Check the "r+" literal, then open an existing file with "R+" and with "W+".
@@ -164,53 +162,50 @@ PRI testModeStrings() | handle, writeCount
 ' @local handle - handle of the file being tested
 ' @local writeCount - bytes written to the file
 
-    utils.startTestGroup(@"mode strings")
+  utils.startTestGroup(@"mode strings")
 
-    utils.startTest(@"mode literals pack as the driver's extended-mode constants")
-    utils.evaluateSubValue(%"r+", @"literal for r+", flash.FILEMODE_READ_EXTENDED)
-    utils.evaluateSubValue(%"w+", @"literal for w+", flash.FILEMODE_WRITE_EXTENDED)
+  utils.startTest(@"mode literals pack as the driver's extended-mode constants")
+  utils.evaluateSubValue(%"r+", @"literal for r+", flash.FILEMODE_READ_EXTENDED)
+  utils.evaluateSubValue(%"w+", @"literal for w+", flash.FILEMODE_WRITE_EXTENDED)
 
-    fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
-    createFile(@"set up an existing file", @modelFile, @modelBuf, SMALL_BYTES)
+  fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
+  createFile(@"set up an existing file", @modelFile, @modelBuf, SMALL_BYTES)
 
-    ' the upper-case form of an extended mode names the same mode as the lower-case form
-    handle := openChecked(@modelFile, MODE_READ_EXTENDED_UPPER, @"open(,R+) on an existing file")
-    utils.startTest(@"R+ handle reads the file")
-    if requireHandle(handle)
-        readAndCheck(handle, 0, EDIT_BYTES)
-        closeAndCheck(handle)
+  ' the upper-case form of an extended mode names the same mode as the lower-case form
+  handle := openChecked(@modelFile, MODE_READ_EXTENDED_UPPER, @"open(,R+) on an existing file")
+  utils.startTest(@"R+ handle reads the file")
+  if requireHandle(handle)
+    readAndCheck(handle, 0, EDIT_BYTES)
+    closeAndCheck(handle)
 
-    fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
-    handle := openChecked(@modelFile, MODE_WRITE_EXTENDED_UPPER, @"open(,W+) on an existing file")
-    utils.startTest(@"W+ handle replaces the file with what is written")
-    if requireHandle(handle)
-        writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
-        utils.evaluateSubValue(writeCount, @"write()", SMALL_EDIT_BYTES)
-        closeAndCheck(handle)
-        checkFileContent(@modelFile, @editBuf, SMALL_EDIT_BYTES)
-
+  fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
+  handle := openChecked(@modelFile, MODE_WRITE_EXTENDED_UPPER, @"open(,W+) on an existing file")
+  utils.startTest(@"W+ handle replaces the file with what is written")
+  if requireHandle(handle)
+    writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
+    utils.evaluateSubValue(writeCount, @"write()", SMALL_EDIT_BYTES)
+    closeAndCheck(handle)
+    checkFileContent(@modelFile, @editBuf, SMALL_EDIT_BYTES)
 
 PRI testWriteRows()
 ' The "w" rows of the mode table: a new and an existing file, with and without writes.
 
-    utils.startTestGroup(@"mode w")
-    runModeCase(@"open(,w) on a new file, then write", flash.FILEMODE_WRITE, FALSE, TRUE, OUTCOME_WRITTEN)
-    runModeCase(@"open(,w) on a new file, no write", flash.FILEMODE_WRITE, FALSE, FALSE, OUTCOME_ABSENT)
-    runModeCase(@"open(,w) on an existing file, then write", flash.FILEMODE_WRITE, TRUE, TRUE, OUTCOME_WRITTEN)
-    runModeCase(@"open(,w) on an existing file, no write", flash.FILEMODE_WRITE, TRUE, FALSE, OUTCOME_ABSENT)
-    emptyNewFileIdCase(@"open(,w) on a new file, no write, counting free block IDs", flash.FILEMODE_WRITE)
-
+  utils.startTestGroup(@"mode w")
+  runModeCase(@"open(,w) on a new file, then write", flash.FILEMODE_WRITE, FALSE, TRUE, OUTCOME_WRITTEN)
+  runModeCase(@"open(,w) on a new file, no write", flash.FILEMODE_WRITE, FALSE, FALSE, OUTCOME_ABSENT)
+  runModeCase(@"open(,w) on an existing file, then write", flash.FILEMODE_WRITE, TRUE, TRUE, OUTCOME_WRITTEN)
+  runModeCase(@"open(,w) on an existing file, no write", flash.FILEMODE_WRITE, TRUE, FALSE, OUTCOME_ABSENT)
+  emptyNewFileIdCase(@"open(,w) on a new file, no write, counting free block IDs", flash.FILEMODE_WRITE)
 
 PRI testWritePlusRows()
 ' The "w+" rows of the mode table: a new and an existing file, with and without writes.
 
-    utils.startTestGroup(@"mode w+")
-    runModeCase(@"open(,w+) on a new file, then write", flash.FILEMODE_WRITE_EXTENDED, FALSE, TRUE, OUTCOME_WRITTEN)
-    runModeCase(@"open(,w+) on a new file, no write", flash.FILEMODE_WRITE_EXTENDED, FALSE, FALSE, OUTCOME_ABSENT)
-    runModeCase(@"open(,w+) on an existing file, then write", flash.FILEMODE_WRITE_EXTENDED, TRUE, TRUE, OUTCOME_WRITTEN)
-    runModeCase(@"open(,w+) on an existing file, no write", flash.FILEMODE_WRITE_EXTENDED, TRUE, FALSE, OUTCOME_ABSENT)
-    emptyNewFileIdCase(@"open(,w+) on a new file, no write, counting free block IDs", flash.FILEMODE_WRITE_EXTENDED)
-
+  utils.startTestGroup(@"mode w+")
+  runModeCase(@"open(,w+) on a new file, then write", flash.FILEMODE_WRITE_EXTENDED, FALSE, TRUE, OUTCOME_WRITTEN)
+  runModeCase(@"open(,w+) on a new file, no write", flash.FILEMODE_WRITE_EXTENDED, FALSE, FALSE, OUTCOME_ABSENT)
+  runModeCase(@"open(,w+) on an existing file, then write", flash.FILEMODE_WRITE_EXTENDED, TRUE, TRUE, OUTCOME_WRITTEN)
+  runModeCase(@"open(,w+) on an existing file, no write", flash.FILEMODE_WRITE_EXTENDED, TRUE, FALSE, OUTCOME_ABSENT)
+  emptyNewFileIdCase(@"open(,w+) on a new file, no write, counting free block IDs", flash.FILEMODE_WRITE_EXTENDED)
 
 PRI emptyNewFileIdCase(pTitle, mode) | freeIdsBefore, handle
 ' Open a new file in a writing mode and close it without a write: the head block ID the open took is free again.
@@ -222,30 +217,28 @@ PRI emptyNewFileIdCase(pTitle, mode) | freeIdsBefore, handle
 ' @local freeIdsBefore - the free block IDs before the open
 ' @local handle - handle of the file being tested
 
-    freshFilesystem()
-    freeIdsBefore := flash.TEST_freeBlockIdCount()
+  freshFilesystem()
+  freeIdsBefore := flash.TEST_freeBlockIdCount()
 
-    handle := openChecked(@modelFile, mode, pTitle)
-    utils.startTest(@"close the file and check its head block ID is free again")
-    if requireHandle(handle)
-        ' the open takes one block ID for the head block of the new file
-        utils.evaluateSubValue(flash.TEST_freeBlockIdCount(), @"free block IDs while the file is open", freeIdsBefore - 1)
-        closeAndCheck(handle)
-        ' a file with no data is not created, so the close gives the ID back
-        utils.evaluateSubValue(flash.TEST_freeBlockIdCount(), @"free block IDs after close()", freeIdsBefore)
-        checkFileAbsent(@modelFile)
-
+  handle := openChecked(@modelFile, mode, pTitle)
+  utils.startTest(@"close the file and check its head block ID is free again")
+  if requireHandle(handle)
+    ' the open takes one block ID for the head block of the new file
+    utils.evaluateSubValue(flash.TEST_freeBlockIdCount(), @"free block IDs while the file is open", freeIdsBefore - 1)
+    closeAndCheck(handle)
+    ' a file with no data is not created, so the close gives the ID back
+    utils.evaluateSubValue(flash.TEST_freeBlockIdCount(), @"free block IDs after close()", freeIdsBefore)
+    checkFileAbsent(@modelFile)
 
 PRI testAppendRows()
 ' The "a" rows of the mode table: a new and an existing file, with and without writes.
 
-    utils.startTestGroup(@"mode a")
-    runModeCase(@"open(,a) on a new file, then write", flash.FILEMODE_APPEND, FALSE, TRUE, OUTCOME_WRITTEN)
-    runModeCase(@"open(,a) on a new file, no write", flash.FILEMODE_APPEND, FALSE, FALSE, OUTCOME_ABSENT)
-    runModeCase(@"open(,a) on an existing file, then write", flash.FILEMODE_APPEND, TRUE, TRUE, OUTCOME_APPENDED)
-    runModeCase(@"open(,a) on an existing file, no write", flash.FILEMODE_APPEND, TRUE, FALSE, OUTCOME_UNCHANGED)
-    emptyNewFileIdCase(@"open(,a) on a new file, no write, counting free block IDs", flash.FILEMODE_APPEND)
-
+  utils.startTestGroup(@"mode a")
+  runModeCase(@"open(,a) on a new file, then write", flash.FILEMODE_APPEND, FALSE, TRUE, OUTCOME_WRITTEN)
+  runModeCase(@"open(,a) on a new file, no write", flash.FILEMODE_APPEND, FALSE, FALSE, OUTCOME_ABSENT)
+  runModeCase(@"open(,a) on an existing file, then write", flash.FILEMODE_APPEND, TRUE, TRUE, OUTCOME_APPENDED)
+  runModeCase(@"open(,a) on an existing file, no write", flash.FILEMODE_APPEND, TRUE, FALSE, OUTCOME_UNCHANGED)
+  emptyNewFileIdCase(@"open(,a) on a new file, no write, counting free block IDs", flash.FILEMODE_APPEND)
 
 PRI testReadPlusRows() | handle, status
 ' The "r+" rows of the mode table: an existing file modified in place or left alone, and a missing file.
@@ -254,20 +247,19 @@ PRI testReadPlusRows() | handle, status
 ' @local handle - handle open() returned for the missing file
 ' @local status - status of closing a handle open() should not have returned
 
-    utils.startTestGroup(@"mode r+")
-    runModeCase(@"open(,r+) on an existing file, then write", flash.FILEMODE_READ_EXTENDED, TRUE, TRUE, OUTCOME_MODIFIED)
-    runModeCase(@"open(,r+) on an existing file, no write", flash.FILEMODE_READ_EXTENDED, TRUE, FALSE, OUTCOME_UNCHANGED)
+  utils.startTestGroup(@"mode r+")
+  runModeCase(@"open(,r+) on an existing file, then write", flash.FILEMODE_READ_EXTENDED, TRUE, TRUE, OUTCOME_MODIFIED)
+  runModeCase(@"open(,r+) on an existing file, no write", flash.FILEMODE_READ_EXTENDED, TRUE, FALSE, OUTCOME_UNCHANGED)
 
-    ' r+ needs a file that exists: a missing file is refused and none is created
-    freshFilesystem()
-    utils.startTest(@"open(,r+) on a missing file is refused")
-    handle, status := utils.openWaitOnHandle(@missingFile, flash.FILEMODE_READ_EXTENDED)
-    utils.evaluateSubStatus(handle, @"open(,r+) result", flash.E_FILE_NOT_FOUND)
-    utils.evaluateSubStatus(status, @"error() after open(,r+)", flash.E_FILE_NOT_FOUND)
-    if handle >= utils.FIRST_HANDLE
-        status := utils.closeHandle(handle)
-    checkFileAbsent(@missingFile)
-
+  ' r+ needs a file that exists: a missing file is refused and none is created
+  freshFilesystem()
+  utils.startTest(@"open(,r+) on a missing file is refused")
+  handle, status := utils.openWaitOnHandle(@missingFile, flash.FILEMODE_READ_EXTENDED)
+  utils.evaluateSubStatus(handle, @"open(,r+) result", flash.E_FILE_NOT_FOUND)
+  utils.evaluateSubStatus(status, @"error() after open(,r+)", flash.E_FILE_NOT_FOUND)
+  if handle >= utils.FIRST_HANDLE
+    status := utils.closeHandle(handle)
+  checkFileAbsent(@missingFile)
 
 PRI testReadRows() | handle, status, readCount, writeCount
 ' The "r" rows of the mode table: an existing file is read and cannot be written, a missing file is refused.
@@ -278,34 +270,33 @@ PRI testReadRows() | handle, status, readCount, writeCount
 ' @local readCount - bytes read from the file
 ' @local writeCount - result of the write the read handle must refuse
 
-    utils.startTestGroup(@"mode r")
-    freshFilesystem()
-    fillPattern(@origBuf, SMALL_BYTES, SEED_ORIGINAL)
-    fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
-    createFile(@"set up an existing file", @modelFile, @origBuf, SMALL_BYTES)
+  utils.startTestGroup(@"mode r")
+  freshFilesystem()
+  fillPattern(@origBuf, SMALL_BYTES, SEED_ORIGINAL)
+  fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
+  createFile(@"set up an existing file", @modelFile, @origBuf, SMALL_BYTES)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_READ, @"open(,r) on an existing file")
-    utils.startTest(@"r handle reads, refuses a write and leaves the file unchanged")
-    if requireHandle(handle)
-        bytefill(@readBuf, POISON_BYTE, SMALL_BYTES)
-        readCount := flash.read(handle, @readBuf, SMALL_BYTES)
-        utils.evaluateSubValue(readCount, @"read()", SMALL_BYTES)
-        utils.evaluateSubValue(firstMismatch(@origBuf, @readBuf, SMALL_BYTES), @"first byte that differs", NO_MISMATCH)
-        writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
-        utils.evaluateSubStatus(writeCount, @"write() on a read handle", flash.E_FILE_MODE)
-        closeAndCheck(handle)
-        checkFileContent(@modelFile, @origBuf, SMALL_BYTES)
+  handle := openChecked(@modelFile, flash.FILEMODE_READ, @"open(,r) on an existing file")
+  utils.startTest(@"r handle reads, refuses a write and leaves the file unchanged")
+  if requireHandle(handle)
+    bytefill(@readBuf, POISON_BYTE, SMALL_BYTES)
+    readCount := flash.read(handle, @readBuf, SMALL_BYTES)
+    utils.evaluateSubValue(readCount, @"read()", SMALL_BYTES)
+    utils.evaluateSubValue(firstMismatch(@origBuf, @readBuf, SMALL_BYTES), @"first byte that differs", NO_MISMATCH)
+    writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
+    utils.evaluateSubStatus(writeCount, @"write() on a read handle", flash.E_FILE_MODE)
+    closeAndCheck(handle)
+    checkFileContent(@modelFile, @origBuf, SMALL_BYTES)
 
-    ' r needs a file that exists: a missing file is refused and none is created
-    freshFilesystem()
-    utils.startTest(@"open(,r) on a missing file is refused")
-    handle, status := utils.openWaitOnHandle(@missingFile, flash.FILEMODE_READ)
-    utils.evaluateSubStatus(handle, @"open(,r) result", flash.E_FILE_NOT_FOUND)
-    utils.evaluateSubStatus(status, @"error() after open(,r)", flash.E_FILE_NOT_FOUND)
-    if handle >= utils.FIRST_HANDLE
-        status := utils.closeHandle(handle)
-    checkFileAbsent(@missingFile)
-
+  ' r needs a file that exists: a missing file is refused and none is created
+  freshFilesystem()
+  utils.startTest(@"open(,r) on a missing file is refused")
+  handle, status := utils.openWaitOnHandle(@missingFile, flash.FILEMODE_READ)
+  utils.evaluateSubStatus(handle, @"open(,r) result", flash.E_FILE_NOT_FOUND)
+  utils.evaluateSubStatus(status, @"error() after open(,r)", flash.E_FILE_NOT_FOUND)
+  if handle >= utils.FIRST_HANDLE
+    status := utils.closeHandle(handle)
+  checkFileAbsent(@missingFile)
 
 PRI testReadWriteSeekCycle() | handle
 ' Read, overwrite and seek through an r+ handle across all three blocks of a file, then check the whole file.
@@ -313,31 +304,30 @@ PRI testReadWriteSeekCycle() | handle
 ' Local Variables:
 ' @local handle - handle of the file being tested
 
-    utils.startTestGroup(@"r+ read, write and seek cycle")
-    freshFilesystem()
-    fillPattern(@modelBuf, MODEL_BYTES, SEED_ORIGINAL)
-    createFile(@"set up a three block file", @modelFile, @modelBuf, MODEL_BYTES)
+  utils.startTestGroup(@"r+ read, write and seek cycle")
+  freshFilesystem()
+  fillPattern(@modelBuf, MODEL_BYTES, SEED_ORIGINAL)
+  createFile(@"set up a three block file", @modelFile, @modelBuf, MODEL_BYTES)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) on a three block file")
-    utils.startTest(@"read, overwrite and seek in every block")
-    if requireHandle(handle)
-        ' read the first bytes, then overwrite the bytes that follow them
-        readAndCheck(handle, 0, EDIT_BYTES)
-        editAndWrite(handle, EDIT_BYTES, EDIT_BYTES)
-        ' move into the next block, read, skip forward with a relative seek and overwrite
-        seekAndCheck(handle, OFFSET_IN_BODY)
-        readAndCheck(handle, OFFSET_IN_BODY, EDIT_BYTES)
-        utils.evaluateSubValue(flash.seek(handle, RELATIVE_SKIP, flash.SK_CURRENT_POSN), @"relative seek()", OFFSET_IN_BODY + EDIT_BYTES + RELATIVE_SKIP)
-        editAndWrite(handle, OFFSET_IN_BODY + EDIT_BYTES + RELATIVE_SKIP, EDIT_BYTES)
-        ' return to the first block and read back the earlier overwrite
-        seekAndCheck(handle, 0)
-        readAndCheck(handle, 0, EDIT_BYTES * 2)
-        ' read in the third block
-        seekAndCheck(handle, OFFSET_IN_TAIL)
-        readAndCheck(handle, OFFSET_IN_TAIL, EDIT_BYTES)
-        closeAndCheck(handle)
-        checkFileContent(@modelFile, @modelBuf, MODEL_BYTES)
-
+  handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) on a three block file")
+  utils.startTest(@"read, overwrite and seek in every block")
+  if requireHandle(handle)
+    ' read the first bytes, then overwrite the bytes that follow them
+    readAndCheck(handle, 0, EDIT_BYTES)
+    editAndWrite(handle, EDIT_BYTES, EDIT_BYTES)
+    ' move into the next block, read, skip forward with a relative seek and overwrite
+    seekAndCheck(handle, OFFSET_IN_BODY)
+    readAndCheck(handle, OFFSET_IN_BODY, EDIT_BYTES)
+    utils.evaluateSubValue(flash.seek(handle, RELATIVE_SKIP, flash.SK_CURRENT_POSN), @"relative seek()", OFFSET_IN_BODY + EDIT_BYTES + RELATIVE_SKIP)
+    editAndWrite(handle, OFFSET_IN_BODY + EDIT_BYTES + RELATIVE_SKIP, EDIT_BYTES)
+    ' return to the first block and read back the earlier overwrite
+    seekAndCheck(handle, 0)
+    readAndCheck(handle, 0, EDIT_BYTES * 2)
+    ' read in the third block
+    seekAndCheck(handle, OFFSET_IN_TAIL)
+    readAndCheck(handle, OFFSET_IN_TAIL, EDIT_BYTES)
+    closeAndCheck(handle)
+    checkFileContent(@modelFile, @modelBuf, MODEL_BYTES)
 
 PRI testReadsOnReadPlus() | handle, bytesRead
 ' Read a byte and a string through an r+ handle.
@@ -346,27 +336,26 @@ PRI testReadsOnReadPlus() | handle, bytesRead
 ' @local handle - handle of the file being tested
 ' @local bytesRead - length of the string rd_str() placed in the buffer
 
-    utils.startTestGroup(@"rd_byte and rd_str on r+")
-    freshFilesystem()
-    createFile(@"set up a file holding a string", @stringFile, @stringContent, @stringEnd - @stringContent)
+  utils.startTestGroup(@"rd_byte and rd_str on r+")
+  freshFilesystem()
+  createFile(@"set up a file holding a string", @stringFile, @stringContent, @stringEnd - @stringContent)
 
-    handle := openChecked(@stringFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) on the string file")
-    utils.startTest(@"rd_byte() on an r+ handle")
-    if requireHandle(handle)
-        utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte()", BYTE[@stringContent])
-        utils.evaluateSubStatus(flash.error(), @"error() after rd_byte()", flash.SUCCESS)
-        closeAndCheck(handle)
+  handle := openChecked(@stringFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) on the string file")
+  utils.startTest(@"rd_byte() on an r+ handle")
+  if requireHandle(handle)
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte()", BYTE[@stringContent])
+    utils.evaluateSubStatus(flash.error(), @"error() after rd_byte()", flash.SUCCESS)
+    closeAndCheck(handle)
 
-    handle := openChecked(@stringFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) on the string file again")
-    utils.startTest(@"rd_str() on an r+ handle")
-    if requireHandle(handle)
-        bytesRead := flash.rd_str(handle, @stringBuf, STRING_BUF_BYTES)
-        utils.evaluateSubValue(bytesRead, @"rd_str()", strsize(@stringContent))
-        utils.evaluateSubStatus(flash.error(), @"error() after rd_str()", flash.SUCCESS)
-        utils.evaluateSubValue(strcomp(@stringBuf, @stringContent), @"string read", TRUE)
-        utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() after the string", BYTE[@stringTail])
-        closeAndCheck(handle)
-
+  handle := openChecked(@stringFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) on the string file again")
+  utils.startTest(@"rd_str() on an r+ handle")
+  if requireHandle(handle)
+    bytesRead := flash.rd_str(handle, @stringBuf, STRING_BUF_BYTES)
+    utils.evaluateSubValue(bytesRead, @"rd_str()", strsize(@stringContent))
+    utils.evaluateSubStatus(flash.error(), @"error() after rd_str()", flash.SUCCESS)
+    utils.evaluateSubValue(strcomp(@stringBuf, @stringContent), @"string read", TRUE)
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() after the string", BYTE[@stringTail])
+    closeAndCheck(handle)
 
 PRI testFlushRemount() | handle, roundIdx
 ' Write and flush repeatedly through an r+ handle, remount, and check every edit survived.
@@ -375,24 +364,23 @@ PRI testFlushRemount() | handle, roundIdx
 ' @local handle - handle of the file being tested
 ' @local roundIdx - number of the write-then-flush round
 
-    utils.startTestGroup(@"flush, write, flush, remount")
-    freshFilesystem()
-    fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
-    createFile(@"set up a one block file", @modelFile, @modelBuf, SMALL_BYTES)
+  utils.startTestGroup(@"flush, write, flush, remount")
+  freshFilesystem()
+  fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
+  createFile(@"set up a one block file", @modelFile, @modelBuf, SMALL_BYTES)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) for repeated flushes")
-    utils.startTest(@"write then flush, repeatedly")
-    if requireHandle(handle)
-        repeat FLUSH_ROUNDS with roundIdx
-            editAndWrite(handle, roundIdx * EDIT_BYTES, EDIT_BYTES)
-            utils.evaluateSubStatus(flash.flush(handle), @"flush()", flash.SUCCESS)
-            utils.evaluateSubStatus(flash.error(), @"error() after flush()", flash.SUCCESS)
-        closeAndCheck(handle)
+  handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) for repeated flushes")
+  utils.startTest(@"write then flush, repeatedly")
+  if requireHandle(handle)
+    repeat FLUSH_ROUNDS with roundIdx
+      editAndWrite(handle, roundIdx * EDIT_BYTES, EDIT_BYTES)
+      utils.evaluateSubStatus(flash.flush(handle), @"flush()", flash.SUCCESS)
+      utils.evaluateSubStatus(flash.error(), @"error() after flush()", flash.SUCCESS)
+    closeAndCheck(handle)
 
-    remount()
-    utils.startTest(@"file holds every flushed edit after the remount")
-    checkFileContent(@modelFile, @modelBuf, SMALL_BYTES)
-
+  remount()
+  utils.startTest(@"file holds every flushed edit after the remount")
+  checkFileContent(@modelFile, @modelBuf, SMALL_BYTES)
 
 PRI testWritePlusFlushSeek() | handle
 ' Write a w+ file over an existing three block file, seek into its head block, flush, then seek and read in every block.
@@ -400,40 +388,38 @@ PRI testWritePlusFlushSeek() | handle
 ' Local Variables:
 ' @local handle - handle of the file being tested
 
-    utils.startTestGroup(@"w+ over an existing file, flush, then seek")
-    freshFilesystem()
-    fillPattern(@guardBuf, MODEL_BYTES, SEED_ORIGINAL)
-    fillPattern(@modelBuf, MODEL_BYTES, SEED_REPLACEMENT)
-    createFile(@"set up the three block file the w+ file replaces", @modelFile, @guardBuf, MODEL_BYTES)
+  utils.startTestGroup(@"w+ over an existing file, flush, then seek")
+  freshFilesystem()
+  fillPattern(@guardBuf, MODEL_BYTES, SEED_ORIGINAL)
+  fillPattern(@modelBuf, MODEL_BYTES, SEED_REPLACEMENT)
+  createFile(@"set up the three block file the w+ file replaces", @modelFile, @guardBuf, MODEL_BYTES)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) over an existing three block file")
-    utils.startTest(@"write, seek into the head block, flush, then seek and read in every block")
-    if requireHandle(handle)
-        utils.evaluateSubValue(flash.write(handle, @modelBuf, MODEL_BYTES), @"write()", MODEL_BYTES)
-        ' the flush commits the file under the head block ID of the file it replaces, and returns to this position
-        seekAndCheck(handle, OFFSET_IN_HEAD)
-        utils.evaluateSubStatus(flash.flush(handle), @"flush()", flash.SUCCESS)
-        utils.evaluateSubValue(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"position after flush()", OFFSET_IN_HEAD)
-        readAndCheck(handle, OFFSET_IN_HEAD, EDIT_BYTES)
-        seekAndCheck(handle, OFFSET_IN_BODY)
-        readAndCheck(handle, OFFSET_IN_BODY, EDIT_BYTES)
-        seekAndCheck(handle, OFFSET_IN_TAIL)
-        readAndCheck(handle, OFFSET_IN_TAIL, EDIT_BYTES)
-        seekAndCheck(handle, 0)
-        readAndCheck(handle, 0, MODEL_BYTES)
-        closeAndCheck(handle)
-        checkFileContent(@modelFile, @modelBuf, MODEL_BYTES)
-
+  handle := openChecked(@modelFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) over an existing three block file")
+  utils.startTest(@"write, seek into the head block, flush, then seek and read in every block")
+  if requireHandle(handle)
+    utils.evaluateSubValue(flash.write(handle, @modelBuf, MODEL_BYTES), @"write()", MODEL_BYTES)
+    ' the flush commits the file under the head block ID of the file it replaces, and returns to this position
+    seekAndCheck(handle, OFFSET_IN_HEAD)
+    utils.evaluateSubStatus(flash.flush(handle), @"flush()", flash.SUCCESS)
+    utils.evaluateSubValue(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"position after flush()", OFFSET_IN_HEAD)
+    readAndCheck(handle, OFFSET_IN_HEAD, EDIT_BYTES)
+    seekAndCheck(handle, OFFSET_IN_BODY)
+    readAndCheck(handle, OFFSET_IN_BODY, EDIT_BYTES)
+    seekAndCheck(handle, OFFSET_IN_TAIL)
+    readAndCheck(handle, OFFSET_IN_TAIL, EDIT_BYTES)
+    seekAndCheck(handle, 0)
+    readAndCheck(handle, 0, MODEL_BYTES)
+    closeAndCheck(handle)
+    checkFileContent(@modelFile, @modelBuf, MODEL_BYTES)
 
 PRI testSeekAfterWrite()
 ' Write, seek within the same block, to the next block and to the previous block, then check the edits after a remount.
 
-    utils.startTestGroup(@"seek after a write")
-    freshFilesystem()
-    seekAfterWriteCase(@"open(,r+) for a seek within the block", OFFSET_IN_HEAD, OFFSET_IN_HEAD_LATER, FALSE)
-    seekAfterWriteCase(@"open(,r+) for a seek to the next block", OFFSET_IN_HEAD, OFFSET_IN_BODY, TRUE)
-    seekAfterWriteCase(@"open(,r+) for a seek to the previous block", OFFSET_IN_BODY, OFFSET_IN_HEAD, TRUE)
-
+  utils.startTestGroup(@"seek after a write")
+  freshFilesystem()
+  seekAfterWriteCase(@"open(,r+) for a seek within the block", OFFSET_IN_HEAD, OFFSET_IN_HEAD_LATER, FALSE)
+  seekAfterWriteCase(@"open(,r+) for a seek to the next block", OFFSET_IN_HEAD, OFFSET_IN_BODY, TRUE)
+  seekAfterWriteCase(@"open(,r+) for a seek to the previous block", OFFSET_IN_BODY, OFFSET_IN_HEAD, TRUE)
 
 PRI testSeekPastEnd() | handle, writeCount
 ' Seek past the end of an r+ file: the seek is refused and the file gains no gap.
@@ -442,32 +428,30 @@ PRI testSeekPastEnd() | handle, writeCount
 ' @local handle - handle of the file being tested
 ' @local writeCount - result of the write that follows the refused seek
 
-    utils.startTestGroup(@"seek past the end")
-    freshFilesystem()
-    fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
-    fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
-    createFile(@"set up an existing file", @modelFile, @modelBuf, SMALL_BYTES)
+  utils.startTestGroup(@"seek past the end")
+  freshFilesystem()
+  fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
+  fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
+  createFile(@"set up an existing file", @modelFile, @modelBuf, SMALL_BYTES)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) to seek past the end")
-    utils.startTest(@"seek past the end is refused and the file does not grow")
-    if requireHandle(handle)
-        ' the block chain has no holes, so a position beyond the end is an error
-        utils.evaluateSubStatus(flash.seek(handle, SMALL_BYTES + 1, flash.SK_FILE_START), @"seek() past the end", flash.E_FILE_SEEK)
-        utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
-        writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
-        debug("* write() after the refused seek returned ", sdec_(writeCount), ", error() ", sdec_(flash.error()))
-        closeAndCheck(handle)
-        utils.evaluateSubValue(flash.file_size(@modelFile), @"file_size() after the write", SMALL_BYTES)
-
+  handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) to seek past the end")
+  utils.startTest(@"seek past the end is refused and the file does not grow")
+  if requireHandle(handle)
+    ' the block chain has no holes, so a position beyond the end is an error
+    utils.evaluateSubStatus(flash.seek(handle, SMALL_BYTES + 1, flash.SK_FILE_START), @"seek() past the end", flash.E_FILE_SEEK)
+    utils.evaluateSubStatus(flash.error(), @"error() after the refused seek", flash.E_FILE_SEEK)
+    writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
+    DEBUG("* write() after the refused seek returned ", sdec_(writeCount), ", error() ", sdec_(flash.error()))
+    closeAndCheck(handle)
+    utils.evaluateSubValue(flash.file_size(@modelFile), @"file_size() after the write", SMALL_BYTES)
 
 PRI testExtendInBlock()
 ' Write at the end of a file, and across it, without leaving the last block.
 
-    utils.startTestGroup(@"r+ write at and past the end, within a block")
-    freshFilesystem()
-    extendCase(@"open(,r+) to write at the end", SMALL_BYTES, SMALL_BYTES, EXTENSION_BYTES)
-    extendCase(@"open(,r+) to write across the end", SMALL_BYTES, SMALL_BYTES - EDIT_BYTES, STRADDLE_BYTES)
-
+  utils.startTestGroup(@"r+ write at and past the end, within a block")
+  freshFilesystem()
+  extendCase(@"open(,r+) to write at the end", SMALL_BYTES, SMALL_BYTES, EXTENSION_BYTES)
+  extendCase(@"open(,r+) to write across the end", SMALL_BYTES, SMALL_BYTES - EDIT_BYTES, STRADDLE_BYTES)
 
 PRI testNewFileNeighbor() | handle
 ' Create a file with w+ while another file is on the flash: the other file must not change.
@@ -475,19 +459,18 @@ PRI testNewFileNeighbor() | handle
 ' Local Variables:
 ' @local handle - handle of the file being tested
 
-    utils.startTestGroup(@"new w+ file beside another file")
-    freshFilesystem()
-    fillPattern(@guardBuf, MODEL_BYTES, SEED_GUARD)
-    fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
-    createFile(@"set up a file that must stay intact", @guardFile, @guardBuf, MODEL_BYTES)
+  utils.startTestGroup(@"new w+ file beside another file")
+  freshFilesystem()
+  fillPattern(@guardBuf, MODEL_BYTES, SEED_GUARD)
+  fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
+  createFile(@"set up a file that must stay intact", @guardFile, @guardBuf, MODEL_BYTES)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) on a new file beside another file")
-    utils.startTest(@"w+ new file holds what was written and the other file is intact")
-    if requireHandle(handle)
-        writeAndClose(handle, @editBuf, SMALL_EDIT_BYTES)
-        checkFileContent(@modelFile, @editBuf, SMALL_EDIT_BYTES)
-        checkFileContent(@guardFile, @guardBuf, MODEL_BYTES)
-
+  handle := openChecked(@modelFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) on a new file beside another file")
+  utils.startTest(@"w+ new file holds what was written and the other file is intact")
+  if requireHandle(handle)
+    writeAndClose(handle, @editBuf, SMALL_EDIT_BYTES)
+    checkFileContent(@modelFile, @editBuf, SMALL_EDIT_BYTES)
+    checkFileContent(@guardFile, @guardBuf, MODEL_BYTES)
 
 PRI testNewFileReadSeekRewrite() | handle
 ' Read, seek and rewrite inside a new w+ file before it is closed.
@@ -495,31 +478,29 @@ PRI testNewFileReadSeekRewrite() | handle
 ' Local Variables:
 ' @local handle - handle of the file being tested
 
-    utils.startTestGroup(@"new w+ file, read, seek and rewrite")
-    freshFilesystem()
-    fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
+  utils.startTestGroup(@"new w+ file, read, seek and rewrite")
+  freshFilesystem()
+  fillPattern(@modelBuf, SMALL_BYTES, SEED_ORIGINAL)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) on a new file to rewrite within it")
-    utils.startTest(@"w+ new file: read back, rewrite and read back what was written")
-    if requireHandle(handle)
-        utils.evaluateSubValue(flash.write(handle, @modelBuf, SMALL_BYTES), @"write()", SMALL_BYTES)
-        seekAndCheck(handle, 0)
-        readAndCheck(handle, 0, SMALL_BYTES)
-        seekAndCheck(handle, SMALL_MIDDLE)
-        editAndWrite(handle, SMALL_MIDDLE, EDIT_BYTES)
-        seekAndCheck(handle, 0)
-        readAndCheck(handle, 0, SMALL_BYTES)
-        closeAndCheck(handle)
-        checkFileContent(@modelFile, @modelBuf, SMALL_BYTES)
-
+  handle := openChecked(@modelFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) on a new file to rewrite within it")
+  utils.startTest(@"w+ new file: read back, rewrite and read back what was written")
+  if requireHandle(handle)
+    utils.evaluateSubValue(flash.write(handle, @modelBuf, SMALL_BYTES), @"write()", SMALL_BYTES)
+    seekAndCheck(handle, 0)
+    readAndCheck(handle, 0, SMALL_BYTES)
+    seekAndCheck(handle, SMALL_MIDDLE)
+    editAndWrite(handle, SMALL_MIDDLE, EDIT_BYTES)
+    seekAndCheck(handle, 0)
+    readAndCheck(handle, 0, SMALL_BYTES)
+    closeAndCheck(handle)
+    checkFileContent(@modelFile, @modelBuf, SMALL_BYTES)
 
 PRI testExtendAcrossBlock()
 ' Write at the end of a file whose last block is full, so the write continues in a new block.
 
-    utils.startTestGroup(@"r+ write past the end, into a new block")
-    freshFilesystem()
-    extendCase(@"open(,r+) to write past a full last block", flash.BYTES_IN_HEAD_BLOCK, flash.BYTES_IN_HEAD_BLOCK, EXTENSION_BYTES)
-
+  utils.startTestGroup(@"r+ write past the end, into a new block")
+  freshFilesystem()
+  extendCase(@"open(,r+) to write past a full last block", flash.BYTES_IN_HEAD_BLOCK, flash.BYTES_IN_HEAD_BLOCK, EXTENSION_BYTES)
 
 PRI runModeCase(pTitle, mode, bFilePresent, bDoWrites, outcome) | handle, writeCount
 ' Open a file in a mode, optionally write to it, close it and check what the file holds.
@@ -534,43 +515,41 @@ PRI runModeCase(pTitle, mode, bFilePresent, bDoWrites, outcome) | handle, writeC
 ' @local handle - handle of the file being tested
 ' @local writeCount - bytes written to the file
 
-    freshFilesystem()
-    fillPattern(@origBuf, SMALL_BYTES, SEED_ORIGINAL)
-    fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
-    if bFilePresent
-        createFile(@"set up the existing file", @modelFile, @origBuf, SMALL_BYTES)
+  freshFilesystem()
+  fillPattern(@origBuf, SMALL_BYTES, SEED_ORIGINAL)
+  fillPattern(@editBuf, SMALL_EDIT_BYTES, SEED_REPLACEMENT)
+  if bFilePresent
+    createFile(@"set up the existing file", @modelFile, @origBuf, SMALL_BYTES)
 
-    handle := openChecked(@modelFile, mode, pTitle)
-    utils.startTest(@"close the file and check what it holds")
-    if requireHandle(handle)
-        if bDoWrites
-            writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
-            utils.evaluateSubValue(writeCount, @"write()", SMALL_EDIT_BYTES)
-        closeAndCheck(handle)
-        checkOutcome(outcome)
-
+  handle := openChecked(@modelFile, mode, pTitle)
+  utils.startTest(@"close the file and check what it holds")
+  if requireHandle(handle)
+    if bDoWrites
+      writeCount := flash.write(handle, @editBuf, SMALL_EDIT_BYTES)
+      utils.evaluateSubValue(writeCount, @"write()", SMALL_EDIT_BYTES)
+    closeAndCheck(handle)
+    checkOutcome(outcome)
 
 PRI checkOutcome(outcome)
 ' Check the file under test against an outcome of a mode case.
 
 ' @param outcome - what the file must hold, an OUTCOME_ value
 
-    case outcome
-        OUTCOME_ABSENT:
-            checkFileAbsent(@modelFile)
-        OUTCOME_UNCHANGED:
-            checkFileContent(@modelFile, @origBuf, SMALL_BYTES)
-        OUTCOME_WRITTEN:
-            checkFileContent(@modelFile, @editBuf, SMALL_EDIT_BYTES)
-        OUTCOME_APPENDED:
-            bytemove(@expectBuf, @origBuf, SMALL_BYTES)
-            bytemove(@expectBuf + SMALL_BYTES, @editBuf, SMALL_EDIT_BYTES)
-            checkFileContent(@modelFile, @expectBuf, SMALL_BYTES + SMALL_EDIT_BYTES)
-        OUTCOME_MODIFIED:
-            bytemove(@expectBuf, @origBuf, SMALL_BYTES)
-            bytemove(@expectBuf, @editBuf, SMALL_EDIT_BYTES)
-            checkFileContent(@modelFile, @expectBuf, SMALL_BYTES)
-
+  CASE outcome
+    OUTCOME_ABSENT:
+      checkFileAbsent(@modelFile)
+    OUTCOME_UNCHANGED:
+      checkFileContent(@modelFile, @origBuf, SMALL_BYTES)
+    OUTCOME_WRITTEN:
+      checkFileContent(@modelFile, @editBuf, SMALL_EDIT_BYTES)
+    OUTCOME_APPENDED:
+      bytemove(@expectBuf, @origBuf, SMALL_BYTES)
+      bytemove(@expectBuf + SMALL_BYTES, @editBuf, SMALL_EDIT_BYTES)
+      checkFileContent(@modelFile, @expectBuf, SMALL_BYTES + SMALL_EDIT_BYTES)
+    OUTCOME_MODIFIED:
+      bytemove(@expectBuf, @origBuf, SMALL_BYTES)
+      bytemove(@expectBuf, @editBuf, SMALL_EDIT_BYTES)
+      checkFileContent(@modelFile, @expectBuf, SMALL_BYTES)
 
 PRI seekAfterWriteCase(pTitle, firstOffset, secondOffset, bWriteSecond) | handle
 ' Write at one offset of a three block file, seek to another, optionally write there, then remount and check both edits.
@@ -583,23 +562,22 @@ PRI seekAfterWriteCase(pTitle, firstOffset, secondOffset, bWriteSecond) | handle
 ' Local Variables:
 ' @local handle - handle of the file being tested
 
-    fillPattern(@modelBuf, MODEL_BYTES, SEED_ORIGINAL)
-    createFile(@"set up a three block file", @modelFile, @modelBuf, MODEL_BYTES)
+  fillPattern(@modelBuf, MODEL_BYTES, SEED_ORIGINAL)
+  createFile(@"set up a three block file", @modelFile, @modelBuf, MODEL_BYTES)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, pTitle)
-    utils.startTest(@"write, seek, and write again")
-    if requireHandle(handle)
-        seekAndCheck(handle, firstOffset)
-        editAndWrite(handle, firstOffset, EDIT_BYTES)
-        seekAndCheck(handle, secondOffset)
-        if bWriteSecond
-            editAndWrite(handle, secondOffset, EDIT_BYTES)
-        closeAndCheck(handle)
+  handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, pTitle)
+  utils.startTest(@"write, seek, and write again")
+  if requireHandle(handle)
+    seekAndCheck(handle, firstOffset)
+    editAndWrite(handle, firstOffset, EDIT_BYTES)
+    seekAndCheck(handle, secondOffset)
+    if bWriteSecond
+      editAndWrite(handle, secondOffset, EDIT_BYTES)
+    closeAndCheck(handle)
 
-    remount()
-    utils.startTest(@"edits are present after the remount")
-    checkFileContent(@modelFile, @modelBuf, MODEL_BYTES)
-
+  remount()
+  utils.startTest(@"edits are present after the remount")
+  checkFileContent(@modelFile, @modelBuf, MODEL_BYTES)
 
 PRI extendCase(pTitle, originalBytes, writeOffset, writeBytes) | handle, writeCount
 ' Write past the end of an r+ file from a given offset and check the file grew to hold the new bytes.
@@ -613,19 +591,18 @@ PRI extendCase(pTitle, originalBytes, writeOffset, writeBytes) | handle, writeCo
 ' @local handle - handle of the file being tested
 ' @local writeCount - bytes written to the file
 
-    fillPattern(@modelBuf, originalBytes, SEED_ORIGINAL)
-    createFile(@"set up the file to extend", @modelFile, @modelBuf, originalBytes)
+  fillPattern(@modelBuf, originalBytes, SEED_ORIGINAL)
+  createFile(@"set up the file to extend", @modelFile, @modelBuf, originalBytes)
 
-    handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, pTitle)
-    utils.startTest(@"write at and past the end, close and check the file grew")
-    if requireHandle(handle)
-        seekAndCheck(handle, writeOffset)
-        fillPattern(@modelBuf + writeOffset, writeBytes, SEED_EXTENSION)
-        writeCount := flash.write(handle, @modelBuf + writeOffset, writeBytes)
-        utils.evaluateSubValue(writeCount, @"write()", writeBytes)
-        closeAndCheck(handle)
-        checkFileContent(@modelFile, @modelBuf, writeOffset + writeBytes)
-
+  handle := openChecked(@modelFile, flash.FILEMODE_READ_EXTENDED, pTitle)
+  utils.startTest(@"write at and past the end, close and check the file grew")
+  if requireHandle(handle)
+    seekAndCheck(handle, writeOffset)
+    fillPattern(@modelBuf + writeOffset, writeBytes, SEED_EXTENSION)
+    writeCount := flash.write(handle, @modelBuf + writeOffset, writeBytes)
+    utils.evaluateSubValue(writeCount, @"write()", writeBytes)
+    closeAndCheck(handle)
+    checkFileContent(@modelFile, @modelBuf, writeOffset + writeBytes)
 
 PRI freshFilesystem() | status
 ' Format the flash and mount it, leaving no files.
@@ -633,10 +610,9 @@ PRI freshFilesystem() | status
 ' Local Variables:
 ' @local status - status format() returned
 
-    utils.startTest(@"format() and mount() leave an empty filesystem")
-    status := flash.format()
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
+  utils.startTest(@"format() and mount() leave an empty filesystem")
+  status := flash.format()
+  utils.evaluateResultNegError(status, flash.SUCCESS)
 
 PRI remount() | status
 ' Unmount and mount the filesystem, as a power cycle would, keeping only what reached the flash.
@@ -644,12 +620,11 @@ PRI remount() | status
 ' Local Variables:
 ' @local status - status of the unmount or the mount
 
-    utils.startTest(@"unmount() then mount()")
-    status := flash.unmount()
-    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
-    status := flash.mount()
-    utils.evaluateSubStatus(status, @"mount()", flash.SUCCESS)
-
+  utils.startTest(@"unmount() then mount()")
+  status := flash.unmount()
+  utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+  status := flash.mount()
+  utils.evaluateSubStatus(status, @"mount()", flash.SUCCESS)
 
 PRI createFile(pDescription, pFilename, pBuffer, byteCount) | handle, status, writeCount
 ' Write bytes to a file opened with "w" and close it, as one test.
@@ -664,15 +639,14 @@ PRI createFile(pDescription, pFilename, pBuffer, byteCount) | handle, status, wr
 ' @local status - status of the open or of the close
 ' @local writeCount - bytes written to the file
 
-    utils.startTest(pDescription)
-    handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_WRITE)
-    utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
-    if status == flash.SUCCESS
-        writeCount := flash.write(handle, pBuffer, byteCount)
-        utils.evaluateSubValue(writeCount, @"write()", byteCount)
-        status := utils.closeHandle(handle)
-        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-
+  utils.startTest(pDescription)
+  handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_WRITE)
+  utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
+  if status == flash.SUCCESS
+    writeCount := flash.write(handle, pBuffer, byteCount)
+    utils.evaluateSubValue(writeCount, @"write()", byteCount)
+    status := utils.closeHandle(handle)
+    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
 
 PRI openChecked(pFilename, mode, pMessage) : handle
 ' Open a file as a test that passes when open() returned a usable handle.
@@ -682,10 +656,9 @@ PRI openChecked(pFilename, mode, pMessage) : handle
 ' @param pMessage - address of zstring naming the test
 ' @returns handle - handle from open(), or a negative error code
 
-    utils.startTest(pMessage)
-    handle, _ := utils.openWaitOnHandle(pFilename, mode)
-    utils.evaluateHandle(handle, pMessage)
-
+  utils.startTest(pMessage)
+  handle, _ := utils.openWaitOnHandle(pFilename, mode)
+  utils.evaluateHandle(handle, pMessage)
 
 PRI requireHandle(handle) : bUsable
 ' Tell whether open() returned a handle; when it did not, record that as a failed check of the running test.
@@ -693,10 +666,9 @@ PRI requireHandle(handle) : bUsable
 ' @param handle - handle from open(), or a negative error code
 ' @returns bUsable - TRUE when the handle can be used
 
-    bUsable := handle >= utils.FIRST_HANDLE
-    ifnot bUsable
-        utils.evaluateSubValue(handle, @"usable handle", utils.FIRST_HANDLE)
-
+  bUsable := handle >= utils.FIRST_HANDLE
+  ifnot bUsable
+    utils.evaluateSubValue(handle, @"usable handle", utils.FIRST_HANDLE)
 
 PRI closeAndCheck(handle) | status
 ' Close a handle and check that close() and error() both report success.
@@ -706,10 +678,9 @@ PRI closeAndCheck(handle) | status
 ' Local Variables:
 ' @local status - status close() returned
 
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-    utils.evaluateSubStatus(flash.error(), @"error() after close()", flash.SUCCESS)
-
+  status := utils.closeHandle(handle)
+  utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+  utils.evaluateSubStatus(flash.error(), @"error() after close()", flash.SUCCESS)
 
 PRI writeAndClose(handle, pBuffer, byteCount) | writeCount
 ' Write bytes through a handle and close it, checking the write count and the close.
@@ -721,10 +692,9 @@ PRI writeAndClose(handle, pBuffer, byteCount) | writeCount
 ' Local Variables:
 ' @local writeCount - bytes written to the file
 
-    writeCount := flash.write(handle, pBuffer, byteCount)
-    utils.evaluateSubValue(writeCount, @"write()", byteCount)
-    closeAndCheck(handle)
-
+  writeCount := flash.write(handle, pBuffer, byteCount)
+  utils.evaluateSubValue(writeCount, @"write()", byteCount)
+  closeAndCheck(handle)
 
 PRI seekAndCheck(handle, position)
 ' Seek to a file offset and check the seek reports that offset.
@@ -732,8 +702,7 @@ PRI seekAndCheck(handle, position)
 ' @param handle - handle of the open file
 ' @param position - file offset to seek to
 
-    utils.evaluateSubValue(flash.seek(handle, position, flash.SK_FILE_START), @"seek()", position)
-
+  utils.evaluateSubValue(flash.seek(handle, position, flash.SK_FILE_START), @"seek()", position)
 
 PRI readAndCheck(handle, fileOffset, byteCount) | readCount
 ' Read bytes at the handle's position and compare them with the model of the file.
@@ -745,11 +714,10 @@ PRI readAndCheck(handle, fileOffset, byteCount) | readCount
 ' Local Variables:
 ' @local readCount - bytes read from the file
 
-    bytefill(@readBuf, POISON_BYTE, byteCount)
-    readCount := flash.read(handle, @readBuf, byteCount)
-    utils.evaluateSubValue(readCount, @"read()", byteCount)
-    utils.evaluateSubValue(firstMismatch(@modelBuf + fileOffset, @readBuf, byteCount), @"first byte that differs", NO_MISMATCH)
-
+  bytefill(@readBuf, POISON_BYTE, byteCount)
+  readCount := flash.read(handle, @readBuf, byteCount)
+  utils.evaluateSubValue(readCount, @"read()", byteCount)
+  utils.evaluateSubValue(firstMismatch(@modelBuf + fileOffset, @readBuf, byteCount), @"first byte that differs", NO_MISMATCH)
 
 PRI editAndWrite(handle, fileOffset, byteCount) | byteIdx, writeCount
 ' Invert bytes of the model of the file and write them through the handle, which is positioned at fileOffset.
@@ -762,11 +730,10 @@ PRI editAndWrite(handle, fileOffset, byteCount) | byteIdx, writeCount
 ' @local byteIdx - number of the byte being inverted
 ' @local writeCount - bytes written to the file
 
-    repeat byteCount with byteIdx
-        BYTE[@modelBuf][fileOffset + byteIdx] ^= EDIT_FLIP
-    writeCount := flash.write(handle, @modelBuf + fileOffset, byteCount)
-    utils.evaluateSubValue(writeCount, @"write()", byteCount)
-
+  repeat byteCount with byteIdx
+    BYTE[@modelBuf][fileOffset + byteIdx] ^= EDIT_FLIP
+  writeCount := flash.write(handle, @modelBuf + fileOffset, byteCount)
+  utils.evaluateSubValue(writeCount, @"write()", byteCount)
 
 PRI checkFileContent(pFilename, pExpected, expectedBytes) | bExists, handle, status, readCount
 ' Check that a file exists, has the expected size and holds the expected bytes, reading it back with "r".
@@ -781,29 +748,27 @@ PRI checkFileContent(pFilename, pExpected, expectedBytes) | bExists, handle, sta
 ' @local status - status of the open or of the close
 ' @local readCount - bytes read from the file
 
-    bExists := flash.exists(pFilename)
-    utils.evaluateSubValue(bExists, @"exists()", TRUE)
-    if bExists
-        utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", expectedBytes)
-        handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_READ)
-        utils.evaluateSubStatus(status, @"open(,r)", flash.SUCCESS)
-        if status == flash.SUCCESS
-            bytefill(@readBuf, POISON_BYTE, expectedBytes)
-            readCount := flash.read(handle, @readBuf, expectedBytes)
-            utils.evaluateSubValue(readCount, @"read()", expectedBytes)
-            utils.evaluateSubValue(firstMismatch(pExpected, @readBuf, expectedBytes), @"first byte that differs", NO_MISMATCH)
-            status := utils.closeHandle(handle)
-            utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-
+  bExists := flash.exists(pFilename)
+  utils.evaluateSubValue(bExists, @"exists()", TRUE)
+  if bExists
+    utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", expectedBytes)
+    handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_READ)
+    utils.evaluateSubStatus(status, @"open(,r)", flash.SUCCESS)
+    if status == flash.SUCCESS
+      bytefill(@readBuf, POISON_BYTE, expectedBytes)
+      readCount := flash.read(handle, @readBuf, expectedBytes)
+      utils.evaluateSubValue(readCount, @"read()", expectedBytes)
+      utils.evaluateSubValue(firstMismatch(pExpected, @readBuf, expectedBytes), @"first byte that differs", NO_MISMATCH)
+      status := utils.closeHandle(handle)
+      utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
 
 PRI checkFileAbsent(pFilename)
 ' Check that no file of this name exists.
 
 ' @param pFilename - address of zstring with the file name
 
-    utils.evaluateSubValue(flash.exists(pFilename), @"exists()", FALSE)
-    utils.evaluateSubStatus(flash.file_size(pFilename), @"file_size()", flash.E_FILE_NOT_FOUND)
-
+  utils.evaluateSubValue(flash.exists(pFilename), @"exists()", FALSE)
+  utils.evaluateSubStatus(flash.file_size(pFilename), @"file_size()", flash.E_FILE_NOT_FOUND)
 
 PRI fillPattern(pBuffer, byteCount, seed) | byteIdx
 ' Fill a buffer with a repeatable pattern that differs by seed and by 256-byte page.
@@ -815,9 +780,8 @@ PRI fillPattern(pBuffer, byteCount, seed) | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being filled
 
-    repeat byteCount with byteIdx
-        BYTE[pBuffer][byteIdx] := (byteIdx + (byteIdx >> PATTERN_PAGE_SHIFT) + seed) & BYTE_MASK
-
+  repeat byteCount with byteIdx
+    BYTE[pBuffer][byteIdx] := (byteIdx + (byteIdx >> PATTERN_PAGE_SHIFT) + seed) & BYTE_MASK
 
 PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Find the first byte at which two buffers differ.
@@ -830,14 +794,13 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being compared
 
-    mismatchIdx := NO_MISMATCH
-    repeat byteCount with byteIdx
-        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-            mismatchIdx := byteIdx
-            quit
+  mismatchIdx := NO_MISMATCH
+  repeat byteCount with byteIdx
+    if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+      mismatchIdx := byteIdx
+      quit
 
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================

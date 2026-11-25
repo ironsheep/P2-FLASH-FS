@@ -33,7 +33,7 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -45,64 +45,63 @@ CON
 '}
 
 OBJ
-    flash : "flash_fs"
-    utils : "RT_utilities"
+  FLASH   : "flash_fs"
+  utils   : "RT_utilities"
 
 CON ' ---- Test Geometry ----
 
-    MIN_HANDLES_NEEDED = 2                              ' handles the cases hold at one time
-    DATA_BYTES = 64                                     ' bytes of the first data file: one block
-    DATA_BASE = 1                                       ' value of the first byte of the first data file
-    OTHER_BYTES = 100                                   ' bytes of the second data file: one block
-    OTHER_BASE = $40                                    ' value of the first byte of the second data file
-    MULTI_EXTRA_BYTES = 100                             ' bytes of the multi-block file beyond the head block
-    MULTI_BYTES = flash.BYTES_IN_HEAD_BLOCK + MULTI_EXTRA_BYTES ' bytes of the multi-block file: two blocks
-    MULTI_BASE = 7                                      ' value of the first byte of the multi-block file
-    ONE_BLOCK = 1                                       ' blocks of a file of a few bytes
-    ONE_FILE = 1                                        ' files one call adds or removes
-    NO_CHANGE = 0                                       ' change in a count of blocks or files
-    BYTE_MASK = $FF                                     ' keeps a value to one byte
-    NO_MISMATCH = -1                                    ' firstMismatch() result when the buffers agree
+  MIN_HANDLES_NEEDED  = 2						 ' handles the cases hold at one time
+  DATA_BYTES	      = 64						 ' bytes of the first data file: one block
+  DATA_BASE	      = 1						 ' value of the first byte of the first data file
+  OTHER_BYTES	      = 100						 ' bytes of the second data file: one block
+  OTHER_BASE	      = $40						 ' value of the first byte of the second data file
+  MULTI_EXTRA_BYTES   = 100						 ' bytes of the multi-block file beyond the head block
+  MULTI_BYTES	      = FLASH.BYTES_IN_HEAD_BLOCK + MULTI_EXTRA_BYTES	 ' bytes of the multi-block file: two blocks
+  MULTI_BASE	      = 7						 ' value of the first byte of the multi-block file
+  ONE_BLOCK	      = 1						 ' blocks of a file of a few bytes
+  ONE_FILE	      = 1						 ' files one call adds or removes
+  NO_CHANGE	      = 0						 ' change in a count of blocks or files
+  BYTE_MASK	      = $FF						 ' keeps a value to one byte
+  NO_MISMATCH	      = -1						 ' firstMismatch() result when the buffers agree
 
-DAT ' ---- Statistics Taken Before a Call ----
+DAT  ' ---- Statistics Taken Before a Call ----
 
-baseUsed        LONG    0                               ' used blocks stats() reported when takeStats() last ran
-baseFree        LONG    0                               ' free blocks stats() reported then
-baseFiles       LONG    0                               ' files stats() reported then
+  baseUsed   LONG  0	' used blocks stats() reported when takeStats() last ran
+  baseFree   LONG  0	' free blocks stats() reported then
+  baseFiles  LONG  0	' files stats() reported then
 
-DAT ' ---- Names ----
+DAT  ' ---- Names ----
 
-renameFrom      BYTE    "ren_a.bin", 0                  ' the one-block file the rename cases move
-renameTo        BYTE    "ren_b.bin", 0                  ' the name it is moved to
-multiFrom       BYTE    "ren_big_a.bin", 0              ' the multi-block file the rename cases move
-multiTo         BYTE    "ren_big_b.bin", 0              ' the name it is moved to
-openRead        BYTE    "opn_a.bin", 0                  ' a file the open cases hold open for reading
-openOther       BYTE    "opn_b.bin", 0                  ' a file the open cases rename to the name of the open file
-openMoved       BYTE    "opn_moved.bin", 0              ' a name no file has: the open cases rename to it
-openWrite       BYTE    "opn_w.bin", 0                  ' a file the open cases hold open for writing
-takenFirst      BYTE    "tkn_a.bin", 0                  ' the file rename() moves onto a taken name
-takenSecond     BYTE    "tkn_b.bin", 0                  ' the file that holds the name
-goneName        BYTE    "gone.bin", 0                   ' a name no file has
-newName         BYTE    "fresh.bin", 0                  ' a name no file has, for a rename to
-orderFirst      BYTE    "ord_a.bin", 0                  ' a file the order cases hold open for reading
-orderSecond     BYTE    "ord_b.bin", 0                  ' a second file the order cases hold open for reading
-deleteOne       BYTE    "del_a.bin", 0                  ' the one-block file the delete cases remove
-deleteBig       BYTE    "del_big.bin", 0                ' the multi-block file the delete cases remove
-deleteOpen      BYTE    "del_open.bin", 0               ' a file the delete cases hold open for reading
-deleteWrite     BYTE    "del_w.bin", 0                  ' a file the delete cases hold open for writing
-keepOld         BYTE    "ps_old.bin", 0                 ' the file the persistence cases rename
-keepNew         BYTE    "ps_new.bin", 0                 ' the name the persistence cases rename it to
-keepFinal       BYTE    "ps_final.bin", 0               ' the name it is renamed to after the first remount
-keepDeleted     BYTE    "ps_del.bin", 0                 ' a file the persistence cases delete
-keepUntouched   BYTE    "ps_keep.bin", 0                ' a multi-block file the persistence cases leave alone until the remount
+  renameFrom	 BYTE  "ren_a.bin", 0	     ' the one-block file the rename cases move
+  renameTo	 BYTE  "ren_b.bin", 0	     ' the name it is moved to
+  multiFrom	 BYTE  "ren_big_a.bin", 0    ' the multi-block file the rename cases move
+  multiTo	 BYTE  "ren_big_b.bin", 0    ' the name it is moved to
+  openRead	 BYTE  "opn_a.bin", 0	     ' a file the open cases hold open for reading
+  openOther	 BYTE  "opn_b.bin", 0	     ' a file the open cases rename to the name of the open file
+  openMoved	 BYTE  "opn_moved.bin", 0    ' a name no file has: the open cases rename to it
+  openWrite	 BYTE  "opn_w.bin", 0	     ' a file the open cases hold open for writing
+  takenFirst	 BYTE  "tkn_a.bin", 0	     ' the file rename() moves onto a taken name
+  takenSecond	 BYTE  "tkn_b.bin", 0	     ' the file that holds the name
+  goneName	 BYTE  "gone.bin", 0	     ' a name no file has
+  newName	 BYTE  "fresh.bin", 0	     ' a name no file has, for a rename to
+  orderFirst	 BYTE  "ord_a.bin", 0	     ' a file the order cases hold open for reading
+  orderSecond	 BYTE  "ord_b.bin", 0	     ' a second file the order cases hold open for reading
+  deleteOne	 BYTE  "del_a.bin", 0	     ' the one-block file the delete cases remove
+  deleteBig	 BYTE  "del_big.bin", 0      ' the multi-block file the delete cases remove
+  deleteOpen	 BYTE  "del_open.bin", 0     ' a file the delete cases hold open for reading
+  deleteWrite	 BYTE  "del_w.bin", 0	     ' a file the delete cases hold open for writing
+  keepOld	 BYTE  "ps_old.bin", 0	     ' the file the persistence cases rename
+  keepNew	 BYTE  "ps_new.bin", 0	     ' the name the persistence cases rename it to
+  keepFinal	 BYTE  "ps_final.bin", 0     ' the name it is renamed to after the first remount
+  keepDeleted	 BYTE  "ps_del.bin", 0	     ' a file the persistence cases delete
+  keepUntouched  BYTE  "ps_keep.bin", 0      ' a multi-block file the persistence cases leave alone until the remount
 
-DAT ' ---- Buffers ----
+DAT  ' ---- Buffers ----
 
-dataBuf         BYTE    0[DATA_BYTES]                   ' what the first data file holds
-otherBuf        BYTE    0[OTHER_BYTES]                  ' what the second data file holds
-multiBuf        BYTE    0[MULTI_BYTES]                  ' what the multi-block file holds
-readBuf         BYTE    0[MULTI_BYTES]                  ' what a read call fills
-
+  dataBuf   BYTE  0[DATA_BYTES]     ' what the first data file holds
+  otherBuf  BYTE  0[OTHER_BYTES]    ' what the second data file holds
+  multiBuf  BYTE  0[MULTI_BYTES]    ' what the multi-block file holds
+  readBuf   BYTE  0[MULTI_BYTES]    ' what a read call fills
 
 PUB go() | status, pFailedCall
 '' Run every rename and delete test, then show the result.
@@ -112,39 +111,38 @@ PUB go() | status, pFailedCall
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
 
-    pFailedCall := @"format()"
-    status := flash.format()      ' Comment out this line to not erase all files
-    if status == flash.SUCCESS
-        pFailedCall := @"mount()"
-        status := flash.mount()
+  pFailedCall := @"format()"
+  status := FLASH.format()			' Comment out this line to not erase all files
+  if status == FLASH.SUCCESS
+    pFailedCall := @"mount()"
+    status := FLASH.mount()
 
-    if status == flash.SUCCESS
-        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+  if status == FLASH.SUCCESS
+    utils.checkDriverInstance(FLASH.MAX_FILES_OPEN)
 
-        utils.showChipAndDriverVersion()
-        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+    utils.showChipAndDriverVersion()
+    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
 
-        fillPattern(@dataBuf, DATA_BYTES, DATA_BASE)
-        fillPattern(@otherBuf, OTHER_BYTES, OTHER_BASE)
-        fillPattern(@multiBuf, MULTI_BYTES, MULTI_BASE)
+    fillPattern(@dataBuf, DATA_BYTES, DATA_BASE)
+    fillPattern(@otherBuf, OTHER_BYTES, OTHER_BASE)
+    fillPattern(@multiBuf, MULTI_BYTES, MULTI_BASE)
 
-        testHandlesAvailable()
-        testRenameClosedFiles()
-        testRenameOpenFiles()
-        testRenameOntoExisting()
-        testRenameMissing()
-        testRenameCheckOrder()
-        testDeleteClosedFiles()
-        testDeleteOpenFiles()
-        testPersistence()
-    else
-        utils.showError(pFailedCall, status)
-        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
-        utils.evaluateResultNegError(status, flash.SUCCESS)
+    testHandlesAvailable()
+    testRenameClosedFiles()
+    testRenameOpenFiles()
+    testRenameOntoExisting()
+    testRenameMissing()
+    testRenameCheckOrder()
+    testDeleteClosedFiles()
+    testDeleteOpenFiles()
+    testPersistence()
+  else
+    utils.showError(pFailedCall, status)
+    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
+    utils.evaluateResultNegError(status, FLASH.SUCCESS)
 
-    debug("* Test Complete")
-    utils.ShowTestResult(@"RT_rename_delete_tests")
-
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_rename_delete_tests")
 
 PRI testHandlesAvailable() | bEnoughHandles
 ' Check that the driver has the handles the cases hold at one time.
@@ -152,26 +150,24 @@ PRI testHandlesAvailable() | bEnoughHandles
 ' Local Variables:
 ' @local bEnoughHandles - TRUE when the driver has at least MIN_HANDLES_NEEDED handles
 
-    utils.startTestGroup(@"handles available to the cases")
-    utils.startTest(@"MAX_FILES_OPEN covers the files the cases hold at one time")
-    bEnoughHandles := flash.MAX_FILES_OPEN >= MIN_HANDLES_NEEDED
-    utils.evaluateSingleValue(bEnoughHandles, @"MAX_FILES_OPEN is enough", TRUE)
-
+  utils.startTestGroup(@"handles available to the cases")
+  utils.startTest(@"MAX_FILES_OPEN covers the files the cases hold at one time")
+  bEnoughHandles := FLASH.MAX_FILES_OPEN >= MIN_HANDLES_NEEDED
+  utils.evaluateSingleValue(bEnoughHandles, @"MAX_FILES_OPEN is enough", TRUE)
 
 PRI testRenameClosedFiles()
 ' Rename a one-block file and a multi-block file that nothing holds open, and rename the first one back.
 
-    utils.startTestGroup(@"rename() of closed files")
-    makeFile(@"set up the one-block file", @renameFrom, @dataBuf, DATA_BYTES)
-    makeFile(@"set up the multi-block file", @multiFrom, @multiBuf, MULTI_BYTES)
+  utils.startTestGroup(@"rename() of closed files")
+  makeFile(@"set up the one-block file", @renameFrom, @dataBuf, DATA_BYTES)
+  makeFile(@"set up the multi-block file", @multiFrom, @multiBuf, MULTI_BYTES)
 
-    renameSucceeds(@"rename() of a one-block file", @renameFrom, @renameTo)
-    movedFileHolds(@"the one-block file is under its new name only", @renameFrom, @renameTo, @dataBuf, DATA_BYTES)
-    renameSucceeds(@"rename() of a multi-block file", @multiFrom, @multiTo)
-    movedFileHolds(@"the multi-block file is under its new name only", @multiFrom, @multiTo, @multiBuf, MULTI_BYTES)
-    renameSucceeds(@"rename() of the one-block file back to its first name", @renameTo, @renameFrom)
-    movedFileHolds(@"the first name holds the file again", @renameTo, @renameFrom, @dataBuf, DATA_BYTES)
-
+  renameSucceeds(@"rename() of a one-block file", @renameFrom, @renameTo)
+  movedFileHolds(@"the one-block file is under its new name only", @renameFrom, @renameTo, @dataBuf, DATA_BYTES)
+  renameSucceeds(@"rename() of a multi-block file", @multiFrom, @multiTo)
+  movedFileHolds(@"the multi-block file is under its new name only", @multiFrom, @multiTo, @multiBuf, MULTI_BYTES)
+  renameSucceeds(@"rename() of the one-block file back to its first name", @renameTo, @renameFrom)
+  movedFileHolds(@"the first name holds the file again", @renameTo, @renameFrom, @dataBuf, DATA_BYTES)
 
 PRI testRenameOpenFiles() | handle
 ' Rename a file while it is open for reading and while it is open for writing, as the old name and as the new name; then rename it once the handles are closed.
@@ -179,50 +175,47 @@ PRI testRenameOpenFiles() | handle
 ' Local Variables:
 ' @local handle - handle of the file being held open
 
-    utils.startTestGroup(@"rename() of files that are open")
-    makeFile(@"set up the file the next calls hold open", @openRead, @dataBuf, DATA_BYTES)
-    makeFile(@"set up a second file", @openOther, @otherBuf, OTHER_BYTES)
+  utils.startTestGroup(@"rename() of files that are open")
+  makeFile(@"set up the file the next calls hold open", @openRead, @dataBuf, DATA_BYTES)
+  makeFile(@"set up a second file", @openOther, @otherBuf, OTHER_BYTES)
 
-    handle := openFor(@openRead, flash.FILEMODE_READ, @"open(,r) the first file")
-    refusedRename(@"rename() of a file that is open for reading", @openRead, @openMoved, flash.E_FILE_OPEN)
-    refusedRename(@"rename() to the name of a file that is open for reading", @openOther, @openRead, flash.E_FILE_OPEN)
-    fileStillThere(@"the file open for reading is still there with its size", @openRead, DATA_BYTES)
-    nameAbsent(@"the name the calls renamed to was not made", @openMoved)
-    utils.startTest(@"close() of the file open for reading")
-    closeSub(handle)
+  handle := openFor(@openRead, FLASH.FILEMODE_READ, @"open(,r) the first file")
+  refusedRename(@"rename() of a file that is open for reading", @openRead, @openMoved, FLASH.E_FILE_OPEN)
+  refusedRename(@"rename() to the name of a file that is open for reading", @openOther, @openRead, FLASH.E_FILE_OPEN)
+  fileStillThere(@"the file open for reading is still there with its size", @openRead, DATA_BYTES)
+  nameAbsent(@"the name the calls renamed to was not made", @openMoved)
+  utils.startTest(@"close() of the file open for reading")
+  closeSub(handle)
 
-    handle := openFor(@openWrite, flash.FILEMODE_WRITE, @"open(,w) a new file")
-    writeOneByte(handle)
-    refusedRename(@"rename() of a file that is open for writing", @openWrite, @openMoved, flash.E_FILE_OPEN)
-    refusedRename(@"rename() to the name of a file that is open for writing", @openRead, @openWrite, flash.E_FILE_OPEN)
-    nameAbsent(@"the name the calls renamed to was not made", @openMoved)
-    utils.startTest(@"close() of the file open for writing")
-    closeSub(handle)
+  handle := openFor(@openWrite, FLASH.FILEMODE_WRITE, @"open(,w) a new file")
+  writeOneByte(handle)
+  refusedRename(@"rename() of a file that is open for writing", @openWrite, @openMoved, FLASH.E_FILE_OPEN)
+  refusedRename(@"rename() to the name of a file that is open for writing", @openRead, @openWrite, FLASH.E_FILE_OPEN)
+  nameAbsent(@"the name the calls renamed to was not made", @openMoved)
+  utils.startTest(@"close() of the file open for writing")
+  closeSub(handle)
 
-    renameSucceeds(@"rename() of the file once its handle is closed", @openRead, @openMoved)
-    movedFileHolds(@"the file is under its new name only", @openRead, @openMoved, @dataBuf, DATA_BYTES)
-
+  renameSucceeds(@"rename() of the file once its handle is closed", @openRead, @openMoved)
+  movedFileHolds(@"the file is under its new name only", @openRead, @openMoved, @dataBuf, DATA_BYTES)
 
 PRI testRenameOntoExisting()
 ' Rename a file to the name of another file: the call fails and both files keep their names and contents.
 
-    utils.startTestGroup(@"rename() onto the name of an existing file")
-    makeFile(@"set up the file to rename", @takenFirst, @dataBuf, DATA_BYTES)
-    makeFile(@"set up the file that holds the name", @takenSecond, @otherBuf, OTHER_BYTES)
+  utils.startTestGroup(@"rename() onto the name of an existing file")
+  makeFile(@"set up the file to rename", @takenFirst, @dataBuf, DATA_BYTES)
+  makeFile(@"set up the file that holds the name", @takenSecond, @otherBuf, OTHER_BYTES)
 
-    refusedRename(@"rename() onto the name of an existing file", @takenFirst, @takenSecond, flash.E_FILE_EXISTS)
-    fileHolds(@"the file to rename is unchanged", @takenFirst, @dataBuf, DATA_BYTES)
-    fileHolds(@"the file that holds the name is unchanged", @takenSecond, @otherBuf, OTHER_BYTES)
-
+  refusedRename(@"rename() onto the name of an existing file", @takenFirst, @takenSecond, FLASH.E_FILE_EXISTS)
+  fileHolds(@"the file to rename is unchanged", @takenFirst, @dataBuf, DATA_BYTES)
+  fileHolds(@"the file that holds the name is unchanged", @takenSecond, @otherBuf, OTHER_BYTES)
 
 PRI testRenameMissing()
 ' Rename a file that does not exist: the call fails and the new name is not made.
 
-    utils.startTestGroup(@"rename() of a file that does not exist")
-    refusedRename(@"rename() of a name no file has", @goneName, @newName, flash.E_FILE_NOT_FOUND)
-    nameAbsent(@"neither name exists", @goneName)
-    nameAbsent(@"the new name was not made", @newName)
-
+  utils.startTestGroup(@"rename() of a file that does not exist")
+  refusedRename(@"rename() of a name no file has", @goneName, @newName, FLASH.E_FILE_NOT_FOUND)
+  nameAbsent(@"neither name exists", @goneName)
+  nameAbsent(@"the new name was not made", @newName)
 
 PRI testRenameCheckOrder() | handle
 ' Make rename() fail for two reasons at once and check which code it reports: an open name beats a taken name and a missing name, and a taken name beats a missing one.
@@ -230,42 +223,40 @@ PRI testRenameCheckOrder() | handle
 ' Local Variables:
 ' @local handle - handle of the file being held open
 
-    utils.startTestGroup(@"the order of the checks of rename()")
-    makeFile(@"set up the first file", @orderFirst, @dataBuf, DATA_BYTES)
-    makeFile(@"set up the second file", @orderSecond, @otherBuf, OTHER_BYTES)
+  utils.startTestGroup(@"the order of the checks of rename()")
+  makeFile(@"set up the first file", @orderFirst, @dataBuf, DATA_BYTES)
+  makeFile(@"set up the second file", @orderSecond, @otherBuf, OTHER_BYTES)
 
-    handle := openFor(@orderFirst, flash.FILEMODE_READ, @"open(,r) the first file")
-    refusedRename(@"old name open and new name taken: E_FILE_OPEN", @orderFirst, @orderSecond, flash.E_FILE_OPEN)
-    utils.startTest(@"close() of the first file")
-    closeSub(handle)
+  handle := openFor(@orderFirst, FLASH.FILEMODE_READ, @"open(,r) the first file")
+  refusedRename(@"old name open and new name taken: E_FILE_OPEN", @orderFirst, @orderSecond, FLASH.E_FILE_OPEN)
+  utils.startTest(@"close() of the first file")
+  closeSub(handle)
 
-    handle := openFor(@orderSecond, flash.FILEMODE_READ, @"open(,r) the second file")
-    refusedRename(@"old name missing and new name open: E_FILE_OPEN", @goneName, @orderSecond, flash.E_FILE_OPEN)
-    utils.startTest(@"close() of the second file")
-    closeSub(handle)
+  handle := openFor(@orderSecond, FLASH.FILEMODE_READ, @"open(,r) the second file")
+  refusedRename(@"old name missing and new name open: E_FILE_OPEN", @goneName, @orderSecond, FLASH.E_FILE_OPEN)
+  utils.startTest(@"close() of the second file")
+  closeSub(handle)
 
-    refusedRename(@"old name missing and new name taken: E_FILE_EXISTS", @goneName, @orderSecond, flash.E_FILE_EXISTS)
-    refusedRename(@"old name missing and new name missing: E_FILE_NOT_FOUND", @goneName, @newName, flash.E_FILE_NOT_FOUND)
-
+  refusedRename(@"old name missing and new name taken: E_FILE_EXISTS", @goneName, @orderSecond, FLASH.E_FILE_EXISTS)
+  refusedRename(@"old name missing and new name missing: E_FILE_NOT_FOUND", @goneName, @newName, FLASH.E_FILE_NOT_FOUND)
 
 PRI testDeleteClosedFiles()
 ' Delete a one-block file and a multi-block file that nothing holds open, then delete them again, and make a deleted name again.
 
-    utils.startTestGroup(@"delete() of closed files")
-    makeFile(@"set up the one-block file", @deleteOne, @dataBuf, DATA_BYTES)
-    makeFile(@"set up the multi-block file", @deleteBig, @multiBuf, MULTI_BYTES)
+  utils.startTestGroup(@"delete() of closed files")
+  makeFile(@"set up the one-block file", @deleteOne, @dataBuf, DATA_BYTES)
+  makeFile(@"set up the multi-block file", @deleteBig, @multiBuf, MULTI_BYTES)
 
-    deleteSucceeds(@"delete() of a one-block file", @deleteOne, ONE_BLOCK)
-    fileGone(@"the deleted one-block file is gone", @deleteOne)
-    deleteSucceeds(@"delete() of a multi-block file", @deleteBig, utils.blockCountForFileSize(MULTI_BYTES))
-    fileGone(@"the deleted multi-block file is gone", @deleteBig)
+  deleteSucceeds(@"delete() of a one-block file", @deleteOne, ONE_BLOCK)
+  fileGone(@"the deleted one-block file is gone", @deleteOne)
+  deleteSucceeds(@"delete() of a multi-block file", @deleteBig, utils.blockCountForFileSize(MULTI_BYTES))
+  fileGone(@"the deleted multi-block file is gone", @deleteBig)
 
-    refusedDelete(@"delete() of a file that was deleted", @deleteOne, flash.E_FILE_NOT_FOUND)
-    refusedDelete(@"delete() of a name no file has", @goneName, flash.E_FILE_NOT_FOUND)
+  refusedDelete(@"delete() of a file that was deleted", @deleteOne, FLASH.E_FILE_NOT_FOUND)
+  refusedDelete(@"delete() of a name no file has", @goneName, FLASH.E_FILE_NOT_FOUND)
 
-    makeFile(@"make the deleted name again with other contents", @deleteOne, @otherBuf, OTHER_BYTES)
-    fileHolds(@"the name holds the new file", @deleteOne, @otherBuf, OTHER_BYTES)
-
+  makeFile(@"make the deleted name again with other contents", @deleteOne, @otherBuf, OTHER_BYTES)
+  fileHolds(@"the name holds the new file", @deleteOne, @otherBuf, OTHER_BYTES)
 
 PRI testDeleteOpenFiles() | handle
 ' Delete a file while it is open for reading and while it is open for writing, then delete each once its handle is closed.
@@ -273,53 +264,50 @@ PRI testDeleteOpenFiles() | handle
 ' Local Variables:
 ' @local handle - handle of the file being held open
 
-    utils.startTestGroup(@"delete() of files that are open")
-    makeFile(@"set up the file the next calls hold open", @deleteOpen, @dataBuf, DATA_BYTES)
+  utils.startTestGroup(@"delete() of files that are open")
+  makeFile(@"set up the file the next calls hold open", @deleteOpen, @dataBuf, DATA_BYTES)
 
-    handle := openFor(@deleteOpen, flash.FILEMODE_READ, @"open(,r) the file")
-    refusedDelete(@"delete() of a file that is open for reading", @deleteOpen, flash.E_FILE_OPEN)
-    fileStillThere(@"the file open for reading is still there with its size", @deleteOpen, DATA_BYTES)
-    utils.startTest(@"close() of the file open for reading")
-    closeSub(handle)
-    deleteSucceeds(@"delete() of the file once its handle is closed", @deleteOpen, ONE_BLOCK)
+  handle := openFor(@deleteOpen, FLASH.FILEMODE_READ, @"open(,r) the file")
+  refusedDelete(@"delete() of a file that is open for reading", @deleteOpen, FLASH.E_FILE_OPEN)
+  fileStillThere(@"the file open for reading is still there with its size", @deleteOpen, DATA_BYTES)
+  utils.startTest(@"close() of the file open for reading")
+  closeSub(handle)
+  deleteSucceeds(@"delete() of the file once its handle is closed", @deleteOpen, ONE_BLOCK)
 
-    handle := openFor(@deleteWrite, flash.FILEMODE_WRITE, @"open(,w) a new file")
-    writeOneByte(handle)
-    refusedDelete(@"delete() of a file that is open for writing", @deleteWrite, flash.E_FILE_OPEN)
-    utils.startTest(@"close() of the file open for writing")
-    closeSub(handle)
-    deleteSucceeds(@"delete() of the file once it is written and closed", @deleteWrite, ONE_BLOCK)
-
+  handle := openFor(@deleteWrite, FLASH.FILEMODE_WRITE, @"open(,w) a new file")
+  writeOneByte(handle)
+  refusedDelete(@"delete() of a file that is open for writing", @deleteWrite, FLASH.E_FILE_OPEN)
+  utils.startTest(@"close() of the file open for writing")
+  closeSub(handle)
+  deleteSucceeds(@"delete() of the file once it is written and closed", @deleteWrite, ONE_BLOCK)
 
 PRI testPersistence()
 ' Rename a file and delete another, unmount and mount, and check the changes and the counts survived; then do both again on the remounted filesystem and remount again.
 
-    utils.startTestGroup(@"rename() and delete() across an unmount and a mount")
-    makeFile(@"set up the file to rename", @keepOld, @dataBuf, DATA_BYTES)
-    makeFile(@"set up the file to delete", @keepDeleted, @otherBuf, OTHER_BYTES)
-    makeFile(@"set up the multi-block file nothing touches", @keepUntouched, @multiBuf, MULTI_BYTES)
+  utils.startTestGroup(@"rename() and delete() across an unmount and a mount")
+  makeFile(@"set up the file to rename", @keepOld, @dataBuf, DATA_BYTES)
+  makeFile(@"set up the file to delete", @keepDeleted, @otherBuf, OTHER_BYTES)
+  makeFile(@"set up the multi-block file nothing touches", @keepUntouched, @multiBuf, MULTI_BYTES)
 
-    renameSucceeds(@"rename() before the remount", @keepOld, @keepNew)
-    deleteSucceeds(@"delete() before the remount", @keepDeleted, ONE_BLOCK)
-    remountCase(@"unmount() and mount() keep the counts")
+  renameSucceeds(@"rename() before the remount", @keepOld, @keepNew)
+  deleteSucceeds(@"delete() before the remount", @keepDeleted, ONE_BLOCK)
+  remountCase(@"unmount() and mount() keep the counts")
 
-    movedFileHolds(@"the renamed file is under its new name only", @keepOld, @keepNew, @dataBuf, DATA_BYTES)
-    fileGone(@"the deleted file is still gone", @keepDeleted)
-    fileHolds(@"the file nothing touched is intact", @keepUntouched, @multiBuf, MULTI_BYTES)
+  movedFileHolds(@"the renamed file is under its new name only", @keepOld, @keepNew, @dataBuf, DATA_BYTES)
+  fileGone(@"the deleted file is still gone", @keepDeleted)
+  fileHolds(@"the file nothing touched is intact", @keepUntouched, @multiBuf, MULTI_BYTES)
 
-    renameSucceeds(@"rename() on the remounted filesystem", @keepNew, @keepFinal)
-    deleteSucceeds(@"delete() of the multi-block file on the remounted filesystem", @keepUntouched, utils.blockCountForFileSize(MULTI_BYTES))
-    remountCase(@"unmount() and mount() a second time keep the counts")
+  renameSucceeds(@"rename() on the remounted filesystem", @keepNew, @keepFinal)
+  deleteSucceeds(@"delete() of the multi-block file on the remounted filesystem", @keepUntouched, utils.blockCountForFileSize(MULTI_BYTES))
+  remountCase(@"unmount() and mount() a second time keep the counts")
 
-    movedFileHolds(@"the file is under its last name only", @keepNew, @keepFinal, @dataBuf, DATA_BYTES)
-    fileGone(@"the multi-block file is still gone", @keepUntouched)
-
+  movedFileHolds(@"the file is under its last name only", @keepNew, @keepFinal, @dataBuf, DATA_BYTES)
+  fileGone(@"the multi-block file is still gone", @keepUntouched)
 
 PRI takeStats()
 ' Record the used blocks, the free blocks and the file count, to measure the change a call makes.
 
-    baseUsed, baseFree, baseFiles := flash.stats()
-
+  baseUsed, baseFree, baseFiles := FLASH.stats()
 
 PRI checkStatsDelta(usedDelta, freeDelta, fileDelta) | usedBlocks, freeBlocks, fileCount
 ' Check the change in the used blocks, the free blocks and the file count since takeStats() ran.
@@ -333,11 +321,10 @@ PRI checkStatsDelta(usedDelta, freeDelta, fileDelta) | usedBlocks, freeBlocks, f
 ' @local freeBlocks - free blocks stats() returned
 ' @local fileCount - file count stats() returned
 
-    usedBlocks, freeBlocks, fileCount := flash.stats()
-    utils.evaluateSubValue(usedBlocks - baseUsed, @"change in used blocks", usedDelta)
-    utils.evaluateSubValue(freeBlocks - baseFree, @"change in free blocks", freeDelta)
-    utils.evaluateSubValue(fileCount - baseFiles, @"change in file count", fileDelta)
-
+  usedBlocks, freeBlocks, fileCount := FLASH.stats()
+  utils.evaluateSubValue(usedBlocks - baseUsed, @"change in used blocks", usedDelta)
+  utils.evaluateSubValue(freeBlocks - baseFree, @"change in free blocks", freeDelta)
+  utils.evaluateSubValue(fileCount - baseFiles, @"change in file count", fileDelta)
 
 PRI renameSucceeds(pTitle, pOldName, pNewName)
 ' Rename a file as a test that passes when rename() and error() report SUCCESS and no count changes.
@@ -346,11 +333,10 @@ PRI renameSucceeds(pTitle, pOldName, pNewName)
 ' @param pOldName - address of zstring with the name of the file
 ' @param pNewName - address of zstring with the name to give it
 
-    utils.startTest(pTitle)
-    takeStats()
-    checkStatus(flash.rename(pOldName, pNewName), flash.SUCCESS, flash.SUCCESS)
-    checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
-
+  utils.startTest(pTitle)
+  takeStats()
+  checkStatus(FLASH.RENAME(pOldName, pNewName), FLASH.SUCCESS, FLASH.SUCCESS)
+  checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
 
 PRI refusedRename(pTitle, pOldName, pNewName, expectedCode)
 ' Rename a file as a test that passes when rename() and error() report a code and no count changes.
@@ -360,11 +346,10 @@ PRI refusedRename(pTitle, pOldName, pNewName, expectedCode)
 ' @param pNewName - address of zstring with the new name
 ' @param expectedCode - the error code rename() must return and leave in error()
 
-    utils.startTest(pTitle)
-    takeStats()
-    checkStatus(flash.rename(pOldName, pNewName), expectedCode, expectedCode)
-    checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
-
+  utils.startTest(pTitle)
+  takeStats()
+  checkStatus(FLASH.RENAME(pOldName, pNewName), expectedCode, expectedCode)
+  checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
 
 PRI deleteSucceeds(pTitle, pName, blockCount)
 ' Delete a file as a test that passes when delete() and error() report SUCCESS and the counts show the file's blocks freed and one file gone.
@@ -373,11 +358,10 @@ PRI deleteSucceeds(pTitle, pName, blockCount)
 ' @param pName - address of zstring with the name of the file
 ' @param blockCount - blocks the file holds
 
-    utils.startTest(pTitle)
-    takeStats()
-    checkStatus(flash.delete(pName), flash.SUCCESS, flash.SUCCESS)
-    checkStatsDelta(-blockCount, blockCount, -ONE_FILE)
-
+  utils.startTest(pTitle)
+  takeStats()
+  checkStatus(FLASH.delete(pName), FLASH.SUCCESS, FLASH.SUCCESS)
+  checkStatsDelta(-blockCount, blockCount, -ONE_FILE)
 
 PRI refusedDelete(pTitle, pName, expectedCode)
 ' Delete a file as a test that passes when delete() and error() report a code and no count changes.
@@ -386,23 +370,21 @@ PRI refusedDelete(pTitle, pName, expectedCode)
 ' @param pName - address of zstring with the name of the file
 ' @param expectedCode - the error code delete() must return and leave in error()
 
-    utils.startTest(pTitle)
-    takeStats()
-    checkStatus(flash.delete(pName), expectedCode, expectedCode)
-    checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
-
+  utils.startTest(pTitle)
+  takeStats()
+  checkStatus(FLASH.delete(pName), expectedCode, expectedCode)
+  checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
 
 PRI remountCase(pTitle)
 ' Unmount and mount as a test that passes when both report SUCCESS and no count changes.
 
 ' @param pTitle - address of zstring naming the test
 
-    utils.startTest(pTitle)
-    takeStats()
-    checkStatus(flash.unmount(), flash.SUCCESS, flash.SUCCESS)
-    checkStatus(flash.mount(), flash.SUCCESS, flash.SUCCESS)
-    checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
-
+  utils.startTest(pTitle)
+  takeStats()
+  checkStatus(FLASH.unmount(), FLASH.SUCCESS, FLASH.SUCCESS)
+  checkStatus(FLASH.mount(), FLASH.SUCCESS, FLASH.SUCCESS)
+  checkStatsDelta(NO_CHANGE, NO_CHANGE, NO_CHANGE)
 
 PRI movedFileHolds(pTitle, pOldName, pNewName, pExpected, byteCount)
 ' Check a renamed file as a test: the old name is gone, and the new name holds the file with its size and bytes.
@@ -413,12 +395,11 @@ PRI movedFileHolds(pTitle, pOldName, pNewName, pExpected, byteCount)
 ' @param pExpected - address of the bytes the file holds
 ' @param byteCount - bytes the file holds
 
-    utils.startTest(pTitle)
-    checkValue(flash.exists(pOldName), FALSE, flash.SUCCESS)
-    utils.evaluateSubValue(flash.exists(pNewName), @"exists() of the new name", TRUE)
-    utils.evaluateSubValue(flash.file_size(pNewName), @"file_size() of the new name", byteCount)
-    utils.evaluateSubValue(contentMatches(pNewName, pExpected, byteCount), @"the bytes read under the new name are the bytes written", TRUE)
-
+  utils.startTest(pTitle)
+  checkValue(FLASH.exists(pOldName), FALSE, FLASH.SUCCESS)
+  utils.evaluateSubValue(FLASH.exists(pNewName), @"exists() of the new name", TRUE)
+  utils.evaluateSubValue(FLASH.file_size(pNewName), @"file_size() of the new name", byteCount)
+  utils.evaluateSubValue(contentMatches(pNewName, pExpected, byteCount), @"the bytes read under the new name are the bytes written", TRUE)
 
 PRI fileHolds(pTitle, pName, pExpected, byteCount)
 ' Check a file as a test: it exists and holds its size and bytes.
@@ -428,11 +409,10 @@ PRI fileHolds(pTitle, pName, pExpected, byteCount)
 ' @param pExpected - address of the bytes the file holds
 ' @param byteCount - bytes the file holds
 
-    utils.startTest(pTitle)
-    checkValue(flash.exists(pName), TRUE, flash.SUCCESS)
-    utils.evaluateSubValue(flash.file_size(pName), @"file_size()", byteCount)
-    utils.evaluateSubValue(contentMatches(pName, pExpected, byteCount), @"the bytes read are the bytes written", TRUE)
-
+  utils.startTest(pTitle)
+  checkValue(FLASH.exists(pName), TRUE, FLASH.SUCCESS)
+  utils.evaluateSubValue(FLASH.file_size(pName), @"file_size()", byteCount)
+  utils.evaluateSubValue(contentMatches(pName, pExpected, byteCount), @"the bytes read are the bytes written", TRUE)
 
 PRI fileStillThere(pTitle, pName, byteCount)
 ' Check a file that is open as a test: exists() says yes and file_size() gives its size. The file cannot be opened a second time to read it.
@@ -441,10 +421,9 @@ PRI fileStillThere(pTitle, pName, byteCount)
 ' @param pName - address of zstring with the name of the file
 ' @param byteCount - bytes the file holds
 
-    utils.startTest(pTitle)
-    checkValue(flash.exists(pName), TRUE, flash.SUCCESS)
-    utils.evaluateSubValue(flash.file_size(pName), @"file_size()", byteCount)
-
+  utils.startTest(pTitle)
+  checkValue(FLASH.exists(pName), TRUE, FLASH.SUCCESS)
+  utils.evaluateSubValue(FLASH.file_size(pName), @"file_size()", byteCount)
 
 PRI fileGone(pTitle, pName) | handle
 ' Check a deleted file as a test: exists() says no, and file_size() and open(,r) fail with E_FILE_NOT_FOUND.
@@ -455,14 +434,13 @@ PRI fileGone(pTitle, pName) | handle
 ' Local Variables:
 ' @local handle - what open() returned
 
-    utils.startTest(pTitle)
-    checkValue(flash.exists(pName), FALSE, flash.SUCCESS)
-    checkStatus(flash.file_size(pName), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
-    handle := flash.open(pName, flash.FILEMODE_READ)
-    checkStatus(handle, flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
-    if isUsableHandle(handle)                           ' a file that was not deleted: give its handle back
-        utils.closeHandle(handle)
-
+  utils.startTest(pTitle)
+  checkValue(FLASH.exists(pName), FALSE, FLASH.SUCCESS)
+  checkStatus(FLASH.file_size(pName), FLASH.E_FILE_NOT_FOUND, FLASH.E_FILE_NOT_FOUND)
+  handle := FLASH.open(pName, FLASH.FILEMODE_READ)
+  checkStatus(handle, FLASH.E_FILE_NOT_FOUND, FLASH.E_FILE_NOT_FOUND)
+  if isUsableHandle(handle)    ' a file that was not deleted: give its handle back
+    utils.closeHandle(handle)
 
 PRI nameAbsent(pTitle, pName)
 ' Check a name as a test: no file has it.
@@ -470,9 +448,8 @@ PRI nameAbsent(pTitle, pName)
 ' @param pTitle - address of zstring naming the test
 ' @param pName - address of zstring with the name
 
-    utils.startTest(pTitle)
-    checkValue(flash.exists(pName), FALSE, flash.SUCCESS)
-
+  utils.startTest(pTitle)
+  checkValue(FLASH.exists(pName), FALSE, FLASH.SUCCESS)
 
 PRI makeFile(pTitle, pFilename, pBuffer, byteCount) | handle, writeCount, errCode
 ' Write bytes to a new file opened with "w" and close it, as one test.
@@ -487,23 +464,21 @@ PRI makeFile(pTitle, pFilename, pBuffer, byteCount) | handle, writeCount, errCod
 ' @local writeCount - what write() returned
 ' @local errCode - error() after write()
 
-    utils.startTest(pTitle)
-    handle := openSub(pFilename, flash.FILEMODE_WRITE)
-    writeCount := flash.write(handle, pBuffer, byteCount)
-    errCode := flash.error()
-    utils.evaluateSubValue(writeCount, @"write()", byteCount)
-    utils.evaluateSubStatus(errCode, @"error() after write()", flash.SUCCESS)
-    closeSub(handle)
-
+  utils.startTest(pTitle)
+  handle := openSub(pFilename, FLASH.FILEMODE_WRITE)
+  writeCount := FLASH.write(handle, pBuffer, byteCount)
+  errCode := FLASH.error()
+  utils.evaluateSubValue(writeCount, @"write()", byteCount)
+  utils.evaluateSubStatus(errCode, @"error() after write()", FLASH.SUCCESS)
+  closeSub(handle)
 
 PRI writeOneByte(handle)
 ' Write one byte to an open file as a test, so closing the file makes it.
 
 ' @param handle - handle of the file opened with "w"
 
-    utils.startTest(@"wr_byte() of one byte")
-    checkStatus(flash.wr_byte(handle, DATA_BASE), flash.SUCCESS, flash.SUCCESS)
-
+  utils.startTest(@"wr_byte() of one byte")
+  checkStatus(FLASH.wr_byte(handle, DATA_BASE), FLASH.SUCCESS, FLASH.SUCCESS)
 
 PRI checkStatus(returned, expectedStatus, expectedCode) | errCode
 ' Check the status a call returned and the error() it left.
@@ -515,10 +490,9 @@ PRI checkStatus(returned, expectedStatus, expectedCode) | errCode
 ' Local Variables:
 ' @local errCode - error() as the call left it
 
-    errCode := flash.error()
-    utils.evaluateSubStatus(returned, @"status returned", expectedStatus)
-    utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
-
+  errCode := FLASH.error()
+  utils.evaluateSubStatus(returned, @"status returned", expectedStatus)
+  utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
 
 PRI checkValue(returned, expectedValue, expectedCode) | errCode
 ' Check the value a call returned and the error() it left.
@@ -530,10 +504,9 @@ PRI checkValue(returned, expectedValue, expectedCode) | errCode
 ' Local Variables:
 ' @local errCode - error() as the call left it
 
-    errCode := flash.error()
-    utils.evaluateSubValue(returned, @"value returned", expectedValue)
-    utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
-
+  errCode := FLASH.error()
+  utils.evaluateSubValue(returned, @"value returned", expectedValue)
+  utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
 
 PRI openSub(pFilename, mode) : handle | errCode
 ' Open a file inside a running test, and check open() returned a handle and error() holds SUCCESS.
@@ -545,11 +518,10 @@ PRI openSub(pFilename, mode) : handle | errCode
 ' Local Variables:
 ' @local errCode - error() after open()
 
-    handle := flash.open(pFilename, mode)
-    errCode := flash.error()
-    utils.evaluateSubValue(isUsableHandle(handle), @"open() returned a usable handle", TRUE)
-    utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
-
+  handle := FLASH.open(pFilename, mode)
+  errCode := FLASH.error()
+  utils.evaluateSubValue(isUsableHandle(handle), @"open() returned a usable handle", TRUE)
+  utils.evaluateSubStatus(errCode, @"error() after open()", FLASH.SUCCESS)
 
 PRI openFor(pFilename, mode, pTitle) : handle
 ' Open a file as a test that passes when open() returned a handle and error() holds SUCCESS.
@@ -559,9 +531,8 @@ PRI openFor(pFilename, mode, pTitle) : handle
 ' @param pTitle - address of zstring naming the test
 ' @returns handle - handle from open(), or a negative error code
 
-    utils.startTest(pTitle)
-    handle := openSub(pFilename, mode)
-
+  utils.startTest(pTitle)
+  handle := openSub(pFilename, mode)
 
 PRI closeSub(handle) | status, errCode
 ' Close a handle inside a running test, and check close() and error() both report SUCCESS.
@@ -572,11 +543,10 @@ PRI closeSub(handle) | status, errCode
 ' @local status - what close() returned
 ' @local errCode - error() after close()
 
-    status := utils.closeHandle(handle)
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after close()", flash.SUCCESS)
-
+  status := utils.closeHandle(handle)
+  errCode := FLASH.error()
+  utils.evaluateSubStatus(status, @"close()", FLASH.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after close()", FLASH.SUCCESS)
 
 PRI isUsableHandle(handle) : bUsable
 ' Tell whether a value is one of the handles open() hands out.
@@ -584,8 +554,7 @@ PRI isUsableHandle(handle) : bUsable
 ' @param handle - value open() returned
 ' @returns bUsable - TRUE when the value is inside the range of handles
 
-    bUsable := handle >= utils.FIRST_HANDLE and handle < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
-
+  bUsable := handle >= utils.FIRST_HANDLE AND handle < utils.FIRST_HANDLE + FLASH.MAX_FILES_OPEN
 
 PRI contentMatches(pName, pExpected, byteCount) : bMatches | handle, readCount
 ' Read a whole file back and tell whether it holds the expected bytes.
@@ -599,13 +568,12 @@ PRI contentMatches(pName, pExpected, byteCount) : bMatches | handle, readCount
 ' @local handle - handle of the file being read
 ' @local readCount - what read() returned
 
-    bMatches := FALSE
-    handle := flash.open(pName, flash.FILEMODE_READ)
-    if isUsableHandle(handle)
-        readCount := flash.read(handle, @readBuf, byteCount)
-        bMatches := readCount == byteCount and firstMismatch(pExpected, @readBuf, byteCount) == NO_MISMATCH
-        utils.closeHandle(handle)
-
+  bMatches := FALSE
+  handle := FLASH.open(pName, FLASH.FILEMODE_READ)
+  if isUsableHandle(handle)
+    readCount := FLASH.read(handle, @readBuf, byteCount)
+    bMatches := readCount == byteCount AND firstMismatch(pExpected, @readBuf, byteCount) == NO_MISMATCH
+    utils.closeHandle(handle)
 
 PRI fillPattern(pBuffer, byteCount, baseValue) | byteIdx
 ' Fill a buffer with bytes that count up from a value, one byte per offset.
@@ -617,9 +585,8 @@ PRI fillPattern(pBuffer, byteCount, baseValue) | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being filled
 
-    repeat byteCount with byteIdx
-        BYTE[pBuffer][byteIdx] := (baseValue + byteIdx) & BYTE_MASK
-
+  repeat byteCount with byteIdx
+    BYTE[pBuffer][byteIdx] := (baseValue + byteIdx) & BYTE_MASK
 
 PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Find the first byte at which two buffers differ.
@@ -632,14 +599,13 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being compared
 
-    mismatchIdx := NO_MISMATCH
-    repeat byteCount with byteIdx
-        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-            mismatchIdx := byteIdx
-            quit
+  mismatchIdx := NO_MISMATCH
+  repeat byteCount with byteIdx
+    if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+      mismatchIdx := byteIdx
+      quit
 
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================

@@ -25,7 +25,7 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -37,44 +37,43 @@ CON
 '}
 
 OBJ
-    flash : "flash_fs"
-    utils : "RT_utilities"
+  flash   : "flash_fs"
+  utils   : "RT_utilities"
 
 CON ' ---- Test Geometry ----
 
-    BUF_SIZE = 16                                       ' buf_size the length cases are built around
-    GUARD_BYTES = 8                                     ' bytes after the buffer that must never change
-    STR_AREA_BYTES = BUF_SIZE + GUARD_BYTES             ' bytes of the buffer area, buffer and guard together
-    SINGLE_BUF_SIZE = 1                                 ' the smallest buffer that holds a terminator
-    PAIR_BUF_SIZE = 2                                   ' a buffer for one character and a terminator
-    UNTERMINATED_LEN = 5                                ' characters of a string the end of the file cuts off
-    MEASURE_LEN = 5                                     ' characters of the string the size probes read
-    TAIL_BYTES = 3                                      ' bytes that follow the string and its terminator
-    FILE_MODEL_BYTES = BUF_SIZE + 1 + TAIL_BYTES        ' the longest string, its terminator and the tail
-    AT_END_OF_FILE = -1                                 ' next-byte offset meaning no byte is left in the file
-    ZERO_BUF_SIZE = 0                                   ' a buffer size that holds nothing
-    BEFORE_FIRST_HANDLE = -1                            ' a handle below every valid handle
+  BUF_SIZE	       = 16			      ' buf_size the length cases are built around
+  GUARD_BYTES	       = 8			      ' bytes after the buffer that must never change
+  STR_AREA_BYTES       = BUF_SIZE + GUARD_BYTES       ' bytes of the buffer area, buffer and guard together
+  SINGLE_BUF_SIZE      = 1			      ' the smallest buffer that holds a terminator
+  PAIR_BUF_SIZE        = 2			      ' a buffer for one character and a terminator
+  UNTERMINATED_LEN     = 5			      ' characters of a string the end of the file cuts off
+  MEASURE_LEN	       = 5			      ' characters of the string the size probes read
+  TAIL_BYTES	       = 3			      ' bytes that follow the string and its terminator
+  FILE_MODEL_BYTES     = BUF_SIZE + 1 + TAIL_BYTES    ' the longest string, its terminator and the tail
+  AT_END_OF_FILE       = -1			      ' next-byte offset meaning no byte is left in the file
+  ZERO_BUF_SIZE        = 0			      ' a buffer size that holds nothing
+  BEFORE_FIRST_HANDLE  = -1			      ' a handle below every valid handle
 
 CON ' ---- Test Data ----
 
-    CHAR_FIRST = "a"                                    ' first character of the string pattern
-    CHAR_SPAN = 26                                      ' characters before the string pattern repeats
-    POISON_BYTE = $A5                                   ' value the buffer area is filled with before a read
-    NO_MISMATCH = -1                                    ' result of a byte comparison when every byte agrees
-    STRING_TAIL_ONE = $11                               ' bytes that follow the string in the string file
-    STRING_TAIL_TWO = $22
-    STRING_TAIL_THREE = $33
+  CHAR_FIRST	     = "a"			      ' first character of the string pattern
+  CHAR_SPAN	     = 26			      ' characters before the string pattern repeats
+  POISON_BYTE	     = $A5			      ' value the buffer area is filled with before a read
+  NO_MISMATCH	     = -1			      ' result of a byte comparison when every byte agrees
+  STRING_TAIL_ONE    = $11			      ' bytes that follow the string in the string file
+  STRING_TAIL_TWO    = $22
+  STRING_TAIL_THREE  = $33
 
-DAT ' ---- Files and Buffers ----
+DAT  ' ---- Files and Buffers ----
 
-stringFile      BYTE    "rd_str_bound.bin", 0
+  stringFile  BYTE  "rd_str_bound.bin", 0
 
 ' the bytes that follow the string and its terminator in the string file
-stringTail      BYTE    STRING_TAIL_ONE, STRING_TAIL_TWO, STRING_TAIL_THREE
+  stringTail  BYTE  STRING_TAIL_ONE, STRING_TAIL_TWO, STRING_TAIL_THREE
 
-fileModel       BYTE    0[FILE_MODEL_BYTES]             ' what the string file holds
-strBuf          BYTE    0[STR_AREA_BYTES]               ' receives the string, followed by the guard bytes
-
+  fileModel   BYTE  0[FILE_MODEL_BYTES]    ' what the string file holds
+  strBuf      BYTE  0[STR_AREA_BYTES]	   ' receives the string, followed by the guard bytes
 
 PUB go() | status, pFailedCall
 '' Run every rd_str boundary test, then show the result.
@@ -84,65 +83,61 @@ PUB go() | status, pFailedCall
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
 
-    pFailedCall := @"format()"
-    status := flash.format()      ' Comment out this line to not erase all files
-    if status == flash.SUCCESS
-        pFailedCall := @"mount()"
-        status := flash.mount()
+  pFailedCall := @"format()"
+  status := flash.format()			' Comment out this line to not erase all files
+  if status == flash.SUCCESS
+    pFailedCall := @"mount()"
+    status := flash.mount()
 
-    if status == flash.SUCCESS
-        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+  if status == flash.SUCCESS
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-        utils.showChipAndDriverVersion()
-        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+    utils.showChipAndDriverVersion()
+    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
 
-        testLengthsAroundBufSize()
-        testSmallBufSizes()
-        testUnterminatedTail()
-        testEmptyString()
-        testInvalidHandle()
-        testMeasuredBufSizes()
-    else
-        utils.showError(pFailedCall, status)
-        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
-        utils.evaluateResultNegError(status, flash.SUCCESS)
+    testLengthsAroundBufSize()
+    testSmallBufSizes()
+    testUnterminatedTail()
+    testEmptyString()
+    testInvalidHandle()
+    testMeasuredBufSizes()
+  else
+    utils.showError(pFailedCall, status)
+    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    debug("* Test Complete")
-    utils.ShowTestResult(@"RT_rd_str_boundary_tests")
-
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_rd_str_boundary_tests")
 
 PRI testLengthsAroundBufSize()
 ' Read strings two bytes shorter than the buffer, one byte shorter, and exactly as long.
 
-    utils.startTestGroup(@"string lengths around buf_size")
-    ' the terminator sits in the buffer's second to last byte, and the read ends there
-    stringCase(@"open(,r) for a string two bytes shorter than buf_size", BUF_SIZE - 2, TRUE, BUF_SIZE, BUF_SIZE - 2, flash.SUCCESS, BUF_SIZE - 1)
-    ' the terminator fills the buffer's last byte, so the whole string fits
-    stringCase(@"open(,r) for a string one byte shorter than buf_size", BUF_SIZE - 1, TRUE, BUF_SIZE, BUF_SIZE - 1, flash.SUCCESS, BUF_SIZE)
-    ' the last character does not fit: the buffer keeps the first buf_size - 1 characters and a terminator,
-    ' the dropped last character is consumed, and the file's own terminator is the next byte
-    stringCase(@"open(,r) for a string exactly buf_size long", BUF_SIZE, TRUE, BUF_SIZE, BUF_SIZE - 1, flash.E_TRUNCATED_STRING, BUF_SIZE)
-
+  utils.startTestGroup(@"string lengths around buf_size")
+  ' the terminator sits in the buffer's second to last byte, and the read ends there
+  stringCase(@"open(,r) for a string two bytes shorter than buf_size", BUF_SIZE - 2, TRUE, BUF_SIZE, BUF_SIZE - 2, flash.SUCCESS, BUF_SIZE - 1)
+  ' the terminator fills the buffer's last byte, so the whole string fits
+  stringCase(@"open(,r) for a string one byte shorter than buf_size", BUF_SIZE - 1, TRUE, BUF_SIZE, BUF_SIZE - 1, flash.SUCCESS, BUF_SIZE)
+  ' the last character does not fit: the buffer keeps the first buf_size - 1 characters and a terminator,
+  ' the dropped last character is consumed, and the file's own terminator is the next byte
+  stringCase(@"open(,r) for a string exactly buf_size long", BUF_SIZE, TRUE, BUF_SIZE, BUF_SIZE - 1, flash.E_TRUNCATED_STRING, BUF_SIZE)
 
 PRI testSmallBufSizes()
 ' Read into buffers of one byte and of two bytes, with a string that fits and a string that does not.
 
-    utils.startTestGroup(@"buf_size 1 and 2")
-    ' a one byte buffer holds only the terminator, so only the empty string fits
-    stringCase(@"open(,r) for an empty string and buf_size 1", 0, TRUE, SINGLE_BUF_SIZE, 0, flash.SUCCESS, SINGLE_BUF_SIZE)
-    stringCase(@"open(,r) for a one character string and buf_size 1", SINGLE_BUF_SIZE, TRUE, SINGLE_BUF_SIZE, 0, flash.E_TRUNCATED_STRING, SINGLE_BUF_SIZE)
-    stringCase(@"open(,r) for a one character string and buf_size 2", PAIR_BUF_SIZE - 1, TRUE, PAIR_BUF_SIZE, PAIR_BUF_SIZE - 1, flash.SUCCESS, PAIR_BUF_SIZE)
-    stringCase(@"open(,r) for a two character string and buf_size 2", PAIR_BUF_SIZE, TRUE, PAIR_BUF_SIZE, PAIR_BUF_SIZE - 1, flash.E_TRUNCATED_STRING, PAIR_BUF_SIZE)
-
+  utils.startTestGroup(@"buf_size 1 and 2")
+  ' a one byte buffer holds only the terminator, so only the empty string fits
+  stringCase(@"open(,r) for an empty string and buf_size 1", 0, TRUE, SINGLE_BUF_SIZE, 0, flash.SUCCESS, SINGLE_BUF_SIZE)
+  stringCase(@"open(,r) for a one character string and buf_size 1", SINGLE_BUF_SIZE, TRUE, SINGLE_BUF_SIZE, 0, flash.E_TRUNCATED_STRING, SINGLE_BUF_SIZE)
+  stringCase(@"open(,r) for a one character string and buf_size 2", PAIR_BUF_SIZE - 1, TRUE, PAIR_BUF_SIZE, PAIR_BUF_SIZE - 1, flash.SUCCESS, PAIR_BUF_SIZE)
+  stringCase(@"open(,r) for a two character string and buf_size 2", PAIR_BUF_SIZE, TRUE, PAIR_BUF_SIZE, PAIR_BUF_SIZE - 1, flash.E_TRUNCATED_STRING, PAIR_BUF_SIZE)
 
 PRI testUnterminatedTail()
 ' Read a string that the end of the file cuts off before its terminator.
 
-    utils.startTestGroup(@"unterminated string at the end of the file")
-    stringCase(@"open(,r) for a short string with no terminator", UNTERMINATED_LEN, FALSE, BUF_SIZE, UNTERMINATED_LEN, flash.E_INCOMPLETE_STRING, AT_END_OF_FILE)
-    ' the end of the file arrives in the buffer's last byte
-    stringCase(@"open(,r) for a string with no terminator that ends in the last byte", BUF_SIZE - 1, FALSE, BUF_SIZE, BUF_SIZE - 1, flash.E_INCOMPLETE_STRING, AT_END_OF_FILE)
-
+  utils.startTestGroup(@"unterminated string at the end of the file")
+  stringCase(@"open(,r) for a short string with no terminator", UNTERMINATED_LEN, FALSE, BUF_SIZE, UNTERMINATED_LEN, flash.E_INCOMPLETE_STRING, AT_END_OF_FILE)
+  ' the end of the file arrives in the buffer's last byte
+  stringCase(@"open(,r) for a string with no terminator that ends in the last byte", BUF_SIZE - 1, FALSE, BUF_SIZE, BUF_SIZE - 1, flash.E_INCOMPLETE_STRING, AT_END_OF_FILE)
 
 PRI testEmptyString() | handle, bytesRead, tailIdx
 ' Read an empty string: 0 bytes and SUCCESS, which differs from the 0 bytes and E_END_OF_FILE of a read at the end of the file.
@@ -152,32 +147,30 @@ PRI testEmptyString() | handle, bytesRead, tailIdx
 ' @local bytesRead - value rd_str() returned
 ' @local tailIdx - number of the tail byte being read
 
-    utils.startTestGroup(@"empty string")
-    stringCase(@"open(,r) for an empty string", 0, TRUE, BUF_SIZE, 0, flash.SUCCESS, 1)
+  utils.startTestGroup(@"empty string")
+  stringCase(@"open(,r) for an empty string", 0, TRUE, BUF_SIZE, 0, flash.SUCCESS, 1)
 
-    writeStringFile(0, TRUE)
-    handle := openChecked(@stringFile, flash.FILEMODE_READ, @"open(,r) to read the empty string and then the end of the file")
-    utils.startTest(@"error() tells an empty string from the end of the file")
-    if requireHandle(handle)
-        bytesRead := flash.rd_str(handle, @strBuf, BUF_SIZE)
-        utils.evaluateSubValue(bytesRead, @"rd_str() of the empty string", 0)
-        utils.evaluateSubStatus(flash.error(), @"error() after the empty string", flash.SUCCESS)
-        ' the bytes after the terminator are the tail; reading them leaves the handle at the end
-        repeat TAIL_BYTES with tailIdx
-            utils.evaluateSubValue(flash.rd_byte(handle), @"tail byte", BYTE[@fileModel][1 + tailIdx])
-        bytesRead := flash.rd_str(handle, @strBuf, BUF_SIZE)
-        utils.evaluateSubValue(bytesRead, @"rd_str() at the end of the file", 0)
-        utils.evaluateSubStatus(flash.error(), @"error() after rd_str() at the end of the file", flash.E_END_OF_FILE)
-        closeAndCheck(handle)
-
+  writeStringFile(0, TRUE)
+  handle := openChecked(@stringFile, flash.FILEMODE_READ, @"open(,r) to read the empty string and then the end of the file")
+  utils.startTest(@"error() tells an empty string from the end of the file")
+  if requireHandle(handle)
+    bytesRead := flash.rd_str(handle, @strBuf, BUF_SIZE)
+    utils.evaluateSubValue(bytesRead, @"rd_str() of the empty string", 0)
+    utils.evaluateSubStatus(flash.error(), @"error() after the empty string", flash.SUCCESS)
+    ' the bytes after the terminator are the tail; reading them leaves the handle at the end
+    repeat TAIL_BYTES with tailIdx
+      utils.evaluateSubValue(flash.rd_byte(handle), @"tail byte", BYTE[@fileModel][1 + tailIdx])
+    bytesRead := flash.rd_str(handle, @strBuf, BUF_SIZE)
+    utils.evaluateSubValue(bytesRead, @"rd_str() at the end of the file", 0)
+    utils.evaluateSubStatus(flash.error(), @"error() after rd_str() at the end of the file", flash.E_END_OF_FILE)
+    closeAndCheck(handle)
 
 PRI testInvalidHandle()
 ' Call rd_str with handles no file can hold: the buffer must come back untouched.
 
-    utils.startTestGroup(@"invalid handle")
-    invalidHandleCase(@"rd_str() with a handle below every valid handle", BEFORE_FIRST_HANDLE)
-    invalidHandleCase(@"rd_str() with the handle after the last valid handle", utils.FIRST_HANDLE + flash.MAX_FILES_OPEN)
-
+  utils.startTestGroup(@"invalid handle")
+  invalidHandleCase(@"rd_str() with a handle below every valid handle", BEFORE_FIRST_HANDLE)
+  invalidHandleCase(@"rd_str() with the handle after the last valid handle", utils.FIRST_HANDLE + flash.MAX_FILES_OPEN)
 
 PRI testMeasuredBufSizes() | handle
 ' Report what rd_str() does for a buffer size of zero; nothing here is checked.
@@ -185,16 +178,15 @@ PRI testMeasuredBufSizes() | handle
 ' Local Variables:
 ' @local handle - handle of the file being read
 
-    utils.startTestGroup(@"buf_size 0, measured")
-    writeStringFile(MEASURE_LEN, TRUE)
-    handle := openChecked(@stringFile, flash.FILEMODE_READ, @"open(,r) for the buffer size probes")
-    if handle >= utils.FIRST_HANDLE
-        measureRdStr(handle, @"0", ZERO_BUF_SIZE)
+  utils.startTestGroup(@"buf_size 0, measured")
+  writeStringFile(MEASURE_LEN, TRUE)
+  handle := openChecked(@stringFile, flash.FILEMODE_READ, @"open(,r) for the buffer size probes")
+  if handle >= utils.FIRST_HANDLE
+    measureRdStr(handle, @"0", ZERO_BUF_SIZE)
 
-    utils.startTest(@"close the file after the buffer size probe")
-    if requireHandle(handle)
-        closeAndCheck(handle)
-
+  utils.startTest(@"close the file after the buffer size probe")
+  if requireHandle(handle)
+    closeAndCheck(handle)
 
 PRI stringCase(pTitle, stringLen, bTerminated, bufSize, expectedCount, expectedError, expectedNextOffset) | handle, bytesRead, errorCode, expectedNext
 ' Write a string file, read it with rd_str(), and check the count, the error, the buffer, the bytes past the buffer and the byte read next.
@@ -213,22 +205,21 @@ PRI stringCase(pTitle, stringLen, bTerminated, bufSize, expectedCount, expectedE
 ' @local errorCode - what error() reported after rd_str()
 ' @local expectedNext - the byte, or the error, rd_byte() must return next
 
-    writeStringFile(stringLen, bTerminated)
-    handle := openChecked(@stringFile, flash.FILEMODE_READ, pTitle)
-    utils.startTest(@"rd_str() count, error, buffer, and the byte that follows")
-    if requireHandle(handle)
-        bytefill(@strBuf, POISON_BYTE, STR_AREA_BYTES)
-        bytesRead := flash.rd_str(handle, @strBuf, bufSize)
-        errorCode := flash.error()
-        utils.evaluateSubValue(bytesRead, @"rd_str()", expectedCount)
-        utils.evaluateSubStatus(errorCode, @"error() after rd_str()", expectedError)
-        utils.evaluateSubValue(firstMismatch(@fileModel, @strBuf, expectedCount), @"first character that differs", NO_MISMATCH)
-        utils.evaluateSubValue(BYTE[@strBuf][expectedCount], @"terminator after the characters", 0)
-        utils.evaluateSubValue(firstNotPoison(bufSize, STR_AREA_BYTES - bufSize), @"first byte past the buffer that was written", NO_MISMATCH)
-        expectedNext := expectedNextOffset == AT_END_OF_FILE ? flash.E_END_OF_FILE : BYTE[@fileModel][expectedNextOffset]
-        utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() after rd_str()", expectedNext)
-        closeAndCheck(handle)
-
+  writeStringFile(stringLen, bTerminated)
+  handle := openChecked(@stringFile, flash.FILEMODE_READ, pTitle)
+  utils.startTest(@"rd_str() count, error, buffer, and the byte that follows")
+  if requireHandle(handle)
+    bytefill(@strBuf, POISON_BYTE, STR_AREA_BYTES)
+    bytesRead := flash.rd_str(handle, @strBuf, bufSize)
+    errorCode := flash.error()
+    utils.evaluateSubValue(bytesRead, @"rd_str()", expectedCount)
+    utils.evaluateSubStatus(errorCode, @"error() after rd_str()", expectedError)
+    utils.evaluateSubValue(firstMismatch(@fileModel, @strBuf, expectedCount), @"first character that differs", NO_MISMATCH)
+    utils.evaluateSubValue(BYTE[@strBuf][expectedCount], @"terminator after the characters", 0)
+    utils.evaluateSubValue(firstNotPoison(bufSize, STR_AREA_BYTES - bufSize), @"first byte past the buffer that was written", NO_MISMATCH)
+    expectedNext := expectedNextOffset == AT_END_OF_FILE ? flash.E_END_OF_FILE : BYTE[@fileModel][expectedNextOffset]
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() after rd_str()", expectedNext)
+    closeAndCheck(handle)
 
 PRI invalidHandleCase(pTitle, badHandle) | bytesRead, errorCode
 ' Call rd_str() with a handle that is not valid, over a buffer filled with a sentinel, and check the buffer is left as it was.
@@ -240,14 +231,13 @@ PRI invalidHandleCase(pTitle, badHandle) | bytesRead, errorCode
 ' @local bytesRead - value rd_str() returned
 ' @local errorCode - what error() reported after rd_str()
 
-    utils.startTest(pTitle)
-    bytefill(@strBuf, POISON_BYTE, STR_AREA_BYTES)
-    bytesRead := flash.rd_str(badHandle, @strBuf, BUF_SIZE)
-    errorCode := flash.error()
-    utils.evaluateSubValue(bytesRead, @"rd_str()", 0)
-    utils.evaluateSubStatus(errorCode, @"error() after rd_str()", flash.E_BAD_HANDLE)
-    utils.evaluateSubValue(firstNotPoison(0, STR_AREA_BYTES), @"first byte of the buffer area that was written", NO_MISMATCH)
-
+  utils.startTest(pTitle)
+  bytefill(@strBuf, POISON_BYTE, STR_AREA_BYTES)
+  bytesRead := flash.rd_str(badHandle, @strBuf, BUF_SIZE)
+  errorCode := flash.error()
+  utils.evaluateSubValue(bytesRead, @"rd_str()", 0)
+  utils.evaluateSubStatus(errorCode, @"error() after rd_str()", flash.E_BAD_HANDLE)
+  utils.evaluateSubValue(firstNotPoison(0, STR_AREA_BYTES), @"first byte of the buffer area that was written", NO_MISMATCH)
 
 PRI measureRdStr(handle, pSizeText, bufSize) | bytesRead, errorCode, positionAfter, nextByte
 ' Call rd_str() with a buffer size and print what it did: no check is made.
@@ -262,16 +252,15 @@ PRI measureRdStr(handle, pSizeText, bufSize) | bytesRead, errorCode, positionAft
 ' @local positionAfter - file offset of the handle after the call
 ' @local nextByte - the byte, or the error, rd_byte() returned after the call
 
-    bytefill(@strBuf, POISON_BYTE, STR_AREA_BYTES)
-    flash.seek(handle, 0, flash.SK_FILE_START)
-    debug("* measure: calling rd_str() with buf_size ", zstr_(pSizeText))
-    bytesRead := flash.rd_str(handle, @strBuf, bufSize)
-    errorCode := flash.error()
-    positionAfter := flash.seek(handle, 0, flash.SK_CURRENT_POSN)
-    nextByte := flash.rd_byte(handle)
-    debug("* measure: buf_size ", zstr_(pSizeText), " returned ", sdec_(bytesRead), ", error() ", sdec_(errorCode), " ", zstr_(flash.string_for_error(errorCode)), ", position after ", sdec_(positionAfter), ", next rd_byte() ", sdec_(nextByte))
-    debug("* measure: buf_size ", zstr_(pSizeText), " buffer starts ", uhex_byte_(BYTE[@strBuf][0]), " ", uhex_byte_(BYTE[@strBuf][1]), " ", uhex_byte_(BYTE[@strBuf][2]), " ", uhex_byte_(BYTE[@strBuf][3]), ", first byte of the buffer area written ", sdec_(firstNotPoison(0, STR_AREA_BYTES)))
-
+  bytefill(@strBuf, POISON_BYTE, STR_AREA_BYTES)
+  flash.seek(handle, 0, flash.SK_FILE_START)
+  DEBUG("* measure: calling rd_str() with buf_size ", zstr_(pSizeText))
+  bytesRead := flash.rd_str(handle, @strBuf, bufSize)
+  errorCode := flash.error()
+  positionAfter := flash.seek(handle, 0, flash.SK_CURRENT_POSN)
+  nextByte := flash.rd_byte(handle)
+  DEBUG("* measure: buf_size ", zstr_(pSizeText), " returned ", sdec_(bytesRead), ", error() ", sdec_(errorCode), " ", zstr_(flash.string_for_error(errorCode)), ", position after ", sdec_(positionAfter), ", next rd_byte() ", sdec_(nextByte))
+  DEBUG("* measure: buf_size ", zstr_(pSizeText), " buffer starts ", uhex_byte_(BYTE[@strBuf][0]), " ", uhex_byte_(BYTE[@strBuf][1]), " ", uhex_byte_(BYTE[@strBuf][2]), " ", uhex_byte_(BYTE[@strBuf][3]), ", first byte of the buffer area written ", sdec_(firstNotPoison(0, STR_AREA_BYTES)))
 
 PRI writeStringFile(stringLen, bTerminated) | charIdx, fileBytes
 ' Build the string file in the model buffer and write it: the characters, then optionally the terminator and the tail.
@@ -283,16 +272,15 @@ PRI writeStringFile(stringLen, bTerminated) | charIdx, fileBytes
 ' @local charIdx - number of the character being placed
 ' @local fileBytes - bytes the file holds
 
-    bytefill(@fileModel, 0, FILE_MODEL_BYTES)
-    if stringLen > 0
-        repeat stringLen with charIdx
-            BYTE[@fileModel][charIdx] := stringChar(charIdx)
-    fileBytes := stringLen
-    if bTerminated
-        bytemove(@fileModel + stringLen + 1, @stringTail, TAIL_BYTES)
-        fileBytes := stringLen + 1 + TAIL_BYTES
-    createFile(@"set up the string file", @stringFile, @fileModel, fileBytes)
-
+  bytefill(@fileModel, 0, FILE_MODEL_BYTES)
+  if stringLen > 0
+    repeat stringLen with charIdx
+      BYTE[@fileModel][charIdx] := stringChar(charIdx)
+  fileBytes := stringLen
+  if bTerminated
+    bytemove(@fileModel + stringLen + 1, @stringTail, TAIL_BYTES)
+    fileBytes := stringLen + 1 + TAIL_BYTES
+  createFile(@"set up the string file", @stringFile, @fileModel, fileBytes)
 
 PRI stringChar(charIdx) : charValue
 ' Compute the character a string holds at an index: a run of letters that repeats, never the terminator.
@@ -300,8 +288,7 @@ PRI stringChar(charIdx) : charValue
 ' @param charIdx - index of the character in the string
 ' @returns charValue - the character at the index
 
-    charValue := CHAR_FIRST + (charIdx +// CHAR_SPAN)
-
+  charValue := CHAR_FIRST + (charIdx +// CHAR_SPAN)
 
 PRI createFile(pDescription, pFilename, pBuffer, byteCount) | handle, status, writeCount
 ' Write bytes to a file opened with "w" and close it, as one test.
@@ -316,15 +303,14 @@ PRI createFile(pDescription, pFilename, pBuffer, byteCount) | handle, status, wr
 ' @local status - status of the open or of the close
 ' @local writeCount - bytes written to the file
 
-    utils.startTest(pDescription)
-    handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_WRITE)
-    utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
-    if status == flash.SUCCESS
-        writeCount := flash.write(handle, pBuffer, byteCount)
-        utils.evaluateSubValue(writeCount, @"write()", byteCount)
-        status := utils.closeHandle(handle)
-        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-
+  utils.startTest(pDescription)
+  handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_WRITE)
+  utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
+  if status == flash.SUCCESS
+    writeCount := flash.write(handle, pBuffer, byteCount)
+    utils.evaluateSubValue(writeCount, @"write()", byteCount)
+    status := utils.closeHandle(handle)
+    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
 
 PRI openChecked(pFilename, mode, pMessage) : handle
 ' Open a file as a test that passes when open() returned a usable handle.
@@ -334,10 +320,9 @@ PRI openChecked(pFilename, mode, pMessage) : handle
 ' @param pMessage - address of zstring naming the test
 ' @returns handle - handle from open(), or a negative error code
 
-    utils.startTest(pMessage)
-    handle, _ := utils.openWaitOnHandle(pFilename, mode)
-    utils.evaluateHandle(handle, pMessage)
-
+  utils.startTest(pMessage)
+  handle, _ := utils.openWaitOnHandle(pFilename, mode)
+  utils.evaluateHandle(handle, pMessage)
 
 PRI requireHandle(handle) : bUsable
 ' Tell whether open() returned a handle; when it did not, record that as a failed check of the running test.
@@ -345,10 +330,9 @@ PRI requireHandle(handle) : bUsable
 ' @param handle - handle from open(), or a negative error code
 ' @returns bUsable - TRUE when the handle can be used
 
-    bUsable := handle >= utils.FIRST_HANDLE
-    ifnot bUsable
-        utils.evaluateSubValue(handle, @"usable handle", utils.FIRST_HANDLE)
-
+  bUsable := handle >= utils.FIRST_HANDLE
+  ifnot bUsable
+    utils.evaluateSubValue(handle, @"usable handle", utils.FIRST_HANDLE)
 
 PRI closeAndCheck(handle) | status
 ' Close a handle and check that close() and error() both report success.
@@ -358,10 +342,9 @@ PRI closeAndCheck(handle) | status
 ' Local Variables:
 ' @local status - status close() returned
 
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-    utils.evaluateSubStatus(flash.error(), @"error() after close()", flash.SUCCESS)
-
+  status := utils.closeHandle(handle)
+  utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+  utils.evaluateSubStatus(flash.error(), @"error() after close()", flash.SUCCESS)
 
 PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Find the first byte at which two buffers differ.
@@ -374,13 +357,12 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being compared
 
-    mismatchIdx := NO_MISMATCH
-    if byteCount > 0
-        repeat byteCount with byteIdx
-            if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-                mismatchIdx := byteIdx
-                quit
-
+  mismatchIdx := NO_MISMATCH
+  if byteCount > 0
+    repeat byteCount with byteIdx
+      if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+	mismatchIdx := byteIdx
+	quit
 
 PRI firstNotPoison(startIdx, byteCount) : changedIdx | byteIdx
 ' Find the first byte of the buffer area, from an index on, that no longer holds the sentinel.
@@ -392,15 +374,14 @@ PRI firstNotPoison(startIdx, byteCount) : changedIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being checked
 
-    changedIdx := NO_MISMATCH
-    if byteCount > 0
-        repeat byteCount with byteIdx
-            if BYTE[@strBuf][startIdx + byteIdx] <> POISON_BYTE
-                changedIdx := startIdx + byteIdx
-                quit
+  changedIdx := NO_MISMATCH
+  if byteCount > 0
+    repeat byteCount with byteIdx
+      if BYTE[@strBuf][startIdx + byteIdx] <> POISON_BYTE
+	changedIdx := startIdx + byteIdx
+	quit
 
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================

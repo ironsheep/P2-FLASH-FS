@@ -29,9 +29,9 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ	   = 320_000_000
 
-     BAD_HANDLE_BASE = 2         ' a HANDLE_BASE the driver does not accept: only 0 and 1 are valid
+  BAD_HANDLE_BASE  = 2	  ' a HANDLE_BASE the driver does not accept: only 0 and 1 are valid
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -43,65 +43,65 @@ CON
 '}
 
 OBJ
-    flash : "flash_fs"
-    flashBadBase : "flash_fs" | HANDLE_BASE = BAD_HANDLE_BASE   ' a separate instance, with its own state, that the cases never mount
-    utils : "RT_utilities"
+  flash		: "flash_fs"
+  flashBadBase	: "flash_fs" | HANDLE_BASE = BAD_HANDLE_BASE	' a separate instance, with its own state, that the cases never mount
+  utils		: "RT_utilities"
 
 CON ' ---- Test Geometry ----
 
-    MIN_HANDLES_NEEDED = 2                              ' handles the open-file cases hold at one time
-    HANDLE_SLOTS = flash.MAX_FILES_OPEN #> 1            ' handles the cases record as held
-    DATA_BYTES = 64                                     ' bytes of the data file, each the offset plus DATA_BASE
-    DATA_BASE = 1                                       ' value of the first byte of the data file
-    TINY_BYTES = 3                                      ' bytes of the tiny file: one WORD and a byte no WORD can use
-    CREATE_BYTES = 100                                  ' bytes of the file create_file() makes
-    CREATE_FILL = $5A                                   ' fill value of the file create_file() makes
-    CIRC_LIMIT_BYTES = 1000                             ' limit a circular handle is opened with
-    ZERO_LENGTH = 0                                     ' a file length that no file can have
-    NEGATIVE_LENGTH = -1                                ' a file length below zero
-    NEGATIVE_COUNT = -1                                 ' a transfer count below zero
-    BEFORE_FIRST_BYTE = -1                              ' a file position before the first byte
-    WHENCE_PAST_LAST = flash.SK_CURRENT_POSN + 1        ' the first seek whence above the valid ones
-    NO_BYTES = 0                                        ' a transfer count of zero, and the return of a call that moved nothing
-    UNTOUCHED_BYTE = $C3                                ' value set in the first byte of a buffer a call must leave alone
-    TAIL_TEXT_BYTES = 4                                 ' bytes of the last string of the string file, which has no terminator
-    TRUNCATE_BUF_BYTES = 4                              ' string buffer size that holds less than the string
-    STRING_BUF_BYTES = 16                               ' string buffer size that holds every string of the string file
-    DIR_PAD_BYTES = 1                                   ' bytes the directory name buffer holds beyond the name field
-    DIR_CALL_LIMIT = 200                                ' directory() calls made before the walk gives up
-    GUARD_BYTES = 8                                     ' bytes of the handle status dump on each side of the array
-    DUMP_BYTES = (GUARD_BYTES * 2) + flash.MAX_FILES_OPEN ' bytes the handle status dump holds
-    WORKER_STACK_LONGS = 256                            ' stack of the cog that calls write()
-    WORKER_WAIT_MS = 10_000                             ' time the worker cog has to finish
-    WORKER_POLL_MS = 10                                 ' pause between looks at the worker's flag
-    NAME_DIGIT_RADIX = 10                               ' radix of the numbers in the names of the files that fill the handles
-    FILL_TENS_OFFSET = 4                                ' offset of the tens digit in the fill file name
-    FILL_ONES_OFFSET = 5                                ' offset of the ones digit in the fill file name
+  MIN_HANDLES_NEEDED  = 2					    ' handles the open-file cases hold at one time
+  HANDLE_SLOTS	      = flash.MAX_FILES_OPEN #> 1		    ' handles the cases record as held
+  DATA_BYTES	      = 64					    ' bytes of the data file, each the offset plus DATA_BASE
+  DATA_BASE	      = 1					    ' value of the first byte of the data file
+  TINY_BYTES	      = 3					    ' bytes of the tiny file: one WORD and a byte no WORD can use
+  CREATE_BYTES	      = 100					    ' bytes of the file create_file() makes
+  CREATE_FILL	      = $5A					    ' fill value of the file create_file() makes
+  CIRC_LIMIT_BYTES    = 1000					    ' limit a circular handle is opened with
+  ZERO_LENGTH	      = 0					    ' a file length that no file can have
+  NEGATIVE_LENGTH     = -1					    ' a file length below zero
+  NEGATIVE_COUNT      = -1					    ' a transfer count below zero
+  BEFORE_FIRST_BYTE   = -1					    ' a file position before the first byte
+  WHENCE_PAST_LAST    = flash.SK_CURRENT_POSN + 1		    ' the first seek whence above the valid ones
+  NO_BYTES	      = 0					    ' a transfer count of zero, and the return of a call that moved nothing
+  UNTOUCHED_BYTE      = $C3					    ' value set in the first byte of a buffer a call must leave alone
+  TAIL_TEXT_BYTES     = 4					    ' bytes of the last string of the string file, which has no terminator
+  TRUNCATE_BUF_BYTES  = 4					    ' string buffer size that holds less than the string
+  STRING_BUF_BYTES    = 16					    ' string buffer size that holds every string of the string file
+  DIR_PAD_BYTES       = 1					    ' bytes the directory name buffer holds beyond the name field
+  DIR_CALL_LIMIT      = 200					    ' directory() calls made before the walk gives up
+  GUARD_BYTES	      = 8					    ' bytes of the handle status dump on each side of the array
+  DUMP_BYTES	      = (GUARD_BYTES * 2) + flash.MAX_FILES_OPEN    ' bytes the handle status dump holds
+  WORKER_STACK_LONGS  = 256					    ' stack of the cog that calls write()
+  WORKER_WAIT_MS      = 10_000					    ' time the worker cog has to finish
+  WORKER_POLL_MS      = 10					    ' pause between looks at the worker's flag
+  NAME_DIGIT_RADIX    = 10					    ' radix of the numbers in the names of the files that fill the handles
+  FILL_TENS_OFFSET    = 4					    ' offset of the tens digit in the fill file name
+  FILL_ONES_OFFSET    = 5					    ' offset of the ones digit in the fill file name
 
 CON ' ---- Test Data ----
 
-    BYTE_SIZE = 1                                       ' bytes in a BYTE
-    WORD_SIZE = 2                                       ' bytes in a WORD
-    LONG_SIZE = 4                                       ' bytes in a LONG
-    TERMINATOR_BYTES = 1                                ' bytes in the terminator of a zstring
-    BYTE_BITS = 8                                       ' bits in a byte
-    BYTE_MASK = $FF                                     ' keeps a value to one byte
-    BAD_HANDLE_VALUE = -1                               ' a handle below every handle
-    BYTE_TEST_VALUE = $A5                               ' BYTE the write cases store
-    WORD_TEST_VALUE = $1234                             ' WORD the write cases store
-    LONG_TEST_VALUE = $1234_5678                        ' LONG the write cases store
-    TINY_FIRST = $11                                    ' bytes of the tiny file
-    TINY_SECOND = $22
-    TINY_THIRD = $33
-    TINY_WORD = TINY_FIRST | (TINY_SECOND << BYTE_BITS) ' the WORD the first two bytes of the tiny file make
-    READ_SPAN = BYTE_SIZE + WORD_SIZE + LONG_SIZE       ' bytes the read cases consume in order
-    NO_MISMATCH = -1                                    ' firstMismatch() result when the buffers agree
-    WORKER_BYTE = $5A                                   ' byte the worker cog tries to write
+  BYTE_SIZE		= 1					     ' bytes in a BYTE
+  WORD_SIZE		= 2					     ' bytes in a WORD
+  LONG_SIZE		= 4					     ' bytes in a LONG
+  TERMINATOR_BYTES	= 1					     ' bytes in the terminator of a zstring
+  BYTE_BITS		= 8					     ' bits in a byte
+  BYTE_MASK		= $FF					     ' keeps a value to one byte
+  BAD_HANDLE_VALUE	= -1					     ' a handle below every handle
+  BYTE_TEST_VALUE	= $A5					     ' BYTE the write cases store
+  WORD_TEST_VALUE	= $1234					     ' WORD the write cases store
+  LONG_TEST_VALUE	= $1234_5678				     ' LONG the write cases store
+  TINY_FIRST		= $11					     ' bytes of the tiny file
+  TINY_SECOND		= $22
+  TINY_THIRD		= $33
+  TINY_WORD		= TINY_FIRST | (TINY_SECOND << BYTE_BITS)    ' the WORD the first two bytes of the tiny file make
+  READ_SPAN		= BYTE_SIZE + WORD_SIZE + LONG_SIZE	     ' bytes the read cases consume in order
+  NO_MISMATCH		= -1					     ' firstMismatch() result when the buffers agree
+  WORKER_BYTE		= $5A					     ' byte the worker cog tries to write
 
-    ' mode values the driver does not accept, packed the way the driver packs "r+": the first letter in the low byte
-    MODE_X = "x"                                        ' one letter that is no mode
-    MODE_READ_WRITE = "r" | ("w" << BYTE_BITS)          ' two letters that are no mode
-    MODE_APPEND_EXTENDED = "a" | ("+" << BYTE_BITS)     ' a mode of C that the driver does not have
+  ' mode values the driver does not accept, packed the way the driver packs "r+": the first letter in the low byte
+  MODE_X		= "x"					     ' one letter that is no mode
+  MODE_READ_WRITE	= "r" | ("w" << BYTE_BITS)		     ' two letters that are no mode
+  MODE_APPEND_EXTENDED	= "a" | ("+" << BYTE_BITS)		     ' a mode of C that the driver does not have
 
 CON ' ---- Handle Methods and Bad Handles ----
 
@@ -111,7 +111,7 @@ CON ' ---- Handle Methods and Bad Handles ----
     '  HM_READ, HM_RD_BYTE, HM_RD_WORD, HM_RD_LONG, HM_RD_STR - the read calls
     '  HM_FILE_SIZE_FOR_HANDLE                           - the size call
     '  HM_COUNT                                          - the number of calls
-    #0, HM_FLUSH, HM_CLOSE, HM_SEEK, HM_WRITE, HM_WR_BYTE, HM_WR_WORD, HM_WR_LONG, HM_WR_STR, HM_READ, HM_RD_BYTE, HM_RD_WORD, HM_RD_LONG, HM_RD_STR, HM_FILE_SIZE_FOR_HANDLE, HM_COUNT
+  #0, HM_FLUSH, HM_CLOSE, HM_SEEK, HM_WRITE, HM_WR_BYTE, HM_WR_WORD, HM_WR_LONG, HM_WR_STR, HM_READ, HM_RD_BYTE, HM_RD_WORD, HM_RD_LONG, HM_RD_STR, HM_FILE_SIZE_FOR_HANDLE, HM_COUNT
 
     ' The handles that are outside the range of handles:
     '  BAD_NEGATIVE   - below every handle
@@ -119,59 +119,58 @@ CON ' ---- Handle Methods and Bad Handles ----
     '  BAD_AT_MAX     - the number of handles, whatever the first handle is (a handle that is not open when the first handle is 1)
     '  BAD_PAST_LAST  - the first handle plus the number of handles, one past the last handle
     '  BAD_HANDLE_KINDS - the number of kinds
-    #0, BAD_NEGATIVE, BAD_BELOW_FIRST, BAD_AT_MAX, BAD_PAST_LAST, BAD_HANDLE_KINDS
+  #0, BAD_NEGATIVE, BAD_BELOW_FIRST, BAD_AT_MAX, BAD_PAST_LAST, BAD_HANDLE_KINDS
 
-DAT ' ---- Counters, Flags and Worker Stack ----
+DAT  ' ---- Counters, Flags and Worker Stack ----
 
-workDone        LONG    FALSE                           ' set by the worker cog when it has recorded every result
-workWriteHandle LONG    0                               ' write handle the worker calls write() with
-workReadHandle  LONG    0                               ' read handle the worker calls write() with
-workZeroResult  LONG    0                               ' what write() returned for a count of zero
-workZeroError   LONG    0                               ' error() of the worker cog after it
-workBadResult   LONG    0                               ' what write() returned for a handle that is no handle
-workBadError    LONG    0                               ' error() of the worker cog after it
-workModeResult  LONG    0                               ' what write() returned for a read handle
-workModeError   LONG    0                               ' error() of the worker cog after it
-directoryId     LONG    0                               ' block ID directory() continues from
-directorySize   LONG    0                               ' size of the file directory() found
-heldHandles     LONG    0[HANDLE_SLOTS]                 ' handles the fill cases hold
-workStack       LONG    0[WORKER_STACK_LONGS]           ' stack of the worker cog
+  workDone	   LONG  FALSE			  ' set by the worker cog when it has recorded every result
+  workWriteHandle  LONG  0			  ' write handle the worker calls write() with
+  workReadHandle   LONG  0			  ' read handle the worker calls write() with
+  workZeroResult   LONG  0			  ' what write() returned for a count of zero
+  workZeroError    LONG  0			  ' error() of the worker cog after it
+  workBadResult    LONG  0			  ' what write() returned for a handle that is no handle
+  workBadError	   LONG  0			  ' error() of the worker cog after it
+  workModeResult   LONG  0			  ' what write() returned for a read handle
+  workModeError    LONG  0			  ' error() of the worker cog after it
+  directoryId	   LONG  0			  ' block ID directory() continues from
+  directorySize    LONG  0			  ' size of the file directory() found
+  heldHandles	   LONG  0[HANDLE_SLOTS]	  ' handles the fill cases hold
+  workStack	   LONG  0[WORKER_STACK_LONGS]	  ' stack of the worker cog
 
-DAT ' ---- Files and Buffers ----
+DAT  ' ---- Files and Buffers ----
 
-dataFile        BYTE    "err_data.bin", 0               ' a file of DATA_BYTES bytes
-otherFile       BYTE    "err_other.bin", 0              ' a second file of DATA_BYTES bytes
-tinyFile        BYTE    "err_tiny.bin", 0               ' a file of TINY_BYTES bytes
-stringFile      BYTE    "err_string.bin", 0             ' a file of three strings, the last without its terminator
-newFile         BYTE    "err_new.bin", 0                ' a name no file keeps
-missingFile     BYTE    "err_missing.bin", 0            ' a name no file has
-tempFile        BYTE    "err_temp.bin", 0               ' a file the rename case moves
-renamedFile     BYTE    "err_renamed.bin", 0            ' the name the rename case moves it to
-createdFile     BYTE    "err_created.bin", 0            ' the file create_file() makes
-writtenFile     BYTE    "err_written.bin", 0            ' the file the write calls make
-zeroLenFile     BYTE    "err_zero.bin", 0               ' a name create_file() is given with a length of zero
-negLenFile      BYTE    "err_negative.bin", 0           ' a name create_file() is given with a length below zero
-extraFile       BYTE    "err_extra.bin", 0              ' the name opened when every handle is in use
-fillFile        BYTE    "fill00.bin", 0                 ' template of the names of the files that fill the handles
-writeText       BYTE    "text", 0                       ' the string the write cases store
+  dataFile     BYTE  "err_data.bin", 0			       ' a file of DATA_BYTES bytes
+  otherFile    BYTE  "err_other.bin", 0			       ' a second file of DATA_BYTES bytes
+  tinyFile     BYTE  "err_tiny.bin", 0			       ' a file of TINY_BYTES bytes
+  stringFile   BYTE  "err_string.bin", 0		       ' a file of three strings, the last without its terminator
+  newFile      BYTE  "err_new.bin", 0			       ' a name no file keeps
+  missingFile  BYTE  "err_missing.bin", 0		       ' a name no file has
+  tempFile     BYTE  "err_temp.bin", 0			       ' a file the rename case moves
+  renamedFile  BYTE  "err_renamed.bin", 0		       ' the name the rename case moves it to
+  createdFile  BYTE  "err_created.bin", 0		       ' the file create_file() makes
+  writtenFile  BYTE  "err_written.bin", 0		       ' the file the write calls make
+  zeroLenFile  BYTE  "err_zero.bin", 0			       ' a name create_file() is given with a length of zero
+  negLenFile   BYTE  "err_negative.bin", 0		       ' a name create_file() is given with a length below zero
+  extraFile    BYTE  "err_extra.bin", 0			       ' the name opened when every handle is in use
+  fillFile     BYTE  "fill00.bin", 0			       ' template of the names of the files that fill the handles
+  writeText    BYTE  "text", 0				       ' the string the write cases store
 
-tinyContent     BYTE    TINY_FIRST, TINY_SECOND, TINY_THIRD
+  tinyContent  BYTE  TINY_FIRST, TINY_SECOND, TINY_THIRD
 
 ' the string file holds the zstrings in this order, the last one without a terminator
 stringContent
-firstText       BYTE    "OK", 0
-secondText      BYTE    "LONGSTRING", 0
-thirdText       BYTE    "tail"
+  firstText    BYTE  "OK", 0
+  secondText   BYTE  "LONGSTRING", 0
+  thirdText    BYTE  "tail"
 stringEnd
 
-oneByte         BYTE    0                               ' a byte for the calls that move one byte
-dataBuf         BYTE    0[DATA_BYTES]                   ' what the data files hold
-readBuf         BYTE    0[DATA_BYTES]                   ' what a read call fills
-stringBuf       BYTE    0[STRING_BUF_BYTES]             ' what rd_str() fills
-dirName         BYTE    0[flash.FILENAME_SIZE + DIR_PAD_BYTES] ' the name directory() reports
-dumpBefore      BYTE    0[DUMP_BYTES]                   ' handle status dump taken before the open that has no handle
-dumpAfter       BYTE    0[DUMP_BYTES]                   ' handle status dump taken after it
-
+  oneByte      BYTE  0					       ' a byte for the calls that move one byte
+  dataBuf      BYTE  0[DATA_BYTES]			       ' what the data files hold
+  readBuf      BYTE  0[DATA_BYTES]			       ' what a read call fills
+  stringBuf    BYTE  0[STRING_BUF_BYTES]		       ' what rd_str() fills
+  dirName      BYTE  0[flash.FILENAME_SIZE + DIR_PAD_BYTES]    ' the name directory() reports
+  dumpBefore   BYTE  0[DUMP_BYTES]			       ' handle status dump taken before the open that has no handle
+  dumpAfter    BYTE  0[DUMP_BYTES]			       ' handle status dump taken after it
 
 PUB go() | status, pFailedCall
 '' Run every error() contract test, then show the result.
@@ -181,46 +180,45 @@ PUB go() | status, pFailedCall
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
 
-    pFailedCall := @"format()"
-    status := flash.format()      ' Comment out this line to not erase all files
-    if status == flash.SUCCESS
-        pFailedCall := @"mount()"
-        status := flash.mount()
+  pFailedCall := @"format()"
+  status := flash.format()			' Comment out this line to not erase all files
+  if status == flash.SUCCESS
+    pFailedCall := @"mount()"
+    status := flash.mount()
 
-    if status == flash.SUCCESS
-        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+  if status == flash.SUCCESS
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-        utils.showChipAndDriverVersion()
-        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+    utils.showChipAndDriverVersion()
+    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
 
-        testHandlesAvailable()
-        testNotMounted()
-        testSuccessPaths()
-        testExemptAccessors()
-        testBadHandleBase()
-        testOpenFailures()
-        testCircularOpenFailures()
-        testFileOperationFailures()
-        testModeMismatches()
-        testClosedHandle()
-        testReadResults()
-        testStringReads()
-        testSeekCodes()
-        testWriteFromOtherCog()
-        testTransferCounts()
-        testCreateFileLength()
-        testBadHandles()
-        testNeverOpenedHandle()
-        testFileSizeBadHandles()
-        testPoolAfterDoubleClose()
-    else
-        utils.showError(pFailedCall, status)
-        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
-        utils.evaluateResultNegError(status, flash.SUCCESS)
+    testHandlesAvailable()
+    testNotMounted()
+    testSuccessPaths()
+    testExemptAccessors()
+    testBadHandleBase()
+    testOpenFailures()
+    testCircularOpenFailures()
+    testFileOperationFailures()
+    testModeMismatches()
+    testClosedHandle()
+    testReadResults()
+    testStringReads()
+    testSeekCodes()
+    testWriteFromOtherCog()
+    testTransferCounts()
+    testCreateFileLength()
+    testBadHandles()
+    testNeverOpenedHandle()
+    testFileSizeBadHandles()
+    testPoolAfterDoubleClose()
+  else
+    utils.showError(pFailedCall, status)
+    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    debug("* Test Complete")
-    utils.ShowTestResult(@"RT_error_paths_tests")
-
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_error_paths_tests")
 
 PRI testHandlesAvailable() | bEnoughHandles
 ' Check that the driver has the handles the open-file cases hold at one time.
@@ -228,60 +226,57 @@ PRI testHandlesAvailable() | bEnoughHandles
 ' Local Variables:
 ' @local bEnoughHandles - TRUE when the driver has at least MIN_HANDLES_NEEDED handles
 
-    utils.startTestGroup(@"handles available to the cases")
-    utils.startTest(@"MAX_FILES_OPEN covers the files the open-file cases hold at one time")
-    bEnoughHandles := flash.MAX_FILES_OPEN >= MIN_HANDLES_NEEDED
-    utils.evaluateSingleValue(bEnoughHandles, @"MAX_FILES_OPEN is enough", TRUE)
-
+  utils.startTestGroup(@"handles available to the cases")
+  utils.startTest(@"MAX_FILES_OPEN covers the files the open-file cases hold at one time")
+  bEnoughHandles := flash.MAX_FILES_OPEN >= MIN_HANDLES_NEEDED
+  utils.evaluateSingleValue(bEnoughHandles, @"MAX_FILES_OPEN is enough", TRUE)
 
 PRI testNotMounted()
 ' Call every method that checks the mount first while the filesystem is not mounted: each one reports E_NOT_MOUNTED.
 
-    utils.startTestGroup(@"calls while the filesystem is not mounted")
-    utils.startTest(@"unmount() of a mounted filesystem")
-    checkStatus(flash.unmount(), flash.SUCCESS, flash.SUCCESS)
+  utils.startTestGroup(@"calls while the filesystem is not mounted")
+  utils.startTest(@"unmount() of a mounted filesystem")
+  checkStatus(flash.unmount(), flash.SUCCESS, flash.SUCCESS)
 
-    testNotMountedFiles()
-    testNotMountedHandles()
-    testNotMountedQueries()
+  testNotMountedFiles()
+  testNotMountedHandles()
+  testNotMountedQueries()
 
-    utils.startTest(@"can_mount() while not mounted")
-    flash.unmount()                                     ' leaves E_NOT_MOUNTED pending
-    flash.can_mount()
-    utils.evaluateSubStatus(flash.error(), @"error() after can_mount()", flash.SUCCESS)
+  utils.startTest(@"can_mount() while not mounted")
+  flash.unmount()    ' leaves E_NOT_MOUNTED pending
+  flash.can_mount()
+  utils.evaluateSubStatus(flash.error(), @"error() after can_mount()", flash.SUCCESS)
 
-    utils.startTest(@"mount() after an unmount")
-    flash.unmount()                                     ' leaves E_NOT_MOUNTED pending
-    checkStatus(flash.mount(), flash.SUCCESS, flash.SUCCESS)
-
+  utils.startTest(@"mount() after an unmount")
+  flash.unmount()    ' leaves E_NOT_MOUNTED pending
+  checkStatus(flash.mount(), flash.SUCCESS, flash.SUCCESS)
 
 PRI testNotMountedFiles()
 ' The calls that take a file name, made while the filesystem is not mounted.
 
-    utils.startTest(@"open() before mount")
-    checkStatus(flash.open(@dataFile, flash.FILEMODE_READ), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"open() before mount")
+  checkStatus(flash.OPEN(@dataFile, flash.FILEMODE_READ), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"open_circular() before mount")
-    checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"open_circular() before mount")
+  checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"rename() before mount")
-    checkStatus(flash.rename(@dataFile, @tempFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"rename() before mount")
+  checkStatus(flash.rename(@dataFile, @tempFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"delete() before mount")
-    checkStatus(flash.delete(@dataFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"delete() before mount")
+  checkStatus(flash.delete(@dataFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"create_file() before mount")
-    checkStatus(flash.create_file(@dataFile, CREATE_FILL, CREATE_BYTES), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"create_file() before mount")
+  checkStatus(flash.create_file(@dataFile, CREATE_FILL, CREATE_BYTES), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"exists() before mount")
-    checkValue(flash.exists(@dataFile), FALSE, flash.E_NOT_MOUNTED)
+  utils.startTest(@"exists() before mount")
+  checkValue(flash.exists(@dataFile), FALSE, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"file_size() before mount")
-    checkStatus(flash.file_size(@dataFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"file_size() before mount")
+  checkStatus(flash.file_size(@dataFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"file_size_unused() before mount")
-    checkStatus(flash.file_size_unused(@dataFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
-
+  utils.startTest(@"file_size_unused() before mount")
+  checkStatus(flash.file_size_unused(@dataFile), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
 PRI testNotMountedHandles() | methodIdx
 ' The calls that take a handle, made while the filesystem is not mounted: the mount is checked before the handle.
@@ -289,10 +284,9 @@ PRI testNotMountedHandles() | methodIdx
 ' Local Variables:
 ' @local methodIdx - number of the handle call being made
 
-    repeat HM_COUNT with methodIdx
-        utils.startTest(handleMethodName(methodIdx))
-        checkValue(callHandleMethod(methodIdx, utils.FIRST_HANDLE), expectedReturn(methodIdx, flash.E_NOT_MOUNTED), flash.E_NOT_MOUNTED)
-
+  repeat HM_COUNT with methodIdx
+    utils.startTest(handleMethodName(methodIdx))
+    checkValue(callHandleMethod(methodIdx, utils.FIRST_HANDLE), expectedReturn(methodIdx, flash.E_NOT_MOUNTED), flash.E_NOT_MOUNTED)
 
 PRI testNotMountedQueries() | pending, errCode, serialHigh, serialLow, usedBlocks, freeBlocks, fileCount, bMounted, versionNumber
 ' The calls that take no name and no handle, made while the filesystem is not mounted.
@@ -308,61 +302,59 @@ PRI testNotMountedQueries() | pending, errCode, serialHigh, serialLow, usedBlock
 ' @local bMounted - what mounted() returned
 ' @local versionNumber - what version() returned
 
-    utils.startTest(@"unmount() when not mounted")
-    checkStatus(flash.unmount(), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"unmount() when not mounted")
+  checkStatus(flash.unmount(), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"serial_number() before mount")
-    serialHigh, serialLow := flash.serial_number()
-    errCode := flash.error()
-    utils.evaluateSubValue(serialHigh, @"high long of the serial number", 0)
-    utils.evaluateSubValue(serialLow, @"low long of the serial number", 0)
-    utils.evaluateSubStatus(errCode, @"error() after serial_number()", flash.E_NOT_MOUNTED)
+  utils.startTest(@"serial_number() before mount")
+  serialHigh, serialLow := flash.serial_number()
+  errCode := flash.error()
+  utils.evaluateSubValue(serialHigh, @"high long of the serial number", 0)
+  utils.evaluateSubValue(serialLow, @"low long of the serial number", 0)
+  utils.evaluateSubStatus(errCode, @"error() after serial_number()", flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"directory() before mount")
-    directoryId := 0
-    checkStatus(flash.directory(@directoryId, @dirName, @directorySize), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
+  utils.startTest(@"directory() before mount")
+  directoryId := 0
+  checkStatus(flash.directory(@directoryId, @dirName, @directorySize), flash.E_NOT_MOUNTED, flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"stats() before mount")
-    usedBlocks, freeBlocks, fileCount := flash.stats()
-    errCode := flash.error()
-    utils.evaluateSubStatus(usedBlocks, @"used blocks", flash.E_NOT_MOUNTED)
-    utils.evaluateSubValue(freeBlocks, @"free blocks", 0)
-    utils.evaluateSubValue(fileCount, @"file count", 0)
-    utils.evaluateSubStatus(errCode, @"error() after stats()", flash.E_NOT_MOUNTED)
+  utils.startTest(@"stats() before mount")
+  usedBlocks, freeBlocks, fileCount := flash.stats()
+  errCode := flash.error()
+  utils.evaluateSubStatus(usedBlocks, @"used blocks", flash.E_NOT_MOUNTED)
+  utils.evaluateSubValue(freeBlocks, @"free blocks", 0)
+  utils.evaluateSubValue(fileCount, @"file count", 0)
+  utils.evaluateSubStatus(errCode, @"error() after stats()", flash.E_NOT_MOUNTED)
 
-    utils.startTest(@"mounted() leaves the pending E_NOT_MOUNTED alone")
-    pending := flash.unmount()
-    bMounted := flash.mounted()
-    errCode := flash.error()
-    utils.evaluateSubValue(bMounted, @"mounted()", FALSE)
-    utils.evaluateSubStatus(errCode, @"error() after mounted()", pending)
+  utils.startTest(@"mounted() leaves the pending E_NOT_MOUNTED alone")
+  pending := flash.unmount()
+  bMounted := flash.mounted()
+  errCode := flash.error()
+  utils.evaluateSubValue(bMounted, @"mounted()", FALSE)
+  utils.evaluateSubStatus(errCode, @"error() after mounted()", pending)
 
-    utils.startTest(@"version() works while not mounted and leaves SUCCESS")
-    flash.unmount()                                     ' leaves E_NOT_MOUNTED pending
-    versionNumber := flash.version()
-    errCode := flash.error()
-    utils.evaluateSubValue(versionNumber, @"version()", flash.LIB_VERSION)
-    utils.evaluateSubStatus(errCode, @"error() after version()", flash.SUCCESS)
-
+  utils.startTest(@"version() works while not mounted and leaves SUCCESS")
+  flash.unmount()    ' leaves E_NOT_MOUNTED pending
+  versionNumber := flash.version()
+  errCode := flash.error()
+  utils.evaluateSubValue(versionNumber, @"version()", flash.LIB_VERSION)
+  utils.evaluateSubStatus(errCode, @"error() after version()", flash.SUCCESS)
 
 PRI testSuccessPaths()
 ' Check that error() holds SUCCESS after every call that succeeds, each made with a failure code pending.
 
-    utils.startTestGroup(@"error() after calls that succeed")
-    formatFresh(@"format() of a mounted filesystem")
-    fillDataBuffer()
-    createFile(@"set up the data file", @dataFile, @dataBuf, DATA_BYTES)
-    createFile(@"set up the second file", @otherFile, @dataBuf, DATA_BYTES)
-    createFile(@"set up the tiny file", @tinyFile, @tinyContent, TINY_BYTES)
-    createFile(@"set up the string file", @stringFile, @stringContent, @stringEnd - @stringContent)
+  utils.startTestGroup(@"error() after calls that succeed")
+  formatFresh(@"format() of a mounted filesystem")
+  fillDataBuffer()
+  createFile(@"set up the data file", @dataFile, @dataBuf, DATA_BYTES)
+  createFile(@"set up the second file", @otherFile, @dataBuf, DATA_BYTES)
+  createFile(@"set up the tiny file", @tinyFile, @tinyContent, TINY_BYTES)
+  createFile(@"set up the string file", @stringFile, @stringContent, @stringEnd - @stringContent)
 
-    testQuerySuccess()
-    testOpenModesSucceed()
-    testReadSuccess()
-    testWriteSuccess()
-    testDirectoryAndStats()
-    testRenameDeleteCreateSuccess()
-
+  testQuerySuccess()
+  testOpenModesSucceed()
+  testReadSuccess()
+  testWriteSuccess()
+  testDirectoryAndStats()
+  testRenameDeleteCreateSuccess()
 
 PRI testQuerySuccess() | versionNumber, errCode
 ' The calls that only look at the filesystem, made with a failure code pending.
@@ -371,139 +363,135 @@ PRI testQuerySuccess() | versionNumber, errCode
 ' @local versionNumber - what version() returned
 ' @local errCode - error() after the call
 
-    utils.startTest(@"version() clears a pending failure code")
-    setPendingError()
-    versionNumber := flash.version()
-    errCode := flash.error()
-    utils.evaluateSubValue(versionNumber, @"version()", flash.LIB_VERSION)
-    utils.evaluateSubStatus(errCode, @"error() after version()", flash.SUCCESS)
+  utils.startTest(@"version() clears a pending failure code")
+  setPendingError()
+  versionNumber := flash.version()
+  errCode := flash.error()
+  utils.evaluateSubValue(versionNumber, @"version()", flash.LIB_VERSION)
+  utils.evaluateSubStatus(errCode, @"error() after version()", flash.SUCCESS)
 
-    utils.startTest(@"serial_number() clears a pending failure code")
-    setPendingError()
-    flash.serial_number()
-    utils.evaluateSubStatus(flash.error(), @"error() after serial_number()", flash.SUCCESS)
+  utils.startTest(@"serial_number() clears a pending failure code")
+  setPendingError()
+  flash.serial_number()
+  utils.evaluateSubStatus(flash.error(), @"error() after serial_number()", flash.SUCCESS)
 
-    utils.startTest(@"mount() of a mounted filesystem clears a pending failure code")
-    setPendingError()
-    checkStatus(flash.mount(), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"mount() of a mounted filesystem clears a pending failure code")
+  setPendingError()
+  checkStatus(flash.mount(), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"can_mount() of a mounted filesystem clears a pending failure code")
-    setPendingError()
-    flash.can_mount()
-    utils.evaluateSubStatus(flash.error(), @"error() after can_mount()", flash.SUCCESS)
+  utils.startTest(@"can_mount() of a mounted filesystem clears a pending failure code")
+  setPendingError()
+  flash.can_mount()
+  utils.evaluateSubStatus(flash.error(), @"error() after can_mount()", flash.SUCCESS)
 
-    utils.startTest(@"exists() of a file that exists")
-    setPendingError()
-    checkValue(flash.exists(@dataFile), TRUE, flash.SUCCESS)
+  utils.startTest(@"exists() of a file that exists")
+  setPendingError()
+  checkValue(flash.exists(@dataFile), TRUE, flash.SUCCESS)
 
-    utils.startTest(@"exists() of a file that does not exist is an answer, not an error")
-    setPendingError()
-    checkValue(flash.exists(@missingFile), FALSE, flash.SUCCESS)
+  utils.startTest(@"exists() of a file that does not exist is an answer, not an error")
+  setPendingError()
+  checkValue(flash.exists(@missingFile), FALSE, flash.SUCCESS)
 
-    utils.startTest(@"file_size() of a file")
-    setPendingError()
-    checkValue(flash.file_size(@dataFile), DATA_BYTES, flash.SUCCESS)
+  utils.startTest(@"file_size() of a file")
+  setPendingError()
+  checkValue(flash.file_size(@dataFile), DATA_BYTES, flash.SUCCESS)
 
-    utils.startTest(@"file_size_unused() of a file")
-    setPendingError()
-    checkValue(flash.file_size_unused(@dataFile), flash.BYTES_IN_HEAD_BLOCK - DATA_BYTES, flash.SUCCESS)
-
+  utils.startTest(@"file_size_unused() of a file")
+  setPendingError()
+  checkValue(flash.file_size_unused(@dataFile), flash.BYTES_IN_HEAD_BLOCK - DATA_BYTES, flash.SUCCESS)
 
 PRI testOpenModesSucceed()
 ' Open and close a handle in every mode the driver has, each with a failure code pending.
 
-    modeSucceeds(@"open(,r) of an existing file", @dataFile, flash.FILEMODE_READ, 0)
-    modeSucceeds(@"open(,w) of a new file", @newFile, flash.FILEMODE_WRITE, 0)
-    modeSucceeds(@"open(,a) of an existing file", @otherFile, flash.FILEMODE_APPEND, 0)
-    modeSucceeds(@"open(,a) of a new file", @newFile, flash.FILEMODE_APPEND, 0)
-    modeSucceeds(@"open(,r+) of an existing file", @otherFile, flash.FILEMODE_READ_EXTENDED, 0)
-    modeSucceeds(@"open(,w+) of a new file", @newFile, flash.FILEMODE_WRITE_EXTENDED, 0)
-    modeSucceeds(@"open_circular(,r) of an existing file", @dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES)
-    modeSucceeds(@"open_circular(,a) of a new file", @newFile, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES)
+  modeSucceeds(@"open(,r) of an existing file", @dataFile, flash.FILEMODE_READ, 0)
+  modeSucceeds(@"open(,w) of a new file", @newFile, flash.FILEMODE_WRITE, 0)
+  modeSucceeds(@"open(,a) of an existing file", @otherFile, flash.FILEMODE_APPEND, 0)
+  modeSucceeds(@"open(,a) of a new file", @newFile, flash.FILEMODE_APPEND, 0)
+  modeSucceeds(@"open(,r+) of an existing file", @otherFile, flash.FILEMODE_READ_EXTENDED, 0)
+  modeSucceeds(@"open(,w+) of a new file", @newFile, flash.FILEMODE_WRITE_EXTENDED, 0)
+  modeSucceeds(@"open_circular(,r) of an existing file", @dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES)
+  modeSucceeds(@"open_circular(,a) of a new file", @newFile, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES)
 
-
-PRI testReadSuccess() | handle
+PRI testReadSuccess() | HANDLE
 ' The read calls and the calls that move or measure a handle, on a read handle, each with a failure code pending.
 
 ' Local Variables:
 ' @local handle - handle of the data file
 
-    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) the data file for the read calls")
+  HANDLE := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) the data file for the read calls")
 
-    utils.startTest(@"read() of every byte of the file")
-    setPendingError()
-    checkValue(flash.read(handle, @readBuf, DATA_BYTES), DATA_BYTES, flash.SUCCESS)
+  utils.startTest(@"read() of every byte of the file")
+  setPendingError()
+  checkValue(flash.read(HANDLE, @readBuf, DATA_BYTES), DATA_BYTES, flash.SUCCESS)
 
-    utils.startTest(@"seek() to the first byte")
-    setPendingError()
-    checkValue(flash.seek(handle, 0, flash.SK_FILE_START), 0, flash.SUCCESS)
+  utils.startTest(@"seek() to the first byte")
+  setPendingError()
+  checkValue(flash.seek(HANDLE, 0, flash.SK_FILE_START), 0, flash.SUCCESS)
 
-    utils.startTest(@"rd_byte() of the first byte")
-    setPendingError()
-    checkValue(flash.rd_byte(handle), dataByte(0), flash.SUCCESS)
+  utils.startTest(@"rd_byte() of the first byte")
+  setPendingError()
+  checkValue(flash.rd_byte(HANDLE), dataByte(0), flash.SUCCESS)
 
-    utils.startTest(@"rd_word() of the next two bytes")
-    setPendingError()
-    checkValue(flash.rd_word(handle), dataByte(BYTE_SIZE) | (dataByte(BYTE_SIZE + 1) << BYTE_BITS), flash.SUCCESS)
+  utils.startTest(@"rd_word() of the next two bytes")
+  setPendingError()
+  checkValue(flash.rd_word(HANDLE), dataByte(BYTE_SIZE) | (dataByte(BYTE_SIZE + 1) << BYTE_BITS), flash.SUCCESS)
 
-    utils.startTest(@"rd_long() of the next four bytes")
-    setPendingError()
-    checkValue(flash.rd_long(handle), dataLong(BYTE_SIZE + WORD_SIZE), flash.SUCCESS)
+  utils.startTest(@"rd_long() of the next four bytes")
+  setPendingError()
+  checkValue(flash.rd_long(HANDLE), dataLong(BYTE_SIZE + WORD_SIZE), flash.SUCCESS)
 
-    utils.startTest(@"seek() relative to the current position")
-    setPendingError()
-    checkValue(flash.seek(handle, -READ_SPAN, flash.SK_CURRENT_POSN), 0, flash.SUCCESS)
+  utils.startTest(@"seek() relative to the current position")
+  setPendingError()
+  checkValue(flash.seek(HANDLE, -READ_SPAN, flash.SK_CURRENT_POSN), 0, flash.SUCCESS)
 
-    utils.startTest(@"file_size_for_handle() of an open file")
-    setPendingError()
-    checkValue(flash.file_size_for_handle(handle), DATA_BYTES, flash.SUCCESS)
+  utils.startTest(@"file_size_for_handle() of an open file")
+  setPendingError()
+  checkValue(flash.file_size_for_handle(HANDLE), DATA_BYTES, flash.SUCCESS)
 
-    utils.startTest(@"close() of the read handle")
-    setPendingError()
-    closeSub(handle)
+  utils.startTest(@"close() of the read handle")
+  setPendingError()
+  closeSub(HANDLE)
 
-
-PRI testWriteSuccess() | handle, expectedBytes
+PRI testWriteSuccess() | HANDLE, expectedBytes
 ' The write calls, flush() and close() on a new file, each with a failure code pending.
 
 ' Local Variables:
 ' @local handle - handle of the file being written
 ' @local expectedBytes - bytes the file holds once every write call has stored its data
 
-    expectedBytes := DATA_BYTES + BYTE_SIZE + WORD_SIZE + LONG_SIZE + strsize(@writeText) + TERMINATOR_BYTES
-    handle := openFor(@writtenFile, flash.FILEMODE_WRITE, @"open(,w) a new file for the write calls")
+  expectedBytes := DATA_BYTES + BYTE_SIZE + WORD_SIZE + LONG_SIZE + strsize(@writeText) + TERMINATOR_BYTES
+  HANDLE := openFor(@writtenFile, flash.FILEMODE_WRITE, @"open(,w) a new file for the write calls")
 
-    utils.startTest(@"write() of a buffer")
-    setPendingError()
-    checkValue(flash.write(handle, @dataBuf, DATA_BYTES), DATA_BYTES, flash.SUCCESS)
+  utils.startTest(@"write() of a buffer")
+  setPendingError()
+  checkValue(flash.write(HANDLE, @dataBuf, DATA_BYTES), DATA_BYTES, flash.SUCCESS)
 
-    utils.startTest(@"wr_byte() of a byte")
-    setPendingError()
-    checkStatus(flash.wr_byte(handle, BYTE_TEST_VALUE), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"wr_byte() of a byte")
+  setPendingError()
+  checkStatus(flash.wr_byte(HANDLE, BYTE_TEST_VALUE), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"wr_word() of a WORD")
-    setPendingError()
-    checkStatus(flash.wr_word(handle, WORD_TEST_VALUE), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"wr_word() of a WORD")
+  setPendingError()
+  checkStatus(flash.wr_word(HANDLE, WORD_TEST_VALUE), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"wr_long() of a LONG")
-    setPendingError()
-    checkStatus(flash.wr_long(handle, LONG_TEST_VALUE), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"wr_long() of a LONG")
+  setPendingError()
+  checkStatus(flash.wr_long(HANDLE, LONG_TEST_VALUE), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"wr_str() of a string")
-    setPendingError()
-    checkStatus(flash.wr_str(handle, @writeText), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"wr_str() of a string")
+  setPendingError()
+  checkStatus(flash.wr_str(HANDLE, @writeText), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"flush() of a write handle")
-    setPendingError()
-    checkStatus(flash.flush(handle), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"flush() of a write handle")
+  setPendingError()
+  checkStatus(flash.flush(HANDLE), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"close() of the write handle")
-    setPendingError()
-    closeSub(handle)
+  utils.startTest(@"close() of the write handle")
+  setPendingError()
+  closeSub(HANDLE)
 
-    utils.startTest(@"the written file holds every byte the write calls stored")
-    checkValue(flash.file_size(@writtenFile), expectedBytes, flash.SUCCESS)
-
+  utils.startTest(@"the written file holds every byte the write calls stored")
+  checkValue(flash.file_size(@writtenFile), expectedBytes, flash.SUCCESS)
 
 PRI testDirectoryAndStats() | status, errCode, usedBlocks, freeBlocks, fileCount
 ' The calls that list the filesystem, each with a failure code pending.
@@ -515,60 +503,58 @@ PRI testDirectoryAndStats() | status, errCode, usedBlocks, freeBlocks, fileCount
 ' @local freeBlocks - second value stats() returned
 ' @local fileCount - third value stats() returned
 
-    utils.startTest(@"directory() finds a file")
-    setPendingError()
-    directoryId := 0
-    checkStatus(flash.directory(@directoryId, @dirName, @directorySize), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"directory() finds a file")
+  setPendingError()
+  directoryId := 0
+  checkStatus(flash.directory(@directoryId, @dirName, @directorySize), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"directory() walks to the end of the list")
-    setPendingError()
-    directoryId := 0
-    status := flash.SUCCESS
-    repeat DIR_CALL_LIMIT
-        status := flash.directory(@directoryId, @dirName, @directorySize)
-        if status <> flash.SUCCESS or strsize(@dirName) == 0
-            quit
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"directory() at the end of the list", flash.SUCCESS)
-    utils.evaluateSubValue(strsize(@dirName), @"length of the name at the end of the list", 0)
-    utils.evaluateSubStatus(errCode, @"error() after directory()", flash.SUCCESS)
+  utils.startTest(@"directory() walks to the end of the list")
+  setPendingError()
+  directoryId := 0
+  status := flash.SUCCESS
+  repeat DIR_CALL_LIMIT
+    status := flash.directory(@directoryId, @dirName, @directorySize)
+    if status <> flash.SUCCESS OR strsize(@dirName) == 0
+      quit
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"directory() at the end of the list", flash.SUCCESS)
+  utils.evaluateSubValue(strsize(@dirName), @"length of the name at the end of the list", 0)
+  utils.evaluateSubStatus(errCode, @"error() after directory()", flash.SUCCESS)
 
-    utils.startTest(@"stats() of the filesystem")
-    setPendingError()
-    usedBlocks, freeBlocks, fileCount := flash.stats()
-    errCode := flash.error()
-    utils.evaluateSubValue(usedBlocks + freeBlocks, @"used plus free blocks", flash.BLOCKS)
-    utils.evaluateSubValue(fileCount > 0, @"at least one file", TRUE)
-    utils.evaluateSubStatus(errCode, @"error() after stats()", flash.SUCCESS)
-
+  utils.startTest(@"stats() of the filesystem")
+  setPendingError()
+  usedBlocks, freeBlocks, fileCount := flash.stats()
+  errCode := flash.error()
+  utils.evaluateSubValue(usedBlocks + freeBlocks, @"used plus free blocks", flash.BLOCKS)
+  utils.evaluateSubValue(fileCount > 0, @"at least one file", TRUE)
+  utils.evaluateSubStatus(errCode, @"error() after stats()", flash.SUCCESS)
 
 PRI testRenameDeleteCreateSuccess()
 ' Rename, delete and create a file, each with a failure code pending.
 
-    createFile(@"set up the file to rename", @tempFile, @dataBuf, DATA_BYTES)
+  createFile(@"set up the file to rename", @tempFile, @dataBuf, DATA_BYTES)
 
-    utils.startTest(@"rename() of a file to a new name")
-    setPendingError()
-    checkStatus(flash.rename(@tempFile, @renamedFile), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"rename() of a file to a new name")
+  setPendingError()
+  checkStatus(flash.rename(@tempFile, @renamedFile), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"the old name is gone and the new name is there")
-    checkValue(flash.exists(@tempFile), FALSE, flash.SUCCESS)
-    utils.evaluateSubValue(flash.exists(@renamedFile), @"exists() of the new name", TRUE)
+  utils.startTest(@"the old name is gone and the new name is there")
+  checkValue(flash.exists(@tempFile), FALSE, flash.SUCCESS)
+  utils.evaluateSubValue(flash.exists(@renamedFile), @"exists() of the new name", TRUE)
 
-    utils.startTest(@"delete() of a file")
-    setPendingError()
-    checkStatus(flash.delete(@renamedFile), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"delete() of a file")
+  setPendingError()
+  checkStatus(flash.delete(@renamedFile), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"the deleted file is gone")
-    checkValue(flash.exists(@renamedFile), FALSE, flash.SUCCESS)
+  utils.startTest(@"the deleted file is gone")
+  checkValue(flash.exists(@renamedFile), FALSE, flash.SUCCESS)
 
-    utils.startTest(@"create_file() of a new file")
-    setPendingError()
-    checkStatus(flash.create_file(@createdFile, CREATE_FILL, CREATE_BYTES), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(@"create_file() of a new file")
+  setPendingError()
+  checkStatus(flash.create_file(@createdFile, CREATE_FILL, CREATE_BYTES), flash.SUCCESS, flash.SUCCESS)
 
-    utils.startTest(@"the created file has the length it was given")
-    checkValue(flash.file_size(@createdFile), CREATE_BYTES, flash.SUCCESS)
-
+  utils.startTest(@"the created file has the length it was given")
+  checkValue(flash.file_size(@createdFile), CREATE_BYTES, flash.SUCCESS)
 
 PRI testExemptAccessors() | pending, pText, bMounted
 ' The accessors that never change the code a failing call left: error(), string_for_error(), null() and mounted().
@@ -578,30 +564,29 @@ PRI testExemptAccessors() | pending, pText, bMounted
 ' @local pText - address of the text string_for_error() returned
 ' @local bMounted - what mounted() returned
 
-    utils.startTestGroup(@"accessors that leave a pending code alone")
+  utils.startTestGroup(@"accessors that leave a pending code alone")
 
-    utils.startTest(@"error() reports the pending code every time it is called")
-    pending := setPendingError()
-    utils.evaluateSubStatus(flash.error(), @"first error()", pending)
-    utils.evaluateSubStatus(flash.error(), @"second error()", pending)
+  utils.startTest(@"error() reports the pending code every time it is called")
+  pending := setPendingError()
+  utils.evaluateSubStatus(flash.error(), @"first error()", pending)
+  utils.evaluateSubStatus(flash.error(), @"second error()", pending)
 
-    utils.startTest(@"string_for_error() leaves the pending code alone")
-    pending := setPendingError()
-    pText := flash.string_for_error(flash.E_BAD_HANDLE)
-    utils.evaluateSubValue(pText <> 0, @"string_for_error() returned a text", TRUE)
-    utils.evaluateSubStatus(flash.error(), @"error() after string_for_error()", pending)
+  utils.startTest(@"string_for_error() leaves the pending code alone")
+  pending := setPendingError()
+  pText := flash.string_for_error(flash.E_BAD_HANDLE)
+  utils.evaluateSubValue(pText <> 0, @"string_for_error() returned a text", TRUE)
+  utils.evaluateSubStatus(flash.error(), @"error() after string_for_error()", pending)
 
-    utils.startTest(@"null() leaves the pending code alone")
-    pending := setPendingError()
-    flash.null()
-    utils.evaluateSubStatus(flash.error(), @"error() after null()", pending)
+  utils.startTest(@"null() leaves the pending code alone")
+  pending := setPendingError()
+  flash.null()
+  utils.evaluateSubStatus(flash.error(), @"error() after null()", pending)
 
-    utils.startTest(@"mounted() leaves the pending code alone")
-    pending := setPendingError()
-    bMounted := flash.mounted()
-    utils.evaluateSubValue(bMounted, @"mounted()", TRUE)
-    utils.evaluateSubStatus(flash.error(), @"error() after mounted()", pending)
-
+  utils.startTest(@"mounted() leaves the pending code alone")
+  pending := setPendingError()
+  bMounted := flash.mounted()
+  utils.evaluateSubValue(bMounted, @"mounted()", TRUE)
+  utils.evaluateSubStatus(flash.error(), @"error() after mounted()", pending)
 
 PRI testBadHandleBase() | status, errCode, bAnswer
 ' Call mount(), format() and can_mount() of a second driver instance whose HANDLE_BASE is not 0 or 1: each refuses with
@@ -612,187 +597,182 @@ PRI testBadHandleBase() | status, errCode, bAnswer
 ' @local errCode - error() of the second instance after the call
 ' @local bAnswer - what can_mount() returned
 
-    utils.startTestGroup(@"a driver instance whose HANDLE_BASE is not 0 or 1")
+  utils.startTestGroup(@"a driver instance whose HANDLE_BASE is not 0 or 1")
 
-    utils.startTest(@"mount() with a HANDLE_BASE of 2")
-    status := flashBadBase.mount()
-    errCode := flashBadBase.error()
-    utils.evaluateSubStatus(status, @"mount()", flash.E_BAD_HANDLE)
-    utils.evaluateSubStatus(errCode, @"error() after mount()", flash.E_BAD_HANDLE)
-    utils.evaluateSubValue(flashBadBase.mounted(), @"mounted()", FALSE)
+  utils.startTest(@"mount() with a HANDLE_BASE of 2")
+  status := flashBadBase.mount()
+  errCode := flashBadBase.error()
+  utils.evaluateSubStatus(status, @"mount()", flash.E_BAD_HANDLE)
+  utils.evaluateSubStatus(errCode, @"error() after mount()", flash.E_BAD_HANDLE)
+  utils.evaluateSubValue(flashBadBase.mounted(), @"mounted()", FALSE)
 
-    utils.startTest(@"can_mount() with a HANDLE_BASE of 2")
-    bAnswer := flashBadBase.can_mount()
-    errCode := flashBadBase.error()
-    utils.evaluateSubValue(bAnswer, @"can_mount()", FALSE)
-    utils.evaluateSubStatus(errCode, @"error() after can_mount()", flash.E_BAD_HANDLE)
+  utils.startTest(@"can_mount() with a HANDLE_BASE of 2")
+  bAnswer := flashBadBase.can_mount()
+  errCode := flashBadBase.error()
+  utils.evaluateSubValue(bAnswer, @"can_mount()", FALSE)
+  utils.evaluateSubStatus(errCode, @"error() after can_mount()", flash.E_BAD_HANDLE)
 
-    utils.startTest(@"format() with a HANDLE_BASE of 2")
-    status := flashBadBase.format()
-    errCode := flashBadBase.error()
-    utils.evaluateSubStatus(status, @"format()", flash.E_BAD_HANDLE)
-    utils.evaluateSubStatus(errCode, @"error() after format()", flash.E_BAD_HANDLE)
-    utils.evaluateSubValue(flashBadBase.mounted(), @"mounted()", FALSE)
+  utils.startTest(@"format() with a HANDLE_BASE of 2")
+  status := flashBadBase.format()
+  errCode := flashBadBase.error()
+  utils.evaluateSubStatus(status, @"format()", flash.E_BAD_HANDLE)
+  utils.evaluateSubStatus(errCode, @"error() after format()", flash.E_BAD_HANDLE)
+  utils.evaluateSubValue(flashBadBase.mounted(), @"mounted()", FALSE)
 
-    utils.startTest(@"the driver under test is still mounted and still holds its files")
-    utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
-    utils.evaluateSubValue(flash.exists(@dataFile), @"exists() of the data file", TRUE)
+  utils.startTest(@"the driver under test is still mounted and still holds its files")
+  utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
+  utils.evaluateSubValue(flash.exists(@dataFile), @"exists() of the data file", TRUE)
 
-
-PRI testOpenFailures() | handle
+PRI testOpenFailures() | HANDLE
 ' Every way open() fails that needs no fault: a missing file, modes that do not exist, a file already open and no free handle.
 
 ' Local Variables:
 ' @local handle - handle of the file the open-file cases find open
 
-    utils.startTestGroup(@"open() failures")
+  utils.startTestGroup(@"open() failures")
 
-    utils.startTest(@"open(,r) of a file that does not exist")
-    checkStatus(flash.open(@missingFile, flash.FILEMODE_READ), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
+  utils.startTest(@"open(,r) of a file that does not exist")
+  checkStatus(flash.OPEN(@missingFile, flash.FILEMODE_READ), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
 
-    utils.startTest(@"open(,r+) of a file that does not exist")
-    checkStatus(flash.open(@missingFile, flash.FILEMODE_READ_EXTENDED), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
+  utils.startTest(@"open(,r+) of a file that does not exist")
+  checkStatus(flash.OPEN(@missingFile, flash.FILEMODE_READ_EXTENDED), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
 
-    utils.startTest(@"open() with a one-letter mode that is no mode")
-    checkStatus(flash.open(@newFile, MODE_X), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open() with a one-letter mode that is no mode")
+  checkStatus(flash.OPEN(@newFile, MODE_X), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    utils.startTest(@"open() with a two-letter mode that is no mode")
-    checkStatus(flash.open(@newFile, MODE_READ_WRITE), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open() with a two-letter mode that is no mode")
+  checkStatus(flash.OPEN(@newFile, MODE_READ_WRITE), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    utils.startTest(@"open() with the append-and-read mode of C")
-    checkStatus(flash.open(@newFile, MODE_APPEND_EXTENDED), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open() with the append-and-read mode of C")
+  checkStatus(flash.OPEN(@newFile, MODE_APPEND_EXTENDED), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a file the next calls find open")
+  HANDLE := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a file the next calls find open")
 
-    utils.startTest(@"open(,r) of a file that is open")
-    checkStatus(flash.open(@dataFile, flash.FILEMODE_READ), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"open(,r) of a file that is open")
+  checkStatus(flash.OPEN(@dataFile, flash.FILEMODE_READ), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"open(,w) of a file that is open")
-    checkStatus(flash.open(@dataFile, flash.FILEMODE_WRITE), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"open(,w) of a file that is open")
+  checkStatus(flash.OPEN(@dataFile, flash.FILEMODE_WRITE), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"open(,a) of a file that is open")
-    checkStatus(flash.open(@dataFile, flash.FILEMODE_APPEND), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"open(,a) of a file that is open")
+  checkStatus(flash.OPEN(@dataFile, flash.FILEMODE_APPEND), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"open(,r+) of a file that is open")
-    checkStatus(flash.open(@dataFile, flash.FILEMODE_READ_EXTENDED), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"open(,r+) of a file that is open")
+  checkStatus(flash.OPEN(@dataFile, flash.FILEMODE_READ_EXTENDED), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"open(,w+) of a file that is open")
-    checkStatus(flash.open(@dataFile, flash.FILEMODE_WRITE_EXTENDED), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"open(,w+) of a file that is open")
+  checkStatus(flash.OPEN(@dataFile, flash.FILEMODE_WRITE_EXTENDED), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"open_circular(,r) of a file that is open")
-    checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"open_circular(,r) of a file that is open")
+  checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"open_circular(,a) of a file that is open")
-    checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"open_circular(,a) of a file that is open")
+  checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"rename() of a file that is open")
-    checkStatus(flash.rename(@dataFile, @tempFile), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"rename() of a file that is open")
+  checkStatus(flash.rename(@dataFile, @tempFile), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"rename() to the name of a file that is open")
-    checkStatus(flash.rename(@otherFile, @dataFile), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"rename() to the name of a file that is open")
+  checkStatus(flash.rename(@otherFile, @dataFile), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"delete() of a file that is open")
-    checkStatus(flash.delete(@dataFile), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"delete() of a file that is open")
+  checkStatus(flash.delete(@dataFile), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"create_file() of a file that is open")
-    checkStatus(flash.create_file(@dataFile, CREATE_FILL, CREATE_BYTES), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
+  utils.startTest(@"create_file() of a file that is open")
+  checkStatus(flash.create_file(@dataFile, CREATE_FILL, CREATE_BYTES), flash.E_FILE_OPEN, flash.E_FILE_OPEN)
 
-    utils.startTest(@"close() of the file the cases found open")
-    closeSub(handle)
+  utils.startTest(@"close() of the file the cases found open")
+  closeSub(HANDLE)
 
-    openAllHandles()
+  openAllHandles()
 
-    utils.startTest(@"open() with every handle in use")
-    checkStatus(flash.open(@dataFile, flash.FILEMODE_READ), flash.E_NO_HANDLE, flash.E_NO_HANDLE)
+  utils.startTest(@"open() with every handle in use")
+  checkStatus(flash.OPEN(@dataFile, flash.FILEMODE_READ), flash.E_NO_HANDLE, flash.E_NO_HANDLE)
 
-    utils.startTest(@"open_circular() with every handle in use")
-    checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_NO_HANDLE, flash.E_NO_HANDLE)
+  utils.startTest(@"open_circular() with every handle in use")
+  checkStatus(flash.open_circular(@dataFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_NO_HANDLE, flash.E_NO_HANDLE)
 
-    closeAllHandles()
-
+  closeAllHandles()
 
 PRI testCircularOpenFailures()
 ' Every way open_circular() fails that needs no fault and was not shown above: a bad length, a mode a circular file does not have, a missing file.
 
-    utils.startTestGroup(@"open_circular() failures")
+  utils.startTestGroup(@"open_circular() failures")
 
-    utils.startTest(@"open_circular() with a length of zero")
-    checkStatus(flash.open_circular(@newFile, flash.FILEMODE_APPEND, ZERO_LENGTH), flash.E_BAD_FILE_LENGTH, flash.E_BAD_FILE_LENGTH)
+  utils.startTest(@"open_circular() with a length of zero")
+  checkStatus(flash.open_circular(@newFile, flash.FILEMODE_APPEND, ZERO_LENGTH), flash.E_BAD_FILE_LENGTH, flash.E_BAD_FILE_LENGTH)
 
-    utils.startTest(@"open_circular() with a length below zero")
-    checkStatus(flash.open_circular(@newFile, flash.FILEMODE_APPEND, NEGATIVE_LENGTH), flash.E_BAD_FILE_LENGTH, flash.E_BAD_FILE_LENGTH)
+  utils.startTest(@"open_circular() with a length below zero")
+  checkStatus(flash.open_circular(@newFile, flash.FILEMODE_APPEND, NEGATIVE_LENGTH), flash.E_BAD_FILE_LENGTH, flash.E_BAD_FILE_LENGTH)
 
-    utils.startTest(@"open_circular(,w), a mode a circular file does not have")
-    checkStatus(flash.open_circular(@newFile, flash.FILEMODE_WRITE, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open_circular(,w), a mode a circular file does not have")
+  checkStatus(flash.open_circular(@newFile, flash.FILEMODE_WRITE, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    utils.startTest(@"open_circular(,r+), a mode a circular file does not have")
-    checkStatus(flash.open_circular(@newFile, flash.FILEMODE_READ_EXTENDED, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open_circular(,r+), a mode a circular file does not have")
+  checkStatus(flash.open_circular(@newFile, flash.FILEMODE_READ_EXTENDED, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    utils.startTest(@"open_circular() with a one-letter mode that is no mode")
-    checkStatus(flash.open_circular(@newFile, MODE_X, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open_circular() with a one-letter mode that is no mode")
+  checkStatus(flash.open_circular(@newFile, MODE_X, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    utils.startTest(@"open_circular() with a two-letter mode that is no mode")
-    checkStatus(flash.open_circular(@newFile, MODE_READ_WRITE, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open_circular() with a two-letter mode that is no mode")
+  checkStatus(flash.open_circular(@newFile, MODE_READ_WRITE, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    utils.startTest(@"open_circular() with the append-and-read mode of C")
-    checkStatus(flash.open_circular(@newFile, MODE_APPEND_EXTENDED, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
+  utils.startTest(@"open_circular() with the append-and-read mode of C")
+  checkStatus(flash.open_circular(@newFile, MODE_APPEND_EXTENDED, CIRC_LIMIT_BYTES), flash.E_FILE_MODE, flash.E_FILE_MODE)
 
-    utils.startTest(@"open_circular(,r) of a file that does not exist")
-    checkStatus(flash.open_circular(@missingFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
-
+  utils.startTest(@"open_circular(,r) of a file that does not exist")
+  checkStatus(flash.open_circular(@missingFile, flash.FILEMODE_READ, CIRC_LIMIT_BYTES), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
 
 PRI testFileOperationFailures()
 ' The calls that take a file name and find the wrong files: a name that is taken, a name that is missing.
 
-    utils.startTestGroup(@"file name failures")
+  utils.startTestGroup(@"file name failures")
 
-    utils.startTest(@"rename() onto the name of an existing file")
-    checkStatus(flash.rename(@dataFile, @otherFile), flash.E_FILE_EXISTS, flash.E_FILE_EXISTS)
+  utils.startTest(@"rename() onto the name of an existing file")
+  checkStatus(flash.rename(@dataFile, @otherFile), flash.E_FILE_EXISTS, flash.E_FILE_EXISTS)
 
-    utils.startTest(@"rename() of a file that does not exist")
-    checkStatus(flash.rename(@missingFile, @newFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
+  utils.startTest(@"rename() of a file that does not exist")
+  checkStatus(flash.rename(@missingFile, @newFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
 
-    utils.startTest(@"delete() of a file that does not exist")
-    checkStatus(flash.delete(@missingFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
+  utils.startTest(@"delete() of a file that does not exist")
+  checkStatus(flash.delete(@missingFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
 
-    utils.startTest(@"create_file() of a name that is taken")
-    checkStatus(flash.create_file(@otherFile, CREATE_FILL, CREATE_BYTES), flash.E_FILE_EXISTS, flash.E_FILE_EXISTS)
+  utils.startTest(@"create_file() of a name that is taken")
+  checkStatus(flash.create_file(@otherFile, CREATE_FILL, CREATE_BYTES), flash.E_FILE_EXISTS, flash.E_FILE_EXISTS)
 
-    utils.startTest(@"file_size() of a file that does not exist")
-    checkStatus(flash.file_size(@missingFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
+  utils.startTest(@"file_size() of a file that does not exist")
+  checkStatus(flash.file_size(@missingFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
 
-    utils.startTest(@"file_size_unused() of a file that does not exist")
-    checkStatus(flash.file_size_unused(@missingFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
+  utils.startTest(@"file_size_unused() of a file that does not exist")
+  checkStatus(flash.file_size_unused(@missingFile), flash.E_FILE_NOT_FOUND, flash.E_FILE_NOT_FOUND)
 
-
-PRI testModeMismatches() | handle, callIdx
+PRI testModeMismatches() | HANDLE, callIdx
 ' Make calls a handle's open mode does not allow: the write calls on a read handle, the read calls and seek() on a write and an append handle.
 
 ' Local Variables:
 ' @local handle - handle of the file being tested
 ' @local callIdx - number of the handle call being made
 
-    utils.startTestGroup(@"calls the open mode does not allow")
+  utils.startTestGroup(@"calls the open mode does not allow")
 
-    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a read handle for the write calls")
-    repeat callIdx from HM_WRITE to HM_WR_STR
-        refusedCall(callIdx, handle)
-    refusedCall(HM_FLUSH, handle)
-    utils.startTest(@"close() of the read handle")
-    closeSub(handle)
+  HANDLE := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a read handle for the write calls")
+  repeat callIdx from HM_WRITE TO HM_WR_STR
+    refusedCall(callIdx, HANDLE)
+  refusedCall(HM_FLUSH, HANDLE)
+  utils.startTest(@"close() of the read handle")
+  closeSub(HANDLE)
 
-    handle := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a write handle for the read calls")
-    readSideRefused(handle)
-    utils.startTest(@"close() of the write handle")
-    closeSub(handle)
+  HANDLE := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a write handle for the read calls")
+  readSideRefused(HANDLE)
+  utils.startTest(@"close() of the write handle")
+  closeSub(HANDLE)
 
-    handle := openFor(@otherFile, flash.FILEMODE_APPEND, @"open(,a) an append handle for the read calls")
-    readSideRefused(handle)
-    utils.startTest(@"close() of the append handle")
-    closeSub(handle)
+  HANDLE := openFor(@otherFile, flash.FILEMODE_APPEND, @"open(,a) an append handle for the read calls")
+  readSideRefused(HANDLE)
+  utils.startTest(@"close() of the append handle")
+  closeSub(HANDLE)
 
-
-PRI readSideRefused(handle) | callIdx
+PRI readSideRefused(HANDLE) | callIdx
 ' Make the read calls and seek() on a handle that was opened without reading.
 
 ' @param handle - handle of a file opened to write or to append
@@ -800,85 +780,81 @@ PRI readSideRefused(handle) | callIdx
 ' Local Variables:
 ' @local callIdx - number of the handle call being made
 
-    refusedCall(HM_SEEK, handle)
-    repeat callIdx from HM_READ to HM_RD_STR
-        refusedCall(callIdx, handle)
+  refusedCall(HM_SEEK, HANDLE)
+  repeat callIdx from HM_READ TO HM_RD_STR
+    refusedCall(callIdx, HANDLE)
 
-
-PRI testClosedHandle() | handle, methodIdx
+PRI testClosedHandle() | HANDLE, methodIdx
 ' Make each call that seeks, writes or reads with a handle in the range that was opened and then closed: each fails with E_BAD_HANDLE.
 
 ' Local Variables:
 ' @local handle - handle of the file, closed before the calls are made
 ' @local methodIdx - number of the handle call being made
 
-    utils.startTestGroup(@"calls with a handle that was opened and closed")
-    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a handle the next calls find closed")
-    utils.startTest(@"close() of the handle")
-    closeSub(handle)
+  utils.startTestGroup(@"calls with a handle that was opened and closed")
+  HANDLE := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a handle the next calls find closed")
+  utils.startTest(@"close() of the handle")
+  closeSub(HANDLE)
 
-    repeat methodIdx from HM_SEEK to HM_RD_STR
-        utils.startTest(handleMethodName(methodIdx))
-        checkValue(callHandleMethod(methodIdx, handle), expectedReturn(methodIdx, flash.E_BAD_HANDLE), flash.E_BAD_HANDLE)
+  repeat methodIdx from HM_SEEK TO HM_RD_STR
+    utils.startTest(handleMethodName(methodIdx))
+    checkValue(callHandleMethod(methodIdx, HANDLE), expectedReturn(methodIdx, flash.E_BAD_HANDLE), flash.E_BAD_HANDLE)
 
-
-PRI refusedCall(methodIdx, handle)
+PRI refusedCall(methodIdx, HANDLE)
 ' Make one handle call as a test that passes when the call fails with E_FILE_MODE.
 
 ' @param methodIdx - number of the handle call to make
 ' @param handle - handle the open mode of which the call does not allow
 
-    utils.startTest(handleMethodName(methodIdx))
-    checkValue(callHandleMethod(methodIdx, handle), expectedReturn(methodIdx, flash.E_FILE_MODE), flash.E_FILE_MODE)
+  utils.startTest(handleMethodName(methodIdx))
+  checkValue(callHandleMethod(methodIdx, HANDLE), expectedReturn(methodIdx, flash.E_FILE_MODE), flash.E_FILE_MODE)
 
-
-PRI testReadResults() | handle
+PRI testReadResults() | HANDLE
 ' Reads that reach the end of a file, on a file that is not a whole number of LONGs.
 
 ' Local Variables:
 ' @local handle - handle of the tiny file
 
-    utils.startTestGroup(@"reads that reach the end of a file")
-    handle := openFor(@tinyFile, flash.FILEMODE_READ, @"open(,r) the tiny file")
+  utils.startTestGroup(@"reads that reach the end of a file")
+  HANDLE := openFor(@tinyFile, flash.FILEMODE_READ, @"open(,r) the tiny file")
 
-    utils.startTest(@"rd_long() with fewer than four bytes left returns 0")
-    checkValue(flash.rd_long(handle), 0, flash.E_END_OF_FILE)
+  utils.startTest(@"rd_long() with fewer than four bytes left returns 0")
+  checkValue(flash.rd_long(HANDLE), 0, flash.E_END_OF_FILE)
 
-    utils.startTest(@"rd_word() of the first two bytes")
-    flash.seek(handle, 0, flash.SK_FILE_START)
-    setPendingError()
-    checkValue(flash.rd_word(handle), TINY_WORD, flash.SUCCESS)
+  utils.startTest(@"rd_word() of the first two bytes")
+  flash.seek(HANDLE, 0, flash.SK_FILE_START)
+  setPendingError()
+  checkValue(flash.rd_word(HANDLE), TINY_WORD, flash.SUCCESS)
 
-    utils.startTest(@"rd_word() with one byte left")
-    checkStatus(flash.rd_word(handle), flash.E_END_OF_FILE, flash.E_END_OF_FILE)
+  utils.startTest(@"rd_word() with one byte left")
+  checkStatus(flash.rd_word(HANDLE), flash.E_END_OF_FILE, flash.E_END_OF_FILE)
 
-    utils.startTest(@"rd_byte() at the end of the file")
-    flash.seek(handle, TINY_BYTES, flash.SK_FILE_START)
-    checkStatus(flash.rd_byte(handle), flash.E_END_OF_FILE, flash.E_END_OF_FILE)
+  utils.startTest(@"rd_byte() at the end of the file")
+  flash.seek(HANDLE, TINY_BYTES, flash.SK_FILE_START)
+  checkStatus(flash.rd_byte(HANDLE), flash.E_END_OF_FILE, flash.E_END_OF_FILE)
 
-    utils.startTest(@"rd_word() at the end of the file")
-    checkStatus(flash.rd_word(handle), flash.E_END_OF_FILE, flash.E_END_OF_FILE)
+  utils.startTest(@"rd_word() at the end of the file")
+  checkStatus(flash.rd_word(HANDLE), flash.E_END_OF_FILE, flash.E_END_OF_FILE)
 
-    utils.startTest(@"rd_long() at the end of the file returns 0")
-    checkValue(flash.rd_long(handle), 0, flash.E_END_OF_FILE)
+  utils.startTest(@"rd_long() at the end of the file returns 0")
+  checkValue(flash.rd_long(HANDLE), 0, flash.E_END_OF_FILE)
 
-    utils.startTest(@"read() at the end of the file")
-    checkValue(flash.read(handle, @readBuf, DATA_BYTES), NO_BYTES, flash.E_END_OF_FILE)
+  utils.startTest(@"read() at the end of the file")
+  checkValue(flash.read(HANDLE, @readBuf, DATA_BYTES), NO_BYTES, flash.E_END_OF_FILE)
 
-    utils.startTest(@"read() of more bytes than the file holds")
-    flash.seek(handle, 0, flash.SK_FILE_START)
-    checkValue(flash.read(handle, @readBuf, DATA_BYTES), TINY_BYTES, flash.E_END_OF_FILE)
+  utils.startTest(@"read() of more bytes than the file holds")
+  flash.seek(HANDLE, 0, flash.SK_FILE_START)
+  checkValue(flash.read(HANDLE, @readBuf, DATA_BYTES), TINY_BYTES, flash.E_END_OF_FILE)
 
-    utils.startTest(@"read() of exactly the bytes the file holds")
-    flash.seek(handle, 0, flash.SK_FILE_START)
-    setPendingError()
-    checkValue(flash.read(handle, @readBuf, TINY_BYTES), TINY_BYTES, flash.SUCCESS)
+  utils.startTest(@"read() of exactly the bytes the file holds")
+  flash.seek(HANDLE, 0, flash.SK_FILE_START)
+  setPendingError()
+  checkValue(flash.read(HANDLE, @readBuf, TINY_BYTES), TINY_BYTES, flash.SUCCESS)
 
-    utils.startTest(@"close() of the tiny file")
-    closeSub(handle)
+  utils.startTest(@"close() of the tiny file")
+  closeSub(HANDLE)
 
-
-PRI testStringReads() | handle, errCode, byteCount
+PRI testStringReads() | HANDLE, errCode, byteCount
 ' Read the three strings of the string file with buffers that are too small, big enough, and then reach the end of the file.
 
 ' Local Variables:
@@ -886,76 +862,74 @@ PRI testStringReads() | handle, errCode, byteCount
 ' @local errCode - error() after the call
 ' @local byteCount - what rd_str() returned
 
-    utils.startTestGroup(@"strings read with rd_str()")
-    handle := openFor(@stringFile, flash.FILEMODE_READ, @"open(,r) the string file")
+  utils.startTestGroup(@"strings read with rd_str()")
+  HANDLE := openFor(@stringFile, flash.FILEMODE_READ, @"open(,r) the string file")
 
-    utils.startTest(@"rd_str() of a string that fits")
-    setPendingError()
-    byteCount := flash.rd_str(handle, @stringBuf, STRING_BUF_BYTES)
-    errCode := flash.error()
-    utils.evaluateSubValue(byteCount, @"bytes read", strsize(@firstText))
-    utils.evaluateSubValue(strcomp(@stringBuf, @firstText), @"string read", TRUE)
-    utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.SUCCESS)
+  utils.startTest(@"rd_str() of a string that fits")
+  setPendingError()
+  byteCount := flash.rd_str(HANDLE, @stringBuf, STRING_BUF_BYTES)
+  errCode := flash.error()
+  utils.evaluateSubValue(byteCount, @"bytes read", strsize(@firstText))
+  utils.evaluateSubValue(strcomp(@stringBuf, @firstText), @"string read", TRUE)
+  utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.SUCCESS)
 
-    utils.startTest(@"rd_str() into a buffer that is too small")
-    byteCount := flash.rd_str(handle, @stringBuf, TRUNCATE_BUF_BYTES)
-    errCode := flash.error()
-    utils.evaluateSubValue(byteCount, @"bytes read", TRUNCATE_BUF_BYTES - TERMINATOR_BYTES)
-    utils.evaluateSubValue(strsize(@stringBuf), @"length of the string placed in the buffer", TRUNCATE_BUF_BYTES - TERMINATOR_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.E_TRUNCATED_STRING)
+  utils.startTest(@"rd_str() into a buffer that is too small")
+  byteCount := flash.rd_str(HANDLE, @stringBuf, TRUNCATE_BUF_BYTES)
+  errCode := flash.error()
+  utils.evaluateSubValue(byteCount, @"bytes read", TRUNCATE_BUF_BYTES - TERMINATOR_BYTES)
+  utils.evaluateSubValue(strsize(@stringBuf), @"length of the string placed in the buffer", TRUNCATE_BUF_BYTES - TERMINATOR_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.E_TRUNCATED_STRING)
 
-    utils.startTest(@"rd_str() of the rest of the truncated string")
-    setPendingError()
-    byteCount := flash.rd_str(handle, @stringBuf, STRING_BUF_BYTES)
-    errCode := flash.error()
-    utils.evaluateSubValue(byteCount, @"bytes read", strsize(@secondText) - TRUNCATE_BUF_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.SUCCESS)
+  utils.startTest(@"rd_str() of the rest of the truncated string")
+  setPendingError()
+  byteCount := flash.rd_str(HANDLE, @stringBuf, STRING_BUF_BYTES)
+  errCode := flash.error()
+  utils.evaluateSubValue(byteCount, @"bytes read", strsize(@secondText) - TRUNCATE_BUF_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.SUCCESS)
 
-    utils.startTest(@"rd_str() of a string whose terminator is missing")
-    byteCount := flash.rd_str(handle, @stringBuf, STRING_BUF_BYTES)
-    errCode := flash.error()
-    utils.evaluateSubValue(byteCount, @"bytes read", TAIL_TEXT_BYTES)
-    utils.evaluateSubValue(strsize(@stringBuf), @"length of the string placed in the buffer", TAIL_TEXT_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.E_INCOMPLETE_STRING)
+  utils.startTest(@"rd_str() of a string whose terminator is missing")
+  byteCount := flash.rd_str(HANDLE, @stringBuf, STRING_BUF_BYTES)
+  errCode := flash.error()
+  utils.evaluateSubValue(byteCount, @"bytes read", TAIL_TEXT_BYTES)
+  utils.evaluateSubValue(strsize(@stringBuf), @"length of the string placed in the buffer", TAIL_TEXT_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.E_INCOMPLETE_STRING)
 
-    utils.startTest(@"rd_str() at the end of the file")
-    byteCount := flash.rd_str(handle, @stringBuf, STRING_BUF_BYTES)
-    errCode := flash.error()
-    utils.evaluateSubValue(byteCount, @"bytes read", NO_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.E_END_OF_FILE)
+  utils.startTest(@"rd_str() at the end of the file")
+  byteCount := flash.rd_str(HANDLE, @stringBuf, STRING_BUF_BYTES)
+  errCode := flash.error()
+  utils.evaluateSubValue(byteCount, @"bytes read", NO_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after rd_str()", flash.E_END_OF_FILE)
 
-    utils.startTest(@"close() of the string file")
-    closeSub(handle)
+  utils.startTest(@"close() of the string file")
+  closeSub(HANDLE)
 
-
-PRI testSeekCodes() | handle
+PRI testSeekCodes() | HANDLE
 ' Every code seek() reports on a read handle: a position out of range, a whence that does not exist, and the last position.
 
 ' Local Variables:
 ' @local handle - handle of the data file
 
-    utils.startTestGroup(@"seek() codes")
-    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) the data file to seek in")
+  utils.startTestGroup(@"seek() codes")
+  HANDLE := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) the data file to seek in")
 
-    utils.startTest(@"seek() to a position below the first byte")
-    checkStatus(flash.seek(handle, BEFORE_FIRST_BYTE, flash.SK_FILE_START), flash.E_FILE_SEEK, flash.E_FILE_SEEK)
+  utils.startTest(@"seek() to a position below the first byte")
+  checkStatus(flash.seek(HANDLE, BEFORE_FIRST_BYTE, flash.SK_FILE_START), flash.E_FILE_SEEK, flash.E_FILE_SEEK)
 
-    utils.startTest(@"seek() to a position past the end of the file")
-    checkStatus(flash.seek(handle, DATA_BYTES + BYTE_SIZE, flash.SK_FILE_START), flash.E_FILE_SEEK, flash.E_FILE_SEEK)
+  utils.startTest(@"seek() to a position past the end of the file")
+  checkStatus(flash.seek(HANDLE, DATA_BYTES + BYTE_SIZE, flash.SK_FILE_START), flash.E_FILE_SEEK, flash.E_FILE_SEEK)
 
-    utils.startTest(@"seek() with a whence of zero")
-    checkStatus(flash.seek(handle, 0, flash.SK_Unknown), flash.E_BAD_SEEK_ARG, flash.E_BAD_SEEK_ARG)
+  utils.startTest(@"seek() with a whence of zero")
+  checkStatus(flash.seek(HANDLE, 0, flash.SK_Unknown), flash.E_BAD_SEEK_ARG, flash.E_BAD_SEEK_ARG)
 
-    utils.startTest(@"seek() with the whence above the last one")
-    checkStatus(flash.seek(handle, 0, WHENCE_PAST_LAST), flash.E_BAD_SEEK_ARG, flash.E_BAD_SEEK_ARG)
+  utils.startTest(@"seek() with the whence above the last one")
+  checkStatus(flash.seek(HANDLE, 0, WHENCE_PAST_LAST), flash.E_BAD_SEEK_ARG, flash.E_BAD_SEEK_ARG)
 
-    utils.startTest(@"seek() to the last position of the file")
-    setPendingError()
-    checkValue(flash.seek(handle, DATA_BYTES, flash.SK_FILE_START), DATA_BYTES, flash.SUCCESS)
+  utils.startTest(@"seek() to the last position of the file")
+  setPendingError()
+  checkValue(flash.seek(HANDLE, DATA_BYTES, flash.SK_FILE_START), DATA_BYTES, flash.SUCCESS)
 
-    utils.startTest(@"close() of the data file")
-    closeSub(handle)
-
+  utils.startTest(@"close() of the data file")
+  closeSub(HANDLE)
 
 PRI testWriteFromOtherCog() | writeHandle, readHandle, pending, workerCog, waitLimit
 ' Call write() from a cog other than the first: the results and error() are those of the cog that called, and the first cog's pending code is left alone.
@@ -967,98 +941,94 @@ PRI testWriteFromOtherCog() | writeHandle, readHandle, pending, workerCog, waitL
 ' @local workerCog - number of the cog the worker runs in
 ' @local waitLimit - time at which the wait for the worker ends
 
-    utils.startTestGroup(@"write() called from another cog")
-    writeHandle := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a handle the worker writes zero bytes to")
-    readHandle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a handle the worker fails to write to")
+  utils.startTestGroup(@"write() called from another cog")
+  writeHandle := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a handle the worker writes zero bytes to")
+  readHandle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a handle the worker fails to write to")
 
-    utils.startTest(@"write() of the worker cog reports the code of the worker cog")
-    workWriteHandle := writeHandle
-    workReadHandle := readHandle
-    workDone := FALSE
-    pending := setPendingError()
-    workerCog := cogspin(NEWCOG, writeWorker(), @workStack)
-    utils.evaluateSubValue(workerCog >= 0, @"worker cog started", TRUE)
-    waitLimit := getms() + WORKER_WAIT_MS
-    repeat until workDone
-        if getms() - waitLimit > 0                      ' signed difference, so a wrap of the millisecond count is harmless
-            quit
-        waitms(WORKER_POLL_MS)
-    utils.evaluateSubValue(workDone, @"worker cog finished", TRUE)
-    utils.evaluateSubValue(workZeroResult, @"write() of zero bytes", NO_BYTES)
-    utils.evaluateSubStatus(workZeroError, @"error() of the worker after zero bytes", flash.SUCCESS)
-    utils.evaluateSubStatus(workBadResult, @"write() with a handle that is no handle", flash.E_BAD_HANDLE)
-    utils.evaluateSubStatus(workBadError, @"error() of the worker after the bad handle", flash.E_BAD_HANDLE)
-    utils.evaluateSubStatus(workModeResult, @"write() to a read handle", flash.E_FILE_MODE)
-    utils.evaluateSubStatus(workModeError, @"error() of the worker after the read handle", flash.E_FILE_MODE)
+  utils.startTest(@"write() of the worker cog reports the code of the worker cog")
+  workWriteHandle := writeHandle
+  workReadHandle := readHandle
+  workDone := FALSE
+  pending := setPendingError()
+  workerCog := cogspin(NEWCOG, writeWorker(), @workStack)
+  utils.evaluateSubValue(workerCog >= 0, @"worker cog started", TRUE)
+  waitLimit := getms() + WORKER_WAIT_MS
+  repeat until workDone
+    if getms() - waitLimit > 0	  ' signed difference, so a wrap of the millisecond count is harmless
+      quit
+    waitms(WORKER_POLL_MS)
+  utils.evaluateSubValue(workDone, @"worker cog finished", TRUE)
+  utils.evaluateSubValue(workZeroResult, @"write() of zero bytes", NO_BYTES)
+  utils.evaluateSubStatus(workZeroError, @"error() of the worker after zero bytes", flash.SUCCESS)
+  utils.evaluateSubStatus(workBadResult, @"write() with a handle that is no handle", flash.E_BAD_HANDLE)
+  utils.evaluateSubStatus(workBadError, @"error() of the worker after the bad handle", flash.E_BAD_HANDLE)
+  utils.evaluateSubStatus(workModeResult, @"write() to a read handle", flash.E_FILE_MODE)
+  utils.evaluateSubStatus(workModeError, @"error() of the worker after the read handle", flash.E_FILE_MODE)
 
-    utils.startTest(@"the calls of the worker cog left the code of the first cog alone")
-    utils.evaluateSubStatus(flash.error(), @"error() of the first cog", pending)
+  utils.startTest(@"the calls of the worker cog left the code of the first cog alone")
+  utils.evaluateSubStatus(flash.error(), @"error() of the first cog", pending)
 
-    utils.startTest(@"close() of the handles the worker used")
-    closeSub(writeHandle)
-    closeSub(readHandle)
-
+  utils.startTest(@"close() of the handles the worker used")
+  closeSub(writeHandle)
+  closeSub(readHandle)
 
 PRI writeWorker()
 ' Run in its own cog: call write() with a count of zero, with a handle that is no handle and with a read handle, and record what each returned and what error() held.
 
-    workZeroResult := flash.write(workWriteHandle, @oneByte, NO_BYTES)
-    workZeroError := flash.error()
-    workBadResult := flash.write(BAD_HANDLE_VALUE, @oneByte, BYTE_SIZE)
-    workBadError := flash.error()
-    workModeResult := flash.write(workReadHandle, @oneByte, BYTE_SIZE)
-    workModeError := flash.error()
-    workDone := TRUE
+  workZeroResult := flash.write(workWriteHandle, @oneByte, NO_BYTES)
+  workZeroError := flash.error()
+  workBadResult := flash.write(BAD_HANDLE_VALUE, @oneByte, BYTE_SIZE)
+  workBadError := flash.error()
+  workModeResult := flash.write(workReadHandle, @oneByte, BYTE_SIZE)
+  workModeError := flash.error()
+  workDone := TRUE
 
-
-PRI testTransferCounts() | handle
+PRI testTransferCounts() | HANDLE
 ' read(), write() and rd_str() with a count of zero move nothing and succeed, and with a count below zero move nothing and refuse.
 
 ' Local Variables:
 ' @local handle - handle of the file being used
 
-    utils.startTestGroup(@"read(), write() and rd_str() with a count of zero or below")
+  utils.startTestGroup(@"read(), write() and rd_str() with a count of zero or below")
 
-    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a file for the read counts")
-    utils.startTest(@"read() with a count of zero moves no bytes and succeeds")
-    readBuf[0] := UNTOUCHED_BYTE
-    checkValue(flash.read(handle, @readBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
-    utils.evaluateSubValue(readBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
-    utils.startTest(@"read() with a count below zero moves no bytes and refuses")
-    readBuf[0] := UNTOUCHED_BYTE
-    checkValue(flash.read(handle, @readBuf, NEGATIVE_COUNT), NO_BYTES, flash.E_BAD_FILE_LENGTH)
-    utils.evaluateSubValue(readBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
-    utils.startTest(@"close() of the file the read counts used")
-    closeSub(handle)
+  HANDLE := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a file for the read counts")
+  utils.startTest(@"read() with a count of zero moves no bytes and succeeds")
+  readBuf[0] := UNTOUCHED_BYTE
+  checkValue(flash.read(HANDLE, @readBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
+  utils.evaluateSubValue(readBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+  utils.startTest(@"read() with a count below zero moves no bytes and refuses")
+  readBuf[0] := UNTOUCHED_BYTE
+  checkValue(flash.read(HANDLE, @readBuf, NEGATIVE_COUNT), NO_BYTES, flash.E_BAD_FILE_LENGTH)
+  utils.evaluateSubValue(readBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+  utils.startTest(@"close() of the file the read counts used")
+  closeSub(HANDLE)
 
-    handle := openFor(@stringFile, flash.FILEMODE_READ, @"open(,r) a file for the rd_str counts")
-    utils.startTest(@"rd_str() with a count of zero moves no bytes and succeeds")
-    stringBuf[0] := UNTOUCHED_BYTE
-    checkValue(flash.rd_str(handle, @stringBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
-    utils.evaluateSubValue(stringBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
-    utils.startTest(@"rd_str() with a count below zero moves no bytes and refuses")
-    checkValue(flash.rd_str(handle, @stringBuf, NEGATIVE_COUNT), NO_BYTES, flash.E_BAD_FILE_LENGTH)
-    utils.evaluateSubValue(stringBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
-    utils.startTest(@"close() of the file the rd_str counts used")
-    closeSub(handle)
+  HANDLE := openFor(@stringFile, flash.FILEMODE_READ, @"open(,r) a file for the rd_str counts")
+  utils.startTest(@"rd_str() with a count of zero moves no bytes and succeeds")
+  stringBuf[0] := UNTOUCHED_BYTE
+  checkValue(flash.rd_str(HANDLE, @stringBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
+  utils.evaluateSubValue(stringBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+  utils.startTest(@"rd_str() with a count below zero moves no bytes and refuses")
+  checkValue(flash.rd_str(HANDLE, @stringBuf, NEGATIVE_COUNT), NO_BYTES, flash.E_BAD_FILE_LENGTH)
+  utils.evaluateSubValue(stringBuf[0], @"first byte of the buffer", UNTOUCHED_BYTE)
+  utils.startTest(@"close() of the file the rd_str counts used")
+  closeSub(HANDLE)
 
-    handle := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a file for the write counts")
-    utils.startTest(@"write() with a count of zero moves no bytes and succeeds")
-    checkValue(flash.write(handle, @dataBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
-    utils.startTest(@"write() with a count below zero moves no bytes and returns E_BAD_FILE_LENGTH")
-    checkValue(flash.write(handle, @dataBuf, NEGATIVE_COUNT), flash.E_BAD_FILE_LENGTH, flash.E_BAD_FILE_LENGTH)
-    utils.startTest(@"close() of the file the write counts used")
-    closeSub(handle)
-
+  HANDLE := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a file for the write counts")
+  utils.startTest(@"write() with a count of zero moves no bytes and succeeds")
+  checkValue(flash.write(HANDLE, @dataBuf, NO_BYTES), NO_BYTES, flash.SUCCESS)
+  utils.startTest(@"write() with a count below zero moves no bytes and returns E_BAD_FILE_LENGTH")
+  checkValue(flash.write(HANDLE, @dataBuf, NEGATIVE_COUNT), flash.E_BAD_FILE_LENGTH, flash.E_BAD_FILE_LENGTH)
+  utils.startTest(@"close() of the file the write counts used")
+  closeSub(HANDLE)
 
 PRI testCreateFileLength()
 ' create_file() with a length of zero and below: it makes no file and says why.
 
-    utils.startTestGroup(@"create_file() with a length of zero or below")
-    createLengthCase(@"create_file() with a length of zero", @zeroLenFile, ZERO_LENGTH)
-    createLengthCase(@"create_file() with a length below zero", @negLenFile, NEGATIVE_LENGTH)
-    formatFresh(@"format() to clear any file the cases made")
-
+  utils.startTestGroup(@"create_file() with a length of zero or below")
+  createLengthCase(@"create_file() with a length of zero", @zeroLenFile, ZERO_LENGTH)
+  createLengthCase(@"create_file() with a length below zero", @negLenFile, NEGATIVE_LENGTH)
+  formatFresh(@"format() to clear any file the cases made")
 
 PRI createLengthCase(pTitle, pFilename, byteCount) | status, errCode, bFound, filesBefore, filesAfter
 ' Call create_file() with a length that is no length, and check it refused, said so, and made no directory entry.
@@ -1074,17 +1044,16 @@ PRI createLengthCase(pTitle, pFilename, byteCount) | status, errCode, bFound, fi
 ' @local filesBefore - files in the directory before the call
 ' @local filesAfter - files in the directory after the call
 
-    utils.startTest(pTitle)
-    _, _, filesBefore := flash.stats()
-    status := flash.create_file(pFilename, CREATE_FILL, byteCount)
-    errCode := flash.error()
-    bFound := flash.exists(pFilename)
-    _, _, filesAfter := flash.stats()
-    utils.evaluateSubStatus(status, @"create_file()", flash.E_BAD_FILE_LENGTH)
-    utils.evaluateSubStatus(errCode, @"error() after create_file()", flash.E_BAD_FILE_LENGTH)
-    utils.evaluateSubValue(bFound, @"exists() of the name", FALSE)
-    utils.evaluateSubValue(filesAfter, @"files in the directory", filesBefore)
-
+  utils.startTest(pTitle)
+  _, _, filesBefore := flash.stats()
+  status := flash.create_file(pFilename, CREATE_FILL, byteCount)
+  errCode := flash.error()
+  bFound := flash.exists(pFilename)
+  _, _, filesAfter := flash.stats()
+  utils.evaluateSubStatus(status, @"create_file()", flash.E_BAD_FILE_LENGTH)
+  utils.evaluateSubStatus(errCode, @"error() after create_file()", flash.E_BAD_FILE_LENGTH)
+  utils.evaluateSubValue(bFound, @"exists() of the name", FALSE)
+  utils.evaluateSubValue(filesAfter, @"files in the directory", filesBefore)
 
 PRI testBadHandles() | methodIdx
 ' Every handle call, but file_size_for_handle(), with every kind of handle outside the range of handles.
@@ -1092,13 +1061,12 @@ PRI testBadHandles() | methodIdx
 ' Local Variables:
 ' @local methodIdx - number of the handle call being made
 
-    utils.startTestGroup(@"handles outside the range of handles")
-    repeat HM_FILE_SIZE_FOR_HANDLE with methodIdx
-        utils.startTest(handleMethodName(methodIdx))
-        checkBadHandles(methodIdx)
+  utils.startTestGroup(@"handles outside the range of handles")
+  repeat HM_FILE_SIZE_FOR_HANDLE with methodIdx
+    utils.startTest(handleMethodName(methodIdx))
+    checkBadHandles(methodIdx)
 
-
-PRI checkBadHandles(methodIdx) | kindIdx, handle
+PRI checkBadHandles(methodIdx) | kindIdx, HANDLE
 ' Make one handle call with each kind of bad handle, naming the handle before its results.
 
 ' @param methodIdx - number of the handle call to make
@@ -1107,44 +1075,41 @@ PRI checkBadHandles(methodIdx) | kindIdx, handle
 ' @local kindIdx - number of the kind of bad handle
 ' @local handle - the bad handle
 
-    repeat BAD_HANDLE_KINDS with kindIdx
-        handle := badHandle(kindIdx)
-        debug("  bad handle ", sdec_(handle))
-        checkValue(callHandleMethod(methodIdx, handle), expectedReturn(methodIdx, flash.E_BAD_HANDLE), flash.E_BAD_HANDLE)
-
+  repeat BAD_HANDLE_KINDS with kindIdx
+    HANDLE := badHandle(kindIdx)
+    DEBUG("  bad handle ", sdec_(handle))
+    checkValue(callHandleMethod(methodIdx, HANDLE), expectedReturn(methodIdx, flash.E_BAD_HANDLE), flash.E_BAD_HANDLE)
 
 PRI testNeverOpenedHandle()
 ' Close and flush a handle that no open() gave out since the filesystem was mounted.
 
-    utils.startTestGroup(@"a handle that was never opened")
-    remountCase(@"unmount() and mount() give every handle back")
+  utils.startTestGroup(@"a handle that was never opened")
+  remountCase(@"unmount() and mount() give every handle back")
 
-    utils.startTest(@"close() of a handle that was never opened")
-    checkStatus(flash.close(utils.FIRST_HANDLE), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
+  utils.startTest(@"close() of a handle that was never opened")
+  checkStatus(flash.close(utils.FIRST_HANDLE), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
 
-    utils.startTest(@"flush() of a handle that was never opened")
-    checkStatus(flash.flush(utils.FIRST_HANDLE), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
+  utils.startTest(@"flush() of a handle that was never opened")
+  checkStatus(flash.flush(utils.FIRST_HANDLE), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
 
-    remountCase(@"unmount() and mount() give every handle back")
+  remountCase(@"unmount() and mount() give every handle back")
 
-
-PRI testFileSizeBadHandles() | kindIdx, handle
+PRI testFileSizeBadHandles() | kindIdx, HANDLE
 ' file_size_for_handle() with every kind of handle outside the range of handles.
 
 ' Local Variables:
 ' @local kindIdx - number of the kind of bad handle
 ' @local handle - the bad handle
 
-    utils.startTestGroup(@"file_size_for_handle() with a handle outside the range")
-    debug("* The next calls pass a handle outside the range to a call that may not check it")
-    utils.startTest(handleMethodName(HM_FILE_SIZE_FOR_HANDLE))
-    repeat BAD_HANDLE_KINDS with kindIdx
-        handle := badHandle(kindIdx)
-        debug("  bad handle ", sdec_(handle))
-        checkStatus(flash.file_size_for_handle(handle), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
+  utils.startTestGroup(@"file_size_for_handle() with a handle outside the range")
+  DEBUG("* The next calls pass a handle outside the range to a call that may not check it")
+  utils.startTest(handleMethodName(HM_FILE_SIZE_FOR_HANDLE))
+  repeat BAD_HANDLE_KINDS with kindIdx
+    HANDLE := badHandle(kindIdx)
+    DEBUG("  bad handle ", sdec_(handle))
+    checkStatus(flash.file_size_for_handle(HANDLE), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
 
-
-PRI testPoolAfterDoubleClose() | handle, dumpBytes, mismatchIdx
+PRI testPoolAfterDoubleClose() | HANDLE, dumpBytes, mismatchIdx
 ' Close a handle twice, then open every handle and one more: the handle pool still has exactly the handles it has,
 ' and the open that has none left changes nothing the dump of the handle status bytes and their neighbours holds.
 
@@ -1153,49 +1118,47 @@ PRI testPoolAfterDoubleClose() | handle, dumpBytes, mismatchIdx
 ' @local dumpBytes - bytes a handle status dump returned
 ' @local mismatchIdx - offset of the first byte that differs between the two dumps
 
-    utils.startTestGroup(@"the handle pool after a handle is closed twice")
-    debug("* The next calls may damage driver state outside the handle arrays")
-    remountCase(@"unmount() and mount() give every handle back")
+  utils.startTestGroup(@"the handle pool after a handle is closed twice")
+  DEBUG("* The next calls may damage driver state outside the handle arrays")
+  remountCase(@"unmount() and mount() give every handle back")
 
-    handle := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a handle to close twice")
-    utils.startTest(@"first close() of the handle")
-    closeSub(handle)
+  HANDLE := openFor(@newFile, flash.FILEMODE_WRITE, @"open(,w) a handle to close twice")
+  utils.startTest(@"first close() of the handle")
+  closeSub(HANDLE)
 
-    utils.startTest(@"second close() of the same handle")
-    checkStatus(flash.close(handle), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
+  utils.startTest(@"second close() of the same handle")
+  checkStatus(flash.close(HANDLE), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
 
-    utils.startTest(@"flush() of the closed handle")
-    checkStatus(flash.flush(handle), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
+  utils.startTest(@"flush() of the closed handle")
+  checkStatus(flash.flush(HANDLE), flash.E_BAD_HANDLE, flash.E_BAD_HANDLE)
 
-    openAllHandles()
+  openAllHandles()
 
-    utils.startTest(@"dump of the handle status bytes with every handle open")
-    dumpBytes := flash.TEST_getHandleStatusDump(@dumpBefore, GUARD_BYTES)
-    utils.evaluateSubValue(dumpBytes, @"bytes dumped", DUMP_BYTES)
+  utils.startTest(@"dump of the handle status bytes with every handle open")
+  dumpBytes := flash.TEST_getHandleStatusDump(@dumpBefore, GUARD_BYTES)
+  utils.evaluateSubValue(dumpBytes, @"bytes dumped", DUMP_BYTES)
 
-    utils.startTest(@"open() with every handle in use")
-    checkStatus(flash.open(@extraFile, flash.FILEMODE_WRITE), flash.E_NO_HANDLE, flash.E_NO_HANDLE)
+  utils.startTest(@"open() with every handle in use")
+  checkStatus(flash.OPEN(@extraFile, flash.FILEMODE_WRITE), flash.E_NO_HANDLE, flash.E_NO_HANDLE)
 
-    utils.startTest(@"the dump of the handle status bytes is the same after that open")
-    dumpBytes := flash.TEST_getHandleStatusDump(@dumpAfter, GUARD_BYTES)
-    mismatchIdx := firstMismatch(@dumpBefore, @dumpAfter, DUMP_BYTES)
-    utils.evaluateSubValue(dumpBytes, @"bytes dumped", DUMP_BYTES)
-    utils.evaluateSubValue(mismatchIdx, @"offset of the first byte that differs", NO_MISMATCH)
-    if mismatchIdx <> NO_MISMATCH
-        debug("*   dump byte ", sdec_(mismatchIdx), " was ", uhex_byte_(BYTE[@dumpBefore][mismatchIdx]), ", is ", uhex_byte_(BYTE[@dumpAfter][mismatchIdx]))
+  utils.startTest(@"the dump of the handle status bytes is the same after that open")
+  dumpBytes := flash.TEST_getHandleStatusDump(@dumpAfter, GUARD_BYTES)
+  mismatchIdx := firstMismatch(@dumpBefore, @dumpAfter, DUMP_BYTES)
+  utils.evaluateSubValue(dumpBytes, @"bytes dumped", DUMP_BYTES)
+  utils.evaluateSubValue(mismatchIdx, @"offset of the first byte that differs", NO_MISMATCH)
+  if mismatchIdx <> NO_MISMATCH
+    DEBUG("*   dump byte ", sdec_(mismatchIdx), " was ", uhex_byte_(BYTE[@dumpBefore][mismatchIdx]), ", is ", uhex_byte_(BYTE[@dumpAfter][mismatchIdx]))
 
-    closeAllHandles()
-    remountCase(@"unmount() and mount() give every handle back")
-
+  closeAllHandles()
+  remountCase(@"unmount() and mount() give every handle back")
 
 PRI setPendingError() : code
 ' Leave E_FILE_NOT_FOUND in error() by asking for the size of a file that does not exist, which needs no free handle, and check that it got there.
 
 ' @returns code - the code file_size() returned
 
-    code := flash.file_size(@missingFile)
-    utils.evaluateSubStatus(flash.error(), @"setup: the pending code", flash.E_FILE_NOT_FOUND)
-
+  code := flash.file_size(@missingFile)
+  utils.evaluateSubStatus(flash.error(), @"setup: the pending code", flash.E_FILE_NOT_FOUND)
 
 PRI checkStatus(returned, expectedStatus, expectedCode) | errCode
 ' Check the status a call returned and the error() it left.
@@ -1207,10 +1170,9 @@ PRI checkStatus(returned, expectedStatus, expectedCode) | errCode
 ' Local Variables:
 ' @local errCode - error() as the call left it
 
-    errCode := flash.error()
-    utils.evaluateSubStatus(returned, @"status returned", expectedStatus)
-    utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
-
+  errCode := flash.error()
+  utils.evaluateSubStatus(returned, @"status returned", expectedStatus)
+  utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
 
 PRI checkValue(returned, expectedValue, expectedCode) | errCode
 ' Check the count or value a call returned and the error() it left.
@@ -1222,10 +1184,9 @@ PRI checkValue(returned, expectedValue, expectedCode) | errCode
 ' Local Variables:
 ' @local errCode - error() as the call left it
 
-    errCode := flash.error()
-    utils.evaluateSubValue(returned, @"value returned", expectedValue)
-    utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
-
+  errCode := flash.error()
+  utils.evaluateSubValue(returned, @"value returned", expectedValue)
+  utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
 
 PRI formatFresh(pTitle) | status, errCode
 ' Format the flash as a test that passes when format() and error() both report SUCCESS.
@@ -1236,24 +1197,22 @@ PRI formatFresh(pTitle) | status, errCode
 ' @local status - what format() returned
 ' @local errCode - error() after format()
 
-    utils.startTest(pTitle)
-    status := flash.format()
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after format()", flash.SUCCESS)
-
+  utils.startTest(pTitle)
+  status := flash.format()
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after format()", flash.SUCCESS)
 
 PRI remountCase(pTitle)
 ' Unmount and mount as a test, which gives every handle back to the pool.
 
 ' @param pTitle - address of zstring naming the test
 
-    utils.startTest(pTitle)
-    checkStatus(flash.unmount(), flash.SUCCESS, flash.SUCCESS)
-    checkStatus(flash.mount(), flash.SUCCESS, flash.SUCCESS)
+  utils.startTest(pTitle)
+  checkStatus(flash.unmount(), flash.SUCCESS, flash.SUCCESS)
+  checkStatus(flash.mount(), flash.SUCCESS, flash.SUCCESS)
 
-
-PRI openSub(pFilename, mode) : handle | errCode
+PRI openSub(pFilename, mode) : HANDLE | errCode
 ' Open a file inside a running test, and check open() returned a handle and error() holds SUCCESS.
 
 ' @param pFilename - address of zstring with the file name
@@ -1263,13 +1222,12 @@ PRI openSub(pFilename, mode) : handle | errCode
 ' Local Variables:
 ' @local errCode - error() after open()
 
-    handle := flash.open(pFilename, mode)
-    errCode := flash.error()
-    utils.evaluateSubValue(isUsableHandle(handle), @"open() returned a usable handle", TRUE)
-    utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
+  HANDLE := flash.OPEN(pFilename, mode)
+  errCode := flash.error()
+  utils.evaluateSubValue(isUsableHandle(HANDLE), @"open() returned a usable handle", TRUE)
+  utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
 
-
-PRI openFor(pFilename, mode, pTitle) : handle
+PRI openFor(pFilename, mode, pTitle) : HANDLE
 ' Open a file as a test that passes when open() returned a handle and error() holds SUCCESS.
 
 ' @param pFilename - address of zstring with the file name
@@ -1277,11 +1235,10 @@ PRI openFor(pFilename, mode, pTitle) : handle
 ' @param pTitle - address of zstring naming the test
 ' @returns handle - handle from open(), or a negative error code
 
-    utils.startTest(pTitle)
-    handle := openSub(pFilename, mode)
+  utils.startTest(pTitle)
+  HANDLE := openSub(pFilename, mode)
 
-
-PRI closeSub(handle) | status, errCode
+PRI closeSub(HANDLE) | status, errCode
 ' Close a handle inside a running test, and check close() and error() both report SUCCESS.
 
 ' @param handle - handle to close
@@ -1290,13 +1247,12 @@ PRI closeSub(handle) | status, errCode
 ' @local status - what close() returned
 ' @local errCode - error() after close()
 
-    status := utils.closeHandle(handle)
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after close()", flash.SUCCESS)
+  status := utils.closeHandle(HANDLE)
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after close()", flash.SUCCESS)
 
-
-PRI modeSucceeds(pTitle, pFilename, mode, limitBytes) | handle
+PRI modeSucceeds(pTitle, pFilename, mode, limitBytes) | HANDLE
 ' Open a file in a mode with a failure code pending, then close it, as one test; a limit above zero opens it circular.
 
 ' @param pTitle - address of zstring naming the test
@@ -1307,18 +1263,17 @@ PRI modeSucceeds(pTitle, pFilename, mode, limitBytes) | handle
 ' Local Variables:
 ' @local handle - handle of the file
 
-    utils.startTest(pTitle)
-    setPendingError()
-    if limitBytes > 0
-        handle := flash.open_circular(pFilename, mode, limitBytes)
-        utils.evaluateSubValue(isUsableHandle(handle), @"open_circular() returned a usable handle", TRUE)
-        utils.evaluateSubStatus(flash.error(), @"error() after open_circular()", flash.SUCCESS)
-    else
-        handle := openSub(pFilename, mode)
-    closeSub(handle)
+  utils.startTest(pTitle)
+  setPendingError()
+  if limitBytes > 0
+    HANDLE := flash.open_circular(pFilename, mode, limitBytes)
+    utils.evaluateSubValue(isUsableHandle(HANDLE), @"open_circular() returned a usable handle", TRUE)
+    utils.evaluateSubStatus(flash.error(), @"error() after open_circular()", flash.SUCCESS)
+  else
+    HANDLE := openSub(pFilename, mode)
+  closeSub(HANDLE)
 
-
-PRI createFile(pTitle, pFilename, pBuffer, byteCount) | handle, writeCount, errCode
+PRI createFile(pTitle, pFilename, pBuffer, byteCount) | HANDLE, writeCount, errCode
 ' Write bytes to a new file opened with "w" and close it, as one test.
 
 ' @param pTitle - address of zstring naming the test
@@ -1331,14 +1286,13 @@ PRI createFile(pTitle, pFilename, pBuffer, byteCount) | handle, writeCount, errC
 ' @local writeCount - what write() returned
 ' @local errCode - error() after write()
 
-    utils.startTest(pTitle)
-    handle := openSub(pFilename, flash.FILEMODE_WRITE)
-    writeCount := flash.write(handle, pBuffer, byteCount)
-    errCode := flash.error()
-    utils.evaluateSubValue(writeCount, @"write()", byteCount)
-    utils.evaluateSubStatus(errCode, @"error() after write()", flash.SUCCESS)
-    closeSub(handle)
-
+  utils.startTest(pTitle)
+  HANDLE := openSub(pFilename, flash.FILEMODE_WRITE)
+  writeCount := flash.write(HANDLE, pBuffer, byteCount)
+  errCode := flash.error()
+  utils.evaluateSubValue(writeCount, @"write()", byteCount)
+  utils.evaluateSubStatus(errCode, @"error() after write()", flash.SUCCESS)
+  closeSub(HANDLE)
 
 PRI openAllHandles() | slotIdx, errCode
 ' Open a new file with every handle the driver has, one test each, and keep the handles.
@@ -1347,15 +1301,14 @@ PRI openAllHandles() | slotIdx, errCode
 ' @local slotIdx - number of the handle being opened
 ' @local errCode - error() after open()
 
-    repeat flash.MAX_FILES_OPEN with slotIdx
-        utils.startTest(@"open(,w) takes a handle while one is free")
-        setFillName(slotIdx)
-        heldHandles[slotIdx] := flash.open(@fillFile, flash.FILEMODE_WRITE)
-        errCode := flash.error()
-        utils.evaluateSubValue(isUsableHandle(heldHandles[slotIdx]), @"open() returned a usable handle", TRUE)
-        utils.evaluateSubValue(isNewHandle(slotIdx), @"handle differs from the handles already held", TRUE)
-        utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
-
+  repeat flash.MAX_FILES_OPEN with slotIdx
+    utils.startTest(@"open(,w) takes a handle while one is free")
+    setFillName(slotIdx)
+    heldHandles[slotIdx] := flash.OPEN(@fillFile, flash.FILEMODE_WRITE)
+    errCode := flash.error()
+    utils.evaluateSubValue(isUsableHandle(heldHandles[slotIdx]), @"open() returned a usable handle", TRUE)
+    utils.evaluateSubValue(isNewHandle(slotIdx), @"handle differs from the handles already held", TRUE)
+    utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
 
 PRI closeAllHandles() | slotIdx
 ' Close every handle openAllHandles() kept, one test each.
@@ -1363,28 +1316,25 @@ PRI closeAllHandles() | slotIdx
 ' Local Variables:
 ' @local slotIdx - number of the handle being closed
 
-    repeat flash.MAX_FILES_OPEN with slotIdx
-        utils.startTest(@"close() gives a handle back to the pool")
-        closeSub(heldHandles[slotIdx])
-
+  repeat flash.MAX_FILES_OPEN with slotIdx
+    utils.startTest(@"close() gives a handle back to the pool")
+    closeSub(heldHandles[slotIdx])
 
 PRI setFillName(slotIdx)
 ' Put the number of a handle slot, as two digits, in the name of the file that fills the slot.
 
 ' @param slotIdx - number of the handle slot, from 0 to 99
 
-    BYTE[@fillFile][FILL_TENS_OFFSET] := "0" + (slotIdx / NAME_DIGIT_RADIX)
-    BYTE[@fillFile][FILL_ONES_OFFSET] := "0" + (slotIdx +// NAME_DIGIT_RADIX)
+  BYTE[@fillFile][FILL_TENS_OFFSET] := "0" + (slotIdx / NAME_DIGIT_RADIX)
+  BYTE[@fillFile][FILL_ONES_OFFSET] := "0" + (slotIdx +// NAME_DIGIT_RADIX)
 
-
-PRI isUsableHandle(handle) : bUsable
+PRI isUsableHandle(HANDLE) : bUsable
 ' Tell whether a value is one of the handles open() hands out.
 
 ' @param handle - value open() returned
 ' @returns bUsable - TRUE when the value is inside the range of handles
 
-    bUsable := handle >= utils.FIRST_HANDLE and handle < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
-
+  bUsable := HANDLE >= utils.FIRST_HANDLE AND HANDLE < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
 
 PRI isNewHandle(slotIdx) : bNew | priorIdx
 ' Tell whether the handle held in a slot differs from the handles held in the slots before it.
@@ -1395,25 +1345,23 @@ PRI isNewHandle(slotIdx) : bNew | priorIdx
 ' Local Variables:
 ' @local priorIdx - number of the earlier slot being compared
 
-    bNew := TRUE
-    if slotIdx > 0
-        repeat slotIdx with priorIdx
-            if heldHandles[priorIdx] == heldHandles[slotIdx]
-                bNew := FALSE
+  bNew := TRUE
+  if slotIdx > 0
+    repeat slotIdx with priorIdx
+      if heldHandles[priorIdx] == heldHandles[slotIdx]
+	bNew := FALSE
 
-
-PRI badHandle(kindIdx) : handle
+PRI badHandle(kindIdx) : HANDLE
 ' Give a handle outside the range of handles.
 
 ' @param kindIdx - the kind of bad handle: BAD_NEGATIVE, BAD_BELOW_FIRST, BAD_AT_MAX or BAD_PAST_LAST
 ' @returns handle - the bad handle
 
-    case kindIdx
-        BAD_NEGATIVE: handle := BAD_HANDLE_VALUE
-        BAD_BELOW_FIRST: handle := utils.FIRST_HANDLE - 1
-        BAD_AT_MAX: handle := flash.MAX_FILES_OPEN
-        other: handle := utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
-
+  case kindIdx
+    BAD_NEGATIVE: HANDLE := BAD_HANDLE_VALUE
+    BAD_BELOW_FIRST: HANDLE := utils.FIRST_HANDLE - 1
+    BAD_AT_MAX: HANDLE := flash.MAX_FILES_OPEN
+    other: HANDLE := utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
 
 PRI fillDataBuffer() | byteIdx
 ' Fill the data buffer with the pattern of the data files.
@@ -1421,9 +1369,8 @@ PRI fillDataBuffer() | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being filled
 
-    repeat DATA_BYTES with byteIdx
-        BYTE[@dataBuf][byteIdx] := dataByte(byteIdx)
-
+  repeat DATA_BYTES with byteIdx
+    BYTE[@dataBuf][byteIdx] := dataByte(byteIdx)
 
 PRI dataByte(offset) : byteValue
 ' Compute the byte the data files hold at an offset.
@@ -1431,8 +1378,7 @@ PRI dataByte(offset) : byteValue
 ' @param offset - offset of the byte from the start of the file
 ' @returns byteValue - the byte at the offset
 
-    byteValue := (DATA_BASE + offset) & BYTE_MASK
-
+  byteValue := (DATA_BASE + offset) & BYTE_MASK
 
 PRI dataLong(offset) : longValue | byteIdx
 ' Compute the LONG the data files hold at an offset, in the byte order the driver reads it.
@@ -1443,34 +1389,32 @@ PRI dataLong(offset) : longValue | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte of the LONG being added
 
-    longValue := 0
-    repeat LONG_SIZE with byteIdx
-        longValue |= dataByte(offset + byteIdx) << (byteIdx * BYTE_BITS)
+  longValue := 0
+  repeat LONG_SIZE with byteIdx
+    longValue |= dataByte(offset + byteIdx) << (byteIdx * BYTE_BITS)
 
-
-PRI callHandleMethod(methodIdx, handle) : returned
+PRI callHandleMethod(methodIdx, HANDLE) : returned
 ' Make one of the handle calls with a handle and arguments that are valid for it.
 
 ' @param methodIdx - number of the handle call, one of the HM_ values
 ' @param handle - the handle to pass
 ' @returns returned - what the call returned
 
-    case methodIdx
-        HM_FLUSH: returned := flash.flush(handle)
-        HM_CLOSE: returned := flash.close(handle)
-        HM_SEEK: returned := flash.seek(handle, 0, flash.SK_FILE_START)
-        HM_WRITE: returned := flash.write(handle, @oneByte, BYTE_SIZE)
-        HM_WR_BYTE: returned := flash.wr_byte(handle, BYTE_TEST_VALUE)
-        HM_WR_WORD: returned := flash.wr_word(handle, WORD_TEST_VALUE)
-        HM_WR_LONG: returned := flash.wr_long(handle, LONG_TEST_VALUE)
-        HM_WR_STR: returned := flash.wr_str(handle, @writeText)
-        HM_READ: returned := flash.read(handle, @readBuf, BYTE_SIZE)
-        HM_RD_BYTE: returned := flash.rd_byte(handle)
-        HM_RD_WORD: returned := flash.rd_word(handle)
-        HM_RD_LONG: returned := flash.rd_long(handle)
-        HM_RD_STR: returned := flash.rd_str(handle, @stringBuf, STRING_BUF_BYTES)
-        other: returned := flash.file_size_for_handle(handle)
-
+  case methodIdx
+    HM_FLUSH: returned := flash.flush(HANDLE)
+    HM_CLOSE: returned := flash.close(HANDLE)
+    HM_SEEK: returned := flash.seek(HANDLE, 0, flash.SK_FILE_START)
+    HM_WRITE: returned := flash.write(HANDLE, @oneByte, BYTE_SIZE)
+    HM_WR_BYTE: returned := flash.wr_byte(HANDLE, BYTE_TEST_VALUE)
+    HM_WR_WORD: returned := flash.wr_word(HANDLE, WORD_TEST_VALUE)
+    HM_WR_LONG: returned := flash.wr_long(HANDLE, LONG_TEST_VALUE)
+    HM_WR_STR: returned := flash.wr_str(HANDLE, @writeText)
+    HM_READ: returned := flash.read(HANDLE, @readBuf, BYTE_SIZE)
+    HM_RD_BYTE: returned := flash.rd_byte(HANDLE)
+    HM_RD_WORD: returned := flash.rd_word(HANDLE)
+    HM_RD_LONG: returned := flash.rd_long(HANDLE)
+    HM_RD_STR: returned := flash.rd_str(HANDLE, @stringBuf, STRING_BUF_BYTES)
+    other: returned := flash.file_size_for_handle(HANDLE)
 
 PRI expectedReturn(methodIdx, failureCode) : expected
 ' Give what a handle call returns when it fails with a code: the calls that return a count or a long return 0.
@@ -1479,10 +1423,9 @@ PRI expectedReturn(methodIdx, failureCode) : expected
 ' @param failureCode - the code the call fails with
 ' @returns expected - the value the call returns
 
-    case methodIdx
-        HM_READ, HM_RD_LONG, HM_RD_STR: expected := NO_BYTES
-        other: expected := failureCode
-
+  case methodIdx
+    HM_READ, HM_RD_LONG, HM_RD_STR: expected := NO_BYTES
+    other: expected := failureCode
 
 PRI handleMethodName(methodIdx) : pName
 ' Give the name of a handle call.
@@ -1490,22 +1433,21 @@ PRI handleMethodName(methodIdx) : pName
 ' @param methodIdx - number of the handle call, one of the HM_ values
 ' @returns pName - address of zstring with the name
 
-    case methodIdx
-        HM_FLUSH: pName := @"flush()"
-        HM_CLOSE: pName := @"close()"
-        HM_SEEK: pName := @"seek()"
-        HM_WRITE: pName := @"write()"
-        HM_WR_BYTE: pName := @"wr_byte()"
-        HM_WR_WORD: pName := @"wr_word()"
-        HM_WR_LONG: pName := @"wr_long()"
-        HM_WR_STR: pName := @"wr_str()"
-        HM_READ: pName := @"read()"
-        HM_RD_BYTE: pName := @"rd_byte()"
-        HM_RD_WORD: pName := @"rd_word()"
-        HM_RD_LONG: pName := @"rd_long()"
-        HM_RD_STR: pName := @"rd_str()"
-        other: pName := @"file_size_for_handle()"
-
+  case methodIdx
+    HM_FLUSH: pName := @"flush()"
+    HM_CLOSE: pName := @"close()"
+    HM_SEEK: pName := @"seek()"
+    HM_WRITE: pName := @"write()"
+    HM_WR_BYTE: pName := @"wr_byte()"
+    HM_WR_WORD: pName := @"wr_word()"
+    HM_WR_LONG: pName := @"wr_long()"
+    HM_WR_STR: pName := @"wr_str()"
+    HM_READ: pName := @"read()"
+    HM_RD_BYTE: pName := @"rd_byte()"
+    HM_RD_WORD: pName := @"rd_word()"
+    HM_RD_LONG: pName := @"rd_long()"
+    HM_RD_STR: pName := @"rd_str()"
+    other: pName := @"file_size_for_handle()"
 
 PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Find the first byte at which two buffers differ.
@@ -1518,14 +1460,13 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being compared
 
-    mismatchIdx := NO_MISMATCH
-    repeat byteCount with byteIdx
-        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-            mismatchIdx := byteIdx
-            quit
+  mismatchIdx := NO_MISMATCH
+  repeat byteCount with byteIdx
+    if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+      mismatchIdx := byteIdx
+      quit
 
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================

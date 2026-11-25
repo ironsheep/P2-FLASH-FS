@@ -33,7 +33,7 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -45,51 +45,51 @@ CON
 '}
 
 OBJ
-    flash : "flash_fs"
-    utils : "RT_utilities"
+  flash   : "flash_fs"
+  utils   : "RT_utilities"
 
 CON ' ---- Test Geometry ----
 
-    DATA_BYTES = 64                                     ' bytes of the data of the files the cases write
-    DATA_BASE = 1                                       ' value of the first byte of the data of those files
-    CREATE_BYTES = 100                                  ' bytes of the files create_file() makes
-    CREATE_FILL = $5A                                   ' fill value of the files create_file() makes
-    CIRC_LIMIT_BYTES = 1000                             ' limit a circular handle is opened with
-    ZERO_LENGTH = 0                                     ' a file length that no file can have
-    NEGATIVE_LENGTH = -1                                ' a file length below zero
-    NO_BYTES = 0                                        ' a transfer count of zero, and the size at the end of the list
-    NO_CHARS = 0                                        ' characters of the name directory() returns at the end of the list
-    SHORT_NAME_LENGTH = 1                               ' characters of the shortest name that works
-    MAX_NAME_LENGTH = flash.FILENAME_SIZE - 1           ' characters of the longest name that works
-    LONG_NAME_LENGTH = flash.FILENAME_SIZE              ' characters of the shortest name that is too long
-    LONGER_NAME_LENGTH = flash.FILENAME_SIZE + 1        ' characters of a name that is longer still
-    NAME_BUFFER_BYTES = flash.FILENAME_SIZE + 8         ' bytes of each name buffer: the longest name built, its terminator and some room
-    ALPHABET_LETTERS = 26                               ' letters the characters of a built name cycle through
-    NAME_SEED_MAX = 0                                   ' first letter of the name of the longest name that works
-    NAME_SEED_RENAMED = 7                               ' first letter of the name the long file is renamed to
-    NAME_SEED_LONG = 13                                 ' first letter of the name that is one character too long
-    NAME_SEED_LONGER = 19                               ' first letter of the name that is two characters too long
-    DIR_PAD_BYTES = 1                                   ' bytes the directory name buffer holds beyond the name field
-    DIR_CALL_LIMIT = 200                                ' directory() calls made before a walk gives up
-    GUARD_BYTE = $A5                                    ' value of the byte after the name field of the directory name buffer
-    SIZE_SENTINEL = $5A5A_5A5A                          ' value the size variable holds before each directory() call
-    NO_MISMATCH = -1                                    ' firstMismatch() result when the buffers agree
-    NO_BYTE_READ = -1                                   ' firstByteOf() result when no byte could be read
-    BYTE_MASK = $FF                                     ' keeps a value to one byte
-    CASE_FILES = 3                                      ' files that differ only by the case of their names
+  DATA_BYTES	      = 64			   ' bytes of the data of the files the cases write
+  DATA_BASE	      = 1			   ' value of the first byte of the data of those files
+  CREATE_BYTES	      = 100			   ' bytes of the files create_file() makes
+  CREATE_FILL	      = $5A			   ' fill value of the files create_file() makes
+  CIRC_LIMIT_BYTES    = 1000			   ' limit a circular handle is opened with
+  ZERO_LENGTH	      = 0			   ' a file length that no file can have
+  NEGATIVE_LENGTH     = -1			   ' a file length below zero
+  NO_BYTES	      = 0			   ' a transfer count of zero, and the size at the end of the list
+  NO_CHARS	      = 0			   ' characters of the name directory() returns at the end of the list
+  SHORT_NAME_LENGTH   = 1			   ' characters of the shortest name that works
+  MAX_NAME_LENGTH     = flash.FILENAME_SIZE - 1    ' characters of the longest name that works
+  LONG_NAME_LENGTH    = flash.FILENAME_SIZE	   ' characters of the shortest name that is too long
+  LONGER_NAME_LENGTH  = flash.FILENAME_SIZE + 1    ' characters of a name that is longer still
+  NAME_BUFFER_BYTES   = flash.FILENAME_SIZE + 8    ' bytes of each name buffer: the longest name built, its terminator and some room
+  ALPHABET_LETTERS    = 26			   ' letters the characters of a built name cycle through
+  NAME_SEED_MAX       = 0			   ' first letter of the name of the longest name that works
+  NAME_SEED_RENAMED   = 7			   ' first letter of the name the long file is renamed to
+  NAME_SEED_LONG      = 13			   ' first letter of the name that is one character too long
+  NAME_SEED_LONGER    = 19			   ' first letter of the name that is two characters too long
+  DIR_PAD_BYTES       = 1			   ' bytes the directory name buffer holds beyond the name field
+  DIR_CALL_LIMIT      = 200			   ' directory() calls made before a walk gives up
+  GUARD_BYTE	      = $A5			   ' value of the byte after the name field of the directory name buffer
+  SIZE_SENTINEL       = $5A5A_5A5A		   ' value the size variable holds before each directory() call
+  NO_MISMATCH	      = -1			   ' firstMismatch() result when the buffers agree
+  NO_BYTE_READ	      = -1			   ' firstByteOf() result when no byte could be read
+  BYTE_MASK	      = $FF			   ' keeps a value to one byte
+  CASE_FILES	      = 3			   ' files that differ only by the case of their names
 
 CON ' ---- Case Files ----
 
-    ' The three files that differ only by case, each with its own size and fill value:
-    '  CASE_LOWER_BYTES, CASE_LOWER_FILL - the file named in lower case
-    '  CASE_UPPER_BYTES, CASE_UPPER_FILL - the file named in upper case
-    '  CASE_MIXED_BYTES, CASE_MIXED_FILL - the file named in mixed case
-    CASE_LOWER_BYTES = 10
-    CASE_LOWER_FILL = $11
-    CASE_UPPER_BYTES = 20
-    CASE_UPPER_FILL = $22
-    CASE_MIXED_BYTES = 30
-    CASE_MIXED_FILL = $33
+  ' The three files that differ only by case, each with its own size and fill value:
+  '  CASE_LOWER_BYTES, CASE_LOWER_FILL - the file named in lower case
+  '  CASE_UPPER_BYTES, CASE_UPPER_FILL - the file named in upper case
+  '  CASE_MIXED_BYTES, CASE_MIXED_FILL - the file named in mixed case
+  CASE_LOWER_BYTES  = 10
+  CASE_LOWER_FILL   = $11
+  CASE_UPPER_BYTES  = 20
+  CASE_UPPER_FILL   = $22
+  CASE_MIXED_BYTES  = 30
+  CASE_MIXED_FILL   = $33
 
 CON ' ---- Bad Names and Calls ----
 
@@ -99,7 +99,7 @@ CON ' ---- Bad Names and Calls ----
     '  NAME_LONGER   - a name of two characters more than a name can hold
     '  NAME_NULL     - the address 0, the last kind because a driver that reads it reads the hub at address 0
     '  NAME_KINDS    - the number of kinds
-    #0, NAME_EMPTY, NAME_LONG, NAME_LONGER, NAME_NULL, NAME_KINDS
+  #0, NAME_EMPTY, NAME_LONG, NAME_LONGER, NAME_NULL, NAME_KINDS
 
     ' The calls that take a name, in the order badNameCase() dispatches them:
     '  NP_OPEN, NP_OPEN_CIRCULAR            - the two calls that open a file
@@ -108,41 +108,40 @@ CON ' ---- Bad Names and Calls ----
     '  NP_EXISTS                            - the call that answers with a boolean
     '  NP_FILE_SIZE, NP_FILE_SIZE_UNUSED    - the size calls
     '  NP_COUNT                             - the number of calls
-    #0, NP_OPEN, NP_OPEN_CIRCULAR, NP_RENAME_OLD, NP_RENAME_NEW, NP_DELETE, NP_CREATE_FILE, NP_EXISTS, NP_FILE_SIZE, NP_FILE_SIZE_UNUSED, NP_COUNT
+  #0, NP_OPEN, NP_OPEN_CIRCULAR, NP_RENAME_OLD, NP_RENAME_NEW, NP_DELETE, NP_CREATE_FILE, NP_EXISTS, NP_FILE_SIZE, NP_FILE_SIZE_UNUSED, NP_COUNT
 
 CON ' ---- Pointers ----
 
-    NULL_POINTER = 0                                    ' an address of no string
+  NULL_POINTER	= 0    ' an address of no string
 
-DAT ' ---- Directory Variables ----
+DAT  ' ---- Directory Variables ----
 
-directoryId     LONG    0                               ' block ID directory() continues from
-directorySize   LONG    0                               ' size of the file directory() found
+  directoryId	 LONG  0				      ' block ID directory() continues from
+  directorySize  LONG  0				      ' size of the file directory() found
 
-DAT ' ---- Names ----
+DAT  ' ---- Names ----
 
-emptyName       BYTE    0                               ' a name of no characters
-shortName       BYTE    "q", 0                          ' a name of SHORT_NAME_LENGTH characters
-shortRenamed    BYTE    "z", 0                          ' the name the short file is renamed to
-caseLower       BYTE    "casefile.bin", 0               ' a name in lower case
-caseUpper       BYTE    "CASEFILE.BIN", 0               ' the same letters in upper case
-caseMixed       BYTE    "CaseFile.Bin", 0               ' the same letters in mixed case
-caseUnused      BYTE    "cAsEfIlE.bin", 0               ' the same letters in a case no file has
-sourceFile      BYTE    "src_name.bin", 0               ' the file the rename cases could rename by mistake
-renamedFile     BYTE    "dst_name.bin", 0               ' a good name for rename() to rename to
-zeroLenFile     BYTE    "len_zero.bin", 0               ' a name create_file() is given with a length of zero
-negLenFile      BYTE    "len_negative.bin", 0           ' a name create_file() is given with a length below zero
+  emptyName	BYTE  0					      ' a name of no characters
+  shortName	BYTE  "q", 0				      ' a name of SHORT_NAME_LENGTH characters
+  shortRenamed	BYTE  "z", 0				      ' the name the short file is renamed to
+  caseLower	BYTE  "casefile.bin", 0			      ' a name in lower case
+  caseUpper	BYTE  "CASEFILE.BIN", 0			      ' the same letters in upper case
+  caseMixed	BYTE  "CaseFile.Bin", 0			      ' the same letters in mixed case
+  caseUnused	BYTE  "cAsEfIlE.bin", 0			      ' the same letters in a case no file has
+  sourceFile	BYTE  "src_name.bin", 0			      ' the file the rename cases could rename by mistake
+  renamedFile	BYTE  "dst_name.bin", 0			      ' a good name for rename() to rename to
+  zeroLenFile	BYTE  "len_zero.bin", 0			      ' a name create_file() is given with a length of zero
+  negLenFile	BYTE  "len_negative.bin", 0		      ' a name create_file() is given with a length below zero
 
-DAT ' ---- Buffers ----
+DAT  ' ---- Buffers ----
 
-maxName         BYTE    0[NAME_BUFFER_BYTES]            ' the longest name that works
-maxRenamed      BYTE    0[NAME_BUFFER_BYTES]            ' the longest name that works, with other letters
-longName        BYTE    0[NAME_BUFFER_BYTES]            ' a name one character too long
-longerName      BYTE    0[NAME_BUFFER_BYTES]            ' a name two characters too long
-dataBuf         BYTE    0[DATA_BYTES]                   ' what the data files hold
-readBuf         BYTE    0[DATA_BYTES]                   ' what a read call fills
-dirName         BYTE    0[flash.FILENAME_SIZE + DIR_PAD_BYTES] ' the name directory() reports, with a guard byte after the name field
-
+  maxName     BYTE  0[NAME_BUFFER_BYTES]		      ' the longest name that works
+  maxRenamed  BYTE  0[NAME_BUFFER_BYTES]		      ' the longest name that works, with other letters
+  longName    BYTE  0[NAME_BUFFER_BYTES]		      ' a name one character too long
+  longerName  BYTE  0[NAME_BUFFER_BYTES]		      ' a name two characters too long
+  dataBuf     BYTE  0[DATA_BYTES]			      ' what the data files hold
+  readBuf     BYTE  0[DATA_BYTES]			      ' what a read call fills
+  dirName     BYTE  0[flash.FILENAME_SIZE + DIR_PAD_BYTES]    ' the name directory() reports, with a guard byte after the name field
 
 PUB go() | status, pFailedCall
 '' Run every file name test, then show the result.
@@ -152,63 +151,60 @@ PUB go() | status, pFailedCall
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
 
-    pFailedCall := @"format()"
-    status := flash.format()      ' Comment out this line to not erase all files
-    if status == flash.SUCCESS
-        pFailedCall := @"mount()"
-        status := flash.mount()
+  pFailedCall := @"format()"
+  status := flash.format()			' Comment out this line to not erase all files
+  if status == flash.SUCCESS
+    pFailedCall := @"mount()"
+    status := flash.mount()
 
-    if status == flash.SUCCESS
-        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+  if status == flash.SUCCESS
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-        utils.showChipAndDriverVersion()
-        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+    utils.showChipAndDriverVersion()
+    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
 
-        buildNames()
-        fillDataBuffer()
+    buildNames()
+    fillDataBuffer()
 
-        testNamesBuilt()
-        testNameLengthsThatWork()
-        testCaseOnlyDifferences()
-        testDirectoryNames()
-        testCreateFileLengths()
-        testBadNames(NAME_EMPTY)
-        testBadNames(NAME_LONG)
-        testBadNames(NAME_LONGER)
-        debug("* The next calls pass a NULL name to calls that may not check it")
-        testBadNames(NAME_NULL)
-    else
-        utils.showError(pFailedCall, status)
-        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
-        utils.evaluateResultNegError(status, flash.SUCCESS)
+    testNamesBuilt()
+    testNameLengthsThatWork()
+    testCaseOnlyDifferences()
+    testDirectoryNames()
+    testCreateFileLengths()
+    testBadNames(NAME_EMPTY)
+    testBadNames(NAME_LONG)
+    testBadNames(NAME_LONGER)
+    DEBUG("* The next calls pass a NULL name to calls that may not check it")
+    testBadNames(NAME_NULL)
+  else
+    utils.showError(pFailedCall, status)
+    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    debug("* Test Complete")
-    utils.ShowTestResult(@"RT_filename_tests")
-
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_filename_tests")
 
 PRI testNamesBuilt()
 ' Check that the name buffers hold names of the lengths the cases need.
 
-    utils.startTestGroup(@"the names the cases use")
-    utils.startTest(@"each built name has the length the cases need")
-    utils.evaluateSubValue(strsize(@maxName), @"length of the longest name that works", MAX_NAME_LENGTH)
-    utils.evaluateSubValue(strsize(@maxRenamed), @"length of the longest name that works, with other letters", MAX_NAME_LENGTH)
-    utils.evaluateSubValue(strcomp(@maxName, @maxRenamed), @"the two longest names that work are different", FALSE)
-    utils.evaluateSubValue(strsize(@longName), @"length of the name one character too long", LONG_NAME_LENGTH)
-    utils.evaluateSubValue(strsize(@longerName), @"length of the name two characters too long", LONGER_NAME_LENGTH)
-    utils.evaluateSubValue(strsize(@shortName), @"length of the shortest name", SHORT_NAME_LENGTH)
-    utils.evaluateSubValue(strsize(@shortRenamed), @"length of the name the shortest name is renamed to", SHORT_NAME_LENGTH)
-
+  utils.startTestGroup(@"the names the cases use")
+  utils.startTest(@"each built name has the length the cases need")
+  utils.evaluateSubValue(strsize(@maxName), @"length of the longest name that works", MAX_NAME_LENGTH)
+  utils.evaluateSubValue(strsize(@maxRenamed), @"length of the longest name that works, with other letters", MAX_NAME_LENGTH)
+  utils.evaluateSubValue(strcomp(@maxName, @maxRenamed), @"the two longest names that work are different", FALSE)
+  utils.evaluateSubValue(strsize(@longName), @"length of the name one character too long", LONG_NAME_LENGTH)
+  utils.evaluateSubValue(strsize(@longerName), @"length of the name two characters too long", LONGER_NAME_LENGTH)
+  utils.evaluateSubValue(strsize(@shortName), @"length of the shortest name", SHORT_NAME_LENGTH)
+  utils.evaluateSubValue(strsize(@shortRenamed), @"length of the name the shortest name is renamed to", SHORT_NAME_LENGTH)
 
 PRI testNameLengthsThatWork()
 ' Make files with names of 1 and of 127 characters and use each end to end: write, read, rename, delete and create_file().
 
-    utils.startTestGroup(@"names of 1 and 127 characters")
-    nameRoundTrip(@"a file with a name of 1 character: write, read, rename and delete", @shortName, @shortRenamed)
-    nameRoundTrip(@"a file with a name of 127 characters: write, read, rename and delete", @maxName, @maxRenamed)
-    nameCreateFile(@"create_file() with a name of 1 character", @shortName)
-    nameCreateFile(@"create_file() with a name of 127 characters", @maxName)
-
+  utils.startTestGroup(@"names of 1 and 127 characters")
+  nameRoundTrip(@"a file with a name of 1 character: write, read, rename and delete", @shortName, @shortRenamed)
+  nameRoundTrip(@"a file with a name of 127 characters: write, read, rename and delete", @maxName, @maxRenamed)
+  nameCreateFile(@"create_file() with a name of 1 character", @shortName)
+  nameCreateFile(@"create_file() with a name of 127 characters", @maxName)
 
 PRI nameRoundTrip(pTitle, pName, pRenamed) | handle, writeCount, errCode, filesBefore, filesAfter
 ' Write a file under a name, read it back, rename it and delete it, as one test.
@@ -224,34 +220,33 @@ PRI nameRoundTrip(pTitle, pName, pRenamed) | handle, writeCount, errCode, filesB
 ' @local filesBefore - files in the directory before the file is made
 ' @local filesAfter - files in the directory after a step
 
-    utils.startTest(pTitle)
-    _, _, filesBefore := flash.stats()
+  utils.startTest(pTitle)
+  _, _, filesBefore := flash.stats()
 
-    handle := openSub(pName, flash.FILEMODE_WRITE)
-    writeCount := flash.write(handle, @dataBuf, DATA_BYTES)
-    errCode := flash.error()
-    utils.evaluateSubValue(writeCount, @"write()", DATA_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after write()", flash.SUCCESS)
-    closeSub(handle)
+  handle := openSub(pName, flash.FILEMODE_WRITE)
+  writeCount := flash.write(handle, @dataBuf, DATA_BYTES)
+  errCode := flash.error()
+  utils.evaluateSubValue(writeCount, @"write()", DATA_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after write()", flash.SUCCESS)
+  closeSub(handle)
 
-    _, _, filesAfter := flash.stats()
-    utils.evaluateSubValue(filesAfter, @"files in the directory after the write", filesBefore + 1)
-    utils.evaluateSubValue(flash.exists(pName), @"exists() of the name", TRUE)
-    utils.evaluateSubValue(flash.file_size(pName), @"file_size()", DATA_BYTES)
-    utils.evaluateSubValue(flash.file_size_unused(pName), @"file_size_unused()", flash.BYTES_IN_HEAD_BLOCK - DATA_BYTES)
-    utils.evaluateSubValue(contentMatches(pName), @"the bytes read back are the bytes written", TRUE)
+  _, _, filesAfter := flash.stats()
+  utils.evaluateSubValue(filesAfter, @"files in the directory after the write", filesBefore + 1)
+  utils.evaluateSubValue(flash.exists(pName), @"exists() of the name", TRUE)
+  utils.evaluateSubValue(flash.file_size(pName), @"file_size()", DATA_BYTES)
+  utils.evaluateSubValue(flash.file_size_unused(pName), @"file_size_unused()", flash.BYTES_IN_HEAD_BLOCK - DATA_BYTES)
+  utils.evaluateSubValue(contentMatches(pName), @"the bytes read back are the bytes written", TRUE)
 
-    checkStatus(flash.rename(pName, pRenamed), flash.SUCCESS, flash.SUCCESS)
-    utils.evaluateSubValue(flash.exists(pName), @"exists() of the old name after rename()", FALSE)
-    utils.evaluateSubValue(flash.exists(pRenamed), @"exists() of the new name after rename()", TRUE)
-    utils.evaluateSubValue(flash.file_size(pRenamed), @"file_size() of the new name", DATA_BYTES)
-    utils.evaluateSubValue(contentMatches(pRenamed), @"the bytes read back under the new name", TRUE)
+  checkStatus(flash.rename(pName, pRenamed), flash.SUCCESS, flash.SUCCESS)
+  utils.evaluateSubValue(flash.exists(pName), @"exists() of the old name after rename()", FALSE)
+  utils.evaluateSubValue(flash.exists(pRenamed), @"exists() of the new name after rename()", TRUE)
+  utils.evaluateSubValue(flash.file_size(pRenamed), @"file_size() of the new name", DATA_BYTES)
+  utils.evaluateSubValue(contentMatches(pRenamed), @"the bytes read back under the new name", TRUE)
 
-    checkStatus(flash.delete(pRenamed), flash.SUCCESS, flash.SUCCESS)
-    utils.evaluateSubValue(flash.exists(pRenamed), @"exists() of the name after delete()", FALSE)
-    _, _, filesAfter := flash.stats()
-    utils.evaluateSubValue(filesAfter, @"files in the directory after the delete", filesBefore)
-
+  checkStatus(flash.delete(pRenamed), flash.SUCCESS, flash.SUCCESS)
+  utils.evaluateSubValue(flash.exists(pRenamed), @"exists() of the name after delete()", FALSE)
+  _, _, filesAfter := flash.stats()
+  utils.evaluateSubValue(filesAfter, @"files in the directory after the delete", filesBefore)
 
 PRI nameCreateFile(pTitle, pName) | filesBefore, filesAfter
 ' Make a file with create_file() under a name and delete it, as one test.
@@ -263,27 +258,25 @@ PRI nameCreateFile(pTitle, pName) | filesBefore, filesAfter
 ' @local filesBefore - files in the directory before the file is made
 ' @local filesAfter - files in the directory after the file is deleted
 
-    utils.startTest(pTitle)
-    _, _, filesBefore := flash.stats()
-    checkStatus(flash.create_file(pName, CREATE_FILL, CREATE_BYTES), flash.SUCCESS, flash.SUCCESS)
-    utils.evaluateSubValue(flash.exists(pName), @"exists() of the name", TRUE)
-    utils.evaluateSubValue(flash.file_size(pName), @"file_size()", CREATE_BYTES)
-    utils.evaluateSubValue(firstByteOf(pName), @"the first byte of the file", CREATE_FILL)
-    checkStatus(flash.delete(pName), flash.SUCCESS, flash.SUCCESS)
-    utils.evaluateSubValue(flash.exists(pName), @"exists() of the name after delete()", FALSE)
-    _, _, filesAfter := flash.stats()
-    utils.evaluateSubValue(filesAfter, @"files in the directory after the delete", filesBefore)
-
+  utils.startTest(pTitle)
+  _, _, filesBefore := flash.stats()
+  checkStatus(flash.create_file(pName, CREATE_FILL, CREATE_BYTES), flash.SUCCESS, flash.SUCCESS)
+  utils.evaluateSubValue(flash.exists(pName), @"exists() of the name", TRUE)
+  utils.evaluateSubValue(flash.file_size(pName), @"file_size()", CREATE_BYTES)
+  utils.evaluateSubValue(firstByteOf(pName), @"the first byte of the file", CREATE_FILL)
+  checkStatus(flash.delete(pName), flash.SUCCESS, flash.SUCCESS)
+  utils.evaluateSubValue(flash.exists(pName), @"exists() of the name after delete()", FALSE)
+  _, _, filesAfter := flash.stats()
+  utils.evaluateSubValue(filesAfter, @"files in the directory after the delete", filesBefore)
 
 PRI testCaseOnlyDifferences()
 ' Names that differ only by case are different names: each one finds its own file, and an operation on one leaves the others.
 
-    utils.startTestGroup(@"names that differ only by case")
-    caseFilesMade()
-    caseFilesFound()
-    caseRenameOntoOther()
-    caseDeleteOne()
-
+  utils.startTestGroup(@"names that differ only by case")
+  caseFilesMade()
+  caseFilesFound()
+  caseRenameOntoOther()
+  caseDeleteOne()
 
 PRI caseFilesMade() | filesBefore, filesAfter
 ' Make three files whose names differ only by case, as one test.
@@ -292,36 +285,33 @@ PRI caseFilesMade() | filesBefore, filesAfter
 ' @local filesBefore - files in the directory before the files are made
 ' @local filesAfter - files in the directory after the files are made
 
-    utils.startTest(@"three names that differ only by case make three files")
-    _, _, filesBefore := flash.stats()
-    checkStatus(flash.create_file(@caseLower, CASE_LOWER_FILL, CASE_LOWER_BYTES), flash.SUCCESS, flash.SUCCESS)
-    checkStatus(flash.create_file(@caseUpper, CASE_UPPER_FILL, CASE_UPPER_BYTES), flash.SUCCESS, flash.SUCCESS)
-    checkStatus(flash.create_file(@caseMixed, CASE_MIXED_FILL, CASE_MIXED_BYTES), flash.SUCCESS, flash.SUCCESS)
-    _, _, filesAfter := flash.stats()
-    utils.evaluateSubValue(filesAfter, @"files in the directory after the three files", filesBefore + CASE_FILES)
-
+  utils.startTest(@"three names that differ only by case make three files")
+  _, _, filesBefore := flash.stats()
+  checkStatus(flash.create_file(@caseLower, CASE_LOWER_FILL, CASE_LOWER_BYTES), flash.SUCCESS, flash.SUCCESS)
+  checkStatus(flash.create_file(@caseUpper, CASE_UPPER_FILL, CASE_UPPER_BYTES), flash.SUCCESS, flash.SUCCESS)
+  checkStatus(flash.create_file(@caseMixed, CASE_MIXED_FILL, CASE_MIXED_BYTES), flash.SUCCESS, flash.SUCCESS)
+  _, _, filesAfter := flash.stats()
+  utils.evaluateSubValue(filesAfter, @"files in the directory after the three files", filesBefore + CASE_FILES)
 
 PRI caseFilesFound()
 ' Check that each of the three names finds its own file by size and by contents, and that a fourth spelling finds none.
 
-    utils.startTest(@"each name finds its own file")
-    utils.evaluateSubValue(flash.file_size(@caseLower), @"size of the file in lower case", CASE_LOWER_BYTES)
-    utils.evaluateSubValue(flash.file_size(@caseUpper), @"size of the file in upper case", CASE_UPPER_BYTES)
-    utils.evaluateSubValue(flash.file_size(@caseMixed), @"size of the file in mixed case", CASE_MIXED_BYTES)
-    utils.evaluateSubValue(firstByteOf(@caseLower), @"first byte of the file in lower case", CASE_LOWER_FILL)
-    utils.evaluateSubValue(firstByteOf(@caseUpper), @"first byte of the file in upper case", CASE_UPPER_FILL)
-    utils.evaluateSubValue(firstByteOf(@caseMixed), @"first byte of the file in mixed case", CASE_MIXED_FILL)
-    utils.evaluateSubValue(flash.exists(@caseUnused), @"exists() of a spelling no file has", FALSE)
-
+  utils.startTest(@"each name finds its own file")
+  utils.evaluateSubValue(flash.file_size(@caseLower), @"size of the file in lower case", CASE_LOWER_BYTES)
+  utils.evaluateSubValue(flash.file_size(@caseUpper), @"size of the file in upper case", CASE_UPPER_BYTES)
+  utils.evaluateSubValue(flash.file_size(@caseMixed), @"size of the file in mixed case", CASE_MIXED_BYTES)
+  utils.evaluateSubValue(firstByteOf(@caseLower), @"first byte of the file in lower case", CASE_LOWER_FILL)
+  utils.evaluateSubValue(firstByteOf(@caseUpper), @"first byte of the file in upper case", CASE_UPPER_FILL)
+  utils.evaluateSubValue(firstByteOf(@caseMixed), @"first byte of the file in mixed case", CASE_MIXED_FILL)
+  utils.evaluateSubValue(flash.exists(@caseUnused), @"exists() of a spelling no file has", FALSE)
 
 PRI caseRenameOntoOther()
 ' Rename a file to a name that differs from its own only by case: the name is taken, so the call fails and both files stay.
 
-    utils.startTest(@"rename() onto a name that differs only by case")
-    checkStatus(flash.rename(@caseLower, @caseUpper), flash.E_FILE_EXISTS, flash.E_FILE_EXISTS)
-    utils.evaluateSubValue(flash.file_size(@caseLower), @"size of the file in lower case", CASE_LOWER_BYTES)
-    utils.evaluateSubValue(flash.file_size(@caseUpper), @"size of the file in upper case", CASE_UPPER_BYTES)
-
+  utils.startTest(@"rename() onto a name that differs only by case")
+  checkStatus(flash.rename(@caseLower, @caseUpper), flash.E_FILE_EXISTS, flash.E_FILE_EXISTS)
+  utils.evaluateSubValue(flash.file_size(@caseLower), @"size of the file in lower case", CASE_LOWER_BYTES)
+  utils.evaluateSubValue(flash.file_size(@caseUpper), @"size of the file in upper case", CASE_UPPER_BYTES)
 
 PRI caseDeleteOne() | filesBefore, filesAfter
 ' Delete the file in lower case and check the two others stay, then delete them, as one test.
@@ -330,17 +320,16 @@ PRI caseDeleteOne() | filesBefore, filesAfter
 ' @local filesBefore - files in the directory before the first delete
 ' @local filesAfter - files in the directory after the last delete
 
-    utils.startTest(@"delete() of one file leaves the files whose names differ only by case")
-    _, _, filesBefore := flash.stats()
-    checkStatus(flash.delete(@caseLower), flash.SUCCESS, flash.SUCCESS)
-    utils.evaluateSubValue(flash.exists(@caseLower), @"exists() of the deleted name", FALSE)
-    utils.evaluateSubValue(flash.exists(@caseUpper), @"exists() of the name in upper case", TRUE)
-    utils.evaluateSubValue(flash.exists(@caseMixed), @"exists() of the name in mixed case", TRUE)
-    checkStatus(flash.delete(@caseUpper), flash.SUCCESS, flash.SUCCESS)
-    checkStatus(flash.delete(@caseMixed), flash.SUCCESS, flash.SUCCESS)
-    _, _, filesAfter := flash.stats()
-    utils.evaluateSubValue(filesAfter, @"files in the directory after the three deletes", filesBefore - CASE_FILES)
-
+  utils.startTest(@"delete() of one file leaves the files whose names differ only by case")
+  _, _, filesBefore := flash.stats()
+  checkStatus(flash.delete(@caseLower), flash.SUCCESS, flash.SUCCESS)
+  utils.evaluateSubValue(flash.exists(@caseLower), @"exists() of the deleted name", FALSE)
+  utils.evaluateSubValue(flash.exists(@caseUpper), @"exists() of the name in upper case", TRUE)
+  utils.evaluateSubValue(flash.exists(@caseMixed), @"exists() of the name in mixed case", TRUE)
+  checkStatus(flash.delete(@caseUpper), flash.SUCCESS, flash.SUCCESS)
+  checkStatus(flash.delete(@caseMixed), flash.SUCCESS, flash.SUCCESS)
+  _, _, filesAfter := flash.stats()
+  utils.evaluateSubValue(filesAfter, @"files in the directory after the three deletes", filesBefore - CASE_FILES)
 
 PRI testDirectoryNames() | handle, writeCount
 ' List a file with a name of 127 characters: the name comes back intact, directory() leaves the byte after the name buffer alone, and the end of the list reports a size of zero.
@@ -349,19 +338,18 @@ PRI testDirectoryNames() | handle, writeCount
 ' @local handle - handle of the file being written
 ' @local writeCount - what write() returned
 
-    utils.startTestGroup(@"directory() with a name of 127 characters")
-    formatFresh(@"format() to leave only the file the next tests list")
+  utils.startTestGroup(@"directory() with a name of 127 characters")
+  formatFresh(@"format() to leave only the file the next tests list")
 
-    utils.startTest(@"set up the file with a name of 127 characters")
-    handle := openSub(@maxName, flash.FILEMODE_WRITE)
-    writeCount := flash.write(handle, @dataBuf, DATA_BYTES)
-    utils.evaluateSubValue(writeCount, @"write()", DATA_BYTES)
-    closeSub(handle)
+  utils.startTest(@"set up the file with a name of 127 characters")
+  handle := openSub(@maxName, flash.FILEMODE_WRITE)
+  writeCount := flash.write(handle, @dataBuf, DATA_BYTES)
+  utils.evaluateSubValue(writeCount, @"write()", DATA_BYTES)
+  closeSub(handle)
 
-    directoryReturnsName()
-    directoryGuardByte()
-    directoryEndOfList()
-
+  directoryReturnsName()
+  directoryGuardByte()
+  directoryEndOfList()
 
 PRI directoryReturnsName() | bFound
 ' List the file with the longest name and check the name and the size come back whole.
@@ -369,13 +357,12 @@ PRI directoryReturnsName() | bFound
 ' Local Variables:
 ' @local bFound - TRUE when directory() listed the file
 
-    utils.startTest(@"directory() returns a name of 127 characters intact")
-    bFound := findInDirectory(@maxName)
-    utils.evaluateSubValue(bFound, @"the file was listed", TRUE)
-    utils.evaluateSubValue(strsize(@dirName), @"length of the name returned", MAX_NAME_LENGTH)
-    utils.evaluateSubValue(strcomp(@dirName, @maxName), @"the name returned is the name of the file", TRUE)
-    utils.evaluateSubValue(directorySize, @"size returned", DATA_BYTES)
-
+  utils.startTest(@"directory() returns a name of 127 characters intact")
+  bFound := findInDirectory(@maxName)
+  utils.evaluateSubValue(bFound, @"the file was listed", TRUE)
+  utils.evaluateSubValue(strsize(@dirName), @"length of the name returned", MAX_NAME_LENGTH)
+  utils.evaluateSubValue(strcomp(@dirName, @maxName), @"the name returned is the name of the file", TRUE)
+  utils.evaluateSubValue(directorySize, @"size returned", DATA_BYTES)
 
 PRI directoryGuardByte() | firstByte, bFound, guardSeen
 ' List the file with the longest name with a guard byte after the name buffer, and check the guard byte is as it was.
@@ -385,16 +372,15 @@ PRI directoryGuardByte() | firstByte, bFound, guardSeen
 ' @local bFound - TRUE when directory() listed the file
 ' @local guardSeen - value of the byte after the name buffer once directory() returned
 
-    utils.startTest(@"directory() leaves the byte after the name buffer alone")
-    firstByte := firstByteOf(@maxName)
-    bFound := findInDirectory(@maxName)
-    guardSeen := BYTE[@dirName][flash.FILENAME_SIZE]
-    utils.evaluateSubValue(firstByte <> GUARD_BYTE, @"the first byte of the file differs from the guard byte", TRUE)
-    utils.evaluateSubValue(bFound, @"the file was listed", TRUE)
-    utils.evaluateSubValue(guardSeen, @"the byte after the name buffer", GUARD_BYTE)
-    if guardSeen <> GUARD_BYTE
-        debug("*   the byte after the name buffer was set to ", uhex_byte_(GUARD_BYTE), " and is ", uhex_byte_(guardSeen), "; the first byte of the file is ", uhex_byte_(firstByte))
-
+  utils.startTest(@"directory() leaves the byte after the name buffer alone")
+  firstByte := firstByteOf(@maxName)
+  bFound := findInDirectory(@maxName)
+  guardSeen := BYTE[@dirName][flash.FILENAME_SIZE]
+  utils.evaluateSubValue(firstByte <> GUARD_BYTE, @"the first byte of the file differs from the guard byte", TRUE)
+  utils.evaluateSubValue(bFound, @"the file was listed", TRUE)
+  utils.evaluateSubValue(guardSeen, @"the byte after the name buffer", GUARD_BYTE)
+  if guardSeen <> GUARD_BYTE
+    DEBUG("*   the byte after the name buffer was set to ", uhex_byte_(GUARD_BYTE), " and is ", uhex_byte_(guardSeen), "; the first byte of the file is ", uhex_byte_(firstByte))
 
 PRI directoryEndOfList() | status, errCode
 ' Walk the list to its end and check the last call returns an empty name and a size of zero.
@@ -403,20 +389,19 @@ PRI directoryEndOfList() | status, errCode
 ' @local status - what the last directory() call returned
 ' @local errCode - error() after the last directory() call
 
-    utils.startTest(@"directory() reports a size of zero at the end of the list")
-    directoryId := 0
-    status := flash.SUCCESS
-    repeat DIR_CALL_LIMIT
-        directorySize := SIZE_SENTINEL                  ' a size no file has, so a call that leaves the variable alone shows
-        status := flash.directory(@directoryId, @dirName, @directorySize)
-        if status <> flash.SUCCESS or strsize(@dirName) == 0
-            quit
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"directory() at the end of the list", flash.SUCCESS)
-    utils.evaluateSubValue(strsize(@dirName), @"length of the name at the end of the list", NO_CHARS)
-    utils.evaluateSubValue(directorySize, @"size at the end of the list", NO_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after directory()", flash.SUCCESS)
-
+  utils.startTest(@"directory() reports a size of zero at the end of the list")
+  directoryId := 0
+  status := flash.SUCCESS
+  repeat DIR_CALL_LIMIT
+    directorySize := SIZE_SENTINEL    ' a size no file has, so a call that leaves the variable alone shows
+    status := flash.DIRECTORY(@directoryId, @dirName, @directorySize)
+    if status <> flash.SUCCESS OR strsize(@dirName) == 0
+      quit
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"directory() at the end of the list", flash.SUCCESS)
+  utils.evaluateSubValue(strsize(@dirName), @"length of the name at the end of the list", NO_CHARS)
+  utils.evaluateSubValue(directorySize, @"size at the end of the list", NO_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after directory()", flash.SUCCESS)
 
 PRI findInDirectory(pName) : bFound | status
 ' Walk the list with directory() until the file with a name is listed, setting the byte after the name buffer to the guard value before every call.
@@ -427,26 +412,24 @@ PRI findInDirectory(pName) : bFound | status
 ' Local Variables:
 ' @local status - what directory() returned
 
-    bFound := FALSE
-    directoryId := 0
-    repeat DIR_CALL_LIMIT
-        BYTE[@dirName][flash.FILENAME_SIZE] := GUARD_BYTE
-        directorySize := SIZE_SENTINEL
-        status := flash.directory(@directoryId, @dirName, @directorySize)
-        if status <> flash.SUCCESS or strsize(@dirName) == 0
-            quit
-        if strcomp(@dirName, pName)
-            bFound := TRUE
-            quit
-
+  bFound := FALSE
+  directoryId := 0
+  repeat DIR_CALL_LIMIT
+    BYTE[@dirName][flash.FILENAME_SIZE] := GUARD_BYTE
+    directorySize := SIZE_SENTINEL
+    status := flash.DIRECTORY(@directoryId, @dirName, @directorySize)
+    if status <> flash.SUCCESS OR strsize(@dirName) == 0
+      quit
+    if strcomp(@dirName, pName)
+      bFound := TRUE
+      quit
 
 PRI testCreateFileLengths()
 ' create_file() with a length of zero and below makes no file: the directory has no new entry.
 
-    utils.startTestGroup(@"create_file() with a length of zero or below")
-    createLengthCase(@"create_file() with a length of zero makes no directory entry", @zeroLenFile, ZERO_LENGTH)
-    createLengthCase(@"create_file() with a length below zero makes no directory entry", @negLenFile, NEGATIVE_LENGTH)
-
+  utils.startTestGroup(@"create_file() with a length of zero or below")
+  createLengthCase(@"create_file() with a length of zero makes no directory entry", @zeroLenFile, ZERO_LENGTH)
+  createLengthCase(@"create_file() with a length below zero makes no directory entry", @negLenFile, NEGATIVE_LENGTH)
 
 PRI createLengthCase(pTitle, pFilename, byteCount) | filesBefore, filesAfter, bListed
 ' Call create_file() with a length that is no length, and check the directory has no new entry.
@@ -460,16 +443,15 @@ PRI createLengthCase(pTitle, pFilename, byteCount) | filesBefore, filesAfter, bL
 ' @local filesAfter - files in the directory after the call
 ' @local bListed - TRUE when directory() lists the name afterward
 
-    utils.startTest(pTitle)
-    _, _, filesBefore := flash.stats()
-    flash.create_file(pFilename, CREATE_FILL, byteCount)
-    _, _, filesAfter := flash.stats()
-    bListed := findInDirectory(pFilename)
-    utils.evaluateSubValue(filesAfter, @"files in the directory", filesBefore)
-    utils.evaluateSubValue(bListed, @"the name is listed by directory()", FALSE)
-    utils.evaluateSubValue(flash.exists(pFilename), @"exists() of the name", FALSE)
-    flash.delete(pFilename)                             ' removes the file a driver that accepts the length makes
-
+  utils.startTest(pTitle)
+  _, _, filesBefore := flash.stats()
+  flash.create_file(pFilename, CREATE_FILL, byteCount)
+  _, _, filesAfter := flash.stats()
+  bListed := findInDirectory(pFilename)
+  utils.evaluateSubValue(filesAfter, @"files in the directory", filesBefore)
+  utils.evaluateSubValue(bListed, @"the name is listed by directory()", FALSE)
+  utils.evaluateSubValue(flash.exists(pFilename), @"exists() of the name", FALSE)
+  flash.delete(pFilename)    ' removes the file a driver that accepts the length makes
 
 PRI testBadNames(kindIdx) | pubIdx
 ' Call every call that takes a name with one kind of bad name.
@@ -479,10 +461,9 @@ PRI testBadNames(kindIdx) | pubIdx
 ' Local Variables:
 ' @local pubIdx - number of the call being made
 
-    utils.startTestGroup(badNameGroupTitle(kindIdx))
-    repeat NP_COUNT with pubIdx
-        badNameCase(pubIdx, badNamePointer(kindIdx))
-
+  utils.startTestGroup(badNameGroupTitle(kindIdx))
+  repeat NP_COUNT WITH pubIdx
+    badNameCase(pubIdx, badNamePointer(kindIdx))
 
 PRI badNameCase(pubIdx, pBadName) | returned, errCode, filesBefore, filesAfter
 ' Make one call with a bad name and check it was refused and changed nothing, as one test.
@@ -496,21 +477,20 @@ PRI badNameCase(pubIdx, pBadName) | returned, errCode, filesBefore, filesAfter
 ' @local filesBefore - files in the directory before the call
 ' @local filesAfter - files in the directory after the call
 
-    utils.startTest(namePubTitle(pubIdx))
-    ifnot flash.exists(@sourceFile)
-        flash.create_file(@sourceFile, CREATE_FILL, CREATE_BYTES)
-    utils.evaluateSubValue(flash.exists(@sourceFile), @"the file rename() could rename is there before the call", TRUE)
+  utils.startTest(namePubTitle(pubIdx))
+  ifnot flash.exists(@sourceFile)
+    flash.create_file(@sourceFile, CREATE_FILL, CREATE_BYTES)
+  utils.evaluateSubValue(flash.exists(@sourceFile), @"the file rename() could rename is there before the call", TRUE)
 
-    _, _, filesBefore := flash.stats()
-    returned, errCode := callWithBadName(pubIdx, pBadName)
-    _, _, filesAfter := flash.stats()
+  _, _, filesBefore := flash.stats()
+  returned, errCode := callWithBadName(pubIdx, pBadName)
+  _, _, filesAfter := flash.stats()
 
-    utils.evaluateSubValue(isRefusal(pubIdx, returned), @"the call was refused", TRUE)
-    utils.evaluateSubStatus(errCode, @"error() holds E_BAD_FILENAME", flash.E_BAD_FILENAME)
-    utils.evaluateSubValue(filesAfter, @"files in the directory", filesBefore)
-    utils.evaluateSubValue(flash.exists(@sourceFile), @"the file rename() could rename is still there", TRUE)
-    flash.delete(pBadName)                              ' removes the entry a driver that accepts the name makes
-
+  utils.evaluateSubValue(isRefusal(pubIdx, returned), @"the call was refused", TRUE)
+  utils.evaluateSubStatus(errCode, @"error() holds E_BAD_FILENAME", flash.E_BAD_FILENAME)
+  utils.evaluateSubValue(filesAfter, @"files in the directory", filesBefore)
+  utils.evaluateSubValue(flash.exists(@sourceFile), @"the file rename() could rename is still there", TRUE)
+  flash.delete(pBadName)    ' removes the entry a driver that accepts the name makes
 
 PRI callWithBadName(pubIdx, pBadName) : returned, errCode
 ' Make one call with a bad name, and give a file that was opened a byte and a close so a driver that accepts the name makes a directory entry.
@@ -520,23 +500,22 @@ PRI callWithBadName(pubIdx, pBadName) : returned, errCode
 ' @returns returned - what the call returned
 ' @returns errCode - error() right after the call
 
-    case pubIdx
-        NP_OPEN: returned := flash.open(pBadName, flash.FILEMODE_WRITE)
-        NP_OPEN_CIRCULAR: returned := flash.open_circular(pBadName, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES)
-        NP_RENAME_OLD: returned := flash.rename(pBadName, @renamedFile)
-        NP_RENAME_NEW: returned := flash.rename(@sourceFile, pBadName)
-        NP_DELETE: returned := flash.delete(pBadName)
-        NP_CREATE_FILE: returned := flash.create_file(pBadName, CREATE_FILL, CREATE_BYTES)
-        NP_EXISTS: returned := flash.exists(pBadName)
-        NP_FILE_SIZE: returned := flash.file_size(pBadName)
-        other: returned := flash.file_size_unused(pBadName)
-    errCode := flash.error()
+  case pubIdx
+    NP_OPEN: returned := flash.open(pBadName, flash.FILEMODE_WRITE)
+    NP_OPEN_CIRCULAR: returned := flash.open_circular(pBadName, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES)
+    NP_RENAME_OLD: returned := flash.rename(pBadName, @renamedFile)
+    NP_RENAME_NEW: returned := flash.rename(@sourceFile, pBadName)
+    NP_DELETE: returned := flash.delete(pBadName)
+    NP_CREATE_FILE: returned := flash.create_file(pBadName, CREATE_FILL, CREATE_BYTES)
+    NP_EXISTS: returned := flash.exists(pBadName)
+    NP_FILE_SIZE: returned := flash.file_size(pBadName)
+    other: returned := flash.file_size_unused(pBadName)
+  errCode := flash.error()
 
-    if pubIdx == NP_OPEN or pubIdx == NP_OPEN_CIRCULAR
-        if isUsableHandle(returned)
-            flash.wr_byte(returned, DATA_BASE)
-            utils.closeHandle(returned)
-
+  if pubIdx == NP_OPEN OR pubIdx == NP_OPEN_CIRCULAR
+    if isUsableHandle(returned)
+      flash.wr_byte(returned, DATA_BASE)
+      utils.closeHandle(returned)
 
 PRI isRefusal(pubIdx, returned) : bRefused
 ' Tell whether a return value is a refusal for a bad name: FALSE from exists(), E_BAD_FILENAME from every other call.
@@ -545,11 +524,10 @@ PRI isRefusal(pubIdx, returned) : bRefused
 ' @param returned - what the call returned
 ' @returns bRefused - TRUE when the return value is a refusal
 
-    if pubIdx == NP_EXISTS
-        bRefused := returned == FALSE
-    else
-        bRefused := returned == flash.E_BAD_FILENAME
-
+  if pubIdx == NP_EXISTS
+    bRefused := returned == FALSE
+  else
+    bRefused := returned == flash.E_BAD_FILENAME
 
 PRI badNamePointer(kindIdx) : pName
 ' Give the address of one kind of bad name.
@@ -557,12 +535,11 @@ PRI badNamePointer(kindIdx) : pName
 ' @param kindIdx - the kind of bad name: NAME_EMPTY, NAME_LONG, NAME_LONGER or NAME_NULL
 ' @returns pName - address of the name, or NULL_POINTER
 
-    case kindIdx
-        NAME_EMPTY: pName := @emptyName
-        NAME_LONG: pName := @longName
-        NAME_LONGER: pName := @longerName
-        other: pName := NULL_POINTER
-
+  case kindIdx
+    NAME_EMPTY: pName := @emptyName
+    NAME_LONG: pName := @longName
+    NAME_LONGER: pName := @longerName
+    other: pName := NULL_POINTER
 
 PRI badNameGroupTitle(kindIdx) : pTitle
 ' Give the heading of the group of cases of one kind of bad name.
@@ -570,12 +547,11 @@ PRI badNameGroupTitle(kindIdx) : pTitle
 ' @param kindIdx - the kind of bad name: NAME_EMPTY, NAME_LONG, NAME_LONGER or NAME_NULL
 ' @returns pTitle - address of zstring with the heading
 
-    case kindIdx
-        NAME_EMPTY: pTitle := @"calls with a name of no characters"
-        NAME_LONG: pTitle := @"calls with a name of 128 characters"
-        NAME_LONGER: pTitle := @"calls with a name of 129 characters"
-        other: pTitle := @"calls with a NULL name"
-
+  case kindIdx
+    NAME_EMPTY: pTitle := @"calls with a name of no characters"
+    NAME_LONG: pTitle := @"calls with a name of 128 characters"
+    NAME_LONGER: pTitle := @"calls with a name of 129 characters"
+    other: pTitle := @"calls with a NULL name"
 
 PRI namePubTitle(pubIdx) : pTitle
 ' Give the title of the case of one call that takes a name.
@@ -583,17 +559,16 @@ PRI namePubTitle(pubIdx) : pTitle
 ' @param pubIdx - number of the call, one of the NP_ values
 ' @returns pTitle - address of zstring with the title
 
-    case pubIdx
-        NP_OPEN: pTitle := @"open(,w) is refused and makes no directory entry"
-        NP_OPEN_CIRCULAR: pTitle := @"open_circular(,a) is refused and makes no directory entry"
-        NP_RENAME_OLD: pTitle := @"rename() with the bad name as the old name is refused"
-        NP_RENAME_NEW: pTitle := @"rename() with the bad name as the new name is refused and renames nothing"
-        NP_DELETE: pTitle := @"delete() is refused"
-        NP_CREATE_FILE: pTitle := @"create_file() is refused and makes no directory entry"
-        NP_EXISTS: pTitle := @"exists() answers FALSE and sets error() to E_BAD_FILENAME"
-        NP_FILE_SIZE: pTitle := @"file_size() is refused"
-        other: pTitle := @"file_size_unused() is refused"
-
+  case pubIdx
+    NP_OPEN: pTitle := @"open(,w) is refused and makes no directory entry"
+    NP_OPEN_CIRCULAR: pTitle := @"open_circular(,a) is refused and makes no directory entry"
+    NP_RENAME_OLD: pTitle := @"rename() with the bad name as the old name is refused"
+    NP_RENAME_NEW: pTitle := @"rename() with the bad name as the new name is refused and renames nothing"
+    NP_DELETE: pTitle := @"delete() is refused"
+    NP_CREATE_FILE: pTitle := @"create_file() is refused and makes no directory entry"
+    NP_EXISTS: pTitle := @"exists() answers FALSE and sets error() to E_BAD_FILENAME"
+    NP_FILE_SIZE: pTitle := @"file_size() is refused"
+    other: pTitle := @"file_size_unused() is refused"
 
 PRI buildName(pDest, nameLength, seedIdx) | charIdx
 ' Build a name of letters that cycle through the alphabet, starting at a letter, and end it with the terminator.
@@ -605,19 +580,17 @@ PRI buildName(pDest, nameLength, seedIdx) | charIdx
 ' Local Variables:
 ' @local charIdx - number of the character being built
 
-    repeat nameLength with charIdx
-        BYTE[pDest][charIdx] := "a" + ((charIdx + seedIdx) +// ALPHABET_LETTERS)
-    BYTE[pDest][nameLength] := 0
-
+  repeat nameLength WITH charIdx
+    BYTE[pDest][charIdx] := "a" + ((charIdx + seedIdx) +// ALPHABET_LETTERS)
+  BYTE[pDest][nameLength] := 0
 
 PRI buildNames()
 ' Build the names that are too long to type: the longest names that work and the names that are too long.
 
-    buildName(@maxName, MAX_NAME_LENGTH, NAME_SEED_MAX)
-    buildName(@maxRenamed, MAX_NAME_LENGTH, NAME_SEED_RENAMED)
-    buildName(@longName, LONG_NAME_LENGTH, NAME_SEED_LONG)
-    buildName(@longerName, LONGER_NAME_LENGTH, NAME_SEED_LONGER)
-
+  buildName(@maxName, MAX_NAME_LENGTH, NAME_SEED_MAX)
+  buildName(@maxRenamed, MAX_NAME_LENGTH, NAME_SEED_RENAMED)
+  buildName(@longName, LONG_NAME_LENGTH, NAME_SEED_LONG)
+  buildName(@longerName, LONGER_NAME_LENGTH, NAME_SEED_LONGER)
 
 PRI checkStatus(returned, expectedStatus, expectedCode) | errCode
 ' Check the status a call returned and the error() it left.
@@ -629,10 +602,9 @@ PRI checkStatus(returned, expectedStatus, expectedCode) | errCode
 ' Local Variables:
 ' @local errCode - error() as the call left it
 
-    errCode := flash.error()
-    utils.evaluateSubStatus(returned, @"status returned", expectedStatus)
-    utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
-
+  errCode := flash.error()
+  utils.evaluateSubStatus(returned, @"status returned", expectedStatus)
+  utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
 
 PRI formatFresh(pTitle) | status, errCode
 ' Format the flash as a test that passes when format() and error() both report SUCCESS.
@@ -643,12 +615,11 @@ PRI formatFresh(pTitle) | status, errCode
 ' @local status - what format() returned
 ' @local errCode - error() after format()
 
-    utils.startTest(pTitle)
-    status := flash.format()
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after format()", flash.SUCCESS)
-
+  utils.startTest(pTitle)
+  status := flash.format()
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after format()", flash.SUCCESS)
 
 PRI openSub(pFilename, mode) : handle | errCode
 ' Open a file inside a running test, and check open() returned a handle and error() holds SUCCESS.
@@ -660,11 +631,10 @@ PRI openSub(pFilename, mode) : handle | errCode
 ' Local Variables:
 ' @local errCode - error() after open()
 
-    handle := flash.open(pFilename, mode)
-    errCode := flash.error()
-    utils.evaluateSubValue(isUsableHandle(handle), @"open() returned a usable handle", TRUE)
-    utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
-
+  handle := flash.open(pFilename, mode)
+  errCode := flash.error()
+  utils.evaluateSubValue(isUsableHandle(handle), @"open() returned a usable handle", TRUE)
+  utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
 
 PRI closeSub(handle) | status, errCode
 ' Close a handle inside a running test, and check close() and error() both report SUCCESS.
@@ -675,11 +645,10 @@ PRI closeSub(handle) | status, errCode
 ' @local status - what close() returned
 ' @local errCode - error() after close()
 
-    status := utils.closeHandle(handle)
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after close()", flash.SUCCESS)
-
+  status := utils.closeHandle(handle)
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after close()", flash.SUCCESS)
 
 PRI isUsableHandle(handle) : bUsable
 ' Tell whether a value is one of the handles open() hands out.
@@ -687,8 +656,7 @@ PRI isUsableHandle(handle) : bUsable
 ' @param handle - value open() returned
 ' @returns bUsable - TRUE when the value is inside the range of handles
 
-    bUsable := handle >= utils.FIRST_HANDLE and handle < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
-
+  bUsable := handle >= utils.FIRST_HANDLE AND handle < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
 
 PRI contentMatches(pName) : bMatches | handle, readCount
 ' Read the whole of a data file back and tell whether it holds the bytes of the data buffer.
@@ -700,14 +668,13 @@ PRI contentMatches(pName) : bMatches | handle, readCount
 ' @local handle - handle of the file being read
 ' @local readCount - what read() returned
 
-    bMatches := FALSE
-    bytefill(@readBuf, 0, DATA_BYTES)
-    handle := flash.open(pName, flash.FILEMODE_READ)
-    if isUsableHandle(handle)
-        readCount := flash.read(handle, @readBuf, DATA_BYTES)
-        bMatches := readCount == DATA_BYTES and firstMismatch(@dataBuf, @readBuf, DATA_BYTES) == NO_MISMATCH
-        utils.closeHandle(handle)
-
+  bMatches := FALSE
+  bytefill(@readBuf, 0, DATA_BYTES)
+  handle := flash.open(pName, flash.FILEMODE_READ)
+  if isUsableHandle(handle)
+    readCount := flash.read(handle, @readBuf, DATA_BYTES)
+    bMatches := readCount == DATA_BYTES AND firstMismatch(@dataBuf, @readBuf, DATA_BYTES) == NO_MISMATCH
+    utils.closeHandle(handle)
 
 PRI firstByteOf(pName) : firstByte | handle
 ' Read the first byte of a file.
@@ -718,12 +685,11 @@ PRI firstByteOf(pName) : firstByte | handle
 ' Local Variables:
 ' @local handle - handle of the file being read
 
-    firstByte := NO_BYTE_READ
-    handle := flash.open(pName, flash.FILEMODE_READ)
-    if isUsableHandle(handle)
-        firstByte := flash.rd_byte(handle)
-        utils.closeHandle(handle)
-
+  firstByte := NO_BYTE_READ
+  handle := flash.open(pName, flash.FILEMODE_READ)
+  if isUsableHandle(handle)
+    firstByte := flash.rd_byte(handle)
+    utils.closeHandle(handle)
 
 PRI fillDataBuffer() | byteIdx
 ' Fill the data buffer with the pattern of the data files.
@@ -731,9 +697,8 @@ PRI fillDataBuffer() | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being filled
 
-    repeat DATA_BYTES with byteIdx
-        BYTE[@dataBuf][byteIdx] := (DATA_BASE + byteIdx) & BYTE_MASK
-
+  repeat DATA_BYTES WITH byteIdx
+    BYTE[@dataBuf][byteIdx] := (DATA_BASE + byteIdx) & BYTE_MASK
 
 PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Find the first byte at which two buffers differ.
@@ -746,14 +711,13 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being compared
 
-    mismatchIdx := NO_MISMATCH
-    repeat byteCount with byteIdx
-        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-            mismatchIdx := byteIdx
-            quit
+  mismatchIdx := NO_MISMATCH
+  repeat byteCount WITH byteIdx
+    if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+      mismatchIdx := byteIdx
+      quit
 
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================

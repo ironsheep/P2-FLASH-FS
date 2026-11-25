@@ -13,7 +13,7 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -25,295 +25,292 @@ CON
 '}
 
 CON
-    HANDLES_OPEN = 8                ' handles the driver and the harness both provide
+  HANDLES_OPEN	= 8    ' handles the driver and the harness both provide
 
 #PRAGMA EXPORTDEF RT_UTILITIES_FILES_OPEN
 
 OBJ
-    flash : "flash_fs" | MAX_FILES_OPEN = HANDLES_OPEN
-    utils : "RT_utilities" | FILES_OPEN = HANDLES_OPEN
+  flash   : "flash_fs" | MAX_FILES_OPEN = HANDLES_OPEN
+  utils   : "RT_utilities" | FILES_OPEN = HANDLES_OPEN
 
 CON
-    RECORD_LEN = 88 ' just for fun, tiny but even number of longs
-    RECORD_DATA_LEN = RECORD_LEN - 12
+  RECORD_LEN		 = 88			   ' just for fun, tiny but even number of longs
+  RECORD_DATA_LEN	 = RECORD_LEN - 12
 
-    STACK_SIZE_PER_COG = 256 ' hrmf needs to be large, huh?
+  STACK_SIZE_PER_COG	 = 256			   ' hrmf needs to be large, huh?
 
-    FILE_NAME_LEN = 20
+  FILE_NAME_LEN		 = 20
 
-    WORKER_COUNT = 7                    ' cogs started besides the main cog, which writes files too
-    FILE_TYPE_COUNT = 5                 ' kinds of test file a cog can write: bytes, words, longs, strings, records
-    MAX_START_DELAY_MS = 30_000         ' a worker waits a random time below this before it starts
-    WORKERS_DONE_LIMIT_MS = 120_000     ' time the main cog waits, once its own files are done, for the workers: the slowest start delay plus two files
-    DONE_POLL_MS = 100                  ' pause between looks at the count of finished workers
+  WORKER_COUNT		 = 7			   ' cogs started besides the main cog, which writes files too
+  FILE_TYPE_COUNT	 = 5			   ' kinds of test file a cog can write: bytes, words, longs, strings, records
+  MAX_START_DELAY_MS	 = 30_000		   ' a worker waits a random time below this before it starts
+  WORKERS_DONE_LIMIT_MS  = 120_000		   ' time the main cog waits, once its own files are done, for the workers: the slowest start delay plus two files
+  DONE_POLL_MS		 = 100			   ' pause between looks at the count of finished workers
 
 CON ' ---- String Stress Run ----
 
-    COG_COUNT = 8                       ' cogs of the P2, each of which writes and reads one string file
-    STRESS_STRINGS = 200                ' strings each cog writes with wr_str() and reads back with rd_str()
-    STRESS_MAX_CHARS = 40               ' characters of the longest string, so the strings cross block boundaries
-    STRESS_BUF = STRESS_MAX_CHARS + 1   ' bytes of a string buffer: the longest string and its terminator
-    STRESS_NAME_LEN = 16                ' bytes of the name buffer of each cog's string file
-    STRESS_NAME_DIGIT = 3               ' offset of the cog digit in that name
-    STRESS_START_LIMIT_MS = 5_000       ' time the workers have to start and report ready
-    STRESS_DONE_LIMIT_MS = 120_000      ' time the main cog waits, once its own file is done, for the workers
-    STRESS_POLL_MS = 10                 ' pause between looks at the ready and done counts
-    LETTER_COUNT = 26                   ' letters the string pattern cycles through
-    MICROS_PER_SECOND = 1_000_000       ' converts a clock frequency to ticks per microsecond
+  COG_COUNT		 = 8			   ' cogs of the P2, each of which writes and reads one string file
+  STRESS_STRINGS	 = 200			   ' strings each cog writes with wr_str() and reads back with rd_str()
+  STRESS_MAX_CHARS	 = 40			   ' characters of the longest string, so the strings cross block boundaries
+  STRESS_BUF		 = STRESS_MAX_CHARS + 1    ' bytes of a string buffer: the longest string and its terminator
+  STRESS_NAME_LEN	 = 16			   ' bytes of the name buffer of each cog's string file
+  STRESS_NAME_DIGIT	 = 3			   ' offset of the cog digit in that name
+  STRESS_START_LIMIT_MS  = 5_000		   ' time the workers have to start and report ready
+  STRESS_DONE_LIMIT_MS	 = 120_000		   ' time the main cog waits, once its own file is done, for the workers
+  STRESS_POLL_MS	 = 10			   ' pause between looks at the ready and done counts
+  LETTER_COUNT		 = 26			   ' letters the string pattern cycles through
+  MICROS_PER_SECOND	 = 1_000_000		   ' converts a clock frequency to ticks per microsecond
 
 DAT
 
 record
-recordMARK       LONG    $beadfeed              ' visual start of record marker
-recordID         LONG    0
-recordData       LONG    0[RECORD_DATA_LEN/4]
-recordCRC        LONG    0
+  recordMARK   LONG  $beadfeed				  ' visual start of record marker
+  recordID     LONG  0
+  recordData   LONG  0[RECORD_DATA_LEN/4]
+  recordCRC    LONG  0
 recordEnd
 
-bufferLock      LONG    -1
-doneLock        LONG    -1                      ' guards doneCount, which several cogs increment
-doneCount       LONG    0                       ' workers that have shown their final counts
+  bufferLock   LONG  -1
+  doneLock     LONG  -1					  ' guards doneCount, which several cogs increment
+  doneCount    LONG  0					  ' workers that have shown their final counts
 
-stack           LONG    0[STACK_SIZE_PER_COG * WORKER_COUNT]
+  stack        LONG  0[STACK_SIZE_PER_COG * WORKER_COUNT]
 
-fileCountAr     BYTE    0[8]
+  fileCountAr  BYTE  0[8]
 
-fileNbr         BYTE    0
+  fileNbr      BYTE  0
 
-DAT ' ---- String Stress Run ----
+DAT  ' ---- String Stress Run ----
 
-stressStart     LONG    FALSE                   ' set by the main cog to release every cog of the stress run together
-stressReady     LONG    0                       ' workers waiting for stressStart, guarded by doneLock
-stressDone      LONG    0                       ' workers that have finished the stress run, guarded by doneLock
-worstWait       LONG    0[COG_COUNT]            ' longest wr_str() or rd_str() call of each cog, in clock ticks
-stressStack     LONG    0[STACK_SIZE_PER_COG * WORKER_COUNT]
-stressNames     BYTE    0[STRESS_NAME_LEN * COG_COUNT]  ' the name of each cog's string file
-stressWrBuf     BYTE    0[STRESS_BUF * COG_COUNT]       ' the string each cog writes, and expects to read back
-stressRdBuf     BYTE    0[STRESS_BUF * COG_COUNT]       ' the string each cog reads
-stressTemplate  BYTE    "ss-0-strs.txt", 0      ' the name of a string file, before the cog digit is put in
+  stressStart	  LONG	FALSE				  ' set by the main cog to release every cog of the stress run together
+  stressReady	  LONG	0				  ' workers waiting for stressStart, guarded by doneLock
+  stressDone	  LONG	0				  ' workers that have finished the stress run, guarded by doneLock
+  worstWait	  LONG	0[COG_COUNT]			  ' longest wr_str() or rd_str() call of each cog, in clock ticks
+  stressStack	  LONG	0[STACK_SIZE_PER_COG * WORKER_COUNT]
+  stressNames	  BYTE	0[STRESS_NAME_LEN * COG_COUNT]	  ' the name of each cog's string file
+  stressWrBuf	  BYTE	0[STRESS_BUF * COG_COUNT]	  ' the string each cog writes, and expects to read back
+  stressRdBuf	  BYTE	0[STRESS_BUF * COG_COUNT]	  ' the string each cog reads
+  stressTemplate  BYTE	"ss-0-strs.txt", 0		  ' the name of a string file, before the cog digit is put in
 
 PUB go() | cogIdx, totalFiles, status, workerCog, workersStarted, waitLimit
 
-    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+  utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-    utils.startTest(@"Format the FLASH")
-    status := flash.format()      ' Comment out this line to not erase all files
+  utils.startTest(@"Format the FLASH")
+  status := flash.format()	  ' Comment out this line to not erase all files
+  utils.evaluateResultNegError(status, flash.SUCCESS)
+
+  bufferLock := LOCKNEW()	  ' I'm allocating... reserve a lock for RT use
+  doneLock := LOCKNEW()		  ' guards doneCount
+  doneCount := 0
+
+  ' ---------------------------------------------------------------------
+  ' TEST SCENARIO 1: write tests by all cogs then read by main cog
+  ' ---------------------------------------------------------------------
+  ' early cogs get to write two files
+
+  DEBUG("  ")
+  DEBUG("* starting COGs")
+  workersStarted := 0
+  repeat cogIdx from 0 TO WORKER_COUNT - 1
+    workerCog := cogspin(NEWCOG, genTwoFiles(@fileCountAr), @stack[cogIdx * STACK_SIZE_PER_COG])
+    if workerCog >= 0
+      workersStarted++
+
+  DEBUG("* writing own files")
+  ' last cog gets to write two files
+  genTwoFiles(@fileCountAr)
+
+  DEBUG("  ")
+  DEBUG("* ------ waiting for ", udec_(workersStarted), " workers... ------")
+  waitLimit := getms() + WORKERS_DONE_LIMIT_MS
+  repeat while doneCount < workersStarted
+    if getms() - waitLimit > 0	  ' signed difference, so a wrap of the millisecond count is harmless
+      quit
+    waitms(DONE_POLL_MS)
+  DEBUG("* Let's see what happened")
+
+  utils.startTest(@"Workers finished within the time limit")
+  utils.evaluateSingleValue(doneCount, @"workers done", workersStarted)
+
+  DEBUG("*  after waiting on COGs to finish writing")
+  totalFiles := 0
+  repeat cogIdx from 0 TO 7
+    totalFiles += BYTE[@fileCountAr][cogIdx]
+  ' debug(" - found ", udec(totalFiles), " expected 16!")
+  utils.startTest(@"Check Cogs wrote All files")
+  utils.evaluateSingleValue(totalFiles, @"file written count", 16)
+
+  utils.showFiles()
+
+  ' ---------------------------------------------------------------------
+  ' TEST SCENARIO 2: read/write tests by all cogs individually but at same time
+  ' ---------------------------------------------------------------------
+  runStringStress()
+
+  DEBUG("TESTs complete")
+  utils.ShowTestEndCounts()
+  utils.ShowMultiCogTestResult(@"RT_read_write_8cog_tests")
+
+CON ' ---- file tests ---
+
+PRI genTwoFiles(pByteFileCountAr) | myId, delayMS, fType1, fType2, status
+
+  myId := COGID()
+  delayMS := utils.randomBelow(MAX_START_DELAY_MS)
+  DEBUG("   ")
+  DEBUG(" ----------------------- ")
+  DEBUG("* Cog #", udec_(myId), " starting after ", udec(delayMS), "ms")
+  waitms(delayMS)
+
+  DEBUG("* Mounting the FLASH")
+  utils.startTest(@"Mount the filesystem")
+  status := flash.mount()
+  utils.evaluateResultNegError(status, flash.SUCCESS)
+
+  utils.startTestGroup(@"Cog write file #1")
+  fType1 := utils.randomBelow(FILE_TYPE_COUNT)
+  writeAndVerifyATestFile(fType1, myId)
+  BYTE[pByteFileCountAr][myId]++
+
+  utils.startTestGroup(@"Cog write file #2")
+  fType2 := utils.randomBelow(FILE_TYPE_COUNT)
+  writeAndVerifyATestFile(fType2, myId)
+  BYTE[pByteFileCountAr][myId]++
+
+  if myId <> 0
+    utils.ShowTestEndCounts()
+
+  DEBUG("   ")
+  DEBUG("* Cog #", udec_(myId), " DONE")
+
+  if myId <> 0	  ' a worker's counts are final, so tell the main cog
+    repeat while LOCKTRY(doneLock) == 0
+    doneCount++
+    LOCKREL(doneLock)
+
+PRI testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeLength, recordNbr, expectedFileSize, expectedFileBlocks, sizeUnused, allocatedFileSize
+' ----------------------------------
+' TEST
+'  open file for write
+'  ensure returns SUCCESS
+
+  DEBUG("- testWriteRecords(", zstr_(pFilename), ", ", udec_(recordCount), ")")
+  utils.startTest(@"Open File for write")
+  handle, status := utils.openWaitOnHandle(pFilename, "w")
+  utils.evaluateResultNegError(status, flash.SUCCESS)
+
+  utils.startTest(@"validate handle")
+  utils.evaluateHandle(handle, @"open(,'w')")
+  if handle >= utils.FIRST_HANDLE
+    repeat while LOCKTRY(bufferLock) == 0	       ' lock for exlusive use
+
+    utils.startTest(@"Write N Records")
+    utils.setCheckCountPerTest(2)
+    status := flash.SUCCESS
+    repeat recordNbr from 1 TO recordCount
+      testValue := COGID() << 8 + ($40 + recordNbr)    ' A, B, C, etc.
+      recordId := recordNbr
+      wordfill(@recordData, testValue, RECORD_DATA_LEN/2)
+      recordCRC := utils.record_crc(@record, RECORD_LEN)
+      ' debug("* write rcd #", udec_(recordNbr), " of 10")
+      ' utils.dbgMemDump(@"Record", @record, RECORD_LEN)
+      writeLength := flash.write(handle, @record, RECORD_LEN)
+      utils.evaluateSubValue(writeLength, @"write()", RECORD_LEN)
+      status := flash.error()
+      utils.evaluateSubStatus(status, @"write()", flash.SUCCESS)
+
+    utils.startTest(@"ensure no errors on Record writes")
     utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    bufferLock := locknew()                                                 'I'm allocating... reserve a lock for RT use
-    doneLock := locknew()                                                   ' guards doneCount
-    doneCount := 0
+    '  dump commit chain
+    utils.showPendingCommitChain(handle)
 
-    ' ---------------------------------------------------------------------
-    ' TEST SCENARIO 1: write tests by all cogs then read by main cog
-    ' ---------------------------------------------------------------------
-    ' early cogs get to write two files
+    '  close file
+    utils.startTest(@"Close written file")
+    status := utils.closeHandle(handle)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    debug("  ")
-    debug("* starting COGs")
-    workersStarted := 0
-    repeat cogIdx from 0 to WORKER_COUNT - 1
-        workerCog := cogspin(NEWCOG, genTwoFiles(@fileCountAr), @stack[cogIdx * STACK_SIZE_PER_COG])
-        if workerCog >= 0
-            workersStarted++
+    LOCKREL(bufferLock)				       ' release the lock, we're done with it
 
-    debug("* writing own files")
-   ' last cog gets to write two files
-    genTwoFiles(@fileCountAr)
+    expectedFileSize := recordCount * RECORD_LEN
 
-    debug("  ")
-    debug("* ------ waiting for ", udec_(workersStarted), " workers... ------")
-    waitLimit := getms() + WORKERS_DONE_LIMIT_MS
-    repeat while doneCount < workersStarted
-        if getms() - waitLimit > 0                                          ' signed difference, so a wrap of the millisecond count is harmless
-            quit
-        waitms(DONE_POLL_MS)
-    debug("* Let's see what happened")
+    expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
 
-    utils.startTest(@"Workers finished within the time limit")
-    utils.evaluateSingleValue(doneCount, @"workers done", workersStarted)
+    '  get single file stats and verify against expectation
+    utils.startTest(@"Ensure expected file stats")
+    utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedFileSize)
 
-    debug("*  after waiting on COGs to finish writing")
-    totalFiles := 0
-    repeat cogIdx from 0 to 7
-        totalFiles += BYTE[@fileCountAr][cogIdx]
-    'debug(" - found ", udec(totalFiles), " expected 16!")
-    utils.startTest(@"Check Cogs wrote All files")
-    utils.evaluateSingleValue(totalFiles, @"file written count", 16)
+    utils.startTest(@"Ensure expected unused bytes stats")
+    sizeUnused := flash.file_size_unused(pFilename)
+
+    expectedFileSize := recordCount * RECORD_LEN
+    allocatedFileSize := flash.BYTES_IN_HEAD_BLOCK
+    if expectedFileBlocks > 2
+      allocatedFileSize += (flash.BYTES_IN_BODY_BLOCK * 2)
+    elseif expectedFileBlocks > 1
+      allocatedFileSize += flash.BYTES_IN_BODY_BLOCK
+    utils.evaluateSingleValue(sizeUnused, @"file_size_unused()", allocatedFileSize - expectedFileSize)
+
+    utils.startTest(@"Ensure no error on size unused call")
+    status := flash.error()
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+PRI testVerifyRecords(pFilename, recordCount) | handle, status, recordNbr, rdLength, calcCRC
+'  open file for read
+
+  utils.startTest(@"Open File for read")
+  handle, status := utils.openWaitOnHandle(pFilename, "r")
+  utils.evaluateResultNegError(status, flash.SUCCESS)
+  '    seek to various locations and read longs validating for correct value
+
+  utils.startTest(@"validate handle")
+  utils.evaluateHandle(handle, @"open(,'r')")
+  if handle >= utils.FIRST_HANDLE
+    repeat while LOCKTRY(bufferLock) == 0    ' lock for exlusive use
+
+    dumpRecords(pFilename, handle, recordCount)
+
+    utils.startTest(@"read expected N RECORDs")
+    utils.setCheckCountPerTest(3)
+    repeat recordNbr from 1 TO recordCount
+      rdLength := flash.read(handle, @record, RECORD_LEN)
+      ' ensure length is same as expected
+      utils.evaluateSubValue(rdLength, @"read()", RECORD_LEN)
+      ' ensure record ID is same as expected
+      utils.evaluateSubValue(recordId, @"recordId", recordNbr)
+      ' ensure record CRC is same as expected
+      calcCRC := utils.record_crc(@record, RECORD_LEN)
+      utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
+      ' IF WE HAVE a CRC error then show buffers!
+      if calcCRC <> recordCRC
+	utils.dumpBlocksAtSplice(pFilename, recordNbr - 1, @record, RECORD_LEN, utils.RCD_DUMP_BYTES, utils.SPLICE_DUMP_BYTES)
+      if rdLength <> RECORD_LEN
+	DEBUG("- ABORT bad rcd length")
+	status := flash.error()
+	quit
+
+    utils.startTest(@"ensure no errors on read RECORDs")
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    '  read past end of file to verify read returns error
+    utils.startTest(@"BAD: read one more Record than written")
+    utils.setCheckCountPerTest(2)
+    rdLength := flash.read(handle, @record, RECORD_LEN)
+    utils.evaluateSubValue(rdLength, @"read()", 0)
+    status := flash.error()
+    utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
+
+    '  close file
+    utils.startTest(@"Close read file")
+    status := utils.closeHandle(handle)
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+    LOCKREL(bufferLock)			     ' release the lock, we're done with it
 
     utils.showFiles()
 
-    ' ---------------------------------------------------------------------
-    ' TEST SCENARIO 2: read/write tests by all cogs individually but at same time
-    ' ---------------------------------------------------------------------
-    runStringStress()
-
-    debug("TESTs complete")
-    utils.ShowTestEndCounts()
-    utils.ShowMultiCogTestResult(@"RT_read_write_8cog_tests")
-
-
-con ' ---- file tests ---
-
-pri genTwoFiles(pByteFileCountAr) | myId, delayMS, fType1, fType2, status
-
-    myId := cogid()
-    delayMS := utils.randomBelow(MAX_START_DELAY_MS)
-    debug("   ")
-    debug(" ----------------------- ")
-    debug("* Cog #", udec_(myId), " starting after ", udec(delayMS), "ms")
-    waitms(delayMS)
-
-    debug("* Mounting the FLASH")
-    utils.startTest(@"Mount the filesystem")
-    status := flash.mount()
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-    utils.startTestGroup(@"Cog write file #1")
-    fType1 := utils.randomBelow(FILE_TYPE_COUNT)
-    writeAndVerifyATestFile(fType1, myId)
-    BYTE[pByteFileCountAr][myId]++
-
-    utils.startTestGroup(@"Cog write file #2")
-    fType2 := utils.randomBelow(FILE_TYPE_COUNT)
-    writeAndVerifyATestFile(fType2, myId)
-    BYTE[pByteFileCountAr][myId]++
-
-    if myId <> 0
-        utils.ShowTestEndCounts()
-
-    debug("   ")
-    debug("* Cog #", udec_(myId), " DONE")
-
-    if myId <> 0                                                            ' a worker's counts are final, so tell the main cog
-        repeat while locktry(doneLock) == 0
-        doneCount++
-        lockrel(doneLock)
-
-
-pri testWriteRecords(pFilename, recordCount) | handle, status, testValue, writeLength, recordNbr, expectedFileSize, expectedFileBlocks, sizeUnused, allocatedFileSize
-    ' ----------------------------------
-    ' TEST
-        '  open file for write
-    '  ensure returns SUCCESS
-    debug("- testWriteRecords(", zstr_(pFilename), ", ", udec_(recordCount), ")")
-    utils.startTest(@"Open File for write")
-    handle, status := utils.openWaitOnHandle(pFilename, "w")
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-
-    utils.startTest(@"validate handle")
-    utils.evaluateHandle(handle, @"open(,'w')")
-    if handle >= utils.FIRST_HANDLE
-        repeat while locktry(bufferLock) == 0                                         'lock for exlusive use
-
-        utils.startTest(@"Write N Records")
-        utils.setCheckCountPerTest(2)
-        status := flash.SUCCESS
-        repeat recordNbr from 1 to recordCount
-            testValue := cogid() << 8 + ($40 + recordNbr)                    ' A, B, C, etc.
-            recordId := recordNbr
-            wordfill(@recordData, testValue, RECORD_DATA_LEN/2)
-            recordCRC := utils.record_crc(@record, RECORD_LEN)
-            'debug("* write rcd #", udec_(recordNbr), " of 10")
-            'utils.dbgMemDump(@"Record", @record, RECORD_LEN)
-            writeLength := flash.write(handle, @record, RECORD_LEN)
-            utils.evaluateSubValue(writeLength, @"write()", RECORD_LEN)
-            status := flash.error()
-            utils.evaluateSubStatus(status, @"write()", flash.SUCCESS)
-
-        utils.startTest(@"ensure no errors on Record writes")
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
-        '  dump commit chain
-        utils.showPendingCommitChain(handle)
-
-        '  close file
-        utils.startTest(@"Close written file")
-        status := utils.closeHandle(handle)
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
-        lockrel(bufferLock)                                                           ' release the lock, we're done with it
-
-        expectedFileSize := recordCount * RECORD_LEN
-
-        expectedFileBlocks := utils.blockCountForFileSize(expectedFileSize)
-
-        '  get single file stats and verify against expectation
-        utils.startTest(@"Ensure expected file stats")
-        utils.evaluateFileStats(pFilename, expectedFileBlocks, expectedFileSize)
-
-        utils.startTest(@"Ensure expected unused bytes stats")
-        sizeUnused := flash.file_size_unused(pFilename)
-
-        expectedFileSize := recordCount * RECORD_LEN
-        allocatedFileSize := flash.BYTES_IN_HEAD_BLOCK
-        if expectedFileBlocks > 2
-            allocatedFileSize += (flash.BYTES_IN_BODY_BLOCK * 2)
-        elseif expectedFileBlocks > 1
-            allocatedFileSize += flash.BYTES_IN_BODY_BLOCK
-        utils.evaluateSingleValue(sizeUnused, @"file_size_unused()", allocatedFileSize - expectedFileSize)
-
-        utils.startTest(@"Ensure no error on size unused call")
-        status := flash.error()
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
-
-pri testVerifyRecords(pFilename, recordCount) | handle, status, recordNbr, rdLength, calcCRC
-
-    '  open file for read
-    utils.startTest(@"Open File for read")
-    handle, status := utils.openWaitOnHandle(pFilename, "r")
-    utils.evaluateResultNegError(status, flash.SUCCESS)
-    '    seek to various locations and read longs validating for correct value
-
-    utils.startTest(@"validate handle")
-    utils.evaluateHandle(handle, @"open(,'r')")
-    if handle >= utils.FIRST_HANDLE
-        repeat while locktry(bufferLock) == 0                                         'lock for exlusive use
-
-        dumpRecords(pFilename, handle, recordCount)
-
-        utils.startTest(@"read expected N RECORDs")
-        utils.setCheckCountPerTest(3)
-        repeat recordNbr from 1 to recordCount
-            rdLength := flash.read(handle, @record, RECORD_LEN)
-            ' ensure length is same as expected
-            utils.evaluateSubValue(rdLength, @"read()", RECORD_LEN)
-            ' ensure record ID is same as expected
-            utils.evaluateSubValue(recordId, @"recordId", recordNbr)
-            ' ensure record CRC is same as expected
-            calcCRC := utils.record_crc(@record, RECORD_LEN)
-            utils.evaluateSubValue(calcCRC, @"recordCRC", recordCRC)
-            ' IF WE HAVE a CRC error then show buffers!
-            if calcCRC <> recordCRC
-                utils.dumpBlocksAtSplice(pFilename, recordNbr - 1, @record, RECORD_LEN, utils.RCD_DUMP_BYTES, utils.SPLICE_DUMP_BYTES)
-            if rdLength <> RECORD_LEN
-                debug("- ABORT bad rcd length")
-                status := flash.error()
-                quit
-
-        utils.startTest(@"ensure no errors on read RECORDs")
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
-        '  read past end of file to verify read returns error
-        utils.startTest(@"BAD: read one more Record than written")
-        utils.setCheckCountPerTest(2)
-        rdLength := flash.read(handle, @record, RECORD_LEN)
-        utils.evaluateSubValue(rdLength, @"read()", 0)
-        status := flash.error()
-        utils.evaluateSubStatus(status, @"read()", flash.E_END_OF_FILE)
-
-        '  close file
-        utils.startTest(@"Close read file")
-        status := utils.closeHandle(handle)
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
-        lockrel(bufferLock)                                                           ' release the lock, we're done with it
-
-        utils.showFiles()
-
-
-con ' ---- string stress run ---
+CON ' ---- string stress run ---
 
 PRI runStringStress() | cogIdx, workerCog, workersStarted, waitLimit, worstTicks, ticksPerMicro
 ' Run the string stress run on every cog at once: each cog writes its own file with wr_str(), reads it back with rd_str()
@@ -327,59 +324,57 @@ PRI runStringStress() | cogIdx, workerCog, workersStarted, waitLimit, worstTicks
 ' @local worstTicks - longest call of any cog, in clock ticks
 ' @local ticksPerMicro - clock ticks in one microsecond at the running clock frequency
 
-    debug("  ")
-    debug("* starting COGs for the string stress run")
-    stressStart := FALSE
-    stressReady := 0
-    stressDone := 0
-    longfill(@worstWait, 0, COG_COUNT)
-    workersStarted := 0
-    repeat WORKER_COUNT with cogIdx
-        workerCog := cogspin(NEWCOG, stressWorker(), @stressStack[cogIdx * STACK_SIZE_PER_COG])
-        if workerCog >= 0
-            workersStarted++
+  DEBUG("  ")
+  DEBUG("* starting COGs for the string stress run")
+  stressStart := FALSE
+  stressReady := 0
+  stressDone := 0
+  longfill(@worstWait, 0, COG_COUNT)
+  workersStarted := 0
+  repeat WORKER_COUNT with cogIdx
+    workerCog := cogspin(NEWCOG, stressWorker(), @stressStack[cogIdx * STACK_SIZE_PER_COG])
+    if workerCog >= 0
+      workersStarted++
 
-    waitLimit := getms() + STRESS_START_LIMIT_MS
-    repeat while stressReady < workersStarted
-        if getms() - waitLimit > 0                                          ' signed difference, so a wrap of the millisecond count is harmless
-            quit
-        waitms(STRESS_POLL_MS)
-    stressStart := TRUE                                                     ' every cog of the run begins together
+  waitLimit := getms() + STRESS_START_LIMIT_MS
+  repeat while stressReady < workersStarted
+    if getms() - waitLimit > 0		  ' signed difference, so a wrap of the millisecond count is harmless
+      quit
+    waitms(STRESS_POLL_MS)
+  stressStart := TRUE			  ' every cog of the run begins together
 
-    stressStrings()                                                         ' the main cog writes and reads its own file too
+  stressStrings()			  ' the main cog writes and reads its own file too
 
-    waitLimit := getms() + STRESS_DONE_LIMIT_MS
-    repeat while stressDone < workersStarted
-        if getms() - waitLimit > 0
-            quit
-        waitms(STRESS_POLL_MS)
+  waitLimit := getms() + STRESS_DONE_LIMIT_MS
+  repeat while stressDone < workersStarted
+    if getms() - waitLimit > 0
+      quit
+    waitms(STRESS_POLL_MS)
 
-    utils.startTest(@"Every worker of the string stress run started")
-    utils.evaluateSingleValue(workersStarted, @"stress workers started", WORKER_COUNT)
-    utils.startTest(@"Every worker finished the string stress run within the time limit")
-    utils.evaluateSingleValue(stressDone, @"stress workers done", workersStarted)
+  utils.startTest(@"Every worker of the string stress run started")
+  utils.evaluateSingleValue(workersStarted, @"stress workers started", WORKER_COUNT)
+  utils.startTest(@"Every worker finished the string stress run within the time limit")
+  utils.evaluateSingleValue(stressDone, @"stress workers done", workersStarted)
 
-    worstTicks := 0
-    repeat COG_COUNT with cogIdx
-        if worstWait[cogIdx] +> worstTicks                                  ' unsigned: a tick count above POSX is still a count
-            worstTicks := worstWait[cogIdx]
-    ticksPerMicro := clkfreq +/ MICROS_PER_SECOND
-    debug("* string stress run: worst lock wait observed (one wr_str() or rd_str() call) ", udec_(worstTicks), " ticks = ", udec_(worstTicks +/ ticksPerMicro), " us at ", udec_(clkfreq), " Hz")
-
+  worstTicks := 0
+  repeat COG_COUNT with cogIdx
+    if worstWait[cogIdx] +> worstTicks	  ' unsigned: a tick count above POSX is still a count
+      worstTicks := worstWait[cogIdx]
+  ticksPerMicro := clkfreq +/ MICROS_PER_SECOND
+  DEBUG("* string stress run: worst lock wait observed (one wr_str() or rd_str() call) ", udec_(worstTicks), " ticks = ", udec_(worstTicks +/ ticksPerMicro), " us at ", udec_(clkfreq), " Hz")
 
 PRI stressWorker()
 ' Run in its own cog: report ready, wait for the main cog's release, run the string stress run, then report done.
 
-    repeat while locktry(doneLock) == 0
-    stressReady++
-    lockrel(doneLock)
-    repeat until stressStart
-    stressStrings()
-    utils.ShowTestEndCounts()
-    repeat while locktry(doneLock) == 0
-    stressDone++
-    lockrel(doneLock)
-
+  repeat while LOCKTRY(doneLock) == 0
+  stressReady++
+  LOCKREL(doneLock)
+  repeat until stressStart
+  stressStrings()
+  utils.ShowTestEndCounts()
+  repeat while LOCKTRY(doneLock) == 0
+  stressDone++
+  LOCKREL(doneLock)
 
 PRI stressStrings() | myId, pName, pWrite, pRead, handle, status, strIdx, startTicks, badCount, readLength
 ' Write STRESS_STRINGS strings to this cog's own file with wr_str(), read them back with rd_str(), and time every call.
@@ -396,50 +391,49 @@ PRI stressStrings() | myId, pName, pWrite, pRead, handle, status, strIdx, startT
 ' @local badCount - calls that did not do what they should
 ' @local readLength - what rd_str() returned
 
-    myId := cogid()
-    pName := @stressNames[myId * STRESS_NAME_LEN]
-    pWrite := @stressWrBuf[myId * STRESS_BUF]
-    pRead := @stressRdBuf[myId * STRESS_BUF]
-    strcopy(pName, @stressTemplate, STRESS_NAME_LEN - 1)
-    BYTE[pName][STRESS_NAME_DIGIT] := "0" + myId
+  myId := COGID()
+  pName := @stressNames[myId * STRESS_NAME_LEN]
+  pWrite := @stressWrBuf[myId * STRESS_BUF]
+  pRead := @stressRdBuf[myId * STRESS_BUF]
+  strcopy(pName, @stressTemplate, STRESS_NAME_LEN - 1)
+  BYTE[pName][STRESS_NAME_DIGIT] := "0" + myId
 
-    utils.startTestGroup(@"String stress run: every cog writes and reads strings at once")
-    utils.startTest(@"Open string file for write")
-    handle, status := utils.openWaitOnHandle(pName, "w")
+  utils.startTestGroup(@"String stress run: every cog writes and reads strings at once")
+  utils.startTest(@"Open string file for write")
+  handle, status := utils.openWaitOnHandle(pName, "w")
+  utils.evaluateResultNegError(status, flash.SUCCESS)
+  if handle >= utils.FIRST_HANDLE
+    utils.startTest(@"wr_str() of every string")
+    badCount := 0
+    repeat STRESS_STRINGS with strIdx
+      fillString(pWrite, myId, strIdx)
+      startTicks := GETCT()
+      status := flash.wr_str(handle, pWrite)
+      noteWait(myId, GETCT() - startTicks)
+      if status <> flash.SUCCESS
+	badCount++
+    utils.evaluateSingleValue(badCount, @"wr_str() calls that failed", 0)
+    utils.startTest(@"Close written string file")
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
-    if handle >= utils.FIRST_HANDLE
-        utils.startTest(@"wr_str() of every string")
-        badCount := 0
-        repeat STRESS_STRINGS with strIdx
-            fillString(pWrite, myId, strIdx)
-            startTicks := getct()
-            status := flash.wr_str(handle, pWrite)
-            noteWait(myId, getct() - startTicks)
-            if status <> flash.SUCCESS
-                badCount++
-        utils.evaluateSingleValue(badCount, @"wr_str() calls that failed", 0)
-        utils.startTest(@"Close written string file")
-        status := utils.closeHandle(handle)
-        utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    utils.startTest(@"Open string file for read")
-    handle, status := utils.openWaitOnHandle(pName, "r")
+  utils.startTest(@"Open string file for read")
+  handle, status := utils.openWaitOnHandle(pName, "r")
+  utils.evaluateResultNegError(status, flash.SUCCESS)
+  if handle >= utils.FIRST_HANDLE
+    utils.startTest(@"rd_str() of every string returns it whole")
+    badCount := 0
+    repeat STRESS_STRINGS with strIdx
+      fillString(pWrite, myId, strIdx)
+      startTicks := GETCT()
+      readLength := flash.rd_str(handle, pRead, STRESS_BUF)
+      noteWait(myId, GETCT() - startTicks)
+      if flash.error() <> flash.SUCCESS OR readLength <> strsize(pWrite) OR NOT strcomp(pRead, pWrite)
+	badCount++
+    utils.evaluateSingleValue(badCount, @"rd_str() calls that did not return the string written", 0)
+    utils.startTest(@"Close read string file")
+    status := utils.closeHandle(handle)
     utils.evaluateResultNegError(status, flash.SUCCESS)
-    if handle >= utils.FIRST_HANDLE
-        utils.startTest(@"rd_str() of every string returns it whole")
-        badCount := 0
-        repeat STRESS_STRINGS with strIdx
-            fillString(pWrite, myId, strIdx)
-            startTicks := getct()
-            readLength := flash.rd_str(handle, pRead, STRESS_BUF)
-            noteWait(myId, getct() - startTicks)
-            if flash.error() <> flash.SUCCESS or readLength <> strsize(pWrite) or not strcomp(pRead, pWrite)
-                badCount++
-        utils.evaluateSingleValue(badCount, @"rd_str() calls that did not return the string written", 0)
-        utils.startTest(@"Close read string file")
-        status := utils.closeHandle(handle)
-        utils.evaluateResultNegError(status, flash.SUCCESS)
-
 
 PRI fillString(pDest, myId, strIdx) | charCount, charIdx
 ' Build one string of the stress run: the cog's letter, then lower-case letters, 1 to STRESS_MAX_CHARS characters long.
@@ -452,13 +446,12 @@ PRI fillString(pDest, myId, strIdx) | charCount, charIdx
 ' @local charCount - characters of the string, without the terminator
 ' @local charIdx - number of the letter after the first
 
-    charCount := (strIdx +// STRESS_MAX_CHARS) + 1
-    BYTE[pDest][0] := "A" + myId
-    if charCount > 1
-        repeat charCount - 1 with charIdx
-            BYTE[pDest][charIdx + 1] := "a" + ((strIdx + charIdx) +// LETTER_COUNT)
-    BYTE[pDest][charCount] := 0
-
+  charCount := (strIdx +// STRESS_MAX_CHARS) + 1
+  BYTE[pDest][0] := "A" + myId
+  if charCount > 1
+    repeat charCount - 1 with charIdx
+      BYTE[pDest][charIdx + 1] := "a" + ((strIdx + charIdx) +// LETTER_COUNT)
+  BYTE[pDest][charCount] := 0
 
 PRI noteWait(myId, elapsedTicks)
 ' Keep the longest call of a cog.
@@ -466,74 +459,69 @@ PRI noteWait(myId, elapsedTicks)
 ' @param myId - cog ID of the cog that made the call
 ' @param elapsedTicks - clock ticks the call took, getct() after less getct() before
 
-    if elapsedTicks +> worstWait[myId]                                      ' unsigned: a tick count above POSX is still a count
-        worstWait[myId] := elapsedTicks
+  if elapsedTicks +> worstWait[myId]	' unsigned: a tick count above POSX is still a count
+    worstWait[myId] := elapsedTicks
 
-
-con ' ---- Utility Methods ---
+CON ' ---- Utility Methods ---
 
 PRI dumpRecords(pFilename, handle, totalRecordsWritten) | lenBytes, recordNbr, rdLength, pErr
 ' Show every record of an open file, then return the file to its start.
 
-    '  file is already open  for read
-    lenBytes := flash.file_size(pFilename)
+'  file is already open  for read
 
+  lenBytes := flash.file_size(pFilename)
 
-    debug("   ")
-    debug("** /----- dumping ", udec_(totalRecordsWritten), " records [contains ", udec_(lenBytes/RECORD_LEN), " records]")
-    repeat recordNbr from 1 to totalRecordsWritten
-        rdLength := flash.read(handle, @record, RECORD_LEN)
-        if rdLength >= 0 and rdLength <> RECORD_LEN
-            debug("-- bad length [", udec_(rdLength), " vs. ", udec_(RECORD_LEN), "]")
-        elseif rdLength < 0
-            pErr := flash.string_for_error(rdLength)
-            debug("-- read error: ", zstr_(pErr))
-        utils.dbgMemDump(utils.recordTitle(recordNbr), @record, RECORD_LEN)
-    debug("** \----- ----- ----- ----- ----- ----- ----- ")
-    debug("   ")
-    flash.seek(handle, 0, flash.SK_FILE_START)
+  DEBUG("   ")
+  DEBUG("** /----- dumping ", udec_(totalRecordsWritten), " records [contains ", udec_(lenBytes/RECORD_LEN), " records]")
+  repeat recordNbr from 1 TO totalRecordsWritten
+    rdLength := flash.read(handle, @record, RECORD_LEN)
+    if rdLength >= 0 AND rdLength <> RECORD_LEN
+      DEBUG("-- bad length [", udec_(rdLength), " vs. ", udec_(RECORD_LEN), "]")
+    elseif rdLength < 0
+      pErr := flash.string_for_error(rdLength)
+      DEBUG("-- read error: ", zstr_(pErr))
+    utils.dbgMemDump(utils.recordTitle(recordNbr), @record, RECORD_LEN)
+  DEBUG("** \----- ----- ----- ----- ----- ----- ----- ")
+  DEBUG("   ")
+  flash.seek(handle, 0, flash.SK_FILE_START)
 
+PRI writeAndVerifyATestFile(fileType, myId) | BYTE filename[FILE_NAME_LEN]
+  case fileType
+    0:
+      fillinFilename(@filename, myId, @"by", @"file.bin", FILE_NAME_LEN)
+      utils.testWriteBytes(@filename, 5, utils.SKIP_FS_STATS, 0)
+      utils.testVerifyBytes(@filename, 5)
+    1:
+      fillinFilename(@filename, myId, @"wd", @"file.bin", FILE_NAME_LEN)
+      utils.testWriteWords(@filename, 5, utils.SKIP_FS_STATS, 0)
+      utils.testVerifyWords(@filename, 5)
+    2:
+      fillinFilename(@filename, myId, @"ln", @"file.bin", FILE_NAME_LEN)
+      utils.testWriteLongs(@filename, 5, utils.SKIP_FS_STATS, 0)
+      utils.testVerifyLongs(@filename, 5)
+    3:
+      fillinFilename(@filename, myId, @"zs", @"file.str", FILE_NAME_LEN)
+      utils.testWriteStrings(@filename, 5, utils.SKIP_FS_STATS, 0)
+      utils.testVerifyStrings(@filename, 5)
+    4:
+      fillinFilename(@filename, myId, @"rc", @"file.bin", FILE_NAME_LEN)
+      testWriteRecords(@filename, 5)
+      testVerifyRecords(@filename, 5)
 
-pri writeAndVerifyATestFile(fileType, myId) | BYTE filename[FILE_NAME_LEN]
-    case fileType
-      0:
-        fillinFilename(@filename, myId, @"by", @"file.bin", FILE_NAME_LEN)
-        utils.testWriteBytes(@filename, 5, utils.SKIP_FS_STATS, 0)
-        utils.testVerifyBytes(@filename, 5)
-      1:
-        fillinFilename(@filename, myId, @"wd", @"file.bin", FILE_NAME_LEN)
-        utils.testWriteWords(@filename, 5, utils.SKIP_FS_STATS, 0)
-        utils.testVerifyWords(@filename, 5)
-      2:
-        fillinFilename(@filename, myId, @"ln", @"file.bin", FILE_NAME_LEN)
-        utils.testWriteLongs(@filename, 5, utils.SKIP_FS_STATS, 0)
-        utils.testVerifyLongs(@filename, 5)
-      3:
-        fillinFilename(@filename, myId, @"zs", @"file.str", FILE_NAME_LEN)
-        utils.testWriteStrings(@filename, 5, utils.SKIP_FS_STATS, 0)
-        utils.testVerifyStrings(@filename, 5)
-      4:
-        fillinFilename(@filename, myId, @"rc", @"file.bin", FILE_NAME_LEN)
-        testWriteRecords(@filename, 5)
-        testVerifyRecords(@filename, 5)
+    ' debug(" - Wrote: [", zstr_(@filename), "]")
 
-    'debug(" - Wrote: [", zstr_(@filename), "]")
+PRI fillinFilename(pFilename, cogIdNbr, pType2ltr, pSuffix, bffrLen) | fileID
 
+  fileID := ++fileNbr	 ' yeah don't let this get past 99
+  strcopy(pFilename, pType2ltr, 2)
+  BYTE[pFilename][2] := $2d
+  BYTE[pFilename][3] := cogIdNbr + $30
+  BYTE[pFilename][4] := (fileID / 10) + $30
+  BYTE[pFilename][5] := (fileID +// 10) + $30
+  BYTE[pFilename][6] := $2d
+  strcopy(@BYTE[pFilename][7], pSuffix, bffrLen - 7)
 
-pri fillinFilename(pFilename, cogIdNbr, pType2ltr, pSuffix, bffrLen) | fileID
-
-    fileID := ++fileNbr ' yeah don't let this get past 99
-    strcopy(pFilename, pType2ltr, 2)
-    BYTE[pFilename][2] := $2d
-    BYTE[pFilename][3] := cogIdNbr + $30
-    BYTE[pFilename][4] := (fileID / 10) + $30
-    BYTE[pFilename][5] := (fileID +// 10) + $30
-    BYTE[pFilename][6] := $2d
-    strcopy(@BYTE[pFilename][7], pSuffix, bffrLen - 7)
-
-
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================

@@ -27,7 +27,7 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -39,47 +39,45 @@ CON
 '}
 
 OBJ
-    flash : "flash_fs"
-    utils : "RT_utilities"
+  flash   : "flash_fs"
+  utils   : "RT_utilities"
 
 CON ' ---- Test Geometry ----
 
-    HANDLE_SLOTS = flash.MAX_FILES_OPEN #> 1            ' handles the cases record as held
-    PATTERN_BYTES = 100                                 ' bytes of the file the round trip writes and reads back
-    PATTERN_BASE = $A5                                  ' value of the first byte of the pattern
-    BYTE_MASK = $FF                                     ' keeps a value to one byte
-    UNREAD_FILL = $EE                                   ' value the read buffer holds before the read
-    NO_MISMATCH = -1                                    ' firstMismatch() result when the buffers agree
-    NAME_DIGIT_RADIX = 10                               ' radix of the numbers in the names of the files that fill the handles
-    FILL_TENS_OFFSET = 4                                ' offset of the tens digit in the fill file name
-    FILL_ONES_OFFSET = 5                                ' offset of the ones digit in the fill file name
+  HANDLE_SLOTS	    = flash.MAX_FILES_OPEN #> 1    ' handles the cases record as held
+  PATTERN_BYTES     = 100			   ' bytes of the file the round trip writes and reads back
+  PATTERN_BASE	    = $A5			   ' value of the first byte of the pattern
+  BYTE_MASK	    = $FF			   ' keeps a value to one byte
+  UNREAD_FILL	    = $EE			   ' value the read buffer holds before the read
+  NO_MISMATCH	    = -1			   ' firstMismatch() result when the buffers agree
+  NAME_DIGIT_RADIX  = 10			   ' radix of the numbers in the names of the files that fill the handles
+  FILL_TENS_OFFSET  = 4				   ' offset of the tens digit in the fill file name
+  FILL_ONES_OFFSET  = 5				   ' offset of the ones digit in the fill file name
 
-DAT ' ---- Files and Buffers ----
+DAT  ' ---- Files and Buffers ----
 
-roundTripFile   BYTE    "smoke.bin", 0                  ' the file the round trip writes and reads back
-fillFile        BYTE    "fill00.bin", 0                 ' template of the names of the files that fill the handles
-extraFile       BYTE    "extra.bin", 0                  ' the name opened when every handle is in use
+  roundTripFile  BYTE  "smoke.bin", 0	   ' the file the round trip writes and reads back
+  fillFile	 BYTE  "fill00.bin", 0	   ' template of the names of the files that fill the handles
+  extraFile	 BYTE  "extra.bin", 0	   ' the name opened when every handle is in use
 
-heldHandles     LONG    0[HANDLE_SLOTS]                 ' handles the fill cases hold
-writeBuf        BYTE    0[PATTERN_BYTES]                ' the bytes the round trip writes
-readBuf         BYTE    0[PATTERN_BYTES]                ' the bytes the round trip reads back
-
+  heldHandles	 LONG  0[HANDLE_SLOTS]	   ' handles the fill cases hold
+  writeBuf	 BYTE  0[PATTERN_BYTES]    ' the bytes the round trip writes
+  readBuf	 BYTE  0[PATTERN_BYTES]    ' the bytes the round trip reads back
 
 PUB go()
 '' Run the checks that fit the MAX_FILES_OPEN of the driver, then show the result.
 ''
 
-    utils.setCheckCountPerTest(1)                       ' each check of a case is shown on its own
+  utils.setCheckCountPerTest(1)    ' each check of a case is shown on its own
 
-    if flash.MAX_FILES_OPEN < 1
-        testNoHandles()
-    else
-        testRoundTrip()
-        testEveryHandle()
+  if flash.MAX_FILES_OPEN < 1
+    testNoHandles()
+  else
+    testRoundTrip()
+    testEveryHandle()
 
-    debug("* Test Complete")
-    utils.ShowTestResult(@"RT_single_handle_smoke_tests")
-
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_single_handle_smoke_tests")
 
 PRI testNoHandles() | status, errCode, bAnswer
 ' A driver built with no handle refuses to mount, to format and to check a mount, and mounts nothing.
@@ -89,30 +87,29 @@ PRI testNoHandles() | status, errCode, bAnswer
 ' @local errCode - error() after the call
 ' @local bAnswer - what can_mount() returned
 
-    utils.startTestGroup(@"a driver built with MAX_FILES_OPEN below 1")
+  utils.startTestGroup(@"a driver built with MAX_FILES_OPEN below 1")
 
-    utils.startTest(@"mount() has no handle to give")
-    status := flash.mount()
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"mount()", flash.E_NO_HANDLE)
-    utils.evaluateSubStatus(errCode, @"error() after mount()", flash.E_NO_HANDLE)
-    utils.evaluateSubValue(flash.mounted(), @"mounted()", FALSE)
+  utils.startTest(@"mount() has no handle to give")
+  status := flash.mount()
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"mount()", flash.E_NO_HANDLE)
+  utils.evaluateSubStatus(errCode, @"error() after mount()", flash.E_NO_HANDLE)
+  utils.evaluateSubValue(flash.mounted(), @"mounted()", FALSE)
 
-    utils.startTest(@"can_mount() makes no check")
-    bAnswer := flash.can_mount()
-    errCode := flash.error()
-    utils.evaluateSubValue(bAnswer, @"can_mount()", FALSE)
-    utils.evaluateSubStatus(errCode, @"error() after can_mount()", flash.E_NO_HANDLE)
+  utils.startTest(@"can_mount() makes no check")
+  bAnswer := flash.can_mount()
+  errCode := flash.error()
+  utils.evaluateSubValue(bAnswer, @"can_mount()", FALSE)
+  utils.evaluateSubStatus(errCode, @"error() after can_mount()", flash.E_NO_HANDLE)
 
-    utils.startTest(@"format() changes nothing and mounts nothing")
-    status := flash.format()
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"format()", flash.E_NO_HANDLE)
-    utils.evaluateSubStatus(errCode, @"error() after format()", flash.E_NO_HANDLE)
-    utils.evaluateSubValue(flash.mounted(), @"mounted()", FALSE)
+  utils.startTest(@"format() changes nothing and mounts nothing")
+  status := flash.FORMAT()
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"format()", flash.E_NO_HANDLE)
+  utils.evaluateSubStatus(errCode, @"error() after format()", flash.E_NO_HANDLE)
+  utils.evaluateSubValue(flash.mounted(), @"mounted()", FALSE)
 
-
-PRI testRoundTrip() | status, errCode, handle, byteCount, mismatchIdx
+PRI testRoundTrip() | status, errCode, HANDLE, byteCount, mismatchIdx
 ' Write a known pattern to a new file through one handle, then read it back through one handle.
 
 ' Local Variables:
@@ -122,43 +119,42 @@ PRI testRoundTrip() | status, errCode, handle, byteCount, mismatchIdx
 ' @local byteCount - what write() or read() returned
 ' @local mismatchIdx - offset of the first byte that differs between what was written and what was read
 
-    utils.startTestGroup(@"a file written and read back through one handle")
-    fillPattern()
+  utils.startTestGroup(@"a file written and read back through one handle")
+  fillPattern()
 
-    utils.startTest(@"format() leaves a mounted, empty filesystem")
-    status := flash.format()
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after format()", flash.SUCCESS)
-    utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
+  utils.startTest(@"format() leaves a mounted, empty filesystem")
+  status := flash.FORMAT()
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after format()", flash.SUCCESS)
+  utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
 
-    utils.startTest(@"open(,w) of a new file")
-    handle := openChecked(@roundTripFile, flash.FILEMODE_WRITE)
+  utils.startTest(@"open(,w) of a new file")
+  HANDLE := openChecked(@roundTripFile, flash.FILEMODE_WRITE)
 
-    utils.startTest(@"write() of the pattern")
-    byteCount := flash.write(handle, @writeBuf, PATTERN_BYTES)
-    errCode := flash.error()
-    utils.evaluateSubValue(byteCount, @"bytes written", PATTERN_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after write()", flash.SUCCESS)
+  utils.startTest(@"write() of the pattern")
+  byteCount := flash.write(HANDLE, @writeBuf, PATTERN_BYTES)
+  errCode := flash.error()
+  utils.evaluateSubValue(byteCount, @"bytes written", PATTERN_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after write()", flash.SUCCESS)
 
-    utils.startTest(@"close() of the written file")
-    closeChecked(handle)
+  utils.startTest(@"close() of the written file")
+  closeChecked(HANDLE)
 
-    utils.startTest(@"open(,r) of the file")
-    handle := openChecked(@roundTripFile, flash.FILEMODE_READ)
+  utils.startTest(@"open(,r) of the file")
+  HANDLE := openChecked(@roundTripFile, flash.FILEMODE_READ)
 
-    utils.startTest(@"read() of the pattern")
-    bytefill(@readBuf, UNREAD_FILL, PATTERN_BYTES)
-    byteCount := flash.read(handle, @readBuf, PATTERN_BYTES)
-    errCode := flash.error()
-    mismatchIdx := firstMismatch(@writeBuf, @readBuf, PATTERN_BYTES)
-    utils.evaluateSubValue(byteCount, @"bytes read", PATTERN_BYTES)
-    utils.evaluateSubStatus(errCode, @"error() after read()", flash.SUCCESS)
-    utils.evaluateSubValue(mismatchIdx, @"offset of the first byte that differs", NO_MISMATCH)
+  utils.startTest(@"read() of the pattern")
+  bytefill(@readBuf, UNREAD_FILL, PATTERN_BYTES)
+  byteCount := flash.read(HANDLE, @readBuf, PATTERN_BYTES)
+  errCode := flash.error()
+  mismatchIdx := firstMismatch(@writeBuf, @readBuf, PATTERN_BYTES)
+  utils.evaluateSubValue(byteCount, @"bytes read", PATTERN_BYTES)
+  utils.evaluateSubStatus(errCode, @"error() after read()", flash.SUCCESS)
+  utils.evaluateSubValue(mismatchIdx, @"offset of the first byte that differs", NO_MISMATCH)
 
-    utils.startTest(@"close() of the file that was read")
-    closeChecked(handle)
-
+  utils.startTest(@"close() of the file that was read")
+  closeChecked(HANDLE)
 
 PRI testEveryHandle() | slotIdx, status, errCode
 ' Hold every handle the driver has at once, find the next open() refused, and give every handle back.
@@ -168,26 +164,25 @@ PRI testEveryHandle() | slotIdx, status, errCode
 ' @local status - what open() returned for the open that has no handle left
 ' @local errCode - error() after that open()
 
-    utils.startTestGroup(@"every handle held at once")
+  utils.startTestGroup(@"every handle held at once")
 
-    repeat flash.MAX_FILES_OPEN with slotIdx
-        utils.startTest(@"open(,w) takes a handle while one is free")
-        setFillName(slotIdx)
-        heldHandles[slotIdx] := openChecked(@fillFile, flash.FILEMODE_WRITE)
-        utils.evaluateSubValue(isNewHandle(slotIdx), @"handle differs from the handles already held", TRUE)
+  repeat flash.MAX_FILES_OPEN with slotIdx
+    utils.startTest(@"open(,w) takes a handle while one is free")
+    setFillName(slotIdx)
+    heldHandles[slotIdx] := openChecked(@fillFile, flash.FILEMODE_WRITE)
+    utils.evaluateSubValue(isNewHandle(slotIdx), @"handle differs from the handles already held", TRUE)
 
-    utils.startTest(@"open() with every handle in use")
-    status := flash.open(@extraFile, flash.FILEMODE_WRITE)
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"open()", flash.E_NO_HANDLE)
-    utils.evaluateSubStatus(errCode, @"error() after open()", flash.E_NO_HANDLE)
+  utils.startTest(@"open() with every handle in use")
+  status := flash.open(@extraFile, flash.FILEMODE_WRITE)
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"open()", flash.E_NO_HANDLE)
+  utils.evaluateSubStatus(errCode, @"error() after open()", flash.E_NO_HANDLE)
 
-    repeat flash.MAX_FILES_OPEN with slotIdx
-        utils.startTest(@"close() gives a handle back")
-        closeChecked(heldHandles[slotIdx])
+  repeat flash.MAX_FILES_OPEN with slotIdx
+    utils.startTest(@"close() gives a handle back")
+    closeChecked(heldHandles[slotIdx])
 
-
-PRI openChecked(pFilename, mode) : handle | errCode
+PRI openChecked(pFilename, mode) : HANDLE | errCode
 ' Open a file inside a running test, and check open() returned a handle in the range of handles and error() holds SUCCESS.
 
 ' @param pFilename - address of zstring with the file name
@@ -197,13 +192,12 @@ PRI openChecked(pFilename, mode) : handle | errCode
 ' Local Variables:
 ' @local errCode - error() after open()
 
-    handle := flash.open(pFilename, mode)
-    errCode := flash.error()
-    utils.evaluateSubValue(isUsableHandle(handle), @"open() returned a handle in the range of handles", TRUE)
-    utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
+  HANDLE := flash.open(pFilename, mode)
+  errCode := flash.error()
+  utils.evaluateSubValue(isUsableHandle(HANDLE), @"open() returned a handle in the range of handles", TRUE)
+  utils.evaluateSubStatus(errCode, @"error() after open()", flash.SUCCESS)
 
-
-PRI closeChecked(handle) | status, errCode
+PRI closeChecked(HANDLE) | status, errCode
 ' Close a handle inside a running test, and check close() and error() both report SUCCESS.
 
 ' @param handle - handle to close
@@ -212,20 +206,18 @@ PRI closeChecked(handle) | status, errCode
 ' @local status - what close() returned
 ' @local errCode - error() after close()
 
-    status := flash.close(handle)
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after close()", flash.SUCCESS)
+  status := flash.close(HANDLE)
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after close()", flash.SUCCESS)
 
-
-PRI isUsableHandle(handle) : bUsable
+PRI isUsableHandle(HANDLE) : bUsable
 ' Tell whether a value is one of the handles open() hands out.
 
 ' @param handle - value open() returned
 ' @returns bUsable - TRUE when the value is inside the range of handles
 
-    bUsable := handle >= flash.HANDLE_BASE and handle < flash.HANDLE_BASE + flash.MAX_FILES_OPEN
-
+  bUsable := HANDLE >= flash.HANDLE_BASE AND HANDLE < flash.HANDLE_BASE + flash.MAX_FILES_OPEN
 
 PRI isNewHandle(slotIdx) : bNew | priorIdx
 ' Tell whether the handle held in a slot differs from the handles held in the slots before it.
@@ -236,21 +228,19 @@ PRI isNewHandle(slotIdx) : bNew | priorIdx
 ' Local Variables:
 ' @local priorIdx - number of the earlier slot being compared
 
-    bNew := TRUE
-    if slotIdx > 0
-        repeat slotIdx with priorIdx
-            if heldHandles[priorIdx] == heldHandles[slotIdx]
-                bNew := FALSE
-
+  bNew := TRUE
+  if slotIdx > 0
+    repeat slotIdx with priorIdx
+      if heldHandles[priorIdx] == heldHandles[slotIdx]
+	bNew := FALSE
 
 PRI setFillName(slotIdx)
 ' Put the number of a handle slot, as two digits, in the name of the file that fills the slot.
 
 ' @param slotIdx - number of the handle slot, from 0 to 99
 
-    BYTE[@fillFile][FILL_TENS_OFFSET] := "0" + (slotIdx / NAME_DIGIT_RADIX)
-    BYTE[@fillFile][FILL_ONES_OFFSET] := "0" + (slotIdx +// NAME_DIGIT_RADIX)
-
+  BYTE[@fillFile][FILL_TENS_OFFSET] := "0" + (slotIdx / NAME_DIGIT_RADIX)
+  BYTE[@fillFile][FILL_ONES_OFFSET] := "0" + (slotIdx +// NAME_DIGIT_RADIX)
 
 PRI fillPattern() | byteIdx
 ' Fill the write buffer with the pattern the round trip writes.
@@ -258,9 +248,8 @@ PRI fillPattern() | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being filled
 
-    repeat PATTERN_BYTES with byteIdx
-        BYTE[@writeBuf][byteIdx] := (PATTERN_BASE + byteIdx) & BYTE_MASK
-
+  repeat PATTERN_BYTES with byteIdx
+    BYTE[@writeBuf][byteIdx] := (PATTERN_BASE + byteIdx) & BYTE_MASK
 
 PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Find the first byte at which two buffers differ.
@@ -273,14 +262,13 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being compared
 
-    mismatchIdx := NO_MISMATCH
-    repeat byteCount with byteIdx
-        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-            mismatchIdx := byteIdx
-            quit
+  mismatchIdx := NO_MISMATCH
+  repeat byteCount with byteIdx
+    if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+      mismatchIdx := byteIdx
+      quit
 
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================

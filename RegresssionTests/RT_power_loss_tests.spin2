@@ -89,7 +89,7 @@
 
 CON
 
-     _CLKFREQ        = 320_000_000
+  _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -101,173 +101,172 @@ CON
 '}
 
 OBJ
-    flash : "flash_fs"
-    utils : "RT_utilities"
+  flash   : "flash_fs"
+  utils   : "RT_utilities"
 
 CON ' ---- Test Geometry ----
 
-    BODY_TAIL_BYTES = 1000                              ' bytes of a two-block file that go into its body block
-    FILE_BYTES = flash.BYTES_IN_HEAD_BLOCK + BODY_TAIL_BYTES ' bytes of each two-block file: a full head block and part of a body
-    ONE_BLOCK_BYTES = 100                               ' bytes of the one-block file
-    FILE_COUNT = 3                                      ' files each group writes
-    KEEP_SEED = 1                                       ' first data byte of the untouched file
-    TARGET_SEED = 2                                     ' first data byte of the target file
-    CRC_SEED = 3                                        ' first data byte of the one-block file
-    BYTE_MASK = $FF                                     ' keeps a value to one byte
-    MAX_TOUCHED = 4                                     ' blocks one group touches at most
-    HEAD_COPY_TOUCH_IDX = 1                             ' entry of the inactive head copy among the blocks its group touches
-    NO_BLOCK = -1                                       ' a block address no block has
-    FIRST_BLOCK_ADDR = 0                                ' first block address of the filesystem
-    BEFORE_FIRST_BLOCK = -1                             ' the block address just below the filesystem
-    ORPHAN_ID = flash.BLOCKS - 1                        ' a block ID no block of the three files has
-    NOT_A_BLOCK_OP = 0                                  ' an operation the block hook does not have
-    NO_SOURCE = 0                                       ' block image address of a hook operation that programs no image
-    NO_CYCLE = 0                                        ' lifecycle of a hook operation that writes no lifecycle
-    MOVED_FILE_BYTES = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + BODY_TAIL_BYTES ' bytes of the file made with create_file(): three blocks
-    MOVED_FILL = $6C                                    ' fill value of the file made with create_file()
-    OUT_OF_RANGE_ID = flash.BLOCKS                      ' the first value past the last block ID: no table has an entry for it
-    BAD_HEAD_END_PTR = flash.ADDR_HEAD_DATA - 1         ' an EndPtr just before the data area of a head block
-    BAD_DATA_OFFSET = ONE_BLOCK_BYTES + 1               ' a data offset past the bytes the one-block file holds: its EndPtr falls before the data it skips
+  BODY_TAIL_BYTES      = 1000									    ' bytes of a two-block file that go into its body block
+  FILE_BYTES	       = flash.BYTES_IN_HEAD_BLOCK + BODY_TAIL_BYTES				    ' bytes of each two-block file: a full head block and part of a body
+  ONE_BLOCK_BYTES      = 100									    ' bytes of the one-block file
+  FILE_COUNT	       = 3									    ' files each group writes
+  KEEP_SEED	       = 1									    ' first data byte of the untouched file
+  TARGET_SEED	       = 2									    ' first data byte of the target file
+  CRC_SEED	       = 3									    ' first data byte of the one-block file
+  BYTE_MASK	       = $FF									    ' keeps a value to one byte
+  MAX_TOUCHED	       = 4									    ' blocks one group touches at most
+  HEAD_COPY_TOUCH_IDX  = 1									    ' entry of the inactive head copy among the blocks its group touches
+  NO_BLOCK	       = -1									    ' a block address no block has
+  FIRST_BLOCK_ADDR     = 0									    ' first block address of the filesystem
+  BEFORE_FIRST_BLOCK   = -1									    ' the block address just below the filesystem
+  ORPHAN_ID	       = flash.BLOCKS - 1							    ' a block ID no block of the three files has
+  NOT_A_BLOCK_OP       = 0									    ' an operation the block hook does not have
+  NO_SOURCE	       = 0									    ' block image address of a hook operation that programs no image
+  NO_CYCLE	       = 0									    ' lifecycle of a hook operation that writes no lifecycle
+  MOVED_FILE_BYTES     = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK + BODY_TAIL_BYTES    ' bytes of the file made with create_file(): three blocks
+  MOVED_FILL	       = $6C									    ' fill value of the file made with create_file()
+  OUT_OF_RANGE_ID      = flash.BLOCKS								    ' the first value past the last block ID: no table has an entry for it
+  BAD_HEAD_END_PTR     = flash.ADDR_HEAD_DATA - 1						    ' an EndPtr just before the data area of a head block
+  BAD_DATA_OFFSET      = ONE_BLOCK_BYTES + 1							    ' a data offset past the bytes the one-block file holds: its EndPtr falls before the data it skips
 
-    ' The field of a block a bad copy changes:
-    '  FIELD_THIS_ID     - the block's own ID
-    '  FIELD_NEXT        - the NextID of a block with a next block, the EndPtr of a last block
-    '  FIELD_DATA_OFFSET - the data offset of a head block, in the low bits of its filename CRC word
-    #0, FIELD_THIS_ID, FIELD_NEXT, FIELD_DATA_OFFSET
+  ' The field of a block a bad copy changes:
+  '  FIELD_THIS_ID     - the block's own ID
+  '  FIELD_NEXT        - the NextID of a block with a next block, the EndPtr of a last block
+  '  FIELD_DATA_OFFSET - the data offset of a head block, in the low bits of its filename CRC word
+  #0, FIELD_THIS_ID, FIELD_NEXT, FIELD_DATA_OFFSET
 
 CON ' ---- Block Format ----
 
-    ' The first long of a block, and the CRC at its end:
-    '  NEXT_TOP..NEXT_BOTTOM   - NextID of a block with more blocks after it, EndPtr of a last block
-    '  ID_TOP..ID_BOTTOM       - the block's own ID
-    '  CYCLE_TOP..CYCLE_BOTTOM - the lifecycle, in the first byte
-    '  BODY_BIT                - 1 in a body block, 0 in a head block
-    '  CRC_BYTES               - bytes of the CRC long at the end of the block, which covers the bytes before it
-    NEXT_TOP = 31
-    NEXT_BOTTOM = 20
-    ID_TOP = 19
-    ID_BOTTOM = 8
-    CYCLE_TOP = 7
-    CYCLE_BOTTOM = 5
-    BODY_BIT = 1
-    CRC_BYTES = 4
-    FIRST_DATA_BYTE = 1                                 ' first byte after the byte that holds the lifecycle
-    ' The data offset of a head block: the low bits of its filename CRC word, the second long of the block
-    DATA_OFFSET_LONG = flash.ADDR_HEAD_FN_CRC / 4       ' the long, counted from 0, that holds the filename CRC word
-    DATA_OFFSET_TOP = 11
-    DATA_OFFSET_BOTTOM = 0
-    BLOCK_CRC_POLY = $AD0424F3 rev 31                   ' polynomial of the block CRC
+  ' The first long of a block, and the CRC at its end:
+  '  NEXT_TOP..NEXT_BOTTOM   - NextID of a block with more blocks after it, EndPtr of a last block
+  '  ID_TOP..ID_BOTTOM       - the block's own ID
+  '  CYCLE_TOP..CYCLE_BOTTOM - the lifecycle, in the first byte
+  '  BODY_BIT                - 1 in a body block, 0 in a head block
+  '  CRC_BYTES               - bytes of the CRC long at the end of the block, which covers the bytes before it
+  NEXT_TOP	      = 31
+  NEXT_BOTTOM	      = 20
+  ID_TOP	      = 19
+  ID_BOTTOM	      = 8
+  CYCLE_TOP	      = 7
+  CYCLE_BOTTOM	      = 5
+  BODY_BIT	      = 1
+  CRC_BYTES	      = 4
+  FIRST_DATA_BYTE     = 1			      ' first byte after the byte that holds the lifecycle
+  ' The data offset of a head block: the low bits of its filename CRC word, the second long of the block
+  DATA_OFFSET_LONG    = flash.ADDR_HEAD_FN_CRC / 4    ' the long, counted from 0, that holds the filename CRC word
+  DATA_OFFSET_TOP     = 11
+  DATA_OFFSET_BOTTOM  = 0
+  BLOCK_CRC_POLY      = $AD0424F3 rev 31	      ' polynomial of the block CRC
 
-    ' Lifecycles: an active block has one zero bit, the three active values follow each other in the
-    ' order CYCLE_FIRST, CYCLE_SECOND, CYCLE_THIRD, CYCLE_FIRST, and the later one of a pair is the newer;
-    ' an inactive block has no zero bit; a cancelled block has two or three
-    CYCLE_FIRST = %011
-    CYCLE_SECOND = %101
-    CYCLE_THIRD = %110
-    CYCLE_INACTIVE = %111
-    ACTIVE_ONES = 2                                     ' one bits of an active lifecycle
-    CANCELLED_MAX_ONES = 1                              ' most one bits of a cancelled lifecycle
+  ' Lifecycles: an active block has one zero bit, the three active values follow each other in the
+  ' order CYCLE_FIRST, CYCLE_SECOND, CYCLE_THIRD, CYCLE_FIRST, and the later one of a pair is the newer;
+  ' an inactive block has no zero bit; a cancelled block has two or three
+  CYCLE_FIRST	      = %011
+  CYCLE_SECOND	      = %101
+  CYCLE_THIRD	      = %110
+  CYCLE_INACTIVE      = %111
+  ACTIVE_ONES	      = 2			      ' one bits of an active lifecycle
+  CANCELLED_MAX_ONES  = 1			      ' most one bits of a cancelled lifecycle
 
 CON ' ---- Fault Injection ----
 
-    ' The flash waits of a faulted call, counted from 1 as TEST_armFlashFault() counts them: a block program is
-    ' one erase wait and then one wait for each page it programs; an activate and a cancel are one wait each
-    WAIT_ERASE = 1                                      ' the erase of the block the call programs
-    PAGES_PER_BLOCK = 16                                ' 256-byte pages one block program writes
-    PAGE_PICK = 7                                       ' the page, counted from 0, whose wait fails in a page fault: one in the middle of the block
-    WAIT_PAGE = WAIT_ERASE + 1 + PAGE_PICK              ' the program of that page
-    WAITS_PER_PROGRAM = WAIT_ERASE + PAGES_PER_BLOCK    ' every wait of one block program
-    WAIT_ACTIVATE = WAITS_PER_PROGRAM + 1               ' the activate that follows the block program
-    WAIT_CANCEL = WAIT_ACTIVATE + 1                     ' the cancel of the old copy, which follows that activate
-    WAIT_HEAD_ACTIVATE = WAIT_ACTIVATE + 1              ' the activate of a new file's head block, which follows the activate of its last block
-    WAIT_READY_CHECK = 1                                ' the first wait of mount() and of can_mount(): the chip is ready before any block is read
-    WAIT_MOUNT_CANCEL = WAIT_READY_CHECK + 1            ' the first cancel mount() makes, after its ready check
-    FAULT_DISARM = 0                                    ' the countdown value that injects no fault
-    ERASED_LONG = $FFFF_FFFF                            ' a long of the flash that no program has written since its erase
-    ONE_REFUSAL = 1                                     ' block programs one refused call adds to the refusal count
+  ' The flash waits of a faulted call, counted from 1 as TEST_armFlashFault() counts them: a block program is
+  ' one erase wait and then one wait for each page it programs; an activate and a cancel are one wait each
+  WAIT_ERASE		= 1				  ' the erase of the block the call programs
+  PAGES_PER_BLOCK	= 16				  ' 256-byte pages one block program writes
+  PAGE_PICK		= 7				  ' the page, counted from 0, whose wait fails in a page fault: one in the middle of the block
+  WAIT_PAGE		= WAIT_ERASE + 1 + PAGE_PICK	  ' the program of that page
+  WAITS_PER_PROGRAM	= WAIT_ERASE + PAGES_PER_BLOCK	  ' every wait of one block program
+  WAIT_ACTIVATE		= WAITS_PER_PROGRAM + 1		  ' the activate that follows the block program
+  WAIT_CANCEL		= WAIT_ACTIVATE + 1		  ' the cancel of the old copy, which follows that activate
+  WAIT_HEAD_ACTIVATE	= WAIT_ACTIVATE + 1		  ' the activate of a new file's head block, which follows the activate of its last block
+  WAIT_READY_CHECK	= 1				  ' the first wait of mount() and of can_mount(): the chip is ready before any block is read
+  WAIT_MOUNT_CANCEL	= WAIT_READY_CHECK + 1		  ' the first cancel mount() makes, after its ready check
+  FAULT_DISARM		= 0				  ' the countdown value that injects no fault
+  ERASED_LONG		= $FFFF_FFFF			  ' a long of the flash that no program has written since its erase
+  ONE_REFUSAL		= 1				  ' block programs one refused call adds to the refusal count
 
-    ' The writer modes of the fault cases, and the commit each faulted call makes:
-    '  MODE_W_NEW  - "w" on a new name, two blocks given to one write(); close() programs and activates the last
-    '                block, then activates the head block that write() programmed
-    '  MODE_APPEND - "a" on a one-block file, a flush(), then more bytes; close() programs a new copy of the
-    '                block, activates it and cancels the old copy
-    '  MODE_R_PLUS - "r+" on a one-block file, every byte rewritten and flushed, then rewritten again; flush()
-    '                programs a new copy of the block, activates it and cancels the old copy
-    '  MODE_W_PLUS - "w+" on the name of a one-block file; close() programs the new head block under the old
-    '                head block's ID, activates it and cancels the old head block
-    #0, MODE_W_NEW, MODE_APPEND, MODE_R_PLUS, MODE_W_PLUS
+  ' The writer modes of the fault cases, and the commit each faulted call makes:
+  '  MODE_W_NEW  - "w" on a new name, two blocks given to one write(); close() programs and activates the last
+  '                block, then activates the head block that write() programmed
+  '  MODE_APPEND - "a" on a one-block file, a flush(), then more bytes; close() programs a new copy of the
+  '                block, activates it and cancels the old copy
+  '  MODE_R_PLUS - "r+" on a one-block file, every byte rewritten and flushed, then rewritten again; flush()
+  '                programs a new copy of the block, activates it and cancels the old copy
+  '  MODE_W_PLUS - "w+" on the name of a one-block file; close() programs the new head block under the old
+  '                head block's ID, activates it and cancels the old head block
+  #0, MODE_W_NEW, MODE_APPEND, MODE_R_PLUS, MODE_W_PLUS
 
-    ' What the writer's file holds after the recovering mount():
-    '  WRITER_GONE - there is no file of its name: nothing of it was committed
-    '  WRITER_OLD  - exactly its contents as of its last commit before the fault
-    '  WRITER_NEW  - exactly its contents with the faulted commit
-    #0, WRITER_GONE, WRITER_OLD, WRITER_NEW
+  ' What the writer's file holds after the recovering mount():
+  '  WRITER_GONE - there is no file of its name: nothing of it was committed
+  '  WRITER_OLD  - exactly its contents as of its last commit before the fault
+  '  WRITER_NEW  - exactly its contents with the faulted commit
+  #0, WRITER_GONE, WRITER_OLD, WRITER_NEW
 
-    ' What the block the faulted call programmed holds once the chip is ready:
-    '  NAMED_NOT_CHECKED     - the case checks the block only through the files
-    '  NAMED_ERASED          - erased whole: the fault stopped the block program after its erase
-    '  NAMED_PART_PROGRAMMED - inactive, its first page programmed and its last page still erased
-    #0, NAMED_NOT_CHECKED, NAMED_ERASED, NAMED_PART_PROGRAMMED
+  ' What the block the faulted call programmed holds once the chip is ready:
+  '  NAMED_NOT_CHECKED     - the case checks the block only through the files
+  '  NAMED_ERASED          - erased whole: the fault stopped the block program after its erase
+  '  NAMED_PART_PROGRAMMED - inactive, its first page programmed and its last page still erased
+  #0, NAMED_NOT_CHECKED, NAMED_ERASED, NAMED_PART_PROGRAMMED
 
-    ' The block the faulted call's one block allocation takes:
-    '  TAKE_FREE_BLOCK  - the lowest free block, named so that the allocation moves no block
-    '  MOVE_SECOND_HEAD - the second file's head block, named so that the allocation moves it to a free block
-    #0, TAKE_FREE_BLOCK, MOVE_SECOND_HEAD
+  ' The block the faulted call's one block allocation takes:
+  '  TAKE_FREE_BLOCK  - the lowest free block, named so that the allocation moves no block
+  '  MOVE_SECOND_HEAD - the second file's head block, named so that the allocation moves it to a free block
+  #0, TAKE_FREE_BLOCK, MOVE_SECOND_HEAD
 
-    SECOND_SEED = 4                                     ' first data byte of the second file
-    WRITER_SEED = 5                                     ' first data byte of the writer's file in "w" and "a"
-    APPEND_BASE_BYTES = 1000                            ' bytes of the file "a" opens
-    APPEND_FIRST_BYTES = 500                            ' bytes "a" writes and flushes
-    APPEND_LAST_BYTES = 500                             ' bytes "a" writes after the flush
-    REWRITE_BYTES = 2000                                ' bytes of the one-block file "r+" and "w+" open
-    RP_OPEN_SEED = 6                                    ' first data byte of the file "r+" opens
-    RP_FLUSH_SEED = 7                                   ' first data byte of the rewrite "r+" flushes
-    RP_FAULT_SEED = 8                                   ' first data byte of the rewrite whose flush is faulted
-    WP_OLD_SEED = 9                                     ' first data byte of the file "w+" replaces
-    WP_NEW_SEED = 10                                    ' first data byte of the file "w+" writes
-    WP_NEW_BYTES = 1500                                 ' bytes "w+" writes
-    FILES_WITH_WRITER = 2                               ' files of a fault case when the writer's file is kept
-    FILES_WITHOUT_WRITER = 1                            ' files of a fault case when only the second file is kept
+  SECOND_SEED		= 4				  ' first data byte of the second file
+  WRITER_SEED		= 5				  ' first data byte of the writer's file in "w" and "a"
+  APPEND_BASE_BYTES	= 1000				  ' bytes of the file "a" opens
+  APPEND_FIRST_BYTES	= 500				  ' bytes "a" writes and flushes
+  APPEND_LAST_BYTES	= 500				  ' bytes "a" writes after the flush
+  REWRITE_BYTES		= 2000				  ' bytes of the one-block file "r+" and "w+" open
+  RP_OPEN_SEED		= 6				  ' first data byte of the file "r+" opens
+  RP_FLUSH_SEED		= 7				  ' first data byte of the rewrite "r+" flushes
+  RP_FAULT_SEED		= 8				  ' first data byte of the rewrite whose flush is faulted
+  WP_OLD_SEED		= 9				  ' first data byte of the file "w+" replaces
+  WP_NEW_SEED		= 10				  ' first data byte of the file "w+" writes
+  WP_NEW_BYTES		= 1500				  ' bytes "w+" writes
+  FILES_WITH_WRITER	= 2				  ' files of a fault case when the writer's file is kept
+  FILES_WITHOUT_WRITER	= 1				  ' files of a fault case when only the second file is kept
 
-DAT ' ---- Files ----
+DAT  ' ---- Files ----
 
-keepFile        BYTE    "pl_keep.bin", 0                ' a two-block file no case touches
-targetFile      BYTE    "pl_target.bin", 0              ' a two-block file whose blocks the cases copy
-crcFile         BYTE    "pl_crc.bin", 0                 ' a one-block file whose block one case corrupts
-movedFile       BYTE    "pl_moved.bin", 0               ' a three-block file made with create_file() while a block is named
-secondFile      BYTE    "pl_second.bin", 0              ' a two-block file open for reading at each fault
-writerFile      BYTE    "pl_writer.bin", 0              ' the file the writer has open at each fault
+  keepFile    BYTE  "pl_keep.bin", 0	  ' a two-block file no case touches
+  targetFile  BYTE  "pl_target.bin", 0	  ' a two-block file whose blocks the cases copy
+  crcFile     BYTE  "pl_crc.bin", 0	  ' a one-block file whose block one case corrupts
+  movedFile   BYTE  "pl_moved.bin", 0	  ' a three-block file made with create_file() while a block is named
+  secondFile  BYTE  "pl_second.bin", 0	  ' a two-block file open for reading at each fault
+  writerFile  BYTE  "pl_writer.bin", 0	  ' the file the writer has open at each fault
 
-DAT ' ---- Block Addresses and State ----
+DAT  ' ---- Block Addresses and State ----
 
-bSetUp          LONG    FALSE                           ' TRUE when the group's files were written and their blocks found
-targetHeadAddr  LONG    0                               ' head block of the target file
-targetBodyAddr  LONG    0                               ' body block of the target file
-crcHeadAddr     LONG    0                               ' the one block of the one-block file
-targetHeadId    LONG    0                               ' block ID of the target file's head block
-targetBodyId    LONG    0                               ' block ID of the target file's body block
-copyAddr        LONG    0                               ' block a case programmed
-sourceAddr      LONG    0                               ' block a case copied into copyAddr with one field changed
-secondCopyAddr  LONG    0                               ' second block a case programmed
-copyCycle       LONG    0                               ' lifecycle the copy was given
-touchedCount    LONG    0                               ' blocks in touchedAddr
-touchedAddr     LONG    0[MAX_TOUCHED]                  ' blocks the group touched or copied
-printsBefore    LONG    0[MAX_TOUCHED]                  ' fingerprint of each touched block before can_mount()
-printsAfter     LONG    0[MAX_TOUCHED]                  ' fingerprint of each touched block after can_mount()
-writerHndl      LONG    0                               ' handle of the writer a fault case opens
-secondHndl      LONG    0                               ' handle of the second file, open for reading
-faultBlockAddr  LONG    0                               ' block named for the faulted call's block allocation
-oldBytes        LONG    0                               ' bytes of the writer's file as of its last commit
-oldSeed         LONG    0                               ' first data byte of the writer's file as of its last commit
-newBytes        LONG    0                               ' bytes of the writer's file with the faulted commit
-newSeed         LONG    0                               ' first data byte of the writer's file with the faulted commit
+  bSetUp	  LONG	FALSE		  ' TRUE when the group's files were written and their blocks found
+  targetHeadAddr  LONG	0		  ' head block of the target file
+  targetBodyAddr  LONG	0		  ' body block of the target file
+  crcHeadAddr	  LONG	0		  ' the one block of the one-block file
+  targetHeadId	  LONG	0		  ' block ID of the target file's head block
+  targetBodyId	  LONG	0		  ' block ID of the target file's body block
+  copyAddr	  LONG	0		  ' block a case programmed
+  sourceAddr	  LONG	0		  ' block a case copied into copyAddr with one field changed
+  secondCopyAddr  LONG	0		  ' second block a case programmed
+  copyCycle	  LONG	0		  ' lifecycle the copy was given
+  touchedCount	  LONG	0		  ' blocks in touchedAddr
+  touchedAddr	  LONG	0[MAX_TOUCHED]	  ' blocks the group touched or copied
+  printsBefore	  LONG	0[MAX_TOUCHED]	  ' fingerprint of each touched block before can_mount()
+  printsAfter	  LONG	0[MAX_TOUCHED]	  ' fingerprint of each touched block after can_mount()
+  writerHndl	  LONG	0		  ' handle of the writer a fault case opens
+  secondHndl	  LONG	0		  ' handle of the second file, open for reading
+  faultBlockAddr  LONG	0		  ' block named for the faulted call's block allocation
+  oldBytes	  LONG	0		  ' bytes of the writer's file as of its last commit
+  oldSeed	  LONG	0		  ' first data byte of the writer's file as of its last commit
+  newBytes	  LONG	0		  ' bytes of the writer's file with the faulted commit
+  newSeed	  LONG	0		  ' first data byte of the writer's file with the faulted commit
 
-DAT ' ---- Buffers ----
+DAT  ' ---- Buffers ----
 
-dataBuf         BYTE    0[FILE_BYTES]                   ' what a file is written from and read into
-sourceBuf       BYTE    0[flash.BLOCK_SIZE]             ' the block a case copies, as read before the copy
-copyBuf         BYTE    0[flash.BLOCK_SIZE]             ' the image a case programs
-
+  dataBuf    BYTE  0[FILE_BYTES]	  ' what a file is written from and read into
+  sourceBuf  BYTE  0[flash.BLOCK_SIZE]	  ' the block a case copies, as read before the copy
+  copyBuf    BYTE  0[flash.BLOCK_SIZE]	  ' the image a case programs
 
 PUB go() | status, pFailedCall
 '' Run every power-loss state test, then show the result.
@@ -277,53 +276,51 @@ PUB go() | status, pFailedCall
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
 
-    pFailedCall := @"format()"
-    status := flash.format()      ' Comment out this line to not erase all files
-    if status == flash.SUCCESS
-        pFailedCall := @"mount()"
-        status := flash.mount()
+  pFailedCall := @"format()"
+  status := flash.format()			' Comment out this line to not erase all files
+  if status == flash.SUCCESS
+    pFailedCall := @"mount()"
+    status := flash.mount()
 
-    if status == flash.SUCCESS
-        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+  if status == flash.SUCCESS
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-        utils.showChipAndDriverVersion()
-        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
+    utils.showChipAndDriverVersion()
+    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
 
-        testDuplicateId()
-        testOrphanBody()
-        testInactiveHead()
-        testBadCrcBlock()
-        testOutOfRangeId()
-        testOutOfRangeNextId()
-        testOutOfRangeEndPtr()
-        testOutOfRangeDataOffset()
-        testMovedNewHead()
-        testFaults()
-        testRecoveryFaults()
-        testUnmountedFault()
-        debug("* The next calls give the block hooks addresses outside the filesystem")
-        testHookRefusals()
-        testGuardRefusal()
-    else
-        utils.showError(pFailedCall, status)
-        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
-        utils.evaluateResultNegError(status, flash.SUCCESS)
+    testDuplicateId()
+    testOrphanBody()
+    testInactiveHead()
+    testBadCrcBlock()
+    testOutOfRangeId()
+    testOutOfRangeNextId()
+    testOutOfRangeEndPtr()
+    testOutOfRangeDataOffset()
+    testMovedNewHead()
+    testFaults()
+    testRecoveryFaults()
+    testUnmountedFault()
+    DEBUG("* The next calls give the block hooks addresses outside the filesystem")
+    testHookRefusals()
+    testGuardRefusal()
+  else
+    utils.showError(pFailedCall, status)
+    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
+    utils.evaluateResultNegError(status, flash.SUCCESS)
 
-    debug("* Test Complete")
-    utils.ShowTestResult(@"RT_power_loss_tests")
-
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_power_loss_tests")
 
 PRI testDuplicateId()
 ' A copy of the target file's body block with the next lifecycle: can_mount() is FALSE, mount() keeps the newer copy, cancels the older one and returns SUCCESS.
 
-    utils.startTestGroup(@"a duplicate ID: a copy of a body block with the next lifecycle")
-    setUpFiles()
-    buildDuplicate()
-    canMountStep(@"can_mount() is FALSE for a duplicate ID and changes no block", FALSE)
-    mountDuplicate()
-    survivorsStep(TRUE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a duplicate ID: a copy of a body block with the next lifecycle")
+  setUpFiles()
+  buildDuplicate()
+  canMountStep(@"can_mount() is FALSE for a duplicate ID and changes no block", FALSE)
+  mountDuplicate()
+  survivorsStep(TRUE)
+  secondMountStep()
 
 PRI buildDuplicate() | pBlock, status, actStatus
 ' Copy the target file's body block to a free block with the next lifecycle, activate it and read it back, as one test.
@@ -333,57 +330,54 @@ PRI buildDuplicate() | pBlock, status, actStatus
 ' @local status - what the program operation returned
 ' @local actStatus - what the activate operation returned
 
-    utils.startTest(@"copy the body block of the target file, activate the copy with the next lifecycle and read it back")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        readInto(targetBodyAddr, @sourceBuf)
-        copyCycle := nextCycle(cycleOf(@sourceBuf))
-        copyAddr := findFreeBlock(NO_BLOCK)
-        bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
-        status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
-        actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, copyAddr, NO_SOURCE, copyCycle)
-        debug("  body block ", uhex_word_(targetBodyAddr), " copied to block ", uhex_word_(copyAddr))
-        utils.evaluateSubStatus(status, @"program the copy", flash.SUCCESS)
-        utils.evaluateSubStatus(actStatus, @"activate the copy", flash.SUCCESS)
+  utils.startTest(@"copy the body block of the target file, activate the copy with the next lifecycle and read it back")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    readInto(targetBodyAddr, @sourceBuf)
+    copyCycle := nextCycle(cycleOf(@sourceBuf))
+    copyAddr := findFreeBlock(NO_BLOCK)
+    bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
+    status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
+    actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, copyAddr, NO_SOURCE, copyCycle)
+    DEBUG("  body block ", uhex_word_(targetBodyAddr), " copied to block ", uhex_word_(copyAddr))
+    utils.evaluateSubStatus(status, @"program the copy", flash.SUCCESS)
+    utils.evaluateSubStatus(actStatus, @"activate the copy", flash.SUCCESS)
 
-        pBlock := readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(pBlock > 0, @"the copy was read back", TRUE)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the copy is the next one", copyCycle)
-        utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the copy is the body block's", targetBodyId)
-        utils.evaluateSubValue(isCrcGood(@copyBuf), @"the copy's CRC matches", TRUE)
-        utils.evaluateSubValue(dataMatches(@copyBuf, @sourceBuf), @"the copy holds the body block's data", TRUE)
+    pBlock := readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(pBlock > 0, @"the copy was read back", TRUE)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the copy is the next one", copyCycle)
+    utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the copy is the body block's", targetBodyId)
+    utils.evaluateSubValue(isCrcGood(@copyBuf), @"the copy's CRC matches", TRUE)
+    utils.evaluateSubValue(dataMatches(@copyBuf, @sourceBuf), @"the copy holds the body block's data", TRUE)
 
-        readInto(targetBodyAddr, @copyBuf)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"the body block keeps its lifecycle", cycleOf(@sourceBuf))
-        utils.evaluateSubValue(isActive(cycleOf(@sourceBuf)), @"the body block is active", TRUE)
+    readInto(targetBodyAddr, @copyBuf)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"the body block keeps its lifecycle", cycleOf(@sourceBuf))
+    utils.evaluateSubValue(isActive(cycleOf(@sourceBuf)), @"the body block is active", TRUE)
 
-        setTouched(targetBodyAddr, copyAddr, NO_BLOCK, NO_BLOCK)
-
+    setTouched(targetBodyAddr, copyAddr, NO_BLOCK, NO_BLOCK)
 
 PRI mountDuplicate()
 ' mount() resolves the duplicate silently: SUCCESS, the older copy cancelled and the newer one kept, as one test.
 
-    utils.startTest(@"mount() cancels the older copy, keeps the newer one and returns SUCCESS")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        mountAndCheck(flash.SUCCESS)                    ' a duplicate ID is repaired without a status
-        readInto(targetBodyAddr, @copyBuf)
-        utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the older copy is cancelled", TRUE)
-        readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"the newer copy keeps its lifecycle", copyCycle)
-
+  utils.startTest(@"mount() cancels the older copy, keeps the newer one and returns SUCCESS")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    mountAndCheck(flash.SUCCESS)    ' a duplicate ID is repaired without a status
+    readInto(targetBodyAddr, @copyBuf)
+    utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the older copy is cancelled", TRUE)
+    readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"the newer copy keeps its lifecycle", copyCycle)
 
 PRI testOrphanBody()
 ' A copy of the target file's body block under an ID no file uses: can_mount() is FALSE, mount() cancels it and returns E_BAD_BLOCKS_REMOVED.
 
-    utils.startTestGroup(@"an orphan body block: an active body block no file reaches")
-    setUpFiles()
-    buildOrphan()
-    canMountStep(@"can_mount() is FALSE for an orphan body block and changes no block", FALSE)
-    mountOrphan()
-    survivorsStep(TRUE)
-    secondMountStep()
-
+  utils.startTestGroup(@"an orphan body block: an active body block no file reaches")
+  setUpFiles()
+  buildOrphan()
+  canMountStep(@"can_mount() is FALSE for an orphan body block and changes no block", FALSE)
+  mountOrphan()
+  survivorsStep(TRUE)
+  secondMountStep()
 
 PRI buildOrphan() | pBlock, status, actStatus
 ' Copy the target file's body block to a free block under an unused ID, activate it and read it back, as one test.
@@ -393,54 +387,51 @@ PRI buildOrphan() | pBlock, status, actStatus
 ' @local status - what the program operation returned
 ' @local actStatus - what the activate operation returned
 
-    utils.startTest(@"copy the body block of the target file under an unused ID, activate it and read it back")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        readInto(targetBodyAddr, @sourceBuf)
-        copyCycle := CYCLE_FIRST                        ' the lifecycle a new body block is given
-        copyAddr := findFreeBlock(NO_BLOCK)
-        bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
-        LONG[@copyBuf].[ID_TOP..ID_BOTTOM] := ORPHAN_ID
-        status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
-        actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, copyAddr, NO_SOURCE, copyCycle)
-        debug("  orphan body block at block ", uhex_word_(copyAddr))
-        utils.evaluateSubStatus(status, @"program the orphan", flash.SUCCESS)
-        utils.evaluateSubStatus(actStatus, @"activate the orphan", flash.SUCCESS)
+  utils.startTest(@"copy the body block of the target file under an unused ID, activate it and read it back")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    readInto(targetBodyAddr, @sourceBuf)
+    copyCycle := CYCLE_FIRST	' the lifecycle a new body block is given
+    copyAddr := findFreeBlock(NO_BLOCK)
+    bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
+    LONG[@copyBuf].[ID_TOP..ID_BOTTOM] := ORPHAN_ID
+    status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
+    actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, copyAddr, NO_SOURCE, copyCycle)
+    DEBUG("  orphan body block at block ", uhex_word_(copyAddr))
+    utils.evaluateSubStatus(status, @"program the orphan", flash.SUCCESS)
+    utils.evaluateSubStatus(actStatus, @"activate the orphan", flash.SUCCESS)
 
-        pBlock := readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(pBlock > 0, @"the orphan was read back", TRUE)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the orphan", copyCycle)
-        utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the orphan", ORPHAN_ID)
-        utils.evaluateSubValue(LONG[@copyBuf].[BODY_BIT], @"the orphan is a body block", 1)
-        utils.evaluateSubValue(isCrcGood(@copyBuf), @"the orphan's CRC matches", TRUE)
+    pBlock := readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(pBlock > 0, @"the orphan was read back", TRUE)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the orphan", copyCycle)
+    utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the orphan", ORPHAN_ID)
+    utils.evaluateSubValue(LONG[@copyBuf].[BODY_BIT], @"the orphan is a body block", 1)
+    utils.evaluateSubValue(isCrcGood(@copyBuf), @"the orphan's CRC matches", TRUE)
 
-        setTouched(copyAddr, targetBodyAddr, NO_BLOCK, NO_BLOCK)
-
+    setTouched(copyAddr, targetBodyAddr, NO_BLOCK, NO_BLOCK)
 
 PRI mountOrphan()
 ' mount() cancels the orphan and reports it, as one test.
 
-    utils.startTest(@"mount() cancels the orphan body block and returns E_BAD_BLOCKS_REMOVED")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)       ' an active block no file reaches is cancelled and reported
-        readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the orphan is cancelled", TRUE)
-
+  utils.startTest(@"mount() cancels the orphan body block and returns E_BAD_BLOCKS_REMOVED")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)	 ' an active block no file reaches is cancelled and reported
+    readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the orphan is cancelled", TRUE)
 
 PRI testInactiveHead()
 ' A copy of the target file's head block with the next lifecycle, programmed and never activated, leading to an active body block: the head copy is ignored, the body copy is an orphan.
 
-    utils.startTestGroup(@"a head block programmed and never activated, with the body block it leads to")
-    setUpFiles()
-    buildInactiveHead()
-    canMountStep(@"can_mount() is TRUE while the one change is a head block that was never activated, and changes no block", TRUE)
-    buildInactiveHeadBody()
-    canMountStep(@"can_mount() is FALSE once the body block the inactive head leads to is active, and changes no block", FALSE)
-    mountInactiveHead()
-    survivorsStep(TRUE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a head block programmed and never activated, with the body block it leads to")
+  setUpFiles()
+  buildInactiveHead()
+  canMountStep(@"can_mount() is TRUE while the one change is a head block that was never activated, and changes no block", TRUE)
+  buildInactiveHeadBody()
+  canMountStep(@"can_mount() is FALSE once the body block the inactive head leads to is active, and changes no block", FALSE)
+  mountInactiveHead()
+  survivorsStep(TRUE)
+  secondMountStep()
 
 PRI buildInactiveHead() | pBlock, status
 ' Copy the target file's head block to a free block with the next lifecycle and a NextID no block has, program it without activating it and read it back, as one test.
@@ -449,28 +440,27 @@ PRI buildInactiveHead() | pBlock, status
 ' @local pBlock - address of a block read back
 ' @local status - what the program operation returned
 
-    utils.startTest(@"copy the head block of the target file with the next lifecycle, never activate it, and read it back")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        readInto(targetHeadAddr, @sourceBuf)
-        copyCycle := nextCycle(cycleOf(@sourceBuf))
-        copyAddr := findFreeBlock(NO_BLOCK)
-        bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
-        LONG[@copyBuf].[NEXT_TOP..NEXT_BOTTOM] := ORPHAN_ID
-        status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
-        debug("  inactive head block at block ", uhex_word_(copyAddr))
-        utils.evaluateSubStatus(status, @"program the head copy", flash.SUCCESS)
+  utils.startTest(@"copy the head block of the target file with the next lifecycle, never activate it, and read it back")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    readInto(targetHeadAddr, @sourceBuf)
+    copyCycle := nextCycle(cycleOf(@sourceBuf))
+    copyAddr := findFreeBlock(NO_BLOCK)
+    bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
+    LONG[@copyBuf].[NEXT_TOP..NEXT_BOTTOM] := ORPHAN_ID
+    status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
+    DEBUG("  inactive head block at block ", uhex_word_(copyAddr))
+    utils.evaluateSubStatus(status, @"program the head copy", flash.SUCCESS)
 
-        pBlock := readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(pBlock > 0, @"the head copy was read back", TRUE)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"the head copy is inactive", CYCLE_INACTIVE)
-        utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the head copy is the head block's", targetHeadId)
-        utils.evaluateSubValue(LONG[@copyBuf].[NEXT_TOP..NEXT_BOTTOM], @"NextID of the head copy", ORPHAN_ID)
-        BYTE[@copyBuf].[CYCLE_TOP..CYCLE_BOTTOM] := copyCycle
-        utils.evaluateSubValue(isCrcGood(@copyBuf), @"the head copy's CRC matches once activated with the next lifecycle", TRUE)
+    pBlock := readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(pBlock > 0, @"the head copy was read back", TRUE)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"the head copy is inactive", CYCLE_INACTIVE)
+    utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the head copy is the head block's", targetHeadId)
+    utils.evaluateSubValue(LONG[@copyBuf].[NEXT_TOP..NEXT_BOTTOM], @"NextID of the head copy", ORPHAN_ID)
+    BYTE[@copyBuf].[CYCLE_TOP..CYCLE_BOTTOM] := copyCycle
+    utils.evaluateSubValue(isCrcGood(@copyBuf), @"the head copy's CRC matches once activated with the next lifecycle", TRUE)
 
-        setTouched(targetHeadAddr, copyAddr, NO_BLOCK, NO_BLOCK)
-
+    setTouched(targetHeadAddr, copyAddr, NO_BLOCK, NO_BLOCK)
 
 PRI buildInactiveHeadBody() | pBlock, status, actStatus
 ' Copy the target file's body block, with the ID the inactive head leads to and one data byte changed, to a free block, activate it and read it back, as one test.
@@ -480,29 +470,28 @@ PRI buildInactiveHeadBody() | pBlock, status, actStatus
 ' @local status - what the program operation returned
 ' @local actStatus - what the activate operation returned
 
-    utils.startTest(@"copy the body block under the ID the inactive head leads to, with one data byte changed, activate it and read it back")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        readInto(targetBodyAddr, @sourceBuf)
-        secondCopyAddr := findFreeBlock(copyAddr)
-        bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
-        LONG[@copyBuf].[ID_TOP..ID_BOTTOM] := ORPHAN_ID
-        BYTE[@copyBuf][flash.ADDR_BODY_DATA] ^= BYTE_MASK  ' a file that read this block would read a byte the file never held
-        status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, secondCopyAddr, @copyBuf, CYCLE_FIRST)
-        actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, secondCopyAddr, NO_SOURCE, CYCLE_FIRST)
-        debug("  body block the inactive head leads to at block ", uhex_word_(secondCopyAddr))
-        utils.evaluateSubStatus(status, @"program the body copy", flash.SUCCESS)
-        utils.evaluateSubStatus(actStatus, @"activate the body copy", flash.SUCCESS)
+  utils.startTest(@"copy the body block under the ID the inactive head leads to, with one data byte changed, activate it and read it back")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    readInto(targetBodyAddr, @sourceBuf)
+    secondCopyAddr := findFreeBlock(copyAddr)
+    bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
+    LONG[@copyBuf].[ID_TOP..ID_BOTTOM] := ORPHAN_ID
+    BYTE[@copyBuf][flash.ADDR_BODY_DATA] ^= BYTE_MASK	 ' a file that read this block would read a byte the file never held
+    status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, secondCopyAddr, @copyBuf, CYCLE_FIRST)
+    actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, secondCopyAddr, NO_SOURCE, CYCLE_FIRST)
+    DEBUG("  body block the inactive head leads to at block ", uhex_word_(secondCopyAddr))
+    utils.evaluateSubStatus(status, @"program the body copy", flash.SUCCESS)
+    utils.evaluateSubStatus(actStatus, @"activate the body copy", flash.SUCCESS)
 
-        pBlock := readInto(secondCopyAddr, @copyBuf)
-        utils.evaluateSubValue(pBlock > 0, @"the body copy was read back", TRUE)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the body copy", CYCLE_FIRST)
-        utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the body copy", ORPHAN_ID)
-        utils.evaluateSubValue(isCrcGood(@copyBuf), @"the body copy's CRC matches", TRUE)
-        utils.evaluateSubValue(BYTE[@copyBuf][flash.ADDR_BODY_DATA] == BYTE[@sourceBuf][flash.ADDR_BODY_DATA], @"the body copy's first data byte differs from the body block's", FALSE)
+    pBlock := readInto(secondCopyAddr, @copyBuf)
+    utils.evaluateSubValue(pBlock > 0, @"the body copy was read back", TRUE)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the body copy", CYCLE_FIRST)
+    utils.evaluateSubValue(idOf(@copyBuf), @"block ID of the body copy", ORPHAN_ID)
+    utils.evaluateSubValue(isCrcGood(@copyBuf), @"the body copy's CRC matches", TRUE)
+    utils.evaluateSubValue(BYTE[@copyBuf][flash.ADDR_BODY_DATA] == BYTE[@sourceBuf][flash.ADDR_BODY_DATA], @"the body copy's first data byte differs from the body block's", FALSE)
 
-        setTouched(targetHeadAddr, copyAddr, targetBodyAddr, secondCopyAddr)
-
+    setTouched(targetHeadAddr, copyAddr, targetBodyAddr, secondCopyAddr)
 
 PRI mountInactiveHead() | printNow
 ' mount() cancels the active body copy, reports it, and leaves the inactive head copy as it was, as one test.
@@ -510,29 +499,27 @@ PRI mountInactiveHead() | printNow
 ' Local Variables:
 ' @local printNow - fingerprint of the inactive head copy after mount()
 
-    utils.startTest(@"mount() cancels the body copy, returns E_BAD_BLOCKS_REMOVED and leaves the inactive head copy as it was")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)       ' the active body copy is reached by no active head
-        readInto(secondCopyAddr, @copyBuf)
-        utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the body copy is cancelled", TRUE)
-        readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"the head copy is still inactive", CYCLE_INACTIVE)
-        printNow := blockPrint(copyAddr)
-        utils.evaluateSubValue(printNow, @"the head copy is unchanged by mount()", printsAfter[HEAD_COPY_TOUCH_IDX])
-
+  utils.startTest(@"mount() cancels the body copy, returns E_BAD_BLOCKS_REMOVED and leaves the inactive head copy as it was")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)	 ' the active body copy is reached by no active head
+    readInto(secondCopyAddr, @copyBuf)
+    utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the body copy is cancelled", TRUE)
+    readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"the head copy is still inactive", CYCLE_INACTIVE)
+    printNow := blockPrint(copyAddr)
+    utils.evaluateSubValue(printNow, @"the head copy is unchanged by mount()", printsAfter[HEAD_COPY_TOUCH_IDX])
 
 PRI testBadCrcBlock()
 ' The one-block file's block with a reserved bit cleared, so its CRC no longer matches: can_mount() is FALSE, mount() cancels it and returns E_BAD_BLOCKS_REMOVED.
 
-    utils.startTestGroup(@"an active block whose CRC no longer matches")
-    setUpFiles()
-    buildBadCrc()
-    canMountStep(@"can_mount() is FALSE for a block whose CRC does not match and changes no block", FALSE)
-    mountBadCrc()
-    survivorsStep(FALSE)
-    secondMountStep()
-
+  utils.startTestGroup(@"an active block whose CRC no longer matches")
+  setUpFiles()
+  buildBadCrc()
+  canMountStep(@"can_mount() is FALSE for a block whose CRC does not match and changes no block", FALSE)
+  mountBadCrc()
+  survivorsStep(FALSE)
+  secondMountStep()
 
 PRI buildBadCrc() | pBlock, status
 ' Clear the reserved bit of the one-block file's block and read the block back, as one test.
@@ -541,84 +528,78 @@ PRI buildBadCrc() | pBlock, status
 ' @local pBlock - address of a block read back
 ' @local status - what the corrupt operation returned
 
-    utils.startTest(@"clear a reserved bit of the one-block file's block and read it back")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        readInto(crcHeadAddr, @sourceBuf)
-        utils.evaluateSubValue(BYTE[@sourceBuf] & flash.TEST_CORRUPT_BIT, @"the reserved bit is set before the change", flash.TEST_CORRUPT_BIT)
-        utils.evaluateSubValue(isCrcGood(@sourceBuf), @"the block's CRC matches before the change", TRUE)
-        status := flash.TEST_changeBlock(flash.TEST_BLK_CORRUPT, crcHeadAddr, NO_SOURCE, NO_CYCLE)
-        debug("  block ", uhex_word_(crcHeadAddr), " corrupted")
-        utils.evaluateSubStatus(status, @"clear the reserved bit", flash.SUCCESS)
+  utils.startTest(@"clear a reserved bit of the one-block file's block and read it back")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    readInto(crcHeadAddr, @sourceBuf)
+    utils.evaluateSubValue(BYTE[@sourceBuf] & flash.TEST_CORRUPT_BIT, @"the reserved bit is set before the change", flash.TEST_CORRUPT_BIT)
+    utils.evaluateSubValue(isCrcGood(@sourceBuf), @"the block's CRC matches before the change", TRUE)
+    status := flash.TEST_changeBlock(flash.TEST_BLK_CORRUPT, crcHeadAddr, NO_SOURCE, NO_CYCLE)
+    DEBUG("  block ", uhex_word_(crcHeadAddr), " corrupted")
+    utils.evaluateSubStatus(status, @"clear the reserved bit", flash.SUCCESS)
 
-        pBlock := readInto(crcHeadAddr, @copyBuf)
-        utils.evaluateSubValue(pBlock > 0, @"the block was read back", TRUE)
-        utils.evaluateSubValue(BYTE[@copyBuf], @"first byte of the block lost the reserved bit", BYTE[@sourceBuf] & !flash.TEST_CORRUPT_BIT & BYTE_MASK)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"the block keeps its lifecycle", cycleOf(@sourceBuf))
-        utils.evaluateSubValue(isActive(cycleOf(@copyBuf)), @"the block is active", TRUE)
-        utils.evaluateSubValue(isCrcGood(@copyBuf), @"the block's CRC matches after the change", FALSE)
+    pBlock := readInto(crcHeadAddr, @copyBuf)
+    utils.evaluateSubValue(pBlock > 0, @"the block was read back", TRUE)
+    utils.evaluateSubValue(BYTE[@copyBuf], @"first byte of the block lost the reserved bit", BYTE[@sourceBuf] & !flash.TEST_CORRUPT_BIT & BYTE_MASK)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"the block keeps its lifecycle", cycleOf(@sourceBuf))
+    utils.evaluateSubValue(isActive(cycleOf(@copyBuf)), @"the block is active", TRUE)
+    utils.evaluateSubValue(isCrcGood(@copyBuf), @"the block's CRC matches after the change", FALSE)
 
-        setTouched(crcHeadAddr, NO_BLOCK, NO_BLOCK, NO_BLOCK)
-
+    setTouched(crcHeadAddr, NO_BLOCK, NO_BLOCK, NO_BLOCK)
 
 PRI mountBadCrc()
 ' mount() cancels the block whose CRC does not match and reports it, as one test.
 
-    utils.startTest(@"mount() cancels the block whose CRC does not match and returns E_BAD_BLOCKS_REMOVED")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)       ' a block cancelled for its CRC is a bad block removed
-        readInto(crcHeadAddr, @copyBuf)
-        utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the block is cancelled", TRUE)
-
+  utils.startTest(@"mount() cancels the block whose CRC does not match and returns E_BAD_BLOCKS_REMOVED")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)	 ' a block cancelled for its CRC is a bad block removed
+    readInto(crcHeadAddr, @copyBuf)
+    utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the block is cancelled", TRUE)
 
 PRI testOutOfRangeId()
 ' A copy of the target file's body block whose ID is past the last block ID, its CRC good: can_mount() is FALSE, mount() cancels it as a bad block and returns E_BAD_BLOCKS_REMOVED, and every file survives.
 
-    utils.startTestGroup(@"a block whose ID is past the last block ID")
-    setUpFiles()
-    buildFieldCopy(@"copy the body block of the target file with an ID past the last one, activate it and read it back", targetBodyAddr, FIELD_THIS_ID, OUT_OF_RANGE_ID)
-    canMountStep(@"can_mount() is FALSE for a block whose ID is past the last one and changes no block", FALSE)
-    mountFieldCopy(@"mount() cancels the block whose ID is past the last one and returns E_BAD_BLOCKS_REMOVED")
-    survivorsStep(TRUE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a block whose ID is past the last block ID")
+  setUpFiles()
+  buildFieldCopy(@"copy the body block of the target file with an ID past the last one, activate it and read it back", targetBodyAddr, FIELD_THIS_ID, OUT_OF_RANGE_ID)
+  canMountStep(@"can_mount() is FALSE for a block whose ID is past the last one and changes no block", FALSE)
+  mountFieldCopy(@"mount() cancels the block whose ID is past the last one and returns E_BAD_BLOCKS_REMOVED")
+  survivorsStep(TRUE)
+  secondMountStep()
 
 PRI testOutOfRangeNextId()
 ' A copy of the target file's head block with the next lifecycle and a NextID past the last block ID, its CRC good: can_mount() is FALSE, mount() cancels the copy as a bad block, keeps the older head and returns E_BAD_BLOCKS_REMOVED, and every file survives.
 
-    utils.startTestGroup(@"a newer head block whose NextID is past the last block ID")
-    setUpFiles()
-    buildFieldCopy(@"copy the head block of the target file with the next lifecycle and a NextID past the last block ID, activate it and read it back", targetHeadAddr, FIELD_NEXT, OUT_OF_RANGE_ID)
-    canMountStep(@"can_mount() is FALSE for a block whose NextID is past the last block ID and changes no block", FALSE)
-    mountFieldCopy(@"mount() cancels the head block whose NextID is past the last block ID, keeps the older head and returns E_BAD_BLOCKS_REMOVED")
-    survivorsStep(TRUE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a newer head block whose NextID is past the last block ID")
+  setUpFiles()
+  buildFieldCopy(@"copy the head block of the target file with the next lifecycle and a NextID past the last block ID, activate it and read it back", targetHeadAddr, FIELD_NEXT, OUT_OF_RANGE_ID)
+  canMountStep(@"can_mount() is FALSE for a block whose NextID is past the last block ID and changes no block", FALSE)
+  mountFieldCopy(@"mount() cancels the head block whose NextID is past the last block ID, keeps the older head and returns E_BAD_BLOCKS_REMOVED")
+  survivorsStep(TRUE)
+  secondMountStep()
 
 PRI testOutOfRangeEndPtr()
 ' A copy of the one-block file's block with the next lifecycle and an EndPtr before its data area, its CRC good: can_mount() is FALSE, mount() cancels the copy as a bad block, keeps the older block and returns E_BAD_BLOCKS_REMOVED, and every file survives.
 
-    utils.startTestGroup(@"a newer last block whose EndPtr lies before its data area")
-    setUpFiles()
-    buildFieldCopy(@"copy the one-block file's block with the next lifecycle and an EndPtr before its data area, activate it and read it back", crcHeadAddr, FIELD_NEXT, BAD_HEAD_END_PTR)
-    canMountStep(@"can_mount() is FALSE for a block whose EndPtr lies before its data area and changes no block", FALSE)
-    mountFieldCopy(@"mount() cancels the block whose EndPtr lies before its data area, keeps the older block and returns E_BAD_BLOCKS_REMOVED")
-    survivorsStep(TRUE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a newer last block whose EndPtr lies before its data area")
+  setUpFiles()
+  buildFieldCopy(@"copy the one-block file's block with the next lifecycle and an EndPtr before its data area, activate it and read it back", crcHeadAddr, FIELD_NEXT, BAD_HEAD_END_PTR)
+  canMountStep(@"can_mount() is FALSE for a block whose EndPtr lies before its data area and changes no block", FALSE)
+  mountFieldCopy(@"mount() cancels the block whose EndPtr lies before its data area, keeps the older block and returns E_BAD_BLOCKS_REMOVED")
+  survivorsStep(TRUE)
+  secondMountStep()
 
 PRI testOutOfRangeDataOffset()
 ' A copy of the one-block file's block with the next lifecycle and a data offset past the bytes it holds, its CRC good: can_mount() is FALSE, mount() cancels the copy as a bad block, keeps the older block and returns E_BAD_BLOCKS_REMOVED, and every file survives.
 
-    utils.startTestGroup(@"a newer head block whose data offset skips past its EndPtr")
-    setUpFiles()
-    buildFieldCopy(@"copy the one-block file's block with the next lifecycle and a data offset past the bytes it holds, activate it and read it back", crcHeadAddr, FIELD_DATA_OFFSET, BAD_DATA_OFFSET)
-    canMountStep(@"can_mount() is FALSE for a head block whose data offset skips past its EndPtr and changes no block", FALSE)
-    mountFieldCopy(@"mount() cancels the head block whose data offset skips past its EndPtr, keeps the older block and returns E_BAD_BLOCKS_REMOVED")
-    survivorsStep(TRUE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a newer head block whose data offset skips past its EndPtr")
+  setUpFiles()
+  buildFieldCopy(@"copy the one-block file's block with the next lifecycle and a data offset past the bytes it holds, activate it and read it back", crcHeadAddr, FIELD_DATA_OFFSET, BAD_DATA_OFFSET)
+  canMountStep(@"can_mount() is FALSE for a head block whose data offset skips past its EndPtr and changes no block", FALSE)
+  mountFieldCopy(@"mount() cancels the head block whose data offset skips past its EndPtr, keeps the older block and returns E_BAD_BLOCKS_REMOVED")
+  survivorsStep(TRUE)
+  secondMountStep()
 
 PRI buildFieldCopy(pTitle, copiedAddr, fieldSel, fieldValue) | pBlock, status, actStatus
 ' Copy a block of the files to a free block with the next lifecycle and one control field changed, activate the copy and read it back, as one test.
@@ -633,57 +614,54 @@ PRI buildFieldCopy(pTitle, copiedAddr, fieldSel, fieldValue) | pBlock, status, a
 ' @local status - what the program operation returned
 ' @local actStatus - what the activate operation returned
 
-    utils.startTest(pTitle)
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        sourceAddr := copiedAddr
-        readInto(sourceAddr, @sourceBuf)
-        copyCycle := nextCycle(cycleOf(@sourceBuf))
-        copyAddr := findFreeBlock(NO_BLOCK)
-        bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
-        setField(@copyBuf, fieldSel, fieldValue)
-        ' programming computes the CRC over the changed field, so only the field is out of range
-        status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
-        actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, copyAddr, NO_SOURCE, copyCycle)
-        debug("  block ", uhex_word_(sourceAddr), " copied to block ", uhex_word_(copyAddr), " with a field set to ", uhex_word_(fieldValue))
-        utils.evaluateSubStatus(status, @"program the copy", flash.SUCCESS)
-        utils.evaluateSubStatus(actStatus, @"activate the copy", flash.SUCCESS)
+  utils.startTest(pTitle)
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    sourceAddr := copiedAddr
+    readInto(sourceAddr, @sourceBuf)
+    copyCycle := nextCycle(cycleOf(@sourceBuf))
+    copyAddr := findFreeBlock(NO_BLOCK)
+    bytemove(@copyBuf, @sourceBuf, flash.BLOCK_SIZE)
+    setField(@copyBuf, fieldSel, fieldValue)
+    ' programming computes the CRC over the changed field, so only the field is out of range
+    status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, copyAddr, @copyBuf, copyCycle)
+    actStatus := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, copyAddr, NO_SOURCE, copyCycle)
+    DEBUG("  block ", uhex_word_(sourceAddr), " copied to block ", uhex_word_(copyAddr), " with a field set to ", uhex_word_(fieldValue))
+    utils.evaluateSubStatus(status, @"program the copy", flash.SUCCESS)
+    utils.evaluateSubStatus(actStatus, @"activate the copy", flash.SUCCESS)
 
-        pBlock := readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(pBlock > 0, @"the copy was read back", TRUE)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the copy is the next one", copyCycle)
-        utils.evaluateSubValue(fieldOf(@copyBuf, fieldSel), @"the copy holds the changed field", fieldValue)
-        utils.evaluateSubValue(isCrcGood(@copyBuf), @"the copy's CRC matches", TRUE)
+    pBlock := readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(pBlock > 0, @"the copy was read back", TRUE)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"lifecycle of the copy is the next one", copyCycle)
+    utils.evaluateSubValue(fieldOf(@copyBuf, fieldSel), @"the copy holds the changed field", fieldValue)
+    utils.evaluateSubValue(isCrcGood(@copyBuf), @"the copy's CRC matches", TRUE)
 
-        readInto(sourceAddr, @copyBuf)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"the copied block keeps its lifecycle", cycleOf(@sourceBuf))
-        utils.evaluateSubValue(isActive(cycleOf(@sourceBuf)), @"the copied block is active", TRUE)
+    readInto(sourceAddr, @copyBuf)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"the copied block keeps its lifecycle", cycleOf(@sourceBuf))
+    utils.evaluateSubValue(isActive(cycleOf(@sourceBuf)), @"the copied block is active", TRUE)
 
-        setTouched(sourceAddr, copyAddr, NO_BLOCK, NO_BLOCK)
-
+    setTouched(sourceAddr, copyAddr, NO_BLOCK, NO_BLOCK)
 
 PRI mountFieldCopy(pTitle)
 ' mount() cancels the copy with the field out of range, reports it, and keeps the block it was copied from, as one test.
 
 ' @param pTitle - address of zstring naming the test
 
-    utils.startTest(pTitle)
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)       ' a block with a field out of range is a bad block removed
-        readInto(copyAddr, @copyBuf)
-        utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the copy is cancelled", TRUE)
-        readInto(sourceAddr, @copyBuf)
-        utils.evaluateSubValue(cycleOf(@copyBuf), @"the copied block keeps its lifecycle", cycleOf(@sourceBuf))
-
+  utils.startTest(pTitle)
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    mountAndCheck(flash.E_BAD_BLOCKS_REMOVED)	 ' a block with a field out of range is a bad block removed
+    readInto(copyAddr, @copyBuf)
+    utils.evaluateSubValue(isCancelled(cycleOf(@copyBuf)), @"the copy is cancelled", TRUE)
+    readInto(sourceAddr, @copyBuf)
+    utils.evaluateSubValue(cycleOf(@copyBuf), @"the copied block keeps its lifecycle", cycleOf(@sourceBuf))
 
 PRI testMovedNewHead()
 ' create_file() with one free block named for the allocations: its head block is written there and picked again while still inactive; the file must survive a mount whole.
 
-    utils.startTestGroup(@"a block move during create_file() and the new file's inactive head block")
-    createWithNamedBlock()
-    movedHeadMountStep()
-
+  utils.startTestGroup(@"a block move during create_file() and the new file's inactive head block")
+  createWithNamedBlock()
+  movedHeadMountStep()
 
 PRI createWithNamedBlock() | status, namedAddr, setStatus, clearStatus, headAddr
 ' Format, name a free block for the allocations, make a three-block file with create_file() and clear the name, as one test; bSetUp tells the next step whether it worked.
@@ -695,26 +673,25 @@ PRI createWithNamedBlock() | status, namedAddr, setStatus, clearStatus, headAddr
 ' @local clearStatus - what clearing the name returned
 ' @local headAddr - the block that holds the new file's head block after create_file()
 
-    utils.startTest(@"create_file() of a three-block file while the block allocations are named to take one free block")
-    bSetUp := FALSE
-    status := flash.format()
-    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
-    namedAddr := findFreeBlock(NO_BLOCK)
-    utils.evaluateSubValue(flash.TEST_blockStateOf(namedAddr), @"the named block is free", flash.B_FREE)
+  utils.startTest(@"create_file() of a three-block file while the block allocations are named to take one free block")
+  bSetUp := FALSE
+  status := flash.format()
+  utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+  namedAddr := findFreeBlock(NO_BLOCK)
+  utils.evaluateSubValue(flash.TEST_blockStateOf(namedAddr), @"the named block is free", flash.B_FREE)
 
-    setStatus := flash.TEST_setTargetBlock(namedAddr)
-    ' the head block is written to the free named block, and each body block's allocation picks the named block again
-    status := flash.create_file(@movedFile, MOVED_FILL, MOVED_FILE_BYTES)
-    clearStatus := flash.TEST_setTargetBlock(flash.NOT_ENABLED)
-    _, _, headAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@movedFile, 0)
-    debug("  named block ", uhex_word_(namedAddr), ", the new file's head block is at block ", uhex_word_(headAddr))
+  setStatus := flash.TEST_setTargetBlock(namedAddr)
+  ' the head block is written to the free named block, and each body block's allocation picks the named block again
+  status := flash.CREATE_FILE(@movedFile, MOVED_FILL, MOVED_FILE_BYTES)
+  clearStatus := flash.TEST_setTargetBlock(flash.NOT_ENABLED)
+  _, _, headAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@movedFile, 0)
+  DEBUG("  named block ", uhex_word_(namedAddr), ", the new file's head block is at block ", uhex_word_(headAddr))
 
-    utils.evaluateSubStatus(setStatus, @"name the block", flash.SUCCESS)
-    utils.evaluateSubStatus(status, @"create_file()", flash.SUCCESS)
-    utils.evaluateSubStatus(clearStatus, @"clear the name", flash.SUCCESS)
-    utils.evaluateSubValue(flash.TEST_blockStateOf(namedAddr) <> flash.B_FREE, @"the named block holds a block of the new file", TRUE)
-    bSetUp := status == flash.SUCCESS and setStatus == flash.SUCCESS and clearStatus == flash.SUCCESS
-
+  utils.evaluateSubStatus(setStatus, @"name the block", flash.SUCCESS)
+  utils.evaluateSubStatus(status, @"create_file()", flash.SUCCESS)
+  utils.evaluateSubStatus(clearStatus, @"clear the name", flash.SUCCESS)
+  utils.evaluateSubValue(flash.TEST_blockStateOf(namedAddr) <> flash.B_FREE, @"the named block holds a block of the new file", TRUE)
+  bSetUp := status == flash.SUCCESS AND setStatus == flash.SUCCESS AND clearStatus == flash.SUCCESS
 
 PRI movedHeadMountStep() | status
 ' Unmount, then check can_mount() is TRUE, mount() returns SUCCESS and the new file reads back whole, as one test.
@@ -722,44 +699,40 @@ PRI movedHeadMountStep() | status
 ' Local Variables:
 ' @local status - what unmount() returned
 
-    utils.startTest(@"the file made while a block was named survives an unmount and a mount, and reads back whole")
-    utils.evaluateSubValue(bSetUp, @"the file was made", TRUE)
-    if bSetUp
-        status := flash.unmount()
-        utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
-        utils.evaluateSubValue(flash.can_mount(), @"can_mount()", TRUE)
-        mountAndCheck(flash.SUCCESS)                    ' a head block whose CRC matches its active lifecycle keeps the whole file
-        utils.evaluateSubValue(flash.exists(@movedFile), @"the file exists", TRUE)
-        utils.evaluateSubValue(fillMatches(@movedFile, MOVED_FILE_BYTES, MOVED_FILL), @"the file reads back whole", TRUE)
-
+  utils.startTest(@"the file made while a block was named survives an unmount and a mount, and reads back whole")
+  utils.evaluateSubValue(bSetUp, @"the file was made", TRUE)
+  if bSetUp
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    utils.evaluateSubValue(flash.CAN_MOUNT(), @"can_mount()", TRUE)
+    mountAndCheck(flash.SUCCESS)    ' a head block whose CRC matches its active lifecycle keeps the whole file
+    utils.evaluateSubValue(flash.exists(@movedFile), @"the file exists", TRUE)
+    utils.evaluateSubValue(fillMatches(@movedFile, MOVED_FILE_BYTES, MOVED_FILL), @"the file reads back whole", TRUE)
 
 PRI testHookRefusals()
 ' The block hooks refuse the block addresses just outside the filesystem and an operation they do not have, and accept the addresses inside it.
 
-    utils.startTestGroup(@"the block hooks refuse an address outside the filesystem")
-    refuseChange()
-    refuseRead()
-    acceptInside()
-
+  utils.startTestGroup(@"the block hooks refuse an address outside the filesystem")
+  refuseChange()
+  refuseRead()
+  acceptInside()
 
 PRI refuseChange()
 ' TEST_changeBlock() refuses -1, BLOCKS and an operation it does not have, as one test.
 
-    utils.startTest(@"TEST_changeBlock() refuses block addresses -1 and BLOCKS and an operation it does not have")
-    ' each call below is refused before any flash command is sent
-    checkStatus(flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, BEFORE_FIRST_BLOCK, NO_SOURCE, CYCLE_INACTIVE), flash.E_TEST_BAD_BLOCK_ARG)
-    checkStatus(flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, flash.BLOCKS, NO_SOURCE, CYCLE_INACTIVE), flash.E_TEST_BAD_BLOCK_ARG)
-    checkStatus(flash.TEST_changeBlock(NOT_A_BLOCK_OP, FIRST_BLOCK_ADDR, NO_SOURCE, CYCLE_INACTIVE), flash.E_TEST_BAD_BLOCK_ARG)
-
+  utils.startTest(@"TEST_changeBlock() refuses block addresses -1 and BLOCKS and an operation it does not have")
+  ' each call below is refused before any flash command is sent
+  checkStatus(flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, BEFORE_FIRST_BLOCK, NO_SOURCE, CYCLE_INACTIVE), flash.E_TEST_BAD_BLOCK_ARG)
+  checkStatus(flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, flash.BLOCKS, NO_SOURCE, CYCLE_INACTIVE), flash.E_TEST_BAD_BLOCK_ARG)
+  checkStatus(flash.TEST_changeBlock(NOT_A_BLOCK_OP, FIRST_BLOCK_ADDR, NO_SOURCE, CYCLE_INACTIVE), flash.E_TEST_BAD_BLOCK_ARG)
 
 PRI refuseRead()
 ' TEST_readBlock() refuses -1 and BLOCKS, as one test.
 
-    utils.startTest(@"TEST_readBlock() refuses block addresses -1 and BLOCKS")
-    ' a refused read returns the error code instead of a buffer address
-    checkStatus(flash.TEST_readBlock(BEFORE_FIRST_BLOCK), flash.E_TEST_BAD_BLOCK_ARG)
-    checkStatus(flash.TEST_readBlock(flash.BLOCKS), flash.E_TEST_BAD_BLOCK_ARG)
-
+  utils.startTest(@"TEST_readBlock() refuses block addresses -1 and BLOCKS")
+  ' a refused read returns the error code instead of a buffer address
+  checkStatus(flash.TEST_readBlock(BEFORE_FIRST_BLOCK), flash.E_TEST_BAD_BLOCK_ARG)
+  checkStatus(flash.TEST_readBlock(flash.BLOCKS), flash.E_TEST_BAD_BLOCK_ARG)
 
 PRI acceptInside() | freeAddr, printBefore, printNow, status, errCode
 ' The hooks accept the first and last block addresses, and an activate with the inactive lifecycle leaves a free block as it was, as one test.
@@ -771,58 +744,57 @@ PRI acceptInside() | freeAddr, printBefore, printNow, status, errCode
 ' @local status - what the activate returned
 ' @local errCode - error() after the activate
 
-    utils.startTest(@"the block hooks accept block addresses 0 and BLOCKS - 1")
-    utils.evaluateSubValue(flash.TEST_readBlock(FIRST_BLOCK_ADDR) > 0, @"TEST_readBlock(0) returns a buffer", TRUE)
-    utils.evaluateSubStatus(flash.error(), @"error() after TEST_readBlock(0)", flash.SUCCESS)
-    utils.evaluateSubValue(flash.TEST_readBlock(flash.BLOCKS - 1) > 0, @"TEST_readBlock(BLOCKS - 1) returns a buffer", TRUE)
-    utils.evaluateSubStatus(flash.error(), @"error() after TEST_readBlock(BLOCKS - 1)", flash.SUCCESS)
+  utils.startTest(@"the block hooks accept block addresses 0 and BLOCKS - 1")
+  utils.evaluateSubValue(flash.TEST_readBlock(FIRST_BLOCK_ADDR) > 0, @"TEST_readBlock(0) returns a buffer", TRUE)
+  utils.evaluateSubStatus(flash.error(), @"error() after TEST_readBlock(0)", flash.SUCCESS)
+  utils.evaluateSubValue(flash.TEST_readBlock(flash.BLOCKS - 1) > 0, @"TEST_readBlock(BLOCKS - 1) returns a buffer", TRUE)
+  utils.evaluateSubStatus(flash.error(), @"error() after TEST_readBlock(BLOCKS - 1)", flash.SUCCESS)
 
-    freeAddr := findFreeBlock(NO_BLOCK)
-    printBefore := blockPrint(freeAddr)
-    status := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, freeAddr, NO_SOURCE, CYCLE_INACTIVE)
-    errCode := flash.error()
-    printNow := blockPrint(freeAddr)
-    utils.evaluateSubStatus(status, @"activate a free block with the inactive lifecycle", flash.SUCCESS)
-    utils.evaluateSubStatus(errCode, @"error() after the activate", flash.SUCCESS)
-    utils.evaluateSubValue(printNow, @"the free block is unchanged", printBefore)
-
+  freeAddr := findFreeBlock(NO_BLOCK)
+  printBefore := blockPrint(freeAddr)
+  status := flash.TEST_changeBlock(flash.TEST_BLK_ACTIVATE, freeAddr, NO_SOURCE, CYCLE_INACTIVE)
+  errCode := flash.error()
+  printNow := blockPrint(freeAddr)
+  utils.evaluateSubStatus(status, @"activate a free block with the inactive lifecycle", flash.SUCCESS)
+  utils.evaluateSubStatus(errCode, @"error() after the activate", flash.SUCCESS)
+  utils.evaluateSubValue(printNow, @"the free block is unchanged", printBefore)
 
 PRI testFaults()
 ' Inject a flash timeout at each stopping point of the commit in each writer mode, with a second file open for reading.
 
-    ' A block that was erased, or programmed only in part, is inactive: mount() and can_mount() skip it, and it
-    ' stays on the flash as it is. Nothing of a new "w" file is active before its last block is activated.
-    faultCase(@"w new file: the erase of the last block fails in close()", MODE_W_NEW, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_GONE, NAMED_ERASED)
-    faultCase(@"w new file: a page program of the last block fails in close()", MODE_W_NEW, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_GONE, NAMED_PART_PROGRAMMED)
-    ' The activate's command was sent before its wait failed, so the chip carries it out. An active body block
-    ' whose head block is not active is reached by no file: mount() cancels it and reports it.
-    faultCase(@"w new file: the activate of the last block fails in close()", MODE_W_NEW, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.E_BAD_BLOCKS_REMOVED, WRITER_GONE, NAMED_NOT_CHECKED)
-    ' Once the head block's activate is carried out the file is whole on the flash.
-    faultCase(@"w new file: the activate of the head block fails in close()", MODE_W_NEW, WAIT_HEAD_ACTIVATE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
-    ' The allocation moves the second file's head block first: the copy is programmed and activated and the
-    ' original is cancelled. The cancel is carried out, so the move is complete and close() wrote nothing.
-    faultCase(@"w new file: the cancel of a block move fails in close()", MODE_W_NEW, WAIT_CANCEL, MOVE_SECOND_HEAD, TRUE, flash.SUCCESS, WRITER_GONE, NAMED_NOT_CHECKED)
+' A block that was erased, or programmed only in part, is inactive: mount() and can_mount() skip it, and it
+' stays on the flash as it is. Nothing of a new "w" file is active before its last block is activated.
 
-    ' Until the new copy is active the old copy is the file. Once it is active there are two active blocks with
-    ' one ID: mount() keeps the newer and cancels the older, returning SUCCESS, and can_mount() is FALSE because
-    ' that mount() changes a block. Once the old copy's cancel is carried out nothing is left to repair.
-    faultCase(@"a: the erase of the new copy of the last block fails in close()", MODE_APPEND, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_ERASED)
-    faultCase(@"a: a page program of the new copy of the last block fails in close()", MODE_APPEND, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_PART_PROGRAMMED)
-    faultCase(@"a: the activate of the new copy fails in close()", MODE_APPEND, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
-    faultCase(@"a: the cancel of the old copy fails in close()", MODE_APPEND, WAIT_CANCEL, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
+  faultCase(@"w new file: the erase of the last block fails in close()", MODE_W_NEW, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_GONE, NAMED_ERASED)
+  faultCase(@"w new file: a page program of the last block fails in close()", MODE_W_NEW, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_GONE, NAMED_PART_PROGRAMMED)
+  ' The activate's command was sent before its wait failed, so the chip carries it out. An active body block
+  ' whose head block is not active is reached by no file: mount() cancels it and reports it.
+  faultCase(@"w new file: the activate of the last block fails in close()", MODE_W_NEW, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.E_BAD_BLOCKS_REMOVED, WRITER_GONE, NAMED_NOT_CHECKED)
+  ' Once the head block's activate is carried out the file is whole on the flash.
+  faultCase(@"w new file: the activate of the head block fails in close()", MODE_W_NEW, WAIT_HEAD_ACTIVATE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
+  ' The allocation moves the second file's head block first: the copy is programmed and activated and the
+  ' original is cancelled. The cancel is carried out, so the move is complete and close() wrote nothing.
+  faultCase(@"w new file: the cancel of a block move fails in close()", MODE_W_NEW, WAIT_CANCEL, MOVE_SECOND_HEAD, TRUE, flash.SUCCESS, WRITER_GONE, NAMED_NOT_CHECKED)
 
-    ' The same three states for the rewrite of one block: the file holds the old copy whole or the new copy whole.
-    faultCase(@"r+: the erase of the new copy of the block fails in flush()", MODE_R_PLUS, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_ERASED)
-    faultCase(@"r+: a page program of the new copy of the block fails in flush()", MODE_R_PLUS, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_PART_PROGRAMMED)
-    faultCase(@"r+: the activate of the new copy fails in flush()", MODE_R_PLUS, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
-    faultCase(@"r+: the cancel of the old copy fails in flush()", MODE_R_PLUS, WAIT_CANCEL, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
+  ' Until the new copy is active the old copy is the file. Once it is active there are two active blocks with
+  ' one ID: mount() keeps the newer and cancels the older, returning SUCCESS, and can_mount() is FALSE because
+  ' that mount() changes a block. Once the old copy's cancel is carried out nothing is left to repair.
+  faultCase(@"a: the erase of the new copy of the last block fails in close()", MODE_APPEND, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_ERASED)
+  faultCase(@"a: a page program of the new copy of the last block fails in close()", MODE_APPEND, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_PART_PROGRAMMED)
+  faultCase(@"a: the activate of the new copy fails in close()", MODE_APPEND, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
+  faultCase(@"a: the cancel of the old copy fails in close()", MODE_APPEND, WAIT_CANCEL, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
 
-    ' The same three states for the head block of the file a "w+" commit replaces.
-    faultCase(@"w+ over a file: the erase of the new head block fails in close()", MODE_W_PLUS, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_ERASED)
-    faultCase(@"w+ over a file: a page program of the new head block fails in close()", MODE_W_PLUS, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_PART_PROGRAMMED)
-    faultCase(@"w+ over a file: the activate of the new head block fails in close()", MODE_W_PLUS, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
-    faultCase(@"w+ over a file: the cancel of the old head block fails in close()", MODE_W_PLUS, WAIT_CANCEL, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
+  ' The same three states for the rewrite of one block: the file holds the old copy whole or the new copy whole.
+  faultCase(@"r+: the erase of the new copy of the block fails in flush()", MODE_R_PLUS, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_ERASED)
+  faultCase(@"r+: a page program of the new copy of the block fails in flush()", MODE_R_PLUS, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_PART_PROGRAMMED)
+  faultCase(@"r+: the activate of the new copy fails in flush()", MODE_R_PLUS, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
+  faultCase(@"r+: the cancel of the old copy fails in flush()", MODE_R_PLUS, WAIT_CANCEL, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
 
+  ' The same three states for the head block of the file a "w+" commit replaces.
+  faultCase(@"w+ over a file: the erase of the new head block fails in close()", MODE_W_PLUS, WAIT_ERASE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_ERASED)
+  faultCase(@"w+ over a file: a page program of the new head block fails in close()", MODE_W_PLUS, WAIT_PAGE, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_OLD, NAMED_PART_PROGRAMMED)
+  faultCase(@"w+ over a file: the activate of the new head block fails in close()", MODE_W_PLUS, WAIT_ACTIVATE, TAKE_FREE_BLOCK, FALSE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
+  faultCase(@"w+ over a file: the cancel of the old head block fails in close()", MODE_W_PLUS, WAIT_CANCEL, TAKE_FREE_BLOCK, TRUE, flash.SUCCESS, WRITER_NEW, NAMED_NOT_CHECKED)
 
 PRI faultCase(pTitle, writerMode, waitNumber, allocation, bCanMount, mountStatus, writerOutcome, namedCheck)
 ' Run one fault case as a test group: set up the writer and the second file, inject the fault, recover and check the files.
@@ -836,23 +808,22 @@ PRI faultCase(pTitle, writerMode, waitNumber, allocation, bCanMount, mountStatus
 ' @param writerOutcome - what the writer's file must hold: WRITER_GONE, WRITER_OLD or WRITER_NEW
 ' @param namedCheck - what the programmed block must hold: NAMED_NOT_CHECKED, NAMED_ERASED or NAMED_PART_PROGRAMMED
 
-    utils.startTestGroup(pTitle)
-    setUpWriter(writerMode)
-    injectFault(writerMode, waitNumber, allocation)
-    recoverStep(bCanMount, mountStatus, namedCheck)
-    committedStep(writerOutcome)
-    secondMountStep()
-
+  utils.startTestGroup(pTitle)
+  setUpWriter(writerMode)
+  injectFault(writerMode, waitNumber, allocation)
+  recoverStep(bCanMount, mountStatus, namedCheck)
+  committedStep(writerOutcome)
+  secondMountStep()
 
 PRI testRecoveryFaults()
 ' Inject a flash timeout inside the recovering mount(), after the fault that leaves an orphan body block.
 
-    ' The ready check fails before any block is read, so the orphan is still there for the next mount().
-    recoveryFaultCase(@"a fault in the ready check of the recovering mount()", WAIT_READY_CHECK, flash.E_BAD_BLOCKS_REMOVED)
-    ' The orphan's cancel was sent before its wait failed, so the chip carries it out: the next mount() finds
-    ' nothing to remove.
-    recoveryFaultCase(@"a fault in the cancel of the orphan body block by the recovering mount()", WAIT_MOUNT_CANCEL, flash.SUCCESS)
+' The ready check fails before any block is read, so the orphan is still there for the next mount().
 
+  recoveryFaultCase(@"a fault in the ready check of the recovering mount()", WAIT_READY_CHECK, flash.E_BAD_BLOCKS_REMOVED)
+  ' The orphan's cancel was sent before its wait failed, so the chip carries it out: the next mount() finds
+  ' nothing to remove.
+  recoveryFaultCase(@"a fault in the cancel of the orphan body block by the recovering mount()", WAIT_MOUNT_CANCEL, flash.SUCCESS)
 
 PRI recoveryFaultCase(pTitle, recoveryWait, retryStatus)
 ' Run one fault in recovery as a test group: a "w" close() whose last block's activate fails, then a mount() whose own wait fails.
@@ -861,30 +832,27 @@ PRI recoveryFaultCase(pTitle, recoveryWait, retryStatus)
 ' @param recoveryWait - the flash wait of mount() that fails, counted from 1
 ' @param retryStatus - the status the next mount() must return
 
-    utils.startTestGroup(pTitle)
-    setUpWriter(MODE_W_NEW)
-    injectFault(MODE_W_NEW, WAIT_ACTIVATE, TAKE_FREE_BLOCK)
-    faultedMountStep(recoveryWait, retryStatus)
-    committedStep(WRITER_GONE)
-    secondMountStep()
-
+  utils.startTestGroup(pTitle)
+  setUpWriter(MODE_W_NEW)
+  injectFault(MODE_W_NEW, WAIT_ACTIVATE, TAKE_FREE_BLOCK)
+  faultedMountStep(recoveryWait, retryStatus)
+  committedStep(WRITER_GONE)
+  secondMountStep()
 
 PRI testUnmountedFault()
 ' Inject a flash timeout into can_mount() while the filesystem is not mounted.
 
-    utils.startTestGroup(@"a flash wait that fails in can_mount() while the filesystem is not mounted")
-    setUpSecond(FALSE)
-    unmountedFaultStep()
-    committedStep(WRITER_GONE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a flash wait that fails in can_mount() while the filesystem is not mounted")
+  setUpSecond(FALSE)
+  unmountedFaultStep()
+  committedStep(WRITER_GONE)
+  secondMountStep()
 
 PRI testGuardRefusal()
 ' Refuse a block program below the filesystem while it is mounted, through each of the two programming primitives.
 
-    guardCase(flash.TEST_BLK_PROGRAM, @"the block program refused below the filesystem returns E_FLASH_TIMEOUT and unmounts")
-    guardCase(flash.TEST_BLK_CORRUPT, @"the lifecycle program refused below the filesystem returns E_FLASH_TIMEOUT and unmounts")
-
+  guardCase(flash.TEST_BLK_PROGRAM, @"the block program refused below the filesystem returns E_FLASH_TIMEOUT and unmounts")
+  guardCase(flash.TEST_BLK_CORRUPT, @"the lifecycle program refused below the filesystem returns E_FLASH_TIMEOUT and unmounts")
 
 PRI guardCase(blockOp, pTitle)
 ' Run one refusal as a test group: mount with the second file open for reading, refuse the program, recover and check the file.
@@ -892,12 +860,11 @@ PRI guardCase(blockOp, pTitle)
 ' @param blockOp - the primitive TEST_programBelowFs() calls: flash.TEST_BLK_PROGRAM or flash.TEST_BLK_CORRUPT
 ' @param pTitle - address of zstring naming the test
 
-    utils.startTestGroup(@"a block program refused below the filesystem while it is mounted")
-    setUpSecond(TRUE)
-    guardRefusalStep(blockOp, pTitle)
-    committedStep(WRITER_GONE)
-    secondMountStep()
-
+  utils.startTestGroup(@"a block program refused below the filesystem while it is mounted")
+  setUpSecond(TRUE)
+  guardRefusalStep(blockOp, pTitle)
+  committedStep(WRITER_GONE)
+  secondMountStep()
 
 PRI setUpWriter(writerMode) | status, bSecond, bBase, bOpen, bWriter
 ' Format, write the second file and the file the writer opens, open the second file for reading and open the writer with bytes not yet committed, as one test; bSetUp tells the later steps whether it worked.
@@ -911,26 +878,25 @@ PRI setUpWriter(writerMode) | status, bSecond, bBase, bOpen, bWriter
 ' @local bOpen - TRUE when the second file is open for reading
 ' @local bWriter - TRUE when the writer is open with bytes not yet committed
 
-    utils.startTest(@"set up: write the second file and the writer's file, open the second file for reading and open the writer")
-    bSetUp := FALSE
-    status := flash.format()
-    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
-    bSecond := writeFile(@secondFile, FILE_BYTES, SECOND_SEED)
-    utils.evaluateSubValue(bSecond, @"the second file is written", TRUE)
-    bBase := writeWriterBase(writerMode)
-    utils.evaluateSubValue(bBase, @"the file the writer opens is written", TRUE)
-    secondHndl := flash.open(@secondFile, flash.FILEMODE_READ)
-    bOpen := isUsableHandle(secondHndl)
-    utils.evaluateSubValue(bOpen, @"the second file is open for reading", TRUE)
+  utils.startTest(@"set up: write the second file and the writer's file, open the second file for reading and open the writer")
+  bSetUp := FALSE
+  status := flash.format()
+  utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+  bSecond := writeFile(@secondFile, FILE_BYTES, SECOND_SEED)
+  utils.evaluateSubValue(bSecond, @"the second file is written", TRUE)
+  bBase := writeWriterBase(writerMode)
+  utils.evaluateSubValue(bBase, @"the file the writer opens is written", TRUE)
+  secondHndl := flash.open(@secondFile, flash.FILEMODE_READ)
+  bOpen := isUsableHandle(secondHndl)
+  utils.evaluateSubValue(bOpen, @"the second file is open for reading", TRUE)
 
-    case writerMode
-        MODE_W_NEW: bWriter := openNewWriter()
-        MODE_APPEND: bWriter := openAppendWriter()
-        MODE_R_PLUS: bWriter := openRewriteWriter()
-        other: bWriter := openReplaceWriter()
-    utils.evaluateSubValue(bWriter, @"the writer is open with bytes not yet committed", TRUE)
-    bSetUp := status == flash.SUCCESS and bSecond and bBase and bOpen and bWriter
-
+  case writerMode
+    MODE_W_NEW: bWriter := openNewWriter()
+    MODE_APPEND: bWriter := openAppendWriter()
+    MODE_R_PLUS: bWriter := openRewriteWriter()
+    other: bWriter := openReplaceWriter()
+  utils.evaluateSubValue(bWriter, @"the writer is open with bytes not yet committed", TRUE)
+  bSetUp := status == flash.SUCCESS AND bSecond AND bBase AND bOpen AND bWriter
 
 PRI writeWriterBase(writerMode) : bWritten
 ' Write the file the writer opens: none for "w" on a new name, a one-block file for the other modes.
@@ -938,12 +904,11 @@ PRI writeWriterBase(writerMode) : bWritten
 ' @param writerMode - the writer's mode: MODE_W_NEW, MODE_APPEND, MODE_R_PLUS or MODE_W_PLUS
 ' @returns bWritten - TRUE when the file was written, or when the mode opens no file
 
-    case writerMode
-        MODE_W_NEW: bWritten := TRUE
-        MODE_APPEND: bWritten := writeFile(@writerFile, APPEND_BASE_BYTES, WRITER_SEED)
-        MODE_R_PLUS: bWritten := writeFile(@writerFile, REWRITE_BYTES, RP_OPEN_SEED)
-        other: bWritten := writeFile(@writerFile, REWRITE_BYTES, WP_OLD_SEED)
-
+  case writerMode
+    MODE_W_NEW: bWritten := TRUE
+    MODE_APPEND: bWritten := writeFile(@writerFile, APPEND_BASE_BYTES, WRITER_SEED)
+    MODE_R_PLUS: bWritten := writeFile(@writerFile, REWRITE_BYTES, RP_OPEN_SEED)
+    other: bWritten := writeFile(@writerFile, REWRITE_BYTES, WP_OLD_SEED)
 
 PRI openNewWriter() : bReady | writeCount
 ' Open "w" on a new name and write two blocks: write() programs the head block, inactive, and the last block stays in the buffer.
@@ -953,17 +918,16 @@ PRI openNewWriter() : bReady | writeCount
 ' Local Variables:
 ' @local writeCount - what write() returned
 
-    bReady := FALSE
-    oldBytes := 0                                       ' no commit of this file comes before the fault
-    oldSeed := WRITER_SEED
-    newBytes := FILE_BYTES
-    newSeed := WRITER_SEED
-    writerHndl := flash.open(@writerFile, flash.FILEMODE_WRITE)
-    if isUsableHandle(writerHndl)
-        fillPattern(FILE_BYTES, WRITER_SEED)
-        writeCount := flash.write(writerHndl, @dataBuf, FILE_BYTES)
-        bReady := writeCount == FILE_BYTES
-
+  bReady := FALSE
+  oldBytes := 0    ' no commit of this file comes before the fault
+  oldSeed := WRITER_SEED
+  newBytes := FILE_BYTES
+  newSeed := WRITER_SEED
+  writerHndl := flash.open(@writerFile, flash.FILEMODE_WRITE)
+  if isUsableHandle(writerHndl)
+    fillPattern(FILE_BYTES, WRITER_SEED)
+    writeCount := flash.write(writerHndl, @dataBuf, FILE_BYTES)
+    bReady := writeCount == FILE_BYTES
 
 PRI openAppendWriter() : bReady | writeCount, status, lastCount
 ' Open "a" on the one-block file, append and flush, then append more bytes that stay in the buffer.
@@ -975,19 +939,18 @@ PRI openAppendWriter() : bReady | writeCount, status, lastCount
 ' @local status - what flush() returned
 ' @local lastCount - what the write() after the flush returned
 
-    bReady := FALSE
-    oldBytes := APPEND_BASE_BYTES + APPEND_FIRST_BYTES  ' the flush commits the first bytes appended
-    oldSeed := WRITER_SEED
-    newBytes := oldBytes + APPEND_LAST_BYTES
-    newSeed := WRITER_SEED
-    writerHndl := flash.open(@writerFile, flash.FILEMODE_APPEND)
-    if isUsableHandle(writerHndl)
-        fillPattern(newBytes, WRITER_SEED)              ' the appended bytes go on with the pattern of the file
-        writeCount := flash.write(writerHndl, @dataBuf + APPEND_BASE_BYTES, APPEND_FIRST_BYTES)
-        status := flash.flush(writerHndl)
-        lastCount := flash.write(writerHndl, @dataBuf + oldBytes, APPEND_LAST_BYTES)
-        bReady := writeCount == APPEND_FIRST_BYTES and status == flash.SUCCESS and lastCount == APPEND_LAST_BYTES
-
+  bReady := FALSE
+  oldBytes := APPEND_BASE_BYTES + APPEND_FIRST_BYTES	' the flush commits the first bytes appended
+  oldSeed := WRITER_SEED
+  newBytes := oldBytes + APPEND_LAST_BYTES
+  newSeed := WRITER_SEED
+  writerHndl := flash.open(@writerFile, flash.FILEMODE_APPEND)
+  if isUsableHandle(writerHndl)
+    fillPattern(newBytes, WRITER_SEED)			' the appended bytes go on with the pattern of the file
+    writeCount := flash.write(writerHndl, @dataBuf + APPEND_BASE_BYTES, APPEND_FIRST_BYTES)
+    status := flash.flush(writerHndl)
+    lastCount := flash.write(writerHndl, @dataBuf + oldBytes, APPEND_LAST_BYTES)
+    bReady := writeCount == APPEND_FIRST_BYTES AND status == flash.SUCCESS AND lastCount == APPEND_LAST_BYTES
 
 PRI openRewriteWriter() : bReady | writeCount, status, position, lastCount
 ' Open "r+" on the one-block file, rewrite every byte and flush, then rewrite every byte again in the buffer.
@@ -1000,21 +963,20 @@ PRI openRewriteWriter() : bReady | writeCount, status, position, lastCount
 ' @local position - what the seek back to the start returned
 ' @local lastCount - what the write() after the flush returned
 
-    bReady := FALSE
-    oldBytes := REWRITE_BYTES                           ' the flush commits the first rewrite
-    oldSeed := RP_FLUSH_SEED
-    newBytes := REWRITE_BYTES
-    newSeed := RP_FAULT_SEED
-    writerHndl := flash.open(@writerFile, flash.FILEMODE_READ_EXTENDED)
-    if isUsableHandle(writerHndl)
-        fillPattern(REWRITE_BYTES, RP_FLUSH_SEED)
-        writeCount := flash.write(writerHndl, @dataBuf, REWRITE_BYTES)
-        status := flash.flush(writerHndl)
-        position := flash.seek(writerHndl, 0, flash.SK_FILE_START)
-        fillPattern(REWRITE_BYTES, RP_FAULT_SEED)
-        lastCount := flash.write(writerHndl, @dataBuf, REWRITE_BYTES)
-        bReady := writeCount == REWRITE_BYTES and status == flash.SUCCESS and position == 0 and lastCount == REWRITE_BYTES
-
+  bReady := FALSE
+  oldBytes := REWRITE_BYTES    ' the flush commits the first rewrite
+  oldSeed := RP_FLUSH_SEED
+  newBytes := REWRITE_BYTES
+  newSeed := RP_FAULT_SEED
+  writerHndl := flash.open(@writerFile, flash.FILEMODE_READ_EXTENDED)
+  if isUsableHandle(writerHndl)
+    fillPattern(REWRITE_BYTES, RP_FLUSH_SEED)
+    writeCount := flash.write(writerHndl, @dataBuf, REWRITE_BYTES)
+    status := flash.flush(writerHndl)
+    position := flash.seek(writerHndl, 0, flash.SK_FILE_START)
+    fillPattern(REWRITE_BYTES, RP_FAULT_SEED)
+    lastCount := flash.write(writerHndl, @dataBuf, REWRITE_BYTES)
+    bReady := writeCount == REWRITE_BYTES AND status == flash.SUCCESS AND position == 0 AND lastCount == REWRITE_BYTES
 
 PRI openReplaceWriter() : bReady | writeCount
 ' Open "w+" on the name of the one-block file and write a new file that stays in the buffer.
@@ -1024,17 +986,16 @@ PRI openReplaceWriter() : bReady | writeCount
 ' Local Variables:
 ' @local writeCount - what write() returned
 
-    bReady := FALSE
-    oldBytes := REWRITE_BYTES                           ' the file "w+" replaces stays as it is until the commit
-    oldSeed := WP_OLD_SEED
-    newBytes := WP_NEW_BYTES
-    newSeed := WP_NEW_SEED
-    writerHndl := flash.open(@writerFile, flash.FILEMODE_WRITE_EXTENDED)
-    if isUsableHandle(writerHndl)
-        fillPattern(WP_NEW_BYTES, WP_NEW_SEED)
-        writeCount := flash.write(writerHndl, @dataBuf, WP_NEW_BYTES)
-        bReady := writeCount == WP_NEW_BYTES
-
+  bReady := FALSE
+  oldBytes := REWRITE_BYTES    ' the file "w+" replaces stays as it is until the commit
+  oldSeed := WP_OLD_SEED
+  newBytes := WP_NEW_BYTES
+  newSeed := WP_NEW_SEED
+  writerHndl := flash.open(@writerFile, flash.FILEMODE_WRITE_EXTENDED)
+  if isUsableHandle(writerHndl)
+    fillPattern(WP_NEW_BYTES, WP_NEW_SEED)
+    writeCount := flash.write(writerHndl, @dataBuf, WP_NEW_BYTES)
+    bReady := writeCount == WP_NEW_BYTES
 
 PRI injectFault(writerMode, waitNumber, allocation) | nameStatus, faultStatus, errCode, clearStatus, nextStatus
 ' Name the block the faulted call allocates, arm the countdown, make the call, disarm, and check the call and the next one, as one test.
@@ -1050,31 +1011,30 @@ PRI injectFault(writerMode, waitNumber, allocation) | nameStatus, faultStatus, e
 ' @local clearStatus - what clearing the name returned
 ' @local nextStatus - what the call after the fault returned
 
-    utils.startTest(@"the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted")
-    utils.evaluateSubValue(bSetUp, @"the writer was set up", TRUE)
-    if bSetUp
-        if allocation == MOVE_SECOND_HEAD
-            _, _, faultBlockAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@secondFile, 0)
-        else
-            faultBlockAddr := findTableFreeBlock()
-        nameStatus := flash.TEST_setTargetBlock(faultBlockAddr)
-        ' this program runs on one cog, so no other cog calls the filesystem while the countdown is armed
-        flash.TEST_armFlashFault(waitNumber)
-        faultStatus := faultedCall(writerMode)          ' the armed wait reports a timeout and the call stops there, as a power loss there would stop it
-        errCode := flash.error()
-        flash.TEST_armFlashFault(FAULT_DISARM)          ' a countdown left armed would fire inside the recovering mount()
-        clearStatus := flash.TEST_setTargetBlock(flash.NOT_ENABLED)
-        nextStatus := flash.close(writerHndl)           ' the fault unmounted the filesystem and freed every handle
-        debug("  block ", uhex_word_(faultBlockAddr), " named, flash wait ", udec_(waitNumber), " fails")
+  utils.startTest(@"the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted")
+  utils.evaluateSubValue(bSetUp, @"the writer was set up", TRUE)
+  if bSetUp
+    if allocation == MOVE_SECOND_HEAD
+      _, _, faultBlockAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@secondFile, 0)
+    else
+      faultBlockAddr := findTableFreeBlock()
+    nameStatus := flash.TEST_setTargetBlock(faultBlockAddr)
+    ' this program runs on one cog, so no other cog calls the filesystem while the countdown is armed
+    flash.TEST_armFlashFault(waitNumber)
+    faultStatus := faultedCall(writerMode)    ' the armed wait reports a timeout and the call stops there, as a power loss there would stop it
+    errCode := flash.error()
+    flash.TEST_armFlashFault(FAULT_DISARM)    ' a countdown left armed would fire inside the recovering mount()
+    clearStatus := flash.TEST_setTargetBlock(flash.NOT_ENABLED)
+    nextStatus := flash.close(writerHndl)     ' the fault unmounted the filesystem and freed every handle
+    DEBUG("  block ", uhex_word_(faultBlockAddr), " named, flash wait ", udec_(waitNumber), " fails")
 
-        utils.evaluateSubValue(faultBlockAddr <> NO_BLOCK, @"a block is named for the allocation", TRUE)
-        utils.evaluateSubStatus(nameStatus, @"name the block", flash.SUCCESS)
-        utils.evaluateSubStatus(faultStatus, @"the faulted call", flash.E_FLASH_TIMEOUT)
-        utils.evaluateSubStatus(errCode, @"error() after the faulted call", flash.E_FLASH_TIMEOUT)
-        utils.evaluateSubStatus(clearStatus, @"clear the name", flash.SUCCESS)
-        utils.evaluateSubStatus(nextStatus, @"close() after the fault", flash.E_NOT_MOUNTED)
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is not mounted", FALSE)
-
+    utils.evaluateSubValue(faultBlockAddr <> NO_BLOCK, @"a block is named for the allocation", TRUE)
+    utils.evaluateSubStatus(nameStatus, @"name the block", flash.SUCCESS)
+    utils.evaluateSubStatus(faultStatus, @"the faulted call", flash.E_FLASH_TIMEOUT)
+    utils.evaluateSubStatus(errCode, @"error() after the faulted call", flash.E_FLASH_TIMEOUT)
+    utils.evaluateSubStatus(clearStatus, @"clear the name", flash.SUCCESS)
+    utils.evaluateSubStatus(nextStatus, @"close() after the fault", flash.E_NOT_MOUNTED)
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is not mounted", FALSE)
 
 PRI faultedCall(writerMode) : status
 ' Make the call of the writer's commit into which the fault is injected.
@@ -1082,11 +1042,10 @@ PRI faultedCall(writerMode) : status
 ' @param writerMode - the writer's mode: MODE_W_NEW, MODE_APPEND, MODE_R_PLUS or MODE_W_PLUS
 ' @returns status - what the call returned
 
-    if writerMode == MODE_R_PLUS
-        status := flash.flush(writerHndl)               ' the flush rewrites the modified block
-    else
-        status := flash.close(writerHndl)               ' the close commits the file
-
+  if writerMode == MODE_R_PLUS
+    status := flash.flush(writerHndl)	 ' the flush rewrites the modified block
+  else
+    status := flash.close(writerHndl)	 ' the close commits the file
 
 PRI recoverStep(bCanMount, mountStatus, namedCheck) | bAnswer, cmErr, printBefore, printAfter
 ' Check can_mount() and the recovering mount() after the fault, and the block the faulted call programmed, as one test.
@@ -1101,25 +1060,24 @@ PRI recoverStep(bCanMount, mountStatus, namedCheck) | bAnswer, cmErr, printBefor
 ' @local printBefore - fingerprint of the programmed block before mount()
 ' @local printAfter - fingerprint of the programmed block after mount()
 
-    utils.startTest(@"can_mount() and the recovering mount() give the pair a power loss at that step gives")
-    utils.evaluateSubValue(bSetUp, @"the writer was set up", TRUE)
-    if bSetUp
-        ' can_mount() first reads the chip's status until its busy bit clears, so the erase or program the
-        ' fault left running is finished before any block is read
-        bAnswer := flash.can_mount()
-        cmErr := flash.error()
-        utils.evaluateSubValue(bAnswer, @"can_mount()", bCanMount)
-        ' can_mount() leaves E_BAD_BLOCKS_REMOVED when mount() would remove a block, and SUCCESS otherwise
-        utils.evaluateSubStatus(cmErr, @"error() after can_mount()", mountStatus)
-        printBefore := 0
-        if namedCheck <> NAMED_NOT_CHECKED
-            printBefore := checkNamedBlock(namedCheck)
-        mountAndCheck(mountStatus)
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is mounted", TRUE)
-        if namedCheck <> NAMED_NOT_CHECKED
-            printAfter := blockPrint(faultBlockAddr)
-            utils.evaluateSubValue(printAfter, @"mount() leaves the half-written block as it was", printBefore)
-
+  utils.startTest(@"can_mount() and the recovering mount() give the pair a power loss at that step gives")
+  utils.evaluateSubValue(bSetUp, @"the writer was set up", TRUE)
+  if bSetUp
+    ' can_mount() first reads the chip's status until its busy bit clears, so the erase or program the
+    ' fault left running is finished before any block is read
+    bAnswer := flash.CAN_MOUNT()
+    cmErr := flash.error()
+    utils.evaluateSubValue(bAnswer, @"can_mount()", bCanMount)
+    ' can_mount() leaves E_BAD_BLOCKS_REMOVED when mount() would remove a block, and SUCCESS otherwise
+    utils.evaluateSubStatus(cmErr, @"error() after can_mount()", mountStatus)
+    printBefore := 0
+    if namedCheck <> NAMED_NOT_CHECKED
+      printBefore := checkNamedBlock(namedCheck)
+    mountAndCheck(mountStatus)
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is mounted", TRUE)
+    if namedCheck <> NAMED_NOT_CHECKED
+      printAfter := blockPrint(faultBlockAddr)
+      utils.evaluateSubValue(printAfter, @"mount() leaves the half-written block as it was", printBefore)
 
 PRI checkNamedBlock(namedCheck) : blockCrc | pBlock
 ' Check that the block the faulted call programmed holds what the fault left, and fingerprint it.
@@ -1130,16 +1088,15 @@ PRI checkNamedBlock(namedCheck) : blockCrc | pBlock
 ' Local Variables:
 ' @local pBlock - the hook's buffer address, or the error code when the block could not be read
 
-    pBlock := readInto(faultBlockAddr, @copyBuf)
-    utils.evaluateSubValue(pBlock > 0, @"the half-written block was read back", TRUE)
-    utils.evaluateSubValue(cycleOf(@copyBuf), @"the half-written block is inactive", CYCLE_INACTIVE)
-    utils.evaluateSubValue(LONG[@copyBuf + flash.BLOCK_SIZE - CRC_BYTES], @"the last page of the half-written block is still erased", ERASED_LONG)
-    if namedCheck == NAMED_ERASED
-        utils.evaluateSubValue(LONG[@copyBuf], @"the first page of the half-written block is still erased", ERASED_LONG)
-    else
-        utils.evaluateSubValue(LONG[@copyBuf] <> ERASED_LONG, @"the first page of the half-written block was programmed", TRUE)
-    blockCrc := blockPrint(faultBlockAddr)
-
+  pBlock := readInto(faultBlockAddr, @copyBuf)
+  utils.evaluateSubValue(pBlock > 0, @"the half-written block was read back", TRUE)
+  utils.evaluateSubValue(cycleOf(@copyBuf), @"the half-written block is inactive", CYCLE_INACTIVE)
+  utils.evaluateSubValue(LONG[@copyBuf + flash.BLOCK_SIZE - CRC_BYTES], @"the last page of the half-written block is still erased", ERASED_LONG)
+  if namedCheck == NAMED_ERASED
+    utils.evaluateSubValue(LONG[@copyBuf], @"the first page of the half-written block is still erased", ERASED_LONG)
+  else
+    utils.evaluateSubValue(LONG[@copyBuf] <> ERASED_LONG, @"the first page of the half-written block was programmed", TRUE)
+  blockCrc := blockPrint(faultBlockAddr)
 
 PRI faultedMountStep(recoveryWait, retryStatus) | bAnswer, cmErr, status, errCode
 ' Check that a mount() whose own flash wait fails returns E_FLASH_TIMEOUT and stays unmounted, and that the next mount() recovers, as one test.
@@ -1153,25 +1110,24 @@ PRI faultedMountStep(recoveryWait, retryStatus) | bAnswer, cmErr, status, errCod
 ' @local status - what the faulted mount() returned
 ' @local errCode - error() after the faulted mount()
 
-    utils.startTest(@"a mount() whose own flash wait fails returns E_FLASH_TIMEOUT and stays unmounted, and the next mount() recovers")
-    utils.evaluateSubValue(bSetUp, @"the writer was set up", TRUE)
-    if bSetUp
-        bAnswer := flash.can_mount()                    ' its status read lets the activate the fault left running finish
-        cmErr := flash.error()
-        utils.evaluateSubValue(bAnswer, @"can_mount() with an orphan body block", FALSE)
-        utils.evaluateSubStatus(cmErr, @"error() after can_mount()", flash.E_BAD_BLOCKS_REMOVED)
+  utils.startTest(@"a mount() whose own flash wait fails returns E_FLASH_TIMEOUT and stays unmounted, and the next mount() recovers")
+  utils.evaluateSubValue(bSetUp, @"the writer was set up", TRUE)
+  if bSetUp
+    bAnswer := flash.CAN_MOUNT()    ' its status read lets the activate the fault left running finish
+    cmErr := flash.error()
+    utils.evaluateSubValue(bAnswer, @"can_mount() with an orphan body block", FALSE)
+    utils.evaluateSubStatus(cmErr, @"error() after can_mount()", flash.E_BAD_BLOCKS_REMOVED)
 
-        flash.TEST_armFlashFault(recoveryWait)
-        status := flash.mount()                         ' the armed wait reports a timeout inside mount()
-        errCode := flash.error()
-        flash.TEST_armFlashFault(FAULT_DISARM)
-        utils.evaluateSubStatus(status, @"the faulted mount()", flash.E_FLASH_TIMEOUT)
-        utils.evaluateSubStatus(errCode, @"error() after the faulted mount()", flash.E_FLASH_TIMEOUT)
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is not mounted", FALSE)
+    flash.TEST_armFlashFault(recoveryWait)
+    status := flash.mount()	    ' the armed wait reports a timeout inside mount()
+    errCode := flash.error()
+    flash.TEST_armFlashFault(FAULT_DISARM)
+    utils.evaluateSubStatus(status, @"the faulted mount()", flash.E_FLASH_TIMEOUT)
+    utils.evaluateSubStatus(errCode, @"error() after the faulted mount()", flash.E_FLASH_TIMEOUT)
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is not mounted", FALSE)
 
-        mountAndCheck(retryStatus)
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is mounted", TRUE)
-
+    mountAndCheck(retryStatus)
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is mounted", TRUE)
 
 PRI unmountedFaultStep() | bAnswer, errCode, freeAddr, printBefore, status, printNow
 ' Check that can_mount() whose flash wait fails returns FALSE with E_FLASH_TIMEOUT, that block programs stay refused, and that mount() recovers, as one test.
@@ -1184,29 +1140,28 @@ PRI unmountedFaultStep() | bAnswer, errCode, freeAddr, printBefore, status, prin
 ' @local status - what the program returned
 ' @local printNow - fingerprint of that block after it
 
-    utils.startTest(@"can_mount() whose flash wait fails returns FALSE with E_FLASH_TIMEOUT; block programs stay refused until mount()")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        flash.TEST_armFlashFault(WAIT_READY_CHECK)
-        bAnswer := flash.can_mount()                    ' the armed wait reports a timeout, so no block is checked
-        errCode := flash.error()
-        flash.TEST_armFlashFault(FAULT_DISARM)
-        utils.evaluateSubValue(bAnswer, @"can_mount()", FALSE)
-        utils.evaluateSubStatus(errCode, @"error() after can_mount()", flash.E_FLASH_TIMEOUT)
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is not mounted", FALSE)
+  utils.startTest(@"can_mount() whose flash wait fails returns FALSE with E_FLASH_TIMEOUT; block programs stay refused until mount()")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    flash.TEST_armFlashFault(WAIT_READY_CHECK)
+    bAnswer := flash.CAN_MOUNT()    ' the armed wait reports a timeout, so no block is checked
+    errCode := flash.error()
+    flash.TEST_armFlashFault(FAULT_DISARM)
+    utils.evaluateSubValue(bAnswer, @"can_mount()", FALSE)
+    utils.evaluateSubStatus(errCode, @"error() after can_mount()", flash.E_FLASH_TIMEOUT)
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is not mounted", FALSE)
 
-        freeAddr := findFreeBlock(NO_BLOCK)
-        printBefore := blockPrint(freeAddr)
-        bytefill(@copyBuf, 0, flash.BLOCK_SIZE)
-        ' the device fault stays raised until mount() or format(), so this program sends nothing to the flash
-        status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, freeAddr, @copyBuf, CYCLE_FIRST)
-        printNow := blockPrint(freeAddr)
-        utils.evaluateSubStatus(status, @"program a free block while the fault is raised", flash.SUCCESS)
-        utils.evaluateSubValue(printNow, @"the free block is unchanged", printBefore)
+    freeAddr := findFreeBlock(NO_BLOCK)
+    printBefore := blockPrint(freeAddr)
+    bytefill(@copyBuf, 0, flash.BLOCK_SIZE)
+    ' the device fault stays raised until mount() or format(), so this program sends nothing to the flash
+    status := flash.TEST_changeBlock(flash.TEST_BLK_PROGRAM, freeAddr, @copyBuf, CYCLE_FIRST)
+    printNow := blockPrint(freeAddr)
+    utils.evaluateSubStatus(status, @"program a free block while the fault is raised", flash.SUCCESS)
+    utils.evaluateSubValue(printNow, @"the free block is unchanged", printBefore)
 
-        mountAndCheck(flash.SUCCESS)                    ' mount() waits for the chip, clears the fault and mounts
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is mounted", TRUE)
-
+    mountAndCheck(flash.SUCCESS)    ' mount() waits for the chip, clears the fault and mounts
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is mounted", TRUE)
 
 PRI guardRefusalStep(blockOp, pTitle) | crcStatus, crcBefore, refusedBefore, status, errCode, nextStatus, crcNow
 ' Refuse a program below the filesystem while it is mounted, check the fault exit and the sector below, and recover, as one test.
@@ -1223,29 +1178,28 @@ PRI guardRefusalStep(blockOp, pTitle) | crcStatus, crcBefore, refusedBefore, sta
 ' @local nextStatus - what the call after the refusal returned
 ' @local crcNow - CRC of that sector after the refused call
 
-    utils.startTest(pTitle)
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        crcStatus, crcBefore := flash.TEST_readBelowFsCrc()
-        utils.evaluateSubStatus(crcStatus, @"read the sector below the filesystem before the call", flash.SUCCESS)
-        refusedBefore := flash.TEST_refusedBlockCount()
-        ' the primitive refuses the block below the filesystem before any command, and the refusal raises the device fault
-        status := flash.TEST_programBelowFs(blockOp)
-        errCode := flash.error()
-        nextStatus := flash.close(secondHndl)           ' the fault unmounted the filesystem and freed every handle
-        utils.evaluateSubStatus(status, @"the refused call", flash.E_FLASH_TIMEOUT)
-        utils.evaluateSubStatus(errCode, @"error() after the refused call", flash.E_FLASH_TIMEOUT)
-        utils.evaluateSubValue(flash.TEST_refusedBlockCount(), @"refused block programs", refusedBefore + ONE_REFUSAL)
-        utils.evaluateSubStatus(nextStatus, @"close() after the refusal", flash.E_NOT_MOUNTED)
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is not mounted", FALSE)
+  utils.startTest(pTitle)
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    crcStatus, crcBefore := flash.TEST_readBelowFsCrc()
+    utils.evaluateSubStatus(crcStatus, @"read the sector below the filesystem before the call", flash.SUCCESS)
+    refusedBefore := flash.TEST_refusedBlockCount()
+    ' the primitive refuses the block below the filesystem before any command, and the refusal raises the device fault
+    status := flash.TEST_programBelowFs(blockOp)
+    errCode := flash.error()
+    nextStatus := flash.close(secondHndl)    ' the fault unmounted the filesystem and freed every handle
+    utils.evaluateSubStatus(status, @"the refused call", flash.E_FLASH_TIMEOUT)
+    utils.evaluateSubStatus(errCode, @"error() after the refused call", flash.E_FLASH_TIMEOUT)
+    utils.evaluateSubValue(flash.TEST_refusedBlockCount(), @"refused block programs", refusedBefore + ONE_REFUSAL)
+    utils.evaluateSubStatus(nextStatus, @"close() after the refusal", flash.E_NOT_MOUNTED)
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is not mounted", FALSE)
 
-        crcStatus, crcNow := flash.TEST_readBelowFsCrc()
-        utils.evaluateSubStatus(crcStatus, @"read the sector below the filesystem after the call", flash.SUCCESS)
-        utils.evaluateSubValue(crcNow, @"the sector below the filesystem is unchanged", crcBefore)
+    crcStatus, crcNow := flash.TEST_readBelowFsCrc()
+    utils.evaluateSubStatus(crcStatus, @"read the sector below the filesystem after the call", flash.SUCCESS)
+    utils.evaluateSubValue(crcNow, @"the sector below the filesystem is unchanged", crcBefore)
 
-        mountAndCheck(flash.SUCCESS)                    ' mount() clears the fault and mounts
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is mounted", TRUE)
-
+    mountAndCheck(flash.SUCCESS)	     ' mount() clears the fault and mounts
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is mounted", TRUE)
 
 PRI setUpSecond(bKeepMounted) | status, bSecond, bReady
 ' Format and write the second file, then open it for reading or unmount, as one test; bSetUp tells the later steps whether it worked.
@@ -1257,23 +1211,22 @@ PRI setUpSecond(bKeepMounted) | status, bSecond, bReady
 ' @local bSecond - TRUE when the second file was written
 ' @local bReady - TRUE when the second file is open for reading, or the filesystem was unmounted
 
-    utils.startTest(@"set up: write the second file, then open it for reading or unmount")
-    bSetUp := FALSE
-    status := flash.format()
-    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
-    bSetUp := status == flash.SUCCESS
-    bSecond := writeFile(@secondFile, FILE_BYTES, SECOND_SEED)
-    utils.evaluateSubValue(bSecond, @"the second file is written", TRUE)
-    if bKeepMounted
-        secondHndl := flash.open(@secondFile, flash.FILEMODE_READ)
-        bReady := isUsableHandle(secondHndl)
-        utils.evaluateSubValue(bReady, @"the second file is open for reading", TRUE)
-    else
-        status := flash.unmount()
-        utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
-        bReady := status == flash.SUCCESS
-    bSetUp := bSetUp and bSecond and bReady
-
+  utils.startTest(@"set up: write the second file, then open it for reading or unmount")
+  bSetUp := FALSE
+  status := flash.format()
+  utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+  bSetUp := status == flash.SUCCESS
+  bSecond := writeFile(@secondFile, FILE_BYTES, SECOND_SEED)
+  utils.evaluateSubValue(bSecond, @"the second file is written", TRUE)
+  if bKeepMounted
+    secondHndl := flash.open(@secondFile, flash.FILEMODE_READ)
+    bReady := isUsableHandle(secondHndl)
+    utils.evaluateSubValue(bReady, @"the second file is open for reading", TRUE)
+  else
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    bReady := status == flash.SUCCESS
+  bSetUp := bSetUp AND bSecond AND bReady
 
 PRI committedStep(writerOutcome) | fileCount
 ' Check that the committed data verifies: the second file whole, and the writer's file as its last commit or the faulted commit left it, as one test.
@@ -1283,24 +1236,23 @@ PRI committedStep(writerOutcome) | fileCount
 ' Local Variables:
 ' @local fileCount - files the filesystem reports
 
-    utils.startTest(@"the committed data verifies")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        utils.evaluateSubValue(fileMatches(@secondFile, FILE_BYTES, SECOND_SEED), @"the second file reads back whole", TRUE)
-        _, _, fileCount := flash.stats()
-        case writerOutcome
-            WRITER_GONE:
-                utils.evaluateSubValue(flash.exists(@writerFile), @"the writer's file does not exist", FALSE)
-                utils.evaluateSubValue(fileCount, @"files in the filesystem", FILES_WITHOUT_WRITER)
-            WRITER_OLD:
-                ' one seed and one size: every byte is the last commit's, none is the faulted commit's
-                utils.evaluateSubValue(fileMatches(@writerFile, oldBytes, oldSeed), @"the writer's file reads back exactly as its last commit left it", TRUE)
-                utils.evaluateSubValue(fileCount, @"files in the filesystem", FILES_WITH_WRITER)
-            other:
-                ' one seed and one size: every byte is the faulted commit's, none is the last commit's
-                utils.evaluateSubValue(fileMatches(@writerFile, newBytes, newSeed), @"the writer's file reads back exactly with the faulted commit", TRUE)
-                utils.evaluateSubValue(fileCount, @"files in the filesystem", FILES_WITH_WRITER)
-
+  utils.startTest(@"the committed data verifies")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    utils.evaluateSubValue(fileMatches(@secondFile, FILE_BYTES, SECOND_SEED), @"the second file reads back whole", TRUE)
+    _, _, fileCount := flash.stats()
+    case writerOutcome
+      WRITER_GONE:
+	utils.evaluateSubValue(flash.exists(@writerFile), @"the writer's file does not exist", FALSE)
+	utils.evaluateSubValue(fileCount, @"files in the filesystem", FILES_WITHOUT_WRITER)
+      WRITER_OLD:
+	' one seed and one size: every byte is the last commit's, none is the faulted commit's
+	utils.evaluateSubValue(fileMatches(@writerFile, oldBytes, oldSeed), @"the writer's file reads back exactly as its last commit left it", TRUE)
+	utils.evaluateSubValue(fileCount, @"files in the filesystem", FILES_WITH_WRITER)
+      other:
+	' one seed and one size: every byte is the faulted commit's, none is the last commit's
+	utils.evaluateSubValue(fileMatches(@writerFile, newBytes, newSeed), @"the writer's file reads back exactly with the faulted commit", TRUE)
+	utils.evaluateSubValue(fileCount, @"files in the filesystem", FILES_WITH_WRITER)
 
 PRI setUpFiles() | status, pBuff, pBuff2, bKeep, bTarget, bCrc, bIdsFree
 ' Format, write the three files, find their blocks and unmount, as one test; bSetUp tells the later steps whether it worked.
@@ -1314,42 +1266,41 @@ PRI setUpFiles() | status, pBuff, pBuff2, bKeep, bTarget, bCrc, bIdsFree
 ' @local bCrc - TRUE when the one-block file was written and has one block
 ' @local bIdsFree - TRUE when no block of the three files uses the orphan ID
 
-    utils.startTest(@"set up: format, write three files, find their blocks and unmount")
-    bSetUp := FALSE
-    bIdsFree := TRUE
-    status := flash.format()
-    utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
-    bSetUp := status == flash.SUCCESS
+  utils.startTest(@"set up: format, write three files, find their blocks and unmount")
+  bSetUp := FALSE
+  bIdsFree := TRUE
+  status := flash.format()
+  utils.evaluateSubStatus(status, @"format()", flash.SUCCESS)
+  bSetUp := status == flash.SUCCESS
 
-    bKeep := writeFile(@keepFile, FILE_BYTES, KEEP_SEED)
-    pBuff, pBuff2, _, _ := flash.TEST_get4kBlockAndNextAtOffset(@keepFile, 0)
-    bKeep := bKeep and pBuff <> 0 and pBuff2 <> 0
-    if bKeep
-        bIdsFree := bIdsFree and idOf(pBuff) <> ORPHAN_ID and idOf(pBuff2) <> ORPHAN_ID
-    utils.evaluateSubValue(bKeep, @"the untouched file is written with a head and a body block", TRUE)
+  bKeep := writeFile(@keepFile, FILE_BYTES, KEEP_SEED)
+  pBuff, pBuff2, _, _ := flash.TEST_get4kBlockAndNextAtOffset(@keepFile, 0)
+  bKeep := bKeep AND pBuff <> 0 AND pBuff2 <> 0
+  if bKeep
+    bIdsFree := bIdsFree AND idOf(pBuff) <> ORPHAN_ID AND idOf(pBuff2) <> ORPHAN_ID
+  utils.evaluateSubValue(bKeep, @"the untouched file is written with a head and a body block", TRUE)
 
-    bTarget := writeFile(@targetFile, FILE_BYTES, TARGET_SEED)
-    pBuff, pBuff2, targetHeadAddr, targetBodyAddr := flash.TEST_get4kBlockAndNextAtOffset(@targetFile, 0)
-    bTarget := bTarget and pBuff <> 0 and pBuff2 <> 0
-    if bTarget
-        targetHeadId := idOf(pBuff)
-        targetBodyId := idOf(pBuff2)
-        bIdsFree := bIdsFree and targetHeadId <> ORPHAN_ID and targetBodyId <> ORPHAN_ID
-    utils.evaluateSubValue(bTarget, @"the target file is written with a head and a body block", TRUE)
+  bTarget := writeFile(@targetFile, FILE_BYTES, TARGET_SEED)
+  pBuff, pBuff2, targetHeadAddr, targetBodyAddr := flash.TEST_get4kBlockAndNextAtOffset(@targetFile, 0)
+  bTarget := bTarget AND pBuff <> 0 AND pBuff2 <> 0
+  if bTarget
+    targetHeadId := idOf(pBuff)
+    targetBodyId := idOf(pBuff2)
+    bIdsFree := bIdsFree AND targetHeadId <> ORPHAN_ID AND targetBodyId <> ORPHAN_ID
+  utils.evaluateSubValue(bTarget, @"the target file is written with a head and a body block", TRUE)
 
-    bCrc := writeFile(@crcFile, ONE_BLOCK_BYTES, CRC_SEED)
-    pBuff, pBuff2, crcHeadAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@crcFile, 0)
-    bCrc := bCrc and pBuff <> 0 and pBuff2 == 0
-    if bCrc
-        bIdsFree := bIdsFree and idOf(pBuff) <> ORPHAN_ID
-    utils.evaluateSubValue(bCrc, @"the one-block file is written with one block", TRUE)
-    utils.evaluateSubValue(bIdsFree, @"no block of the three files uses the orphan ID", TRUE)
+  bCrc := writeFile(@crcFile, ONE_BLOCK_BYTES, CRC_SEED)
+  pBuff, pBuff2, crcHeadAddr, _ := flash.TEST_get4kBlockAndNextAtOffset(@crcFile, 0)
+  bCrc := bCrc AND pBuff <> 0 AND pBuff2 == 0
+  if bCrc
+    bIdsFree := bIdsFree AND idOf(pBuff) <> ORPHAN_ID
+  utils.evaluateSubValue(bCrc, @"the one-block file is written with one block", TRUE)
+  utils.evaluateSubValue(bIdsFree, @"no block of the three files uses the orphan ID", TRUE)
 
-    status := flash.unmount()
-    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
-    bSetUp := bSetUp and bKeep and bTarget and bCrc and bIdsFree and status == flash.SUCCESS
-    touchedCount := 0
-
+  status := flash.unmount()
+  utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+  bSetUp := bSetUp AND bKeep AND bTarget AND bCrc AND bIdsFree AND status == flash.SUCCESS
+  touchedCount := 0
 
 PRI canMountStep(pTitle, bExpected) | bCanMount, touchIdx
 ' Call can_mount() with the filesystem unmounted, and check its answer and that every touched block is unchanged, as one test.
@@ -1361,18 +1312,17 @@ PRI canMountStep(pTitle, bExpected) | bCanMount, touchIdx
 ' @local bCanMount - what can_mount() returned
 ' @local touchIdx - number of the touched block being compared
 
-    utils.startTest(pTitle)
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        recordPrints(@printsBefore)
-        bCanMount := flash.can_mount()
-        recordPrints(@printsAfter)
-        utils.evaluateSubValue(bCanMount, @"can_mount()", bExpected)
-        utils.evaluateSubValue(flash.mounted(), @"the filesystem is still not mounted", FALSE)
-        if touchedCount > 0
-            repeat touchedCount with touchIdx
-                utils.evaluateSubValue(printsAfter[touchIdx], @"a touched block is unchanged by can_mount()", printsBefore[touchIdx])
-
+  utils.startTest(pTitle)
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    recordPrints(@printsBefore)
+    bCanMount := flash.CAN_MOUNT()
+    recordPrints(@printsAfter)
+    utils.evaluateSubValue(bCanMount, @"can_mount()", bExpected)
+    utils.evaluateSubValue(flash.MOUNTED(), @"the filesystem is still not mounted", FALSE)
+    if touchedCount > 0
+      repeat touchedCount WITH touchIdx
+	utils.evaluateSubValue(printsAfter[touchIdx], @"a touched block is unchanged by can_mount()", printsBefore[touchIdx])
 
 PRI survivorsStep(bOneBlockFileKept) | fileCount
 ' Check the files that must survive read back whole, and the file count, as one test.
@@ -1382,19 +1332,18 @@ PRI survivorsStep(bOneBlockFileKept) | fileCount
 ' Local Variables:
 ' @local fileCount - files the filesystem reports
 
-    utils.startTest(@"the files that must survive read back whole")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        utils.evaluateSubValue(fileMatches(@keepFile, FILE_BYTES, KEEP_SEED), @"the untouched file reads back whole", TRUE)
-        utils.evaluateSubValue(fileMatches(@targetFile, FILE_BYTES, TARGET_SEED), @"the target file reads back whole", TRUE)
-        _, _, fileCount := flash.stats()
-        if bOneBlockFileKept
-            utils.evaluateSubValue(fileMatches(@crcFile, ONE_BLOCK_BYTES, CRC_SEED), @"the one-block file reads back whole", TRUE)
-            utils.evaluateSubValue(fileCount, @"files in the filesystem", FILE_COUNT)
-        else
-            utils.evaluateSubValue(flash.exists(@crcFile), @"the one-block file is gone", FALSE)
-            utils.evaluateSubValue(fileCount, @"files in the filesystem", FILE_COUNT - 1)
-
+  utils.startTest(@"the files that must survive read back whole")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    utils.evaluateSubValue(fileMatches(@keepFile, FILE_BYTES, KEEP_SEED), @"the untouched file reads back whole", TRUE)
+    utils.evaluateSubValue(fileMatches(@targetFile, FILE_BYTES, TARGET_SEED), @"the target file reads back whole", TRUE)
+    _, _, fileCount := flash.stats()
+    if bOneBlockFileKept
+      utils.evaluateSubValue(fileMatches(@crcFile, ONE_BLOCK_BYTES, CRC_SEED), @"the one-block file reads back whole", TRUE)
+      utils.evaluateSubValue(fileCount, @"files in the filesystem", FILE_COUNT)
+    else
+      utils.evaluateSubValue(flash.exists(@crcFile), @"the one-block file is gone", FALSE)
+      utils.evaluateSubValue(fileCount, @"files in the filesystem", FILE_COUNT - 1)
 
 PRI secondMountStep() | status
 ' Unmount, then check can_mount() is TRUE and mount() returns SUCCESS, as one test.
@@ -1402,14 +1351,13 @@ PRI secondMountStep() | status
 ' Local Variables:
 ' @local status - what unmount() returned
 
-    utils.startTest(@"a second mount is clean: can_mount() TRUE, then mount() SUCCESS")
-    utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
-    if bSetUp
-        status := flash.unmount()
-        utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
-        utils.evaluateSubValue(flash.can_mount(), @"can_mount()", TRUE)
-        mountAndCheck(flash.SUCCESS)
-
+  utils.startTest(@"a second mount is clean: can_mount() TRUE, then mount() SUCCESS")
+  utils.evaluateSubValue(bSetUp, @"the files were set up", TRUE)
+  if bSetUp
+    status := flash.unmount()
+    utils.evaluateSubStatus(status, @"unmount()", flash.SUCCESS)
+    utils.evaluateSubValue(flash.CAN_MOUNT(), @"can_mount()", TRUE)
+    mountAndCheck(flash.SUCCESS)
 
 PRI mountAndCheck(expectedStatus) | status, errCode
 ' Call mount() and check its status and the error() it leaves.
@@ -1420,11 +1368,10 @@ PRI mountAndCheck(expectedStatus) | status, errCode
 ' @local status - what mount() returned
 ' @local errCode - error() after mount()
 
-    status := flash.mount()
-    errCode := flash.error()
-    utils.evaluateSubStatus(status, @"mount()", expectedStatus)
-    utils.evaluateSubStatus(errCode, @"error() after mount()", expectedStatus)
-
+  status := flash.mount()
+  errCode := flash.error()
+  utils.evaluateSubStatus(status, @"mount()", expectedStatus)
+  utils.evaluateSubStatus(errCode, @"error() after mount()", expectedStatus)
 
 PRI checkStatus(returned, expectedCode) | errCode
 ' Check the status a call returned and the error() it left are both a code.
@@ -1435,10 +1382,9 @@ PRI checkStatus(returned, expectedCode) | errCode
 ' Local Variables:
 ' @local errCode - error() as the call left it
 
-    errCode := flash.error()
-    utils.evaluateSubStatus(returned, @"status returned", expectedCode)
-    utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
-
+  errCode := flash.error()
+  utils.evaluateSubStatus(returned, @"status returned", expectedCode)
+  utils.evaluateSubStatus(errCode, @"error() after the call", expectedCode)
 
 PRI setTouched(firstAddr, secondAddr, thirdAddr, fourthAddr)
 ' Record the blocks a group touched, skipping NO_BLOCK.
@@ -1448,21 +1394,19 @@ PRI setTouched(firstAddr, secondAddr, thirdAddr, fourthAddr)
 ' @param thirdAddr - a touched block, or NO_BLOCK
 ' @param fourthAddr - a touched block, or NO_BLOCK
 
-    touchedCount := 0
-    addTouched(firstAddr)
-    addTouched(secondAddr)
-    addTouched(thirdAddr)
-    addTouched(fourthAddr)
-
+  touchedCount := 0
+  addTouched(firstAddr)
+  addTouched(secondAddr)
+  addTouched(thirdAddr)
+  addTouched(fourthAddr)
 
 PRI addTouched(blockAddr)
 ' Add a block to the touched list, unless it is NO_BLOCK or the list is full.
 
 ' @param blockAddr - a touched block, or NO_BLOCK
 
-    if blockAddr <> NO_BLOCK and touchedCount < MAX_TOUCHED
-        touchedAddr[touchedCount++] := blockAddr
-
+  if blockAddr <> NO_BLOCK AND touchedCount < MAX_TOUCHED
+    touchedAddr[touchedCount++] := blockAddr
 
 PRI recordPrints(pPrints) | touchIdx
 ' Fingerprint every touched block into a list.
@@ -1472,10 +1416,9 @@ PRI recordPrints(pPrints) | touchIdx
 ' Local Variables:
 ' @local touchIdx - number of the touched block being fingerprinted
 
-    if touchedCount > 0
-        repeat touchedCount with touchIdx
-            LONG[pPrints][touchIdx] := blockPrint(touchedAddr[touchIdx])
-
+  if touchedCount > 0
+    repeat touchedCount WITH touchIdx
+      LONG[pPrints][touchIdx] := blockPrint(touchedAddr[touchIdx])
 
 PRI blockPrint(blockAddr) : blockCrc | pBlock
 ' Fingerprint a whole block: a CRC over all its bytes.
@@ -1486,12 +1429,11 @@ PRI blockPrint(blockAddr) : blockCrc | pBlock
 ' Local Variables:
 ' @local pBlock - address of the block read
 
-    pBlock := flash.TEST_readBlock(blockAddr)
-    if pBlock > 0
-        blockCrc := getcrc(pBlock, BLOCK_CRC_POLY, flash.BLOCK_SIZE)
-    else
-        blockCrc := pBlock
-
+  pBlock := flash.TEST_readBlock(blockAddr)
+  if pBlock > 0
+    blockCrc := getcrc(pBlock, BLOCK_CRC_POLY, flash.BLOCK_SIZE)
+  else
+    blockCrc := pBlock
 
 PRI readInto(blockAddr, pDest) : pBlock
 ' Read a block into a buffer of the test.
@@ -1500,12 +1442,11 @@ PRI readInto(blockAddr, pDest) : pBlock
 ' @param pDest - address of a buffer of flash.BLOCK_SIZE bytes, cleared when the block could not be read
 ' @returns pBlock - the hook's buffer address, or the error code when the block could not be read
 
-    pBlock := flash.TEST_readBlock(blockAddr)
-    if pBlock > 0
-        bytemove(pDest, pBlock, flash.BLOCK_SIZE)
-    else
-        bytefill(pDest, 0, flash.BLOCK_SIZE)
-
+  pBlock := flash.TEST_readBlock(blockAddr)
+  if pBlock > 0
+    bytemove(pDest, pBlock, flash.BLOCK_SIZE)
+  else
+    bytefill(pDest, 0, flash.BLOCK_SIZE)
 
 PRI findFreeBlock(excludeAddr) : blockAddr | scanAddr, pBlock
 ' Find the lowest block whose lifecycle is not active, other than one block to leave out.
@@ -1517,15 +1458,14 @@ PRI findFreeBlock(excludeAddr) : blockAddr | scanAddr, pBlock
 ' @local scanAddr - the block being looked at
 ' @local pBlock - address of that block as read
 
-    blockAddr := NO_BLOCK
-    repeat flash.BLOCKS with scanAddr
-        if scanAddr <> excludeAddr
-            pBlock := flash.TEST_readBlock(scanAddr)
-            if pBlock > 0
-                ifnot isActive(BYTE[pBlock].[CYCLE_TOP..CYCLE_BOTTOM])
-                    blockAddr := scanAddr
-                    quit
-
+  blockAddr := NO_BLOCK
+  repeat flash.BLOCKS WITH scanAddr
+    if scanAddr <> excludeAddr
+      pBlock := flash.TEST_readBlock(scanAddr)
+      if pBlock > 0
+	ifnot isActive(BYTE[pBlock].[CYCLE_TOP..CYCLE_BOTTOM])
+	  blockAddr := scanAddr
+	  quit
 
 PRI findTableFreeBlock() : blockAddr | scanAddr
 ' Find the lowest block the mounted filesystem's table holds as B_FREE: a block no file and no open writer uses.
@@ -1535,12 +1475,11 @@ PRI findTableFreeBlock() : blockAddr | scanAddr
 ' Local Variables:
 ' @local scanAddr - the block being looked at
 
-    blockAddr := NO_BLOCK
-    repeat flash.BLOCKS with scanAddr
-        if flash.TEST_blockStateOf(scanAddr) == flash.B_FREE
-            blockAddr := scanAddr
-            quit
-
+  blockAddr := NO_BLOCK
+  repeat flash.BLOCKS WITH scanAddr
+    if flash.TEST_blockStateOf(scanAddr) == flash.B_FREE
+      blockAddr := scanAddr
+      quit
 
 PRI cycleOf(pBlock) : cycle
 ' Give the lifecycle of a block image.
@@ -1548,8 +1487,7 @@ PRI cycleOf(pBlock) : cycle
 ' @param pBlock - address of a block image
 ' @returns cycle - the lifecycle bits
 
-    cycle := BYTE[pBlock].[CYCLE_TOP..CYCLE_BOTTOM]
-
+  cycle := BYTE[pBlock].[CYCLE_TOP..CYCLE_BOTTOM]
 
 PRI idOf(pBlock) : blockId
 ' Give the block ID of a block image.
@@ -1557,8 +1495,7 @@ PRI idOf(pBlock) : blockId
 ' @param pBlock - address of a block image
 ' @returns blockId - the ID the block carries
 
-    blockId := LONG[pBlock].[ID_TOP..ID_BOTTOM]
-
+  blockId := LONG[pBlock].[ID_TOP..ID_BOTTOM]
 
 PRI fieldOf(pBlock, fieldSel) : fieldValue
 ' Give one control field of a block image.
@@ -1567,11 +1504,10 @@ PRI fieldOf(pBlock, fieldSel) : fieldValue
 ' @param fieldSel - the field: FIELD_THIS_ID, FIELD_NEXT or FIELD_DATA_OFFSET
 ' @returns fieldValue - the value the block holds in that field
 
-    case fieldSel
-        FIELD_THIS_ID: fieldValue := LONG[pBlock].[ID_TOP..ID_BOTTOM]
-        FIELD_NEXT: fieldValue := LONG[pBlock].[NEXT_TOP..NEXT_BOTTOM]
-        other: fieldValue := LONG[pBlock][DATA_OFFSET_LONG].[DATA_OFFSET_TOP..DATA_OFFSET_BOTTOM]
-
+  case fieldSel
+    FIELD_THIS_ID: fieldValue := LONG[pBlock].[ID_TOP..ID_BOTTOM]
+    FIELD_NEXT: fieldValue := LONG[pBlock].[NEXT_TOP..NEXT_BOTTOM]
+    other: fieldValue := LONG[pBlock][DATA_OFFSET_LONG].[DATA_OFFSET_TOP..DATA_OFFSET_BOTTOM]
 
 PRI setField(pBlock, fieldSel, fieldValue)
 ' Change one control field of a block image.
@@ -1580,11 +1516,10 @@ PRI setField(pBlock, fieldSel, fieldValue)
 ' @param fieldSel - the field: FIELD_THIS_ID, FIELD_NEXT or FIELD_DATA_OFFSET
 ' @param fieldValue - the value to place in that field
 
-    case fieldSel
-        FIELD_THIS_ID: LONG[pBlock].[ID_TOP..ID_BOTTOM] := fieldValue
-        FIELD_NEXT: LONG[pBlock].[NEXT_TOP..NEXT_BOTTOM] := fieldValue
-        other: LONG[pBlock][DATA_OFFSET_LONG].[DATA_OFFSET_TOP..DATA_OFFSET_BOTTOM] := fieldValue
-
+  case fieldSel
+    FIELD_THIS_ID: LONG[pBlock].[ID_TOP..ID_BOTTOM] := fieldValue
+    FIELD_NEXT: LONG[pBlock].[NEXT_TOP..NEXT_BOTTOM] := fieldValue
+    other: LONG[pBlock][DATA_OFFSET_LONG].[DATA_OFFSET_TOP..DATA_OFFSET_BOTTOM] := fieldValue
 
 PRI nextCycle(cycle) : newerCycle
 ' Give the active lifecycle that is newer than an active lifecycle.
@@ -1592,11 +1527,10 @@ PRI nextCycle(cycle) : newerCycle
 ' @param cycle - an active lifecycle
 ' @returns newerCycle - the lifecycle a replacement of that block is given
 
-    case cycle
-        CYCLE_FIRST: newerCycle := CYCLE_SECOND
-        CYCLE_SECOND: newerCycle := CYCLE_THIRD
-        other: newerCycle := CYCLE_FIRST
-
+  case cycle
+    CYCLE_FIRST: newerCycle := CYCLE_SECOND
+    CYCLE_SECOND: newerCycle := CYCLE_THIRD
+    other: newerCycle := CYCLE_FIRST
 
 PRI isActive(cycle) : bActive
 ' Tell whether a lifecycle is active: exactly one zero bit.
@@ -1604,8 +1538,7 @@ PRI isActive(cycle) : bActive
 ' @param cycle - lifecycle bits
 ' @returns bActive - TRUE when the lifecycle is active
 
-    bActive := (ones cycle) == ACTIVE_ONES
-
+  bActive := (ONES cycle) == ACTIVE_ONES
 
 PRI isCancelled(cycle) : bCancelled
 ' Tell whether a lifecycle is cancelled: two or three zero bits.
@@ -1613,8 +1546,7 @@ PRI isCancelled(cycle) : bCancelled
 ' @param cycle - lifecycle bits
 ' @returns bCancelled - TRUE when the lifecycle is cancelled
 
-    bCancelled := (ones cycle) <= CANCELLED_MAX_ONES
-
+  bCancelled := (ONES cycle) <= CANCELLED_MAX_ONES
 
 PRI isCrcGood(pBlock) : bGood
 ' Tell whether the CRC stored at the end of a block image matches the bytes before it.
@@ -1622,8 +1554,7 @@ PRI isCrcGood(pBlock) : bGood
 ' @param pBlock - address of a block image
 ' @returns bGood - TRUE when the stored CRC matches
 
-    bGood := LONG[pBlock + flash.BLOCK_SIZE - CRC_BYTES] == getcrc(pBlock, BLOCK_CRC_POLY, flash.BLOCK_SIZE - CRC_BYTES)
-
+  bGood := LONG[pBlock + flash.BLOCK_SIZE - CRC_BYTES] == getcrc(pBlock, BLOCK_CRC_POLY, flash.BLOCK_SIZE - CRC_BYTES)
 
 PRI dataMatches(pFirst, pSecond) : bSame | byteIdx
 ' Tell whether two block images hold the same bytes from the second byte to the CRC: everything but the lifecycle byte and the CRC.
@@ -1635,12 +1566,11 @@ PRI dataMatches(pFirst, pSecond) : bSame | byteIdx
 ' Local Variables:
 ' @local byteIdx - offset of the byte being compared
 
-    bSame := TRUE
-    repeat byteIdx from FIRST_DATA_BYTE to flash.BLOCK_SIZE - CRC_BYTES - 1
-        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-            bSame := FALSE
-            quit
-
+  bSame := TRUE
+  repeat byteIdx FROM FIRST_DATA_BYTE TO flash.BLOCK_SIZE - CRC_BYTES - 1
+    if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+      bSame := FALSE
+      quit
 
 PRI writeFile(pName, byteCount, seed) : bWritten | handle, writeCount, status
 ' Write a file of a pattern: each byte is the seed plus its offset, kept to one byte.
@@ -1655,14 +1585,13 @@ PRI writeFile(pName, byteCount, seed) : bWritten | handle, writeCount, status
 ' @local writeCount - what write() returned
 ' @local status - what close() returned
 
-    bWritten := FALSE
-    fillPattern(byteCount, seed)
-    handle := flash.open(pName, flash.FILEMODE_WRITE)
-    if isUsableHandle(handle)
-        writeCount := flash.write(handle, @dataBuf, byteCount)
-        status := utils.closeHandle(handle)
-        bWritten := writeCount == byteCount and status == flash.SUCCESS
-
+  bWritten := FALSE
+  fillPattern(byteCount, seed)
+  handle := flash.open(pName, flash.FILEMODE_WRITE)
+  if isUsableHandle(handle)
+    writeCount := flash.write(handle, @dataBuf, byteCount)
+    status := utils.closeHandle(handle)
+    bWritten := writeCount == byteCount AND status == flash.SUCCESS
 
 PRI fileMatches(pName, byteCount, seed) : bMatches | handle, readCount, byteIdx
 ' Read a whole file and tell whether it holds the pattern writeFile() writes, and nothing more.
@@ -1677,20 +1606,19 @@ PRI fileMatches(pName, byteCount, seed) : bMatches | handle, readCount, byteIdx
 ' @local readCount - what read() returned
 ' @local byteIdx - offset of the byte being compared
 
-    bMatches := FALSE
-    if flash.file_size(pName) == byteCount
-        bytefill(@dataBuf, 0, byteCount)
-        handle := flash.open(pName, flash.FILEMODE_READ)
-        if isUsableHandle(handle)
-            readCount := flash.read(handle, @dataBuf, byteCount)
-            utils.closeHandle(handle)
-            bMatches := readCount == byteCount
-            if byteCount > 0
-                repeat byteCount with byteIdx
-                    if dataBuf[byteIdx] <> (seed + byteIdx) & BYTE_MASK
-                        bMatches := FALSE
-                        quit
-
+  bMatches := FALSE
+  if flash.file_size(pName) == byteCount
+    bytefill(@dataBuf, 0, byteCount)
+    handle := flash.open(pName, flash.FILEMODE_READ)
+    if isUsableHandle(handle)
+      readCount := flash.READ(handle, @dataBuf, byteCount)
+      utils.closeHandle(handle)
+      bMatches := readCount == byteCount
+      if byteCount > 0
+	repeat byteCount WITH byteIdx
+	  if dataBuf[byteIdx] <> (seed + byteIdx) & BYTE_MASK
+	    bMatches := FALSE
+	    quit
 
 PRI fillMatches(pName, byteCount, fillValue) : bMatches | handle, readCount, chunkBytes, doneBytes, byteIdx
 ' Read a whole file through the data buffer, one buffer at a time, and tell whether every byte is the fill value and the size matches.
@@ -1707,24 +1635,23 @@ PRI fillMatches(pName, byteCount, fillValue) : bMatches | handle, readCount, chu
 ' @local doneBytes - bytes read and compared so far
 ' @local byteIdx - offset of the byte being compared
 
-    bMatches := FALSE
-    if flash.file_size(pName) == byteCount
-        handle := flash.open(pName, flash.FILEMODE_READ)
-        if isUsableHandle(handle)
-            bMatches := TRUE
-            doneBytes := 0
-            repeat while bMatches and doneBytes < byteCount
-                chunkBytes := (byteCount - doneBytes) <# FILE_BYTES
-                bytefill(@dataBuf, !fillValue, chunkBytes)      ' a byte read() did not write cannot match
-                readCount := flash.read(handle, @dataBuf, chunkBytes)
-                bMatches := readCount == chunkBytes
-                repeat chunkBytes with byteIdx
-                    if dataBuf[byteIdx] <> fillValue
-                        bMatches := FALSE
-                        quit
-                doneBytes += chunkBytes
-            utils.closeHandle(handle)
-
+  bMatches := FALSE
+  if flash.file_size(pName) == byteCount
+    handle := flash.open(pName, flash.FILEMODE_READ)
+    if isUsableHandle(handle)
+      bMatches := TRUE
+      doneBytes := 0
+      repeat while bMatches AND doneBytes < byteCount
+	chunkBytes := (byteCount - doneBytes) <# FILE_BYTES
+	bytefill(@dataBuf, !fillValue, chunkBytes)    ' a byte read() did not write cannot match
+	readCount := flash.READ(handle, @dataBuf, chunkBytes)
+	bMatches := readCount == chunkBytes
+	repeat chunkBytes WITH byteIdx
+	  if dataBuf[byteIdx] <> fillValue
+	    bMatches := FALSE
+	    quit
+	doneBytes += chunkBytes
+      utils.closeHandle(handle)
 
 PRI fillPattern(byteCount, seed) | byteIdx
 ' Fill the data buffer with the pattern: each byte is the seed plus its offset, kept to one byte.
@@ -1735,9 +1662,8 @@ PRI fillPattern(byteCount, seed) | byteIdx
 ' Local Variables:
 ' @local byteIdx - offset of the byte being filled
 
-    repeat byteCount with byteIdx
-        dataBuf[byteIdx] := (seed + byteIdx) & BYTE_MASK
-
+  repeat byteCount WITH byteIdx
+    dataBuf[byteIdx] := (seed + byteIdx) & BYTE_MASK
 
 PRI isUsableHandle(handle) : bUsable
 ' Tell whether a value is one of the handles open() hands out.
@@ -1745,10 +1671,9 @@ PRI isUsableHandle(handle) : bUsable
 ' @param handle - value open() returned
 ' @returns bUsable - TRUE when the value is inside the range of handles
 
-    bUsable := handle >= utils.FIRST_HANDLE and handle < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
+  bUsable := handle >= utils.FIRST_HANDLE AND handle < utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
 
-
-con { license }
+CON { license }
 
 {{
   =================================================================================================
