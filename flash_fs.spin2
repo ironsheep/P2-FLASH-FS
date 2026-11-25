@@ -1100,7 +1100,7 @@ PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
 
   ifnot fsMounted
     status := E_NOT_MOUNTED
-  elseifnot valid_filename(p_cur_filename) or not valid_filename(p_new_filename)
+  elseif not valid_filename(p_cur_filename) or not valid_filename(p_new_filename)
     status := E_BAD_FILENAME
   else
     repeat while locktry(fsLock) == 0                                           ' lock for exlusive use
