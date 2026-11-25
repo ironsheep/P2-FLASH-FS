@@ -12,6 +12,71 @@
 ''   Updated.... 22 DEC 2023
 ''
 '' =================================================================================================
+''
+'' Reporting errors
+'' ----------------
+'' Every call sets error() for the calling cog, on every path it can take: SUCCESS, or the reason the
+'' call failed. Each cog has its own error(), so a call made by another cog never changes what your cog reads.
+'' The only calls that leave error() as it was are error(), string_for_error(), null() and mounted().
+''
+'' A method whose valid results are never negative also returns the negative code in place of its result.
+'' The @returns of each method names the return style it uses:
+''   status         returns SUCCESS (0) or a negative code
+''   value-or-code  returns a result that is never negative (a handle, size, position or byte), or the
+''                  negative code in its place
+''   count          returns the number of bytes transferred; when that is fewer than asked, error() holds
+''                  why (0 bytes transferred returns 0)
+''   count-or-code  returns the number of bytes transferred, or the negative code when none were
+''   boolean        returns TRUE or FALSE; when FALSE is a failure and not an answer, error() holds why
+''   value          returns a value that has no code: rd_long() returns 0 when it fails, so check error()
+''   values         returns several results, none of them a code unless the method says so:
+''                  serial_number() returns 0, 0 when it fails, so check error()
+''
+'' A handle that is in range but not open gives E_BAD_HANDLE from every method that takes a handle.
+'' E_FILE_MODE means only a handle that is open in a mode the method does not serve.
+''
+'' A call that erases or programs the flash gives E_FLASH_TIMEOUT when the chip does not finish in time.
+'' The filesystem is then unmounted and every handle is freed without a commit; each later call gives
+'' E_NOT_MOUNTED until mount() or format() is called. Nothing on the flash is undone: the next mount()
+'' recovers the flash as it would after a power loss.
+''
+'' mount(), format() and can_mount() check the configuration first, before they take the lock or touch the
+'' flash: E_NO_HANDLE when MAX_FILES_OPEN is below 1, E_BAD_HANDLE when HANDLE_BASE is not 0 or 1.
+''
+'' E_FILE_WRITING (-5), E_FILE_READING (-6) and E_SHORT_TRANSER (-16) are reserved: the driver never
+'' returns them. Their values are kept so the numbering of the other codes does not change.
+''
+'' Constants
+'' ---------
+'' YES is 1, not TRUE (TRUE is -1, as ON is); NO is 0, as FALSE and OFF are.
+''
+'' Configuring the driver
+'' ----------------------
+'' A program overrides these constants on its OBJ line, for example:  OBJ fs : "flash_fs" | MAX_FILES_OPEN = 4
+'' The compiler checks none of the values.
+'' -- MAX_FILES_OPEN: the number of files that can be open at one time, and so the number of handles.
+''    The default is 2; any value of 1 or more is valid. Each handle takes 4264 bytes of hub RAM.
+'' -- HANDLE_BASE: the value of the first handle open() and open_circular() return, 0 or 1 (the default is 0).
+''    The handles are HANDLE_BASE .. HANDLE_BASE + MAX_FILES_OPEN - 1, and every method that takes a handle
+''    takes one of these.
+'' -- FIRST_BLOCK and LAST_BLOCK: the first and last 4KB block of the flash the file system uses. The
+''    defaults, $080 and $FFF, leave the first 512KB for the boot image. LAST_BLOCK - FIRST_BLOCK + 1 can be
+''    no more than 4096 blocks.
+'' -- Not constants to override: a file name is at most 127 characters, and the driver serves at most 8
+''    cogs at once.
+''
+'' Known limits
+'' ------------
+'' -- A power loss part-way through moving a block leaves two blocks with one ID. mount() resolves that
+''    pair by keeping the newer. It assumes no ID is held by more than two blocks.
+'' -- When a block is moved to wear-level the flash, its data is copied with a new CRC computed over the
+''    copy. The CRC of the block being moved is not checked first, so a bit error in it is copied.
+'' -- Every call that reaches the flash takes over pins 58 to 61, the flash chip's pins, and does not
+''    check whether another user of those pins (such as an SD card) holds them.
+'' -- The SPI timing is written for system clocks up to about 350 MHz. It is not verified above that.
+''
+'' Version history: see CHANGELOG.md. The releases before it:
+'' -------------------------------------------------------------------------------------------------
 '' v1.2.0 - initial release of flash_fs with full API
 '' v1.2.1 - revised seek() method parameters - can now seek relative to current position in file
 '' v1.3.0 - update for flexspin compatibility, seek() returns file position, write() returns bytes written
@@ -25,6 +90,7 @@ CON { version }
 
   LIB_VERSION = 200                                     ' 2.0.0
 
+  ' ON is TRUE (-1) and OFF is 0; NO is FALSE (0) and YES is 1, not TRUE
   #true,  ON, OFF
   #false, NO, YES
 
@@ -66,8 +132,8 @@ CON { PUBLIC driver constants }
   E_NO_HANDLE      = -2                                         ' Error: Out of available handles
   E_FILE_NOT_FOUND = -3                                         ' Error: File not present
   E_DRIVE_FULL     = -4                                         ' Error: Out of space on flash chip
-  E_FILE_WRITING   = -5                                         ' Error: File is open for writing
-  E_FILE_READING   = -6                                         ' Error: File is open for reading
+  E_FILE_WRITING   = -5                                         ' Error: File is open for writing (reserved: the driver never returns it)
+  E_FILE_READING   = -6                                         ' Error: File is open for reading (reserved: the driver never returns it)
   E_FILE_OPEN      = -7                                         ' Error: File is open
   E_FILE_EXISTS    = -8                                         ' Error: the File exists
   E_END_OF_FILE    = -9                                         ' Error: no more data available, at end of file
@@ -77,7 +143,7 @@ CON { PUBLIC driver constants }
   E_NO_LOCK_AVAIL  = -13                                        ' Error: Unable to obtain a LOCK for driver use
   E_TRUNCATED_STRING = -14                                      ' Error: Buffer full, before reaching string terminator
   E_INCOMPLETE_STRING = -15                                     ' Error: End of file reached before string terminator
-  E_SHORT_TRANSER = -16                                         ' Error: Too few bytes read or written
+  E_SHORT_TRANSER = -16                                         ' Error: Too few bytes read or written (reserved: the driver never returns it)
   E_NOT_MOUNTED = -17                                           ' Error: Filesystem NOT mounted (not yet accessible)
   E_BAD_FILE_LENGTH = -18                                       ' Error: File length given is negative or zero
   E_BAD_SEEK_ARG = -19                                          ' Error: Invalid seek argument
@@ -291,11 +357,15 @@ PUB null()
 
 '' This is not an application
 '' -- (invoke format() or mount() to use the flash file system)
+'' -- does not change error()
 
 PUB version() : result | status
 
 '' Returns flash file system library version as integer
 '' -- e.g., version 120 is 1.2.0 (major, minor, bugfix)
+'' -- sets error() to SUCCESS
+''
+'' @returns result - return style value: the library version, as an integer
 
 ' Local Variables:
 ' @local status - SUCCESS, which version() leaves in error()
@@ -313,9 +383,9 @@ PUB serial_number() : sn_hi, sn_lo | status
 
 '' Returns 64-bit unique id of flash chip
 ''
-'' @returns sn_hi - high 32 bits of 64-bit unique id of flash chip (0 when error return)
+'' @returns sn_hi - return style values: high 32 bits of 64-bit unique id of flash chip (0 when error return)
 '' @returns sn_lo - low 32 bits of 64-bit unique id of flash chip (0 when error return)
-'' (sets error() to E_NOT_MOUNTED and returns 0,0 if filesystem has not been mounted)
+'' (sets error() to SUCCESS, or to E_NOT_MOUNTED and returns 0,0 if filesystem has not been mounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason no id was read
@@ -364,8 +434,10 @@ PUB format() : status | block_address, cycleBits
 '' Format the file system blocks and (re)mount it
 '' -- the lock is held from before the first block is cancelled until the filesystem is mounted again, so
 ''    another cog's call finds either E_NOT_MOUNTED or the formatted filesystem fully mounted
+'' -- every file that is open is abandoned: every handle is freed, and the data a handle holds that was not
+''    written to the flash is lost
 ''
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish an erase or program in time: the filesystem is left
@@ -420,8 +492,13 @@ PUB mount() : status
 '' Mount the filesystem so it is ready to use after scanning all blocks and initilizing internal tables and buffers
 '' -- the first mount() of the run creates the driver's lock, which is then kept until reset or power-off
 '' -- mounted() becomes TRUE only once the tables are built
+'' -- a filesystem that is already mounted is left as it is: its files stay open and the call returns SUCCESS
+'' -- a mount that builds the tables frees every handle
+'' -- a bad block is cancelled: a block whose CRC does not match, one whose block IDs, end pointer or data
+''    offset are out of range, or one that no file reaches. A file whose chain runs through a block that was
+''    cancelled, or names a block that cannot exist, is removed, and E_BAD_BLOCKS_REMOVED is returned
 ''
-'' @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
+'' @returns status - return style status: E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish an erase or program in time (the filesystem stays unmounted),
 '' .. E_NO_HANDLE if MAX_FILES_OPEN is below 1, E_BAD_HANDLE if HANDLE_BASE is not 0 or 1 (nothing is mounted),
@@ -452,17 +529,19 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
 '' Check entire flash - to see if it would mount without modifying any blocks
 ''
 '' -- a filesystem that is already mounted would not be changed, so the answer is True
-'' -- error() holds SUCCESS when the check was made and a mount would cancel no bad block, E_BAD_BLOCKS_REMOVED when
-''    a mount would cancel a bad block, or E_NO_LOCK_AVAIL when the check could not be made
-'' -- error() holds E_FLASH_TIMEOUT, and the answer is False, when the flash chip stayed busy past the bound of a
-''    flash wait: no check is made
-'' -- error() holds E_NO_HANDLE when MAX_FILES_OPEN is below 1, or E_BAD_HANDLE when HANDLE_BASE is not 0 or 1, and the
-''    answer is False: no check is made
-'' -- False with error() SUCCESS means a mount would resolve a duplicate block ID: it keeps the newer block and
-''    cancels the older, and reports SUCCESS
+'' -- a bad block is a block a mount would cancel: one whose CRC does not match, one whose block IDs, end pointer
+''    or data offset are out of range, or one that no file reaches (a dead block). The answer is False and
+''    error() holds E_BAD_BLOCKS_REMOVED
+'' -- a duplicate block ID alone gives False with error() SUCCESS: a mount would resolve it, keeping the newer
+''    block and cancelling the older, and would report SUCCESS
+'' -- the answer is True and error() holds SUCCESS when a mount would change no block
+'' -- the answer is False, and no check is made, when the check could not be made: error() holds
+''    E_NO_LOCK_AVAIL when no lock could be created, E_FLASH_TIMEOUT when the flash chip stayed busy past the
+''    bound of a flash wait, E_NO_HANDLE when MAX_FILES_OPEN is below 1, or E_BAD_HANDLE when HANDLE_BASE is
+''    not 0 or 1
 ''
-'' @returns bool - True/False where True means no blocks would be changed by mount: False for a bad block,
-'' .. a duplicate block ID, or when the check could not be made
+'' @returns bool - return style boolean: True/False where True means no blocks would be changed by mount:
+'' .. False for a bad block, a duplicate block ID, or when the check could not be made
 
 ' Local Variables:
 ' @local status - SUCCESS, E_BAD_BLOCKS_REMOVED when a mount would cancel a block, or the reason the check was not made
@@ -551,8 +630,9 @@ PUB mounted() : bool
 
 '' Returns the mounted status of the filesystem
 '' -- (saves us from having to find creative ways to get an error code telling us this)
+'' -- does not change error()
 ''
-'' @returns bool - True/False where True means the filesystem has already been successfully mounted
+'' @returns bool - return style boolean: True/False where True means the filesystem has already been successfully mounted
 
   return fsMounted
 
@@ -562,12 +642,16 @@ PUB unmount() : status | handle, tmpStatus
 '' Prepare for shutdown / power-off by closing any open files
 '' -- (no further access allowed until a subsequent mount())
 '' -- every file open for writing is committed before its handle is freed
+'' -- the first close that fails is the status returned, and every handle is still closed: a file that could not
+''    be committed for lack of a free block is closed without the data it had not written
 '' -- the driver's lock is kept for the next mount(); a call another cog makes meanwhile returns E_NOT_MOUNTED
 ''
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem had not been mounted,
+'' .. E_DRIVE_FULL if a file could not be committed, trimmed or rewritten for lack of a free block,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the commits stop at that file, every
-''    handle is freed, and the next mount() recovers the flash as it would after a power loss
+''    handle is freed, the data of every file not yet committed is lost, and the next mount() recovers the
+''    flash as it would after a power loss
 
 ' Local Variables:
 ' @local handle - temporary handle to use when closing files
@@ -606,9 +690,12 @@ PUB unmount() : status | handle, tmpStatus
 
 PUB error() : status
 
-'' Returns the error code from most recent operation
+'' Returns the error code from most recent operation the calling cog made
+'' -- every filesystem call sets error() for the calling cog, on every path it can take: SUCCESS, or the
+''    reason it failed; each cog has its own error()
+'' -- error(), string_for_error(), null() and mounted() leave it as it was, so reading it never loses a code
 ''
-'' @returns result - latest error code (SUCCESS, for no error)
+'' @returns status - return style value: latest error code (SUCCESS, for no error)
 
   return LONG[@errorCode][cogid()]
 
@@ -617,22 +704,32 @@ PUB open(p_filename, mode) : handle | status, bFileExists, signature
 
 '' Open file in mode; return handle (HANDLE_BASE..HANDLE_BASE+MAX_FILES_OPEN-1) if successful
 ''
+'' A file with no contents does not exist: the flash keeps no empty file and no empty name, where C would
+'' leave a zero-length file. An existing file that a "w" or "w+" open replaces is left untouched until the
+'' handle is closed. Closed with no write, a "w" or "w+" open of an existing file DELETES it: close() still
+'' returns SUCCESS and error() is SUCCESS, so use exists() to confirm. This and the other differences from C
+'' are in the "Differences from ANSI C" table of README.md.
+''
 '' @param p_filename - address of a zstring containing the filename
-'' @param mode - the mode in which to open the file:
-'' -- mode "r", "R" to read from an existing file
-'' -- mode "w", "W" to write to a new file (an existing file is replaced at close; closed with no write, no file is left)
-'' -- mode "a", "A" to append to the end of an existing file (file is created if doesn't exist)
-'' -- mode "r+", "R+" to read/modify/write within an existing file
-'' -- mode "w+", "W+" to read/modify/write within a new file (an existing file is replaced at close; closed with
-''    no write, no file is left)
-'' @returns handle - handle to open file if successful,
+'' @param mode - the mode in which to open the file, what each does with a file that exists or not:
+'' -- mode "r", "R" reads. The file must exist (E_FILE_NOT_FOUND). Closing changes nothing.
+'' -- mode "w", "W" writes. A new file holds what was written when closed, or no file is left if nothing was
+''    written. An existing file is replaced by what was written when closed, or deleted if nothing was written.
+'' -- mode "a", "A" appends. A new file is made as "w" makes it. An existing file holds its old contents plus
+''    what was appended when closed, and is unchanged if nothing was appended.
+'' -- mode "r+", "R+" reads, seeks and modifies within an existing file, and extends it at its end with no gap.
+''    The file must exist (E_FILE_NOT_FOUND). It is modified in place, and unchanged if nothing was written.
+'' -- mode "w+", "W+" is "w" with reading, seeking and rewriting within the new file: an existing file is
+''    replaced by what was written when closed, or deleted if nothing was written.
+'' -- any other mode, such as "a+", is E_FILE_MODE
+'' @returns handle - return style value-or-code: handle to open file if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
 '' .. E_NO_HANDLE if no handle is available,
 '' .. E_FILE_MODE if mode letter(s) is/are invalid,
-'' .. E_DRIVE_FULL if flash filesystem is full (write/append mode),
+'' .. E_DRIVE_FULL if there is no free block, or no free block ID for the head of a new file (any mode but "r"),
 '' .. E_FILE_OPEN if file is already open,
-'' .. E_FILE_NOT_FOUND if file does not exist (read mode)
+'' .. E_FILE_NOT_FOUND if file does not exist (read mode, "r" or "r+")
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason no handle is returned
@@ -729,13 +826,18 @@ PUB open(p_filename, mode) : handle | status, bFileExists, signature
 PUB open_circular(p_filename, mode, max_file_length) : handle | status, bFileExists, signature
 
 '' Open circular file of max_file_length in mode; return handle (HANDLE_BASE..HANDLE_BASE+MAX_FILES_OPEN-1) if successful
+'' -- a circular file keeps its newest max_file_length bytes: when it is committed by close() or flush(), the oldest
+''    bytes beyond the limit are removed from its start
+'' -- as with open(), a file with no contents does not exist, so a new file closed with nothing written is not
+''    left; see the "Differences from ANSI C" table of README.md
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @param mode - the mode in which to open the file:
-'' -- mode "a", "A" to append to the end of an existing circular file (file created if doesn't exist)
-'' -- mode "r", "R" to read from an existing circular file
-'' @param max_file_length - constrain the file to this length (in bytes)
-'' @returns handle - handle to open file if successful,
+'' @param mode - the mode in which to open the file (no other mode is valid, and "w" is E_FILE_MODE):
+'' -- mode "a", "A" to append to the end of an existing circular file (file created if doesn't exist). Closed
+''    with nothing appended, an existing file is unchanged
+'' -- mode "r", "R" to read from an existing circular file (the file must exist)
+'' @param max_file_length - constrain the file to this length (in bytes, 1 or more)
+'' @returns handle - return style value-or-code: handle to open file if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
 '' .. E_NO_HANDLE if no handle is available,
@@ -824,8 +926,11 @@ PUB flush(handle) : status | fileOffset, seekStatus
 '' -- a "w+" file is committed, replacing any existing file of the same name, and stays open at the same position
 '' -- a "w" or "a" file that cannot be committed for lack of a free block stays open as it was, its unwritten bytes
 ''    kept, so a later flush() or close() commits it once a block is free
+'' -- a circular file that is committed over its limit, because its trim found no free block, stays whole and
+''    the status is E_DRIVE_FULL: close() trims it once a block is free
 '' @param handle - a handle to an open file
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
+'' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_FILE_MODE if the handle is open for reading only,
 '' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_DRIVE_FULL if the file could not be committed, trimmed or rewritten for lack of a free block (it stays open),
@@ -891,9 +996,11 @@ PUB close(handle) : status
 '' -- a file opened with "w" or "w+" replaces any existing file of the same name now; closed with no write, it
 ''    leaves no file: an existing file of that name is deleted, and the status is still SUCCESS (use exists() to check)
 '' -- a circular file that a flush() committed over its limit, because the trim found no free block, is trimmed now
+'' -- the handle is freed whatever the status: a file that could not be committed for lack of a free block is
+''    closed without the data it had not written (flush() keeps the handle open for another try)
 ''
 '' @param handle - a handle to an open file
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_DRIVE_FULL if the flash has no free block for the commit, the trim or the rewrite,
@@ -934,15 +1041,19 @@ PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
 '' A rename needs a free block ID and one free block for the new head block, and both are checked before anything
 '' changes: on E_DRIVE_FULL the file keeps its old name and the flash is unchanged.
 ''
+'' When more than one reason applies, the one reported is the first of these checks, in this order: E_NOT_MOUNTED,
+'' E_BAD_FILENAME, E_FILE_OPEN, E_DRIVE_FULL, E_FILE_EXISTS, E_FILE_NOT_FOUND. So when the new name is in use and
+'' the old file does not exist the result is E_FILE_EXISTS, and a full flash hides both.
+''
 '' @param p_cur_filename - address of a zstring containing the existing filename
 '' @param p_new_filename - address of a zstring containing the new filename
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if either filename is a null pointer, empty or longer than 127 characters,
-'' .. E_FILE_NOT_FOUND if old file doesn't exist,
 '' .. E_FILE_OPEN if either file is open,
-'' .. E_FILE_EXISTS if new file already exists,
 '' .. E_DRIVE_FULL if no available space left in filesystem,
+'' .. E_FILE_EXISTS if new file already exists,
+'' .. E_FILE_NOT_FOUND if old file doesn't exist,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the filesystem is unmounted, and the next
 ''    mount() finds the file under its old name or its new one, as after a power loss
 
@@ -1014,11 +1125,11 @@ PUB delete(p_filename) : status | signature
 '' Delete a named file
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
-'' .. E_FILE_NOT_FOUND if file doesn't exist,
 '' .. E_FILE_OPEN if file is open,
+'' .. E_FILE_NOT_FOUND if file doesn't exist,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the filesystem is unmounted, and the next
 ''    mount() removes what is left of the file, as after a power loss
 
@@ -1064,12 +1175,12 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
 '' @param p_filename - address of a zstring containing the filename
 '' @param fill_value - initial value for all bytes in the new file
 '' @param byte_count - desired length of file in bytes (at least 1)
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
 '' .. E_BAD_FILE_LENGTH if byte_count is negative or zero (no file is created),
 '' .. E_FILE_OPEN if file is open,
-'' .. E_DRIVE_FULL if no available space left in filesystem,
+'' .. E_DRIVE_FULL if no available space left in filesystem (no file is created),
 '' .. E_FILE_EXISTS if the file already exists,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: nothing written is undone, the filesystem
 ''    is unmounted, and the next mount() removes the blocks of the file, which was never activated
@@ -1179,7 +1290,8 @@ PUB exists(p_filename) : bool | status
 '' Determine if named file is present in the file system
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns bool - True/False where True means the file exists
+'' @returns bool - return style boolean: True/False where True means the file exists
+'' (a file that does not exist is an answer, not an error: it returns false and error() is SUCCESS)
 '' (sets error() to E_NOT_MOUNTED and returns false if filesystem has not been mounted)
 '' (sets error() to E_BAD_FILENAME and returns false if the filename is a null pointer, empty or longer than 127 characters)
 
@@ -1208,9 +1320,12 @@ PUB exists(p_filename) : bool | status
 PUB file_size(p_filename) : size_in_bytes | status, signature
 
 '' Return size of file in bytes
+'' -- the size is of the file on the flash: bytes a handle holds and has not yet written are not counted
+''    (file_size_for_handle() counts them)
+'' -- a circular file that has been trimmed is the length that can be read from it
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns size_in_bytes - either the count of bytes contained in the file or
+'' @returns size_in_bytes - return style value-or-code: either the count of bytes contained in the file or
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
 '' .. E_FILE_NOT_FOUND if the file doesn't exist
@@ -1247,11 +1362,13 @@ PUB file_size_for_handle(handle) : size_in_bytes | status
 
 '' Return size of file in bytes
 '' -- the size counts the bytes the handle holds and has not yet written to the flash
+'' -- for a file open with "w" or "a" it is the file as the handle will commit it
+'' -- a circular file that has been trimmed is the length that can be read from it
 '' -- for an old-format circular file read with open_circular() it is the bytes the handle can read, counted from
 ''    the first byte it keeps, as its seek positions are
 ''
 '' @param handle - a handle to an open file
-'' @returns size_in_bytes - either the count of bytes contained in the file or
+'' @returns size_in_bytes - return style value-or-code: either the count of bytes contained in the file or
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not an open handle
 
@@ -1287,7 +1404,7 @@ PUB file_size_unused(p_filename) : size_in_bytes_unused | status, signature
 '' Return the number of bytes not yet written in the last allocated block
 ''
 '' @param p_filename - address of a zstring containing the filename
-'' @returns size_in_bytes_unused - either the count of unwritten bytes of the file or
+'' @returns size_in_bytes_unused - return style value-or-code: either the count of unwritten bytes of the file or
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
 '' .. E_FILE_NOT_FOUND if the file doesn't exist
@@ -1336,11 +1453,11 @@ PUB seek(handle, position, whence) : end_position | status, file_position, block
 '' @param position - position (in bytes) within the file (0 to length-1, posx)
 ''  use  seek(handle, POSX, SK_FILE_START) to seek to end of the file
 '' @param whence - meaning of position: [SK_FILE_START, SK_CURRENT_POSN]
-'' @returns end_position - within the file to which the file pointer was set, or
+'' @returns end_position - return style value-or-code: within the file to which the file pointer was set, or
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_BAD_SEEK_ARG if invalid whence value,
-'' .. E_FILE_MODE if the file is not open in a mode supporting seeks,
+'' .. E_FILE_MODE if the file is not open in a mode supporting seeks (only "r", "r+" and "w+" do),
 '' .. E_FILE_SEEK if attempted seek past either end of file (and didn't use POSX for tail),
 '' .. E_DRIVE_FULL if a modified block could not be rewritten,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified block in time (the filesystem
@@ -1415,17 +1532,25 @@ PUB seek(handle, position, whence) : end_position | status, file_position, block
 
 PUB write(handle, p_buffer, count) : bytes_written | status
 
-'' Write count bytes from p_buffer to the file (open for write/append) associated with the handle
+'' Write count bytes from p_buffer to the file (open for write/append/modify) associated with the handle
+'' -- if fewer than count bytes could be written, bytes_written is the number written so far and error() holds
+''    the reason the write stopped; those bytes stay in the file (unless E_FLASH_TIMEOUT unmounted it)
+'' -- if no byte could be written because of an error, the negative code is returned in place of the count
+'' -- when the flash has no room for the block the next byte needs, the write stops with E_DRIVE_FULL; a full block
+''    that is waiting to be written stays in the handle, and close() or flush() commits it if a free block is left
 ''
 '' @param handle - the handle to the file to which to write byte(s)
 '' @param p_buffer - the address of the buffer containing the users' data to write
 '' @param count - the number of bytes to write to the file (0 writes nothing and is not an error)
-'' @returns bytes_written - the count of bytes written to the file or,
+'' @returns bytes_written - return style count-or-code: the count of bytes written to the file or,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for writing,
 '' .. E_BAD_FILE_LENGTH if count is negative (nothing is written),
-'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
+'' .. E_DRIVE_FULL if the flash has no room for the block the next byte needs (returned when no byte was
+''    written; otherwise the count written, with E_DRIVE_FULL in error()),
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted; returned
+''    when no byte was written, otherwise the count written, with E_FLASH_TIMEOUT in error())
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the write stopped
@@ -1464,10 +1589,11 @@ PUB wr_byte(handle, byte_value) : status
 ''
 '' @param handle - handle to a file that is open for write or rewrite
 '' @param byte_value - value to write to the file
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_DRIVE_FULL if the flash has no room for the block the byte needs (the byte is not written),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
   handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
@@ -1494,13 +1620,15 @@ PUB wr_word(handle, word_value) : status | writeLength
 
 '' Write WORD (16-bits) to the file (open for write/append) associated with the handle
 '' -- order is Little Endian
+'' -- a write that stops part-way returns the reason it stopped; the bytes already written stay in the file
 ''
 '' @param handle - the handle of the file to which to write the WORD
 '' @param word_value - the 16 bit WORD to write to the file
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_DRIVE_FULL if the flash has no room for the block a byte needs (fewer than 2 bytes may be written),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
 ' Local Variables:
@@ -1520,13 +1648,15 @@ PUB wr_long(handle, long_value) : status | writeLength
 
 '' Write LONG (32-bits) to the file (open for write/append) associated with the handle
 '' -- order is Little Endian
+'' -- a write that stops part-way returns the reason it stopped; the bytes already written stay in the file
 ''
 '' @param handle - the handle of the file to which to write the LONG
 '' @param long_value - the 32 bit LONG to write to the file
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_DRIVE_FULL if the flash has no room for the block a byte needs (fewer than 4 bytes may be written),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
 ' Local Variables:
@@ -1545,13 +1675,15 @@ PUB wr_long(handle, long_value) : status | writeLength
 PUB wr_str(handle, p_str) : status | writeLength, strBytes
 
 '' Write string (including the terminator) from p_str to the file (open for write/append) associated with the handle
+'' -- a write that stops part-way returns the reason it stopped; the bytes already written stay in the file
 ''
 '' @param handle - the handle of the file to which to write the zString
 '' @param p_str - the address of the zString to write to the file
-'' @returns status - 0 (SUCCESS) if successful,
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_DRIVE_FULL if the flash has no room for the block a byte needs (fewer bytes than the string may be written),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
 ' Local Variables:
@@ -1581,13 +1713,15 @@ PUB read(handle, p_buffer, count) : bytes_read | status
 '' @param handle - the handle to the file from which to read bytes
 '' @param p_buffer - address of the buffer into which to place the bytes read
 '' @param count - the maximum number of bytes to place into the buffer (0 reads nothing and is not an error)
-'' @returns bytes_read - the number of bytes actually read from the file
+'' @returns bytes_read - return style count: the number of bytes actually read from the file (0 when the call fails at once)
 '' --> If error() <> SUCCESS then it will be one of the following reasons:
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
-'' .. E_FILE_MODE if the file is not open for reading,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
+'' .. E_FILE_MODE if the file is not open for reading (modes "r", "r+" and "w+" read),
 '' .. E_BAD_FILE_LENGTH if count is negative (no bytes are read),
 '' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_DRIVE_FULL if a modified "r+"/"w+" block could not be rewritten for lack of a free block (the read stops
+''    there, and the block stays modified in the handle),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
 ''    filesystem is unmounted)
 
@@ -1623,11 +1757,12 @@ PUB rd_byte(handle) : byte_value | status
 '' -- negative value indicates error or end of file
 ''
 '' @param handle - the handle to the file from which to read a byte
-'' @returns byte_value - the next byte [0-255] from the file, or
+'' @returns byte_value - return style value-or-code: the next byte [0-255] from the file, or
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for reading,
 '' .. E_END_OF_FILE if no more data,
+'' .. E_DRIVE_FULL if a modified "r+"/"w+" block could not be rewritten for lack of a free block,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
 ''    filesystem is unmounted)
 
@@ -1661,11 +1796,12 @@ PUB rd_word(handle) : word_value | status, readLength
 '' -- negative value indicates error or end of file
 ''
 '' @param handle - the handle to the file from which to read a WORD
-'' @returns result - the WORD value read from the file, or:
+'' @returns word_value - return style value-or-code: the WORD value read from the file [0-65535], or:
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for reading,
-'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_END_OF_FILE if attempted read beyond written data (fewer than 2 bytes were left),
+'' .. E_DRIVE_FULL if a modified "r+"/"w+" block could not be rewritten for lack of a free block,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
 ''    filesystem is unmounted)
 
@@ -1688,12 +1824,14 @@ PUB rd_long(handle) : long_value | status, readCount
 '' -- check for error() == SUCCESS before using value
 ''
 '' @param handle - the handle to the file from which to read a LONG
-'' @returns value - the LONG value read from the file (0 when fewer than four bytes are read)
+'' @returns long_value - return style value: the LONG value read from the file (0 when it fails: fewer than
+'' .. four bytes are read, and none of the bytes read are returned)
 ''  error() when not SUCCESS could be:
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for reading,
-'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_END_OF_FILE if attempted read beyond written data (fewer than 4 bytes were left),
+'' .. E_DRIVE_FULL if a modified "r+"/"w+" block could not be rewritten for lack of a free block,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
 ''    filesystem is unmounted)
 
@@ -1713,17 +1851,29 @@ PUB rd_str(handle, p_str, buf_size) : bytes_read | status
 
 '' Read zstring from file at handle into buffer at p_str (buf_size is max length of string + terminator)
 '' -- check for error() == SUCCESS before using value
+'' -- the buffer is cleared first, and the string is always zero terminated (when buf_size is at least 1): at
+''    most buf_size - 1 characters and the terminator are placed in it
+'' -- a string whose terminator does not fit in buf_size bytes gives E_TRUNCATED_STRING: buf_size bytes are read
+''    from the file, the first buf_size - 1 are placed in the buffer, and the terminator is placed where the last
+''    byte read would go, so that byte is not kept
+'' -- a file that ends before a terminator gives E_INCOMPLETE_STRING: the bytes read are placed in the buffer
+''    and a terminator follows them
 ''
 '' @param handle - the handle to the file from which to read a zstring
 '' @param p_str - the address of the buffer into which to place the zstring
-'' @param buf_size - the maximum number of bytes to place into the buffer (including the terminator; 0 reads nothing and is not an error)
-'' @returns bytes_read - the number of bytes placed into the buffer (strsize() of the string read)
+'' @param buf_size - the size in bytes of the buffer p_str points to, which holds the string and its terminator
+'' .. (0 reads nothing and is not an error)
+'' @returns bytes_read - return style count: the number of characters placed into the buffer, not counting the
+'' .. terminator (strsize() of the string read)
 ''  error() when not SUCCESS could be:
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
-'' .. E_BAD_HANDLE if the handle is not valid,
+'' .. E_BAD_HANDLE if the handle is not an open handle,
 '' .. E_FILE_MODE if the file is not open for reading,
 '' .. E_BAD_FILE_LENGTH if buf_size is negative (no bytes are read, the buffer is untouched),
-'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_END_OF_FILE if attempted read beyond written data (nothing was read),
+'' .. E_TRUNCATED_STRING if the buffer filled before the string's terminator was read,
+'' .. E_INCOMPLETE_STRING if the file ended before the string's terminator,
+'' .. E_DRIVE_FULL if a modified "r+"/"w+" block could not be rewritten for lack of a free block,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
 ''    filesystem is unmounted)
 
@@ -1765,11 +1915,14 @@ PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
 
 '' Get next file's filename and size in bytes via current blockID
 '' -- NOTE: p_filename must be address of a 128 byte buffer!
+'' -- call until the filename returned is a zero length string: that call reports SUCCESS, a file size of 0 and
+''    no file, and the next call reports the same
 ''
-'' @param p_block_id - the next block ID to check for a file head. (Initialize to 0, will be auto-advanced by each call to this method)
+'' @param p_block_id - address of a LONG holding the next block ID to check for a file head. (Set the LONG to 0
+'' .. before the first call; each call advances it)
 '' @param p_filename - the filename of the file found (or a zero length string if no more files, must be address of 128 byte buffer!)
-'' @param p_file_size - the number of bytes in the file found (or 0 when no more files)
-'' @returns status - 0 (SUCCESS) if successful,
+'' @param p_file_size - address of a LONG that receives the number of bytes in the file found (0 when no more files)
+'' @returns status - return style status: 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted
 
 ' Local Variables:
@@ -1812,7 +1965,7 @@ PUB stats() : used_blocks, free_blocks, file_count | status, block_address
 
 '' Get filesystem status: used/free block counts and file count
 ''
-'' @returns used_blocks - the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
+'' @returns used_blocks - return style values (this result is the code when the call fails): the number of blocks in use (or E_NOT_MOUNTED if the file system is NOT mounted)
 '' @returns free_blocks - the number of free blocks (or 0 if there is an error)
 '' @returns file_count - the number of files recorded in filesystem (or 0 if there is an error)
 
@@ -1852,9 +2005,11 @@ PUB stats() : used_blocks, free_blocks, file_count | status, block_address
 PUB string_for_error(status) : p_interpretation
 
 '' Return an address of a zstring describing the error code
+'' -- a code the driver does not define gives the text "???: Unknown error code ???"
+'' -- does not change error()
 ''
 '' @param status - the error code to translate
-'' @returns p_interpretation - interpretation of the errcode
+'' @returns p_interpretation - return style value: address of the zstring that interprets the errcode
 
     case status
         SUCCESS:                p_interpretation := @"SUCCESS: No error"
@@ -3292,6 +3447,8 @@ PRI delete_chain_from_id(block_id, EndID, delete_mode, KeepFirstIDValid) | block
 ' remove selected part of a file chain
 ' -- a cancel that fails raises fsDeviceFault and ends the walk there: the rest of the chain stays on the flash, as
 '    a power loss at that point would leave it, and no block is read from a chip that may still be busy
+' -- modes 1 and 2 stop only at the block EndID names: they have no guard for the end of the chain, so the caller
+'    passes an EndID that the chain from block_id reaches
 '
 ' @param block_id - starting block id
 ' @param EndID - ending block id
