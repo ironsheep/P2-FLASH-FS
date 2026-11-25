@@ -95,20 +95,37 @@ CON { PUBLIC driver constants }
 CON { PRIVATE driver constants }
 
   ' optionally customizable
+  '
+  ' A program overrides one of these constants in its OBJ line, for example: OBJ fs : "flash_fs" | MAX_FILES_OPEN = 4
+  ' The compiler checks none of the values: mount(), format() and can_mount() check MAX_FILES_OPEN and HANDLE_BASE when
+  ' they run, and each fails before it takes the lock or touches the flash when either is invalid.
+  '
+  ' MAX_FILES_OPEN - the number of files that can be open at one time, and so the number of handles
+  '   default 2; valid values are 1 or more
+  '   below 1, mount(), format() and can_mount() report E_NO_HANDLE
+  '   each handle takes 4264 bytes of hub RAM: the growth of the driver's DAT for one more handle, from the
+  '   pnut-ts v1.55.12 listing (pnut-ts -l) of the driver compiled with MAX_FILES_OPEN 2 and 3
+  '
+  ' HANDLE_BASE - the value of the first handle open() and open_circular() return: 0 or 1
+  '   the handles are HANDLE_BASE .. HANDLE_BASE + MAX_FILES_OPEN - 1, and every method that takes a handle takes one of these
+  '   a program that counts handles from 1 overrides it: OBJ fs : "flash_fs" | HANDLE_BASE = 1
+  '   any other value makes mount(), format() and can_mount() report E_BAD_HANDLE
+  '
+  ' FIRST_BLOCK and LAST_BLOCK - the first and last block of the flash this file system uses
+  '   a block ID is a 12-bit field in the block header (ThisID, bits 19..8, and NextID, bits 31..20), and the ID-to-block
+  '   table holds 12-bit entries, so BLOCKS (LAST_BLOCK - FIRST_BLOCK + 1) can be no more than 4096
+  '
+  ' Limits that are not constants to override:
+  '   a file name is at most 127 characters, and FILENAME_SIZE holds it with its zero terminator
+  '   the driver serves at most 8 cogs at once: errorCode and fsCogCts hold one entry for each cog
 
   FIRST_BLOCK      = $080                                       ' Physical address of first block in this flash file system
   LAST_BLOCK       = $FFF                                       ' Physical address of last block in this flash file system
   MAX_FILES_OPEN   = 2                                          ' Maximum number of files that can be open at one time
-  ' The value of the first handle open() and open_circular() return: 0 or 1. The handles are
-  ' HANDLE_BASE .. HANDLE_BASE + MAX_FILES_OPEN - 1, and every method that takes a handle takes one of these.
-  ' A caller that counts handles from 1 overrides it in its OBJ line: flash : "flash_fs" | HANDLE_BASE = 1
   HANDLE_BASE      = 0                                          ' Value of the first handle: 0 or 1
 
-
-  ' ------------------------------
-  '  NOT customizable! below here
-  ' ------------------------------
-  BLOCKS           = LAST_BLOCK - FIRST_BLOCK+1                 ' Number of blocks in flash allocated to this file system
+  ' NOT customizable! below here
+  BLOCKS          = LAST_BLOCK - FIRST_BLOCK+1                 ' Number of blocks in flash allocated to this file system
 
   BLOCK_SIZE       = $1000                                      ' Size in bytes: 4KB block (4096 bytes)
   BLOCK_SIZE_EXP   = encod BLOCK_SIZE
@@ -150,6 +167,9 @@ CON { PRIVATE driver constants }
   NEXT_BLOCK_SPARE = 1                                          ' free blocks a written block that has a next block leaves for it
   ONE_FREE_BLOCK   = 1                                          ' free blocks an allocation takes, and an open for writing or a rename needs at least
   RANDOM_PICK_TRIES = 64                                        ' random tries an allocation makes for a block that is not B_TEMP before it scans every block
+  MIN_FILES_OPEN = 1                                            ' fewest handles a driver that can open a file has
+  MIN_HANDLE_BASE = 0                                           ' lowest value HANDLE_BASE may take
+  MAX_HANDLE_BASE = 1                                           ' highest value HANDLE_BASE may take
 
   ID_FLAGS_PER_BYTE = 8                                         ' block IDs whose valid flags one byte of IDValids holds
   ID_FLAGS_ALL_USED = $FF                                       ' a byte of IDValids whose block IDs are all in use
@@ -349,15 +369,16 @@ PUB format() : status | block_address, cycleBits
 '' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish an erase or program in time: the filesystem is left
-''    unmounted and is not mounted again, and the next mount() or format() starts over
+''    unmounted and is not mounted again, and the next mount() or format() starts over,
+'' .. E_NO_HANDLE if MAX_FILES_OPEN is below 1, E_BAD_HANDLE if HANDLE_BASE is not 0 or 1: no block is changed
 
 ' Local Variables:
 ' @local block_address - the block offset within the file system
 ' @local cycleBits - lifeCycle bit-pattern found in block
 
   'debug("* format()")
-    status := SUCCESS
-    if fsLock == -1                                                             ' no cog has created the lock yet
+    status := configuration_status()                                            ' SUCCESS, or the reason the driver cannot run as configured
+    if status == SUCCESS and fsLock == -1                                       ' no cog has created the lock yet
         status := setup_semaphore()                                             ' E_NO_LOCK_AVAIL if no hub lock was free
 
     if status == SUCCESS
@@ -403,10 +424,11 @@ PUB mount() : status
 '' @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish an erase or program in time (the filesystem stays unmounted),
+'' .. E_NO_HANDLE if MAX_FILES_OPEN is below 1, E_BAD_HANDLE if HANDLE_BASE is not 0 or 1 (nothing is mounted),
 '' .. otherwise 0 for success
 
-    status := SUCCESS                                                           ' preset to success
-    ifnot fsMounted                                                             ' don't mount if already mounted
+    status := configuration_status()                                            ' SUCCESS, or the reason the driver cannot run as configured
+    if status == SUCCESS and not fsMounted                                      ' don't mount if already mounted
         if fsLock == -1                                                         ' no cog has created the lock yet
             status := setup_semaphore()                                         ' E_NO_LOCK_AVAIL if no hub lock was free
 
@@ -434,6 +456,8 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
 ''    a mount would cancel a bad block, or E_NO_LOCK_AVAIL when the check could not be made
 '' -- error() holds E_FLASH_TIMEOUT, and the answer is False, when the flash chip stayed busy past the bound of a
 ''    flash wait: no check is made
+'' -- error() holds E_NO_HANDLE when MAX_FILES_OPEN is below 1, or E_BAD_HANDLE when HANDLE_BASE is not 0 or 1, and the
+''    answer is False: no check is made
 '' -- False with error() SUCCESS means a mount would resolve a duplicate block ID: it keeps the newer block and
 ''    cancels the older, and reports SUCCESS
 ''
@@ -451,9 +475,9 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
 ' @local bad_count - count of bad blocks found
 ' @local dupe_count - count of duplicate ID blocks found at one block
 
-    status := SUCCESS
-    bool := TRUE                                                                ' a mounted filesystem would not be changed by a mount
-    ifnot fsMounted
+    status := configuration_status()                                            ' SUCCESS, or the reason the driver cannot run as configured
+    bool := status == SUCCESS                                                   ' a mounted filesystem would not be changed by a mount; a driver that cannot run as configured makes no check
+    if status == SUCCESS and not fsMounted
         bool := FALSE                                                           ' with no lock the check cannot be made
         if fsLock == -1                                                         ' no cog has created the lock yet
             status := setup_semaphore()                                         ' E_NO_LOCK_AVAIL if no hub lock was free
@@ -3710,6 +3734,21 @@ PRI mount_no_lock() : status | block_address, signature
         status := (LONG[@errorCode][cogid()] := E_FLASH_TIMEOUT)
     else
         fsMounted := true                                                       ' set "mounted" indication, now that the tables are built
+
+
+PRI configuration_status() : status
+
+' Tell whether the constants an OBJ line can override leave a driver that can run
+' -- the compiler accepts MAX_FILES_OPEN below 1 and a HANDLE_BASE other than 0 or 1, so mount(), format() and
+'    can_mount() ask here, before they take the lock or touch the flash
+'
+' @returns status - SUCCESS, E_NO_HANDLE when MAX_FILES_OPEN is below 1, or E_BAD_HANDLE when HANDLE_BASE is not 0 or 1
+
+    status := SUCCESS
+    if MAX_FILES_OPEN < MIN_FILES_OPEN
+        status := E_NO_HANDLE
+    elseif HANDLE_BASE < MIN_HANDLE_BASE or HANDLE_BASE > MAX_HANDLE_BASE
+        status := E_BAD_HANDLE
 
 
 PRI release_lock(callStatus) : status

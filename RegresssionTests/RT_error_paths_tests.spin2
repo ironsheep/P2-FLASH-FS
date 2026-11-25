@@ -5,7 +5,8 @@
 ''               error() holds SUCCESS when the call succeeded and the call's own code when it failed,
 ''               the accessors error(), string_for_error(), null() and mounted() leave a pending code
 ''               alone, and a handle outside the range, a handle not open, a handle opened and closed
-''               and a handle closed twice are refused without touching any state of another handle
+''               and a handle closed twice are refused without touching any state of another handle,
+''               and a second driver instance with a HANDLE_BASE of 2 refuses mount(), format() and can_mount()
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -30,6 +31,8 @@ CON
 
      _CLKFREQ        = 320_000_000
 
+     BAD_HANDLE_BASE = 2         ' a HANDLE_BASE the driver does not accept: only 0 and 1 are valid
+
 {
     ' debug via serial to RPi (using RPi gateway pins)
     '  USES LED1 (56) and LED2 (57) pins
@@ -41,6 +44,7 @@ CON
 
 OBJ
     flash : "flash_fs"
+    flashBadBase : "flash_fs" | HANDLE_BASE = BAD_HANDLE_BASE   ' a separate instance, with its own state, that the cases never mount
     utils : "RT_utilities"
 
 CON ' ---- Test Geometry ----
@@ -193,6 +197,7 @@ PUB go() | status, pFailedCall
         testNotMounted()
         testSuccessPaths()
         testExemptAccessors()
+        testBadHandleBase()
         testOpenFailures()
         testCircularOpenFailures()
         testFileOperationFailures()
@@ -596,6 +601,42 @@ PRI testExemptAccessors() | pending, pText, bMounted
     bMounted := flash.mounted()
     utils.evaluateSubValue(bMounted, @"mounted()", TRUE)
     utils.evaluateSubStatus(flash.error(), @"error() after mounted()", pending)
+
+
+PRI testBadHandleBase() | status, errCode, bAnswer
+' Call mount(), format() and can_mount() of a second driver instance whose HANDLE_BASE is not 0 or 1: each refuses with
+' E_BAD_HANDLE before it takes a lock or touches the flash, so the files of the driver under test are still there.
+
+' Local Variables:
+' @local status - what the call returned
+' @local errCode - error() of the second instance after the call
+' @local bAnswer - what can_mount() returned
+
+    utils.startTestGroup(@"a driver instance whose HANDLE_BASE is not 0 or 1")
+
+    utils.startTest(@"mount() with a HANDLE_BASE of 2")
+    status := flashBadBase.mount()
+    errCode := flashBadBase.error()
+    utils.evaluateSubStatus(status, @"mount()", flash.E_BAD_HANDLE)
+    utils.evaluateSubStatus(errCode, @"error() after mount()", flash.E_BAD_HANDLE)
+    utils.evaluateSubValue(flashBadBase.mounted(), @"mounted()", FALSE)
+
+    utils.startTest(@"can_mount() with a HANDLE_BASE of 2")
+    bAnswer := flashBadBase.can_mount()
+    errCode := flashBadBase.error()
+    utils.evaluateSubValue(bAnswer, @"can_mount()", FALSE)
+    utils.evaluateSubStatus(errCode, @"error() after can_mount()", flash.E_BAD_HANDLE)
+
+    utils.startTest(@"format() with a HANDLE_BASE of 2")
+    status := flashBadBase.format()
+    errCode := flashBadBase.error()
+    utils.evaluateSubStatus(status, @"format()", flash.E_BAD_HANDLE)
+    utils.evaluateSubStatus(errCode, @"error() after format()", flash.E_BAD_HANDLE)
+    utils.evaluateSubValue(flashBadBase.mounted(), @"mounted()", FALSE)
+
+    utils.startTest(@"the driver under test is still mounted and still holds its files")
+    utils.evaluateSubValue(flash.mounted(), @"mounted()", TRUE)
+    utils.evaluateSubValue(flash.exists(@dataFile), @"exists() of the data file", TRUE)
 
 
 PRI testOpenFailures() | handle
