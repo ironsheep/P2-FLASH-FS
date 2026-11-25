@@ -199,7 +199,8 @@ hSeekPtr        LONG    NOT_ENABLED[MAX_FILES_OPEN]                             
 hSeekFileOffset LONG    0[MAX_FILES_OPEN]                                       'handle: seek offset within entire file
 hCircularLength LONG    0[MAX_FILES_OPEN]                                       'handle: circular buffer length in byt
 hHeadPending    BYTE    0[MAX_FILES_OPEN]                                       'handle: TRUE while the head block of a "w+" file is not yet active on the flash
-hReplacedID     LONG    NOT_VALID[MAX_FILES_OPEN]                               'handle: head block ID of the existing file this handle replaces at close, or NOT_VALID
+hWindowStart    LONG    0[MAX_FILES_OPEN]                                       'handle: file offset of the first byte of an old-format circular read, 0 for every other handle; seek positions count from it
+hReplacedID     LONG    NOT_VALID[MAX_FILES_OPEN]                             'handle: head block ID of the existing file this handle replaces at close, or NOT_VALID
 hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                       'handle: 59+1 byte buffer for filename
 hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                          'handle: 4KB buffer for file data
 
@@ -370,7 +371,14 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
 
 '' Check entire flash - to see if it would mount without modifying any blocks
 ''
-'' @returns bool - True/False where True means no blocks would be changed by mount
+'' -- a filesystem that is already mounted would not be changed, so the answer is True
+'' -- error() holds SUCCESS when the check was made and a mount would cancel no bad block, E_BAD_BLOCKS_REMOVED when
+''    a mount would cancel a bad block, or E_NO_LOCK_AVAIL when the check could not be made
+'' -- False with error() SUCCESS means a mount would resolve a duplicate block ID: it keeps the newer block and
+''    cancels the older, and reports SUCCESS
+''
+'' @returns bool - True/False where True means no blocks would be changed by mount: False for a bad block,
+'' .. a duplicate block ID, or when the check could not be made
 
 ' Local Variables:
 ' @local status - SUCCESS, E_BAD_BLOCKS_REMOVED when a mount would cancel a block, or the reason the check was not made
@@ -384,14 +392,13 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
 ' @local dupe_count - count of duplicate ID blocks found at one block
 
     status := SUCCESS
-    bool := SUCCESS                                                             ' the value returned while the filesystem is mounted
+    bool := TRUE                                                                ' a mounted filesystem would not be changed by a mount
     ifnot fsMounted
+        bool := FALSE                                                           ' with no lock the check cannot be made
         if fsLock == -1                                                         ' no cog has created the lock yet
             status := setup_semaphore()                                         ' E_NO_LOCK_AVAIL if no hub lock was free
 
-        if status <> SUCCESS
-            bool := status                                                      ' with no lock the code is returned
-        else
+        if status == SUCCESS
             'debug("- have lock, trying...")
             repeat while locktry(fsLock) == 0                                   ' lock for exlusive use
 
@@ -435,11 +442,15 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
                         field[BlockState][block_address] := B_FREE              '..return block state to B_FREE
                         badBlockCount++                                         '..would cancel block to inhibit future CRC checks
                         'debug(" -- found dead block...")
-                        status := E_BAD_BLOCKS_REMOVED
 
                 'debug("mntCk: - mount test done")
-                bool := badBlockCount == 0 ? true :false
+                bool := badBlockCount == 0 and dupeIdCount == 0                 'a duplicate ID is resolved by cancelling a block, so a mount would change one
+                if badBlockCount > 0
+                    status := E_BAD_BLOCKS_REMOVED                              'mount() reports a cancelled bad block, and not a cancelled duplicate
                 'debug("mntCk: - ", udec(badBlockCount, dupeIdCount, fileCount))
+
+            else
+                bool := TRUE                                                    'another cog mounted while this one waited: a mount would change nothing
 
             lockrel(fsLock)                                                     ' release the lock, we're done with it
             'debug("- lock released")
@@ -1129,10 +1140,7 @@ PUB file_size_for_handle(handle) : size_in_bytes | status
     ifnot fsMounted                                                             'unmount() may have run while this cog waited for the lock
       status := E_NOT_MOUNTED
     elseif hStatus[handle]                                                      'is this handle open?
-      if field[IDToBlock][hHeadBlockID[handle]] > BLOCKS - 1                    'no copy of the head on the flash yet: the file is the head block in the buffer
-        size_in_bytes := LONG[buffer_pointer(handle)].[31..20] - ADDR_HEAD_DATA
-      else
-        size_in_bytes, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]])
+      size_in_bytes := handle_file_length(handle)                               'includes bytes written to the handle and not yet on the flash
     else
       status := E_BAD_HANDLE
 
@@ -1190,6 +1198,8 @@ PUB seek(handle, position, whence) : end_position | status, file_length, file_po
 '' -- use +/- value, SK_CURRENT_POSN to move RELATIVE to the current position within the file
 '' -- in "r+"/"w+" mode a modified block is rewritten before the seek leaves it; with no free block for that
 ''    the position does not change and E_DRIVE_FULL is returned
+'' -- positions of an old-format circular file read with open_circular() count from the first byte it keeps
+'' -- in "r+"/"w+" mode bytes written past the end of the file and not yet flushed are part of the file, and a seek can reach them
 ''
 '' @param handle - a handle to an open file
 '' @param position - position (in bytes) within the file (0 to length-1, posx)
@@ -1238,15 +1248,12 @@ PUB seek(handle, position, whence) : end_position | status, file_length, file_po
         file_position := position
       else
         ' for SK_CURRENT_POSN, we need to calculate the adjusted position
-        file_position := hSeekPtr[handle] <> NOT_ENABLED ? hSeekFileOffset[handle] : hEndPtr[handle] ' if seek mode enabled, use seek pointer, else use 0
-        file_position += position                                               ' calculate the adjusted position
+        file_position := hSeekPtr[handle] <> NOT_ENABLED ? hSeekFileOffset[handle] : buffered_file_offset(handle) ' if seek mode enabled, use seek offset, else count the blocks before the buffered one
+        file_position += position - hWindowStart[handle]                        ' calculate the adjusted position, counted from the start of the data
 
-      if field[IDToBlock][hHeadBlockID[handle]] > BLOCKS - 1                    ' no copy of the head on the flash yet: the file is the head block in the buffer
-        file_length := LONG[buffer_pointer(handle)].[31..20] - ADDR_HEAD_DATA
-      else
-        file_length, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]]) ' get the file length
+      file_length := handle_file_length(handle) - hWindowStart[handle]          ' get the file length from the start of the data, including bytes written but not yet on the flash
 
-      if file_length > 0 and position == POSX                                   ' if have file length and attempting to seek beyond, limit to end of file
+      if position == POSX                                                       ' attempting to seek beyond, limit to end of file (0 for an empty file)
         file_position := file_length
 
       'debug("seek(", sdec_(position), "), ", sdec(file_position), udec(file_length))
@@ -1258,7 +1265,7 @@ PUB seek(handle, position, whence) : end_position | status, file_length, file_po
        status := E_FILE_SEEK                                                    ' abort with error
       elseif file_position >= 0 and file_position <= file_length                ' is position within file? ( allow length + 1 for append )
         'debug("seek(", udec_(file_position), "), FSize=(", udec_(file_length), ") going to location, offset=(", sdec_(position), ")")
-        status := seek_no_locks(handle, file_position)                          ' SUCCESS, or the reason the position was not set
+        status := seek_no_locks(handle, file_position + hWindowStart[handle])   ' SUCCESS, or the reason the position was not set
         end_position := file_position
       else
        'debug("seek() file-range out")
@@ -1656,6 +1663,7 @@ PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
       status := E_NOT_MOUNTED
     else
       BYTE[p_filename][0] := 0                                                  'reset filename
+      LONG[p_file_size] := 0                                                    'reset size, both stay so at the end of the list
 
       repeat while LONG[p_block_id] < BLOCKS                                    'scan any remaining blockID's for file heads
             blockID := LONG[p_block_id]++                                       'get current blockID and post-increment it
@@ -1783,6 +1791,7 @@ PRI finish_open_read(p_filename, max_file_length) : handle | signature, block_id
         if lenInBytes > max_file_length
           bNeedSeek := false                                                    'is file longer than requested length?
           offsetInBytes := lenInBytes - max_file_length                         'get offset to start of data in file
+          hWindowStart[handle] := offsetInBytes                                 'seek positions of this handle count from the start of the data
           block_id, hEndPtr[handle], _ := locate_file_byte(block_id, offsetInBytes) 'reqest position beyond end to get last byte/block in file
           flash_read_block_id(block_id, buffer_pointer(handle), $000, $FFF)     'read new block into buffer
               'debug(" open_read() ", udec(offsetInBytes, block_address, endPtr))
@@ -2065,6 +2074,7 @@ PRI new_handle(p_filename) : handle | possible_handle
     strcopy(@hFilename + handle * FILENAME_SIZE, p_filename, FILENAME_SIZE - 1) ' copy new filename into buffer
     hHeadPending[handle] := FALSE                                               ' a handle starts with no new head and replaces no file,
     hReplacedID[handle] := NOT_VALID                                            ' .. whatever a handle abandoned by mount() left here
+    hWindowStart[handle] := 0                                                   ' and its positions count from the first byte of the file
 
 
 PRI filename_crc(p_filename) : filenameCRC
@@ -2301,7 +2311,7 @@ PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeekin
         '    debug("+ wr_byte() ", uhex_word(hEndPtr[handle], handle))
 
 
-PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fileOffset, bInBuffer
+PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fileOffset, bInBuffer, extraBytes
 
 ' seek file associted with handle to new position
 '
@@ -2310,7 +2320,8 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
 ' With no free block for the rewrite the position does not change, the block stays in the buffer still modified,
 ' and the status is E_DRIVE_FULL. In read mode the located block is always read: the buffer of a newly opened
 ' handle can hold a block left from an earlier file. The head block of a new "w+" file with no copy on the flash
-' yet is the whole file, and the position is found in the buffer without reading the flash.
+' yet is the whole file, and the position is found in the buffer without reading the flash. When the buffer holds
+' the last block, bytes written to it and not yet on the flash are part of the file and the position can lie in them.
 '
 ' @param handle - handle to open file
 ' @param file_position - desired file postion
@@ -2322,6 +2333,7 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
 ' @local endPtr - offset within the located block of the byte at file_position
 ' @local fileOffset - the position within the file that was located
 ' @local bInBuffer - TRUE when the located block is the modify-mode block already in the buffer
+' @local extraBytes - bytes from the end of the flash copy of the last block to file_position, written but not yet flushed
 
     status := SUCCESS
     bInBuffer := FALSE
@@ -2336,7 +2348,11 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
     if hStatus[handle] & H_MODIFY                                               'if modify mode..
       if block_id == long[pBuff].[19..8]                                        '..and the block is the one in the buffer, keep it
         bInBuffer := TRUE
-      elseif hModified[handle]                                                  '..else if the buffered block was modified
+        if long[pBuff].[0] == 0                                                 '....the last block: its buffered end is past the end of its flash copy when the file grew
+          extraBytes := (file_position - fileOffset) #> 0 <# (long[pBuff].[31..20] - endPtr)
+          endPtr += extraBytes
+          fileOffset += extraBytes
+      elseif hModified[handle]                                                 '..else if the buffered block was modified
         status := rewrite_block(handle)                                         '..then rewrite block (might move a block)
         if status == SUCCESS
           hModified[handle]~
@@ -2346,6 +2362,78 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
       hSeekPtr[handle] := hEndPtr[handle] := endPtr                             ' point to start of data in body block
       if bInBuffer == FALSE
         flash_read_block_id(block_id, pBuff, $000, $FFF)                        'read new block into buffer
+
+
+PRI buffered_file_offset(handle) : fileOffset | pBuff, blockID, blockAddress, signature, blockIdx
+
+' Return the file offset of the byte the end pointer names in the block in the buffer
+' -- for a handle with no seek offset: the data of every block before the buffered one is counted from the flash,
+'    following the chain from the head block
+' -- a handle writing a new file, or a file over an existing name, counts from the first block it wrote, whose
+'    copy on the flash is the one the handle programmed
+' -- a handle appending to an existing file counts from the block it started in, which begins where the file
+'    length at open, less the data that block already held, puts it
+'
+' @param handle - a handle to an open file
+' @returns fileOffset - the count of file bytes before that byte
+
+' Local Variables:
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
+' @local blockID - the block id of the block being counted
+' @local blockAddress - the block offset within the file system of the block being counted
+' @local signature - the first long of the block being counted: its type bits and the next block id
+' @local blockIdx - counts the blocks followed, so a damaged chain cannot loop
+
+  pBuff := buffer_pointer(handle)
+  fileOffset := 0
+  if hStatus[handle] == H_WRITE or hStatus[handle] == H_APPEND                  'the handle writes: it counts from the block it started in
+    blockID := hChainBlockID[handle]
+    blockAddress := hChainBlockAddr[handle]
+    if hStatus[handle] == H_APPEND and hReplacedID[handle] == NOT_VALID         'appending: that block holds data that was there at open
+      flash_read_block_id(blockID, @signature, $000, $003)                      'its flash copy is the one at open, whose last-block EndPtr ends the old data
+      fileOffset := hSeekFileOffset[handle] - (signature.[31..20] - (signature.[1] ? $004 : $088))
+  else
+    blockID := hHeadBlockID[handle]
+    blockAddress := field[IDToBlock][blockID]
+
+  repeat BLOCKS with blockIdx                                                   'follow the chain to the buffered block
+    if blockID == long[pBuff].[19..8] or blockAddress > BLOCKS - 1              'reached it (or there is no copy on the flash to follow)
+      quit
+    flash_read_block_addr(blockAddress, @signature, $000, $003)                'read block header
+    fileOffset += $FFC - (signature.[1] ? $004 : $088)                          'a block with a next block holds its whole data area
+    blockID := signature.[31..20]                                               'get next block ID
+    blockAddress := field[IDToBlock][blockID]
+
+  fileOffset += hEndPtr[handle] - (blockID == hHeadBlockID[handle] ? ADDR_HEAD_DATA : $004) 'then the bytes before the end pointer in the buffered block
+
+
+PRI handle_file_length(handle) : byteCount | pBuff, headAddress, flashSignature
+
+' Return the length of the file a handle has open, counting bytes the handle holds that are not yet on the flash
+' -- a file the handle is writing ("w", "a"): the file as the handle will commit it, from the blocks it wrote and its
+'    buffer, never from a head that has no copy on the flash or from the file a "w" replaces
+' -- "r+"/"w+": a head with no copy on the flash is the buffered block alone, and a file that grew in the buffered last
+'    block is longer than the copy of that block on the flash
+'
+' @param handle - a handle to an open file
+' @returns byteCount - the count of bytes in the file
+
+' Local Variables:
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
+' @local headAddress - the block offset within the file system of the head block, or an address outside the file system for none
+' @local flashSignature - the first long of the flash copy of the buffered block
+
+  pBuff := buffer_pointer(handle)
+  headAddress := field[IDToBlock][hHeadBlockID[handle]]
+  if hStatus[handle] == H_WRITE or hStatus[handle] == H_APPEND                  'a handle that writes: the file is what it will commit, and IDToBlock may hold nothing, or an older file, for its head
+    byteCount := buffered_file_offset(handle)
+  elseif headAddress > BLOCKS - 1                                               'no copy of the head on the flash yet: the file is the head block in the buffer
+    byteCount := long[pBuff].[31..20] - ADDR_HEAD_DATA
+  else
+    byteCount, _, _ := count_file_bytes(headAddress)
+    if hStatus[handle] == H_READWRITE and long[pBuff].[0] == 0                  'the buffered block is the last block: it may hold bytes past its flash copy
+      flash_read_block_id(long[pBuff].[19..8], @flashSignature, $000, $003)
+      byteCount += long[pBuff].[31..20] - flashSignature.[31..20]
 
 
 PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address, head_block_id, chain_block_id, chainState, bKeepHandle
@@ -2943,11 +3031,12 @@ PRI check_block_read_only(thisBlockAddress): bad_count, dupe_count | otherBlockA
     field[BlockState][otherBlockAddress] := B_FREE                              '..set B_FREE status for other block
 
 
-PRI check_block_fix_dupe_id(thisBlockAddress) | otherBlockAddress, thisCycleBits, otherCycleBits, thisBlockID
+PRI check_block_fix_dupe_id(thisBlockAddress) : bBadCancelled | otherBlockAddress, thisCycleBits, otherCycleBits, thisBlockID
 
 ' If there is more than one block with this blocks ID, cancel the older block
 '
 ' @param thisBlockAddress - the block offset within the file system for "this" block
+' @returns bBadCancelled - TRUE when "this" block was cancelled because its CRC does not match, FALSE otherwise
 
 ' Local Variables:
 ' @local otherBlockAddress -the block offset within the file system for the "other" block
@@ -2955,39 +3044,37 @@ PRI check_block_fix_dupe_id(thisBlockAddress) | otherBlockAddress, thisCycleBits
 ' @local otherCycleBits - the lifecycle bits of the "other" block
 ' @local thisBlockID - the blockID of "this" block
 
+  bBadCancelled := FALSE
   flash_read_block_addr(thisBlockAddress, @thisCycleBits, $000, $000)           'read first byte of block
 
-  ifnot lookdown(thisCycleBits.[7..5]: %011, %101, %110)                        'is block canceled or inactive?
-    return                                                                      '..if so, block status remains B_FREE, done
+  if lookdown(thisCycleBits.[7..5]: %011, %101, %110)                           'is block active? (a canceled or inactive block stays B_FREE)
+    flash_read_block_addr(thisBlockAddress, @tmpBlockBuffer, $000, $FFF)        'read entire block
 
-  flash_read_block_addr(thisBlockAddress, @tmpBlockBuffer, $000, $FFF)          'read entire block
+    if LONG[@tmpBlockBuffer + $FFC] <> block_crc(@tmpBlockBuffer)               'is CRC bad?
+      flash_cancel_block(thisBlockAddress)                                      '..if so, cancel block to inhibit future CRC checks
+      bBadCancelled := TRUE                                                     '..block status remains B_FREE, done
+    else
+      thisBlockID := LONG[@tmpBlockBuffer].[19..8]                              'this block is good, get its ID
 
-  if LONG[@tmpBlockBuffer + $FFC] <> block_crc(@tmpBlockBuffer)                 'is CRC bad?
-    flash_cancel_block(thisBlockAddress)                                        '..if so, cancel block to inhibit future CRC checks
-    return                                                                      '..block status remains B_FREE, done
+      ' if first block with this ID
+      ifnot field[IDValid][thisBlockID]~~                                       'set ID flag and if it wasn't already set.. (after test, bit := 1)
+        field[IDToBlock][thisBlockID] := thisBlockAddress                       '..set IDToBlock to this block
+        field[BlockState][thisBlockAddress] := B_TEMP                           '..set B_TEMP status for this block
+      else
+        ' we have a dupe ID, which do we keep?
+        otherBlockAddress := field[IDToBlock][thisBlockID]                      'ID flag was already set, get other block with same ID
 
-  thisBlockID := LONG[@tmpBlockBuffer].[19..8]                                  'this block is good, get its ID
+        flash_read_block_addr(otherBlockAddress, @otherCycleBits, $000, $000)   'read first byte of other block
 
-  ' if first block with this ID
-  ifnot field[IDValid][thisBlockID]~~                                           'set ID flag and if it wasn't already set.. (after test, bit := 1)
-    field[IDToBlock][thisBlockID] := thisBlockAddress                           '..set IDToBlock to this block
-    field[BlockState][thisBlockAddress] := B_TEMP                               '..set B_TEMP status for this block
-    return                                                                      '..done
-
-  ' we have a dupe ID, which do we keep?
-  otherBlockAddress := field[IDToBlock][thisBlockID]                            'ID flag was already set, get other block with same ID
-
-  flash_read_block_addr(otherBlockAddress, @otherCycleBits, $000, $000)         'read first byte of other block
-
-  if lookdown(thisCycleBits.[7..5] << 3 | otherCycleBits.[7..5]: %011_110, %101_011, %110_101)  'if this block is newer..
-    ' keep this one, cancel other
-    field[IDToBlock][thisBlockID] := thisBlockAddress                           '..set IDToBlock to this block
-    field[BlockState][thisBlockAddress] := B_TEMP                               '..set B_TEMP status for this block
-    field[BlockState][otherBlockAddress] := B_FREE                              '..set B_FREE status for other block
-    flash_cancel_block(otherBlockAddress)                                       '..cancel other block
-  else
-     ' keep other, cancel this one
-   flash_cancel_block(thisBlockAddress)                                         'else, cancel this block, block status remains B_FREE
+        if lookdown(thisCycleBits.[7..5] << 3 | otherCycleBits.[7..5]: %011_110, %101_011, %110_101)  'if this block is newer..
+          ' keep this one, cancel other
+          field[IDToBlock][thisBlockID] := thisBlockAddress                     '..set IDToBlock to this block
+          field[BlockState][thisBlockAddress] := B_TEMP                         '..set B_TEMP status for this block
+          field[BlockState][otherBlockAddress] := B_FREE                        '..set B_FREE status for other block
+          flash_cancel_block(otherBlockAddress)                                 '..cancel other block
+        else
+          ' keep other, cancel this one
+          flash_cancel_block(thisBlockAddress)                                  'else, cancel this block, block status remains B_FREE
 
 
 PRI count_file_bytes(block_address) : bytes_used, bytes_free, block_count | signature
@@ -3202,7 +3289,8 @@ PRI mount_no_lock() : status | block_address, blockTypeBits, signature, blockCou
 
     'debug("mnt: - fixing power-out leftovers...")
     repeat BLOCKS with block_address                                            'check each block and fix any duplicate IDs
-        check_block_fix_dupe_id(block_address)                                  '(recovers from incomplete block switchover due to power loss)
+        if check_block_fix_dupe_id(block_address)                               '(recovers from incomplete block switchover due to power loss)
+            status := (LONG[@errorCode][cogid()] := E_BAD_BLOCKS_REMOVED)       'a block whose CRC does not match was cancelled
         ' returns table set with B_TEMP for each good CRC block
 
     'debug("mnt: - locating files...")

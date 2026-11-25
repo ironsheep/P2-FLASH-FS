@@ -18,9 +18,11 @@
   through the file length, where the length is the first offset with no byte; a seek past either
   end is refused with E_FILE_SEEK and leaves the position where it was.
 
-  The last case seeks inside a new w+ file whose head block is not yet on the flash.  It runs on
-  its own formatted filesystem, after every other case, so a driver that mishandles it cannot
-  disturb the other cases.
+  The last cases seek inside a new w+ file whose head block is not yet on the flash, seek into bytes an
+  r+ handle wrote past the end and has not flushed, and ask the size of a new file, of an appended file
+  and of a rewritten file before the handle is closed.
+  Each runs on its own formatted filesystem, after every other case, so a driver that mishandles it
+  cannot disturb the other cases.
 }
 
 CON
@@ -69,6 +71,14 @@ CON ' ---- Test Geometry ----
     TRIM_SKIP_IN_SECOND = 10                            ' bytes of the second block the other limit leaves out
     TRIM_LIMIT_EDGE = TRIM_WRITE_BYTES - (flash.BYTES_IN_HEAD_BLOCK + TRIM_SKIP_IN_SECOND) ' limit that keeps the data from just inside the second block
     CHUNK_BYTES = 1000                                  ' bytes moved by one write or read of the streaming checks
+
+    ' bytes an r+ handle adds past the end of a file and has not flushed
+    UNFLUSHED_BYTES = 50                                ' bytes written past the end
+    UNFLUSHED_SKIP = 10                                 ' bytes of them a seek passes over
+
+    ' bytes written through an "a" handle, and through a "w" handle over an existing name
+    APPEND_BYTES = 50                                   ' bytes appended to the existing file
+    OVERWRITE_BYTES = 40                                ' bytes that replace the existing file
 
 CON ' ---- Test Data ----
 
@@ -121,6 +131,9 @@ PUB go() | status, pFailedCall
         testSameBlockSeekEdit()
         testTrimmedCircularSize()
         testEmptyFileSeekToEnd()
+        testUnflushedExtensionSeek()
+        testNewFileSizeBeforeClose()
+        testOldFileSizeBeforeClose()
     else
         utils.showError(pFailedCall, status)
         utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
@@ -342,6 +355,87 @@ PRI testEmptyFileSeekToEnd() | handle
     if requireHandle(handle)
         utils.evaluateSubValue(flash.seek(handle, posx, flash.SK_FILE_START), @"seek() to POSX", 0)
         utils.evaluateSubStatus(flash.error(), @"error() after seek() to POSX", flash.SUCCESS)
+        closeAndCheck(handle)
+
+
+PRI testUnflushedExtensionSeek() | handle, fileBytes
+' Write past the end of a file through an r+ handle without flushing, then seek into the new bytes and read them back.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+' @local fileBytes - size of the file with its extension
+
+    utils.startTestGroup(@"seek into bytes written past the end and not flushed")
+    freshFilesystem()
+    fileBytes := SMALL_BYTES + UNFLUSHED_BYTES
+    fillPattern(@modelBuf, 0, fileBytes, SEED_ORIGINAL)
+    createFile(@"set up the file to extend", @seekFile, @modelBuf, SMALL_BYTES)
+
+    handle := openChecked(@seekFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+) to extend the file")
+    utils.startTest(@"extend, seek into the extension and read it back")
+    if requireHandle(handle)
+        seekAndCheck(handle, SMALL_BYTES)
+        utils.evaluateSubValue(flash.write(handle, @modelBuf + SMALL_BYTES, UNFLUSHED_BYTES), @"write() past the end", UNFLUSHED_BYTES)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle() counts the unflushed bytes", fileBytes)
+        seekAndCheck(handle, SMALL_BYTES + UNFLUSHED_SKIP)
+        readAndCheck(handle, SMALL_BYTES + UNFLUSHED_SKIP, UNFLUSHED_BYTES - UNFLUSHED_SKIP)
+        closeAndCheck(handle)
+
+    utils.startTest(@"file holds the extension after the handle closes")
+    checkFileContent(@seekFile, @modelBuf, fileBytes)
+
+
+PRI testNewFileSizeBeforeClose()
+' Write a new file with "w" and ask its size before closing it: within the head block, and into a second block.
+
+    utils.startTestGroup(@"size of a new file before it is closed")
+    newFileSizeCase(@"open(,w) with the bytes in the head block", SMALL_BYTES)
+    newFileSizeCase(@"open(,w) with the bytes in two blocks", TWO_BLOCK_BYTES)
+
+
+PRI newFileSizeCase(pTitle, byteCount) | handle
+' Open a new file with "w", write bytes without closing, and check file_size_for_handle() returns the bytes written.
+
+' @param pTitle - address of zstring naming the open
+' @param byteCount - bytes written to the file
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    freshFilesystem()
+    handle := openChecked(@seekFile, flash.FILEMODE_WRITE, pTitle)
+    utils.startTest(@"file_size_for_handle() counts the bytes written so far")
+    if requireHandle(handle)
+        utils.evaluateSubValue(writePattern(handle, byteCount), @"bytes written", byteCount)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle()", byteCount)
+        closeAndCheck(handle)
+
+
+PRI testOldFileSizeBeforeClose() | handle
+' Ask the size of a file an "a" or "w" handle holds before closing it: the file as the handle will commit it.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"size of an existing name before the handle is closed")
+    freshFilesystem()
+    fillPattern(@modelBuf, 0, SMALL_BYTES, SEED_ORIGINAL)
+    createFile(@"set up the file to append to", @seekFile, @modelBuf, SMALL_BYTES)
+    handle := openChecked(@seekFile, flash.FILEMODE_APPEND, @"open(,a) on an existing file")
+    utils.startTest(@"file_size_for_handle() counts the committed bytes and the bytes appended")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle() at open", SMALL_BYTES)
+        utils.evaluateSubValue(writePattern(handle, APPEND_BYTES), @"bytes written", APPEND_BYTES)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle()", SMALL_BYTES + APPEND_BYTES)
+        closeAndCheck(handle)
+
+    freshFilesystem()
+    createFile(@"set up the file to overwrite", @seekFile, @modelBuf, SMALL_BYTES)
+    handle := openChecked(@seekFile, flash.FILEMODE_WRITE, @"open(,w) over an existing file")
+    utils.startTest(@"file_size_for_handle() counts only the bytes written since the open")
+    if requireHandle(handle)
+        utils.evaluateSubValue(writePattern(handle, OVERWRITE_BYTES), @"bytes written", OVERWRITE_BYTES)
+        utils.evaluateSubValue(flash.file_size_for_handle(handle), @"file_size_for_handle()", OVERWRITE_BYTES)
         closeAndCheck(handle)
 
 
