@@ -38,8 +38,9 @@
 #
 # Files: compiled images go to RegresssionTests/build/bin/ (nothing is written beside the
 # sources). Run mode writes the log to RegresssionTests/<prog>.log, overwriting it; a build/
-# program writes beside itself as build/<path>.log, and a run with --set or --define writes
-# RegresssionTests/build/<prog>.<NAME>-<VALUE>.<SYMBOL>.log, so tracked logs are replaced only
+# program writes beside itself as build/<path>.log, and a run of an RT_* program with --driver,
+# --set or --define writes RegresssionTests/build/<prog>.DRIVER-<driver dir>.<NAME>-<VALUE>.<SYMBOL>.log
+# (each part present only when its option is given), so tracked logs are replaced only
 # by plain runs of RT_* programs. pnut-term-ts runs inside RegresssionTests/build/; the session
 # log it writes to build/logs/ during the run becomes the program's log, and its standard
 # output is used when it wrote none (the run says which).
@@ -60,6 +61,7 @@ MARKER="REMOVE BEFORE FLIGHT"
 MODE=""
 TIMEOUT=600
 JUDGE=""
+DRIVERTAG=""
 SETS=()
 DEFINES=()
 PROGS=()
@@ -109,7 +111,13 @@ while [[ $# -gt 0 ]]; do
             TIMEOUT="$2"; shift 2 ;;
         --driver)
             [[ $# -ge 2 ]] || die 2 "--driver needs a file"
-            DRIVER="$2"; shift 2 ;;
+            DRIVER="$2"
+            # the name of the directory holding the driver tags the log of a run that uses it
+            DRIVERTAG="$2"
+            [[ "$2" == */* ]] && DRIVERTAG="${2%/*}"
+            DRIVERTAG="DRIVER-${DRIVERTAG##*/}"
+            DRIVERTAG="${DRIVERTAG//[^A-Za-z0-9_.-]/_}"
+            shift 2 ;;
         --judge)
             [[ $# -ge 2 ]] || die 2 "--judge needs a log file"
             JUDGE="$2"; shift 2 ;;
@@ -249,18 +257,19 @@ for p in "${RESOLVED[@]}"; do
         NFAIL=$((NFAIL + 1)); continue
     fi
 
-    if [[ "$MODE" == compile ]]; then
-        echo "COMPILED $p $bytes bytes (compile-only, nothing run)"
-        NCOMP=$((NCOMP + 1)); continue
-    fi
-
     if [[ "$p" == build/* ]]; then
         log="$TESTDIR/$base${SETTAG:+.$SETTAG}.log"
-    elif [[ -n "$SETTAG" ]]; then
-        log="$BUILDDIR/$base.$SETTAG.log"
+    elif [[ -n "$DRIVERTAG$SETTAG" ]]; then
+        log="$BUILDDIR/$base.${DRIVERTAG}${DRIVERTAG:+${SETTAG:+.}}${SETTAG}.log"
     else
         log="$TESTDIR/$base.log"
     fi
+
+    if [[ "$MODE" == compile ]]; then
+        echo "COMPILED $p $bytes bytes (compile-only, nothing run; a run would log to $log)"
+        NCOMP=$((NCOMP + 1)); continue
+    fi
+
     # pnut-term-ts writes its session log to logs/ under its working directory, so it runs
     # inside the gitignored build tree; the newest log written during this run becomes the
     # program's log, and its standard output is the fallback when it wrote none.
