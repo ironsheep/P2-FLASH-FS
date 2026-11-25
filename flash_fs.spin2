@@ -634,7 +634,7 @@ PUB mounted() : bool
 ''
 '' @returns bool - return style boolean: True/False where True means the filesystem has already been successfully mounted
 
-  return fsMounted
+  bool := fsMounted
 
 
 PUB unmount() : status | handle, tmpStatus
@@ -697,7 +697,7 @@ PUB error() : status
 ''
 '' @returns status - return style value: latest error code (SUCCESS, for no error)
 
-  return LONG[@errorCode][cogid()]
+  status := LONG[@errorCode][cogid()]
 
 
 PUB open(p_filename, mode) : handle | status, bFileExists, signature
@@ -3144,7 +3144,7 @@ PRI filename_pointer(handle) : p_filename
 ' @param handle - a handle to an open file
 ' @returns p_filename - address of a zstring containing the filename
 
-  return @hFilename + handle << FILENAME_SIZE_EXP                               'get filename pointer by handle
+  p_filename := @hFilename + handle << FILENAME_SIZE_EXP                              'get filename pointer by handle
 
 
 PRI buffer_pointer(handle) : p_buffer
@@ -3154,7 +3154,7 @@ PRI buffer_pointer(handle) : p_buffer
 ' @param handle - a handle to an open file
 ' @returns p_buffer -  the address of the 4KB buffer associated with this handle
 
-  return @hBlockBuff + handle << BLOCK_SIZE_EXP
+  p_buffer := @hBlockBuff + handle << BLOCK_SIZE_EXP
 
 
 PRI handle_index(handle) : hndlIdx
@@ -4056,7 +4056,7 @@ PRI block_crc(p_block_buffer) : crc
 ' @param p_block_buffer - the address of the 4KB buffer for the file associated with this handle
 ' @returns crc - the calculated CRC for the block
 
-  return getcrc(p_block_buffer, $AD0424F3 rev 31, BLOCK_SIZE - 4)  'compute CRC of a buffered block
+  crc := getcrc(p_block_buffer, $AD0424F3 rev 31, BLOCK_SIZE - 4)  'compute CRC of a buffered block
 
 
 PRI block_fields_in_range(pBlock) : bInRange | signature, dataStart, dataOffset
