@@ -125,7 +125,7 @@ pub startTestGroup(pDesciption)
     debug(" ------------------------------------------------------------")  ' blank line
     debug("* Test Group: ", zstr_(pDesciption))
 
-pub startTest(pDesciption) | ecGot, ecExpected, passScaled, failScaled, total
+pub startTest(pDesciption)
     ' if prior sub tests show sub tests results
 
     initIfNotAlready()
@@ -241,6 +241,7 @@ pub evaluateSubStatus(result, pMessage, expectedResult) | ecGot, ecExpected, bPa
     else
         passCountSub[cogId()]++
     ifnot bPassed               ' only shou result on failure
+        debug("  Sub-Test: ", zstr_(pMessage))
         ifnot bPassed
             debug("  Status: ", zstr_(ecGot), "(", sdec_(result), "),  (expected ", zstr_(ecExpected), "(", sdec_(expectedResult), "))")
         else
@@ -1174,17 +1175,20 @@ pub isStringsFile(pFilename) : bIsBinaryStatus | pFileType
     bIsBinaryStatus :=  strcomp(pFileType, @"zstr")
 
 pub fileTypePtr(pFilename) : pFileType | byteIdx
+    pFileType := 0                                                    'no extension: no pointer
     repeat byteIdx from 0 to strsize(pFilename) - 1
         if pFilename[byteIdx] == "."
-            return @pFilename[byteIdx + 1]
+            pFileType := @pFilename[byteIdx + 1]
+            quit
 
 pub isZstr(pBffr, count) : bIsStringStatus | bytIdx
     bIsStringStatus := false
     repeat bytIdx from 0 to count - 1
-            if pBffr[bytIdx] == 0
-                return true
-            if pBffr[bytIdx] < 32 or pBffr[bytIdx] > 126
-                return
+        if pBffr[bytIdx] == 0
+            bIsStringStatus := true
+            quit
+        if pBffr[bytIdx] < 32 or pBffr[bytIdx] > 126
+            quit
 
 pub ReadFile(pFilename, pStr, maxlen) | handle, byteCount
     if isStringsFile(pFilename)
@@ -1319,7 +1323,7 @@ dirEnd          LONG    0              ' ptr = NULL, no more entries
 ' -------
 ' dbgMemDump(@"TASK Stack", pStack, (nStackLongCt + 1) * 4)
 
-pub dbgMemDumpAbs(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar
+pub dbgMemDumpAbs(pMessage, pBytes, lenBytes) | rowCount, pCurrByte, lastRowByteCount, bytesSoFar
 '' Dump rows of hex values with address preceeding
     if pMessage
         debug("** ", zstr_(pMessage), ":")
@@ -1340,7 +1344,7 @@ pub dbgMemDumpAbs(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, las
         ' emit last line
         dbgMemDumpRowAbs(pCurrByte, lastRowByteCount)
 
-pub dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, rowLen, pCurrByte, lastRowByteCount, bytesSoFar, offset
+pub dbgMemDump(pMessage, pBytes, lenBytes) | rowCount, pCurrByte, lastRowByteCount, bytesSoFar, offset
 
     if pMessage
         debug("** ", zstr_(pMessage), ":")
@@ -1369,7 +1373,7 @@ pub record_crc(p_record_buffer, record_length) : crc
 ' @param p_block_buffer - the address of the 4KB buffer for the file associated with this handle
 ' @returns crc - the calculated CRC for the block
 
-  return getcrc(p_record_buffer, $AD0424F3 rev 31, record_length - 4)  'compute CRC of a buffered block
+  crc := getcrc(p_record_buffer, $AD0424F3 rev 31, record_length - 4)  'compute CRC of a buffered block
 
 pub dumpFileHeads() | blockID, byteCount, pBlock
     debug(" ")  ' blank line
