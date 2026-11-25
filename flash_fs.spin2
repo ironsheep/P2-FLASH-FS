@@ -98,6 +98,10 @@ CON { PRIVATE driver constants }
   FIRST_BLOCK      = $080                                       ' Physical address of first block in this flash file system
   LAST_BLOCK       = $FFF                                       ' Physical address of last block in this flash file system
   MAX_FILES_OPEN   = 2                                          ' Maximum number of files that can be open at one time
+  ' The value of the first handle open() and open_circular() return: 0 or 1. The handles are
+  ' HANDLE_BASE .. HANDLE_BASE + MAX_FILES_OPEN - 1, and every method that takes a handle takes one of these.
+  ' A caller that counts handles from 1 overrides it in its OBJ line: flash : "flash_fs" | HANDLE_BASE = 1
+  HANDLE_BASE      = 0                                          ' Value of the first handle: 0 or 1
 
 
   ' ------------------------------
@@ -521,7 +525,7 @@ PUB error() : status
 
 PUB open(p_filename, mode) : handle | status, bFileExists
 
-'' Open file in mode; return handle (0..MAX_FILES_OPEN-1) if successful
+'' Open file in mode; return handle (HANDLE_BASE..HANDLE_BASE+MAX_FILES_OPEN-1) if successful
 ''
 '' @param p_filename - address of a zstring containing the filename
 '' @param mode - the mode in which to open the file:
@@ -620,6 +624,8 @@ PUB open(p_filename, mode) : handle | status, bFileExists
           handle := finish_open_readwrite(p_filename, TRUE)                     ' read/write/modify a new file, which replaces any existing file at close
       if handle < 0
         status := handle                                                        'the reason the open could not finish
+      else
+        handle += HANDLE_BASE                                                   'the caller's handle counts from HANDLE_BASE
 
   if status < 0
     handle := status                                                            'a failed open returns its code in place of a handle
@@ -630,7 +636,7 @@ PUB open(p_filename, mode) : handle | status, bFileExists
 
 PUB open_circular(p_filename, mode, max_file_length) : handle | status, bFileExists
 
-'' Open circular file of max_file_length in mode; return handle (0..MAX_FILES_OPEN-1) if successful
+'' Open circular file of max_file_length in mode; return handle (HANDLE_BASE..HANDLE_BASE+MAX_FILES_OPEN-1) if successful
 ''
 '' @param p_filename - address of a zstring containing the filename
 '' @param mode - the mode in which to open the file:
@@ -707,6 +713,8 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | status, bFileExi
         "r", "R": handle := finish_open_read(p_filename, max_file_length)       ' read CIRC
       if handle < 0
         status := handle                                                        'the reason the open could not finish
+      else
+        handle += HANDLE_BASE                                                   'the caller's handle counts from HANDLE_BASE
 
   if status < 0
     handle := status                                                            'a failed open returns its code in place of a handle
@@ -732,6 +740,7 @@ PUB flush(handle) : status | fileOffset, seekStatus
 ' @local fileOffset - the position in a "w+" file, kept across its commit
 ' @local seekStatus - what the return to that position reported
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
     status := E_NOT_MOUNTED
   elseif handle < 0 or handle > MAX_FILES_OPEN - 1
@@ -790,6 +799,7 @@ PUB close(handle) : status
 '' .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
 '' .. E_BAD_HANDLE if the handle is not an open handle
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
     status := E_NOT_MOUNTED
   elseif handle < 0 or handle > MAX_FILES_OPEN - 1
@@ -1128,6 +1138,7 @@ PUB file_size_for_handle(handle) : size_in_bytes | status
 ' Local Variables:
 ' @local status - SUCCESS, or the reason no size is returned
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
     status := E_NOT_MOUNTED
   elseif handle < 0 or handle > MAX_FILES_OPEN - 1
@@ -1218,6 +1229,7 @@ PUB seek(handle, position, whence) : end_position | status, file_length, file_po
 ' @local file_length - temporary for calculated file length
 ' @local file_position - temporary for calculated seek position
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
     status := E_NOT_MOUNTED
   elseif handle < 0 or handle > MAX_FILES_OPEN - 1
@@ -1295,6 +1307,7 @@ PUB write(handle, p_buffer, count) : bytes_written | status, byteIndex
 ' @local status - SUCCESS, or the reason the write stopped
 ' @local byteIndex - the index into the users' buffer for the next byte to write
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   bytes_written := 0
   ifnot fsMounted
     status := E_NOT_MOUNTED
@@ -1337,6 +1350,7 @@ PUB wr_byte(handle, byte_value) : status
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_MODE if the file is not open for writing
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
     status := E_NOT_MOUNTED
   else
@@ -1457,6 +1471,7 @@ PUB read(handle, p_buffer, count) : bytes_read | status, byteIndex, readValue
 ' @local byteIndex - the index into the users' buffer for the next byte to be read
 ' @local readValue - a temporary variable to hold the byte read from the file (or the returned error code)
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   bytes_read := 0
   ifnot fsMounted
     status := E_NOT_MOUNTED
@@ -1500,6 +1515,7 @@ PUB rd_byte(handle) : byte_value | status
 ' Local Variables:
 ' @local status - SUCCESS, or the reason no byte was read
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
     status := E_NOT_MOUNTED
   else
@@ -1592,6 +1608,7 @@ PUB rd_str(handle, p_str, buf_size) : bytes_read | status, byteIndex, readValue
 ' @local byteIndex - the index into the users' buffer for the next byte to be read
 ' @local readValue - a temporary variable to hold the byte read from the file (or the returned error code)
 
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   bytes_read := 0
   ifnot fsMounted
     status := E_NOT_MOUNTED
@@ -2720,11 +2737,22 @@ PRI buffer_pointer(handle) : p_buffer
   return @hBlockBuff + handle << BLOCK_SIZE_EXP
 
 
+PRI handle_index(handle) : hndlIdx
+
+' Return the index into the handle tables of a handle the caller holds
+' -- the index is the handle less HANDLE_BASE; a value that is not a handle gives an index outside 0..MAX_FILES_OPEN-1
+'
+' @param handle - a handle as the caller holds it
+' @returns hndlIdx - the index of the handle in the handle tables
+
+  hndlIdx := handle - HANDLE_BASE
+
+
 PRI ensure_handle_mode(handle, open_mode_bits) : status
 
 ' Determine if handle is open with dedired mode
 '
-' @param handle - handle to a file that might be open for read or read/write
+' @param handle - index in the handle tables of a file that might be open for read or read/write (not the caller's handle)
 ' @param open_mode_bits - some combiantion of H_READ, H_WRITE, and H_REPLACE
 ' @returns status - 0 (SUCCESS) if successful,
 ' .. E_BAD_HANDLE if the handle is outside the range of handles or is not open,
@@ -3936,6 +3964,7 @@ PUB TEST_getCommitBlockSignatures(handle, p_sigLong) : sigCount | pBuff, endPtr,
 ' NOTE: !!! INTERNAL USE !!!   signature.[4..2] are unused - we use .[3] herein to indicate modified!
 
     sigCount := 0
+    handle := handle_index(handle)                                              'from here on handle is the index in the handle tables
     ifnot fsMounted
         LONG[@errorCode][cogid()] := E_NOT_MOUNTED
     elseif handle < 0 or handle > MAX_FILES_OPEN - 1
@@ -3991,6 +4020,7 @@ PUB TEST_getBlockAddressForId(blockID, possHandle) : block_address
 '' .. or the file system is NOT mounted (error() then holds E_NOT_MOUNTED)
 
     block_address := 0
+    possHandle := handle_index(possHandle)                                      'from here on possHandle is the index in the handle tables
     if fsMounted
         repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
@@ -4058,6 +4088,7 @@ PUB TEST_filename_for_handle(handle) : pStr
 '' .. E_BAD_HANDLE if the handle is not valid
 
   'debug("* TST_fn_for_h() ", sdec(fsMounted))
+  handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
     LONG[@errorCode][cogid()] := E_NOT_MOUNTED
     return 0

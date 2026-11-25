@@ -111,10 +111,11 @@ CON ' ---- Handle Methods and Bad Handles ----
 
     ' The handles that are outside the range of handles:
     '  BAD_NEGATIVE   - below every handle
-    '  BAD_AT_MAX     - the number of handles, whatever the first handle is
+    '  BAD_BELOW_FIRST - one below the first handle, whatever the first handle is
+    '  BAD_AT_MAX     - the number of handles, whatever the first handle is (a handle that is not open when the first handle is 1)
     '  BAD_PAST_LAST  - the first handle plus the number of handles, one past the last handle
     '  BAD_HANDLE_KINDS - the number of kinds
-    #0, BAD_NEGATIVE, BAD_AT_MAX, BAD_PAST_LAST, BAD_HANDLE_KINDS
+    #0, BAD_NEGATIVE, BAD_BELOW_FIRST, BAD_AT_MAX, BAD_PAST_LAST, BAD_HANDLE_KINDS
 
 DAT ' ---- Counters, Flags and Worker Stack ----
 
@@ -1362,11 +1363,12 @@ PRI isNewHandle(slotIdx) : bNew | priorIdx
 PRI badHandle(kindIdx) : handle
 ' Give a handle outside the range of handles.
 
-' @param kindIdx - the kind of bad handle: BAD_NEGATIVE, BAD_AT_MAX or BAD_PAST_LAST
+' @param kindIdx - the kind of bad handle: BAD_NEGATIVE, BAD_BELOW_FIRST, BAD_AT_MAX or BAD_PAST_LAST
 ' @returns handle - the bad handle
 
     case kindIdx
         BAD_NEGATIVE: handle := BAD_HANDLE_VALUE
+        BAD_BELOW_FIRST: handle := utils.FIRST_HANDLE - 1
         BAD_AT_MAX: handle := flash.MAX_FILES_OPEN
         other: handle := utils.FIRST_HANDLE + flash.MAX_FILES_OPEN
 

@@ -18,7 +18,7 @@ CON
 #ENDIF
   TEST_SIGNATURE = $12345678
   SIG_BUFFER_LONGS = flash.MAX_FILE_LEN_IN_BLOCKS * 2 ' longs the driver's signature hooks fill, per cog
-  FIRST_HANDLE = 0                      ' lowest handle value open() returns for a file that opened
+  FIRST_HANDLE = flash.HANDLE_BASE      ' lowest handle value open() returns for a file that opened
   SKIP_FS_STATS = -1                    ' startingFileCount value that skips the filesystem statistics check
   OPEN_RETRY_LIMIT = 3000               ' open attempts made while every handle is in use by other cogs
   OPEN_RETRY_WAIT_MS = 10               ' pause between those attempts
