@@ -82,6 +82,7 @@ CON { PUBLIC driver constants }
   E_BAD_FILE_LENGTH = -18                                       ' Error: File length given is negative or zero
   E_BAD_SEEK_ARG = -19                                          ' Error: Invalid seek argument
   E_BAD_FILENAME = -20                                          ' Error: Filename is a null pointer, empty or longer than 127 characters
+  E_FLASH_TIMEOUT = -21                                         ' Error: Flash chip did not finish an erase or program in time, filesystem unmounted
 
   BYTES_IN_HEAD_BLOCK = 3956                                    ' first block in file contains 3956 bytes, 140 bytes overhead
   WORDS_IN_HEAD_BLOCK = BYTES_IN_HEAD_BLOCK/2
@@ -168,6 +169,20 @@ CON { PRIVATE driver constants }
   ELECT_UNSET      = POSX                                       ' the entry of a cog that is not in the election
   ELECT_WAIT_MS    = 10                                         ' time a cog waits, after it enters, for other cogs to enter
 
+  ' The longest a flash wait lets the chip stay busy before it reports a timeout. The W25Q128JV datasheet
+  ' (DOCs/W25Q128JV-210823.pdf, AC Electrical Characteristics, page 65) gives Sector Erase Time (4KB) tSE as
+  ' 45 ms typical and 400 ms maximum, and Page Program Time tPP as 0.4 ms typical and 3 ms maximum, so a
+  ' working chip always finishes well inside this bound. In system clock ticks it is below 2^31 at any
+  ' clock the P2 runs at (350_000_000 ticks at 350 MHz), so the signed elapsed-tick compare holds.
+  FLASH_TIMEOUT_MS = 1000                                       ' bound on one flash erase or program wait, in milliseconds
+  MS_PER_SECOND    = 1000                                       ' clkfreq / MS_PER_SECOND is the system clock ticks in one millisecond
+
+  ' The values of the flash fault countdown (fsFaultCountdown) with a meaning of their own:
+  '  FAULT_OFF       - no fault is injected: every flash wait polls the chip
+  '  FAULT_THIS_WAIT - the flash wait that finds this value reports a timeout without polling the chip
+  FAULT_OFF        = 0
+  FAULT_THIS_WAIT  = 1
+
 DAT { pre-initialized: driver state tracking tables }
 
 '-------+-----+---------+-------+---------------+-------+-----------------------+
@@ -178,6 +193,9 @@ fsFreeHndlCt  LONG      MAX_FILES_OPEN
 fsCogCts      LONG      ELECT_UNSET[ELECT_ENTRIES]                              'cog counts: one for each cog that is attempting to start the filesystem
 showRTdebug   LONG      false
 fsMounted     LONG      false                                                   ' T/F where T means the filesystem is mounted
+fsDeviceFault LONG      false                                                   ' T/F where T means a flash wait timed out or a block program was refused; every block program is refused until it is cleared
+fsFlashWaitMs LONG      FLASH_TIMEOUT_MS                                        'the longest one flash wait lets the chip stay busy, in milliseconds
+fsFaultCountdown LONG   FAULT_OFF                                               'FAULT_OFF in normal operation; else counts flash waits down to the one that reports a timeout
 
 ' physically: 3/4 of a word (12 bits) for every valid block ID, 12 bits per ID
 ' logically: a "BLOCKS"-sized array of 12-bit variables, 1 for ea. block ID - indexed by block ID
@@ -311,7 +329,7 @@ PUB serial_number() : sn_hi, sn_lo | status
                 movbyts     sn_lo, #%%0123
       end
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -324,7 +342,9 @@ PUB format() : status | block_address, cycleBits
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
-'' .. E_NOT_MOUNTED if filesystem has not been mounted
+'' .. E_NOT_MOUNTED if filesystem has not been mounted,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish an erase or program in time: the filesystem is left
+''    unmounted and is not mounted again, and the next mount() or format() starts over
 
 ' Local Variables:
 ' @local block_address - the block offset within the file system
@@ -340,20 +360,30 @@ PUB format() : status | block_address, cycleBits
         repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
 
         fsMounted := false                                                     ' every call that takes the lock until the mount below finds the filesystem not mounted
+        bytefill(@hStatus, 0, MAX_FILES_OPEN)                                   ' every handle is freed, any open handle is abandoned
+        fsFreeHndlCt := MAX_FILES_OPEN
+
+        status := clear_device_fault()                                          ' wait out any erase or program a failed flash wait left running
 
         'debug("- formatting...")
-        repeat BLOCKS with block_address                                        'cancel all active blocks
-            flash_read_block_addr(block_address, @cycleBits, $000, $000)
-            'if block_address // 128 == 0
-            '  debug(" -- block ", uhex_word_(block_address),", cycle...", ubin_byte(cycleBits))
-            if lookdown(cycleBits.[7..5] : %011, %101, %110)
-                'debug(" -- clearing...")
-                flash_cancel_block(block_address)
+        if status == SUCCESS
+            repeat BLOCKS with block_address                                    'cancel all active blocks
+                flash_read_block_addr(block_address, @cycleBits, $000, $000)
+                'if block_address // 128 == 0
+                '  debug(" -- block ", uhex_word_(block_address),", cycle...", ubin_byte(cycleBits))
+                if lookdown(cycleBits.[7..5] : %011, %101, %110)
+                    'debug(" -- clearing...")
+                    flash_cancel_block(block_address)
+                    if fsDeviceFault                                            ' the flash failed: no further block is cancelled
+                        quit
 
-        'debug("- formatting done")
-        status := mount_no_lock()                                               '(re)mount flash while still holding the lock
+            'debug("- formatting done")
+            if fsDeviceFault                                                    ' a failed cancel leaves the filesystem unmounted
+                status := E_FLASH_TIMEOUT
+            else
+                status := mount_no_lock()                                       '(re)mount flash while still holding the lock
 
-        lockrel(fsLock)                                                         ' release the lock, we're done with it
+        status := release_lock(status)                                          ' release the lock, we're done with it
         'debug("- lock released")
 
     LONG[@errorCode][cogid()] := status                                         'every path leaves its status in error() for this cog
@@ -366,7 +396,9 @@ PUB mount() : status
 '' -- mounted() becomes TRUE only once the tables are built
 ''
 '' @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
-'' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use, otherwise 0 for success
+'' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish an erase or program in time (the filesystem stays unmounted),
+'' .. otherwise 0 for success
 
     status := SUCCESS                                                           ' preset to success
     ifnot fsMounted                                                             ' don't mount if already mounted
@@ -378,9 +410,11 @@ PUB mount() : status
             repeat while locktry(fsLock) == 0                                   ' lock for exlusive use
 
             ifnot fsMounted                                                     ' another cog may have mounted while this one waited for the lock
-                status := mount_no_lock()
+                status := clear_device_fault()                                  ' wait out any erase or program a failed flash wait left running
+                if status == SUCCESS
+                    status := mount_no_lock()
 
-            lockrel(fsLock)                                                     ' release the lock, we're done with it
+            status := release_lock(status)                                      ' release the lock, we're done with it
             'debug("- lock released")
 
     LONG[@errorCode][cogid()] := status                                         'every path leaves its status in error() for this cog
@@ -393,6 +427,8 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
 '' -- a filesystem that is already mounted would not be changed, so the answer is True
 '' -- error() holds SUCCESS when the check was made and a mount would cancel no bad block, E_BAD_BLOCKS_REMOVED when
 ''    a mount would cancel a bad block, or E_NO_LOCK_AVAIL when the check could not be made
+'' -- error() holds E_FLASH_TIMEOUT, and the answer is False, when the flash chip stayed busy past the bound of a
+''    flash wait: no check is made
 '' -- False with error() SUCCESS means a mount would resolve a duplicate block ID: it keeps the newer block and
 ''    cancels the older, and reports SUCCESS
 ''
@@ -421,7 +457,12 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
             'debug("- have lock, trying...")
             repeat while locktry(fsLock) == 0                                   ' lock for exlusive use
 
-            ifnot fsMounted                                                     ' another cog may have mounted while this one waited for the lock
+            ifnot fsMounted                                                     ' a chip still busy with an erase or program ignores reads: wait for it
+                status := flash_wait()
+
+            if status <> SUCCESS                                                ' the chip was still busy at the bound: no check is made
+                bool := FALSE
+            elseifnot fsMounted                                                 ' another cog may have mounted while this one waited for the lock
                 'debug("* mntCk: can_mount()?")
                 badBlockCount := dupeIdCount := fileCount := 0
 
@@ -471,7 +512,7 @@ PUB can_mount() : bool | status, block_address, signature, BYTE blockTypeBits, d
             else
                 bool := TRUE                                                    'another cog mounted while this one waited: a mount would change nothing
 
-            lockrel(fsLock)                                                     ' release the lock, we're done with it
+            status := release_lock(status)                                      ' release the lock, we're done with it
             'debug("- lock released")
 
     LONG[@errorCode][cogid()] := status                                         'every path leaves its status in error() for this cog
@@ -495,7 +536,9 @@ PUB unmount() : status | handle, tmpStatus
 '' -- the driver's lock is kept for the next mount(); a call another cog makes meanwhile returns E_NOT_MOUNTED
 ''
 '' @returns status - 0 (SUCCESS) if successful,
-'' .. E_NOT_MOUNTED if filesystem had not been mounted
+'' .. E_NOT_MOUNTED if filesystem had not been mounted,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the commits stop at that file, every
+''    handle is freed, and the next mount() recovers the flash as it would after a power loss
 
 ' Local Variables:
 ' @local handle - temporary handle to use when closing files
@@ -517,13 +560,16 @@ PUB unmount() : status | handle, tmpStatus
           tmpStatus := close_no_lock(handle, TRUE)                              ' ..commit it while its mode is still set
           if tmpStatus < 0 and status == SUCCESS
             status := tmpStatus                                                 ' the first failure of a close is kept, every handle is still closed
+          if fsDeviceFault                                                      ' ..the flash failed: no further file is committed
+            quit
           hStatus[handle]~                                                      ' ..then free it
           hCircularLength[handle] := 0                                          'clear prior length
 
-      fsFreeHndlCt := MAX_FILES_OPEN
-      fsMounted := false                                                        ' clear "mounted" indication
+      if fsDeviceFault == FALSE                                                 ' after a flash failure the release below unmounts
+        fsFreeHndlCt := MAX_FILES_OPEN
+        fsMounted := false                                                      ' clear "mounted" indication
 
-    lockrel(fsLock)                                                             ' release the lock, it is kept for the next mount()
+    status := release_lock(status)                                              ' release the lock, it is kept for the next mount()
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -623,7 +669,7 @@ PUB open(p_filename, mode) : handle | status, bFileExists, signature
       status := E_NO_HANDLE
 
     if status <> SUCCESS
-      lockrel(fsLock)                                                           ' aborting, release the lock
+      status := release_lock(status)                                            ' aborting, release the lock
       'debug("open(", sdec_(status), ") ABORT freed sem #", udec_(fsLock))
     else
       ' the following calls release the lock
@@ -720,7 +766,7 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | status, bFileExi
       status := E_NO_HANDLE
 
     if status <> SUCCESS
-      lockrel(fsLock)                                                           ' aborting, release the lock
+      status := release_lock(status)                                            ' aborting, release the lock
     else
       ' the following calls release the lock
       case mode
@@ -753,7 +799,9 @@ PUB flush(handle) : status | fileOffset, seekStatus
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_FILE_MODE if the handle is open for reading only,
 '' .. E_BAD_HANDLE if the handle is not an open handle,
-'' .. E_DRIVE_FULL if the file could not be committed, trimmed or rewritten for lack of a free block (it stays open)
+'' .. E_DRIVE_FULL if the file could not be committed, trimmed or rewritten for lack of a free block (it stays open),
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the filesystem is unmounted and every
+''    handle freed, and the next mount() recovers the flash as it would after a power loss
 
 ' Local Variables:
 ' @local fileOffset - the position in a "w+" file, kept across its commit
@@ -783,7 +831,7 @@ PUB flush(handle) : status | fileOffset, seekStatus
         H_WRITE, H_APPEND:                                                      'write/rewrite/append mode?
           if hModified[handle]                                                  'only when something was written since the last commit
             status := close_no_lock(handle, FALSE)                              'commit the file, keeping the handle
-            ifnot hModified[handle]                                             'committed (a trim that failed leaves the file whole), else left as it was..
+            if hModified[handle] == FALSE and fsDeviceFault == FALSE            'committed (a trim that failed leaves the file whole), else left as it was..
               start_modify(handle, H_APPEND, hHeadBlockID[handle], $FFFFFF, true) '..reopen file in append mode
 
         H_READWRITE:                                                            'modify mode?
@@ -791,9 +839,10 @@ PUB flush(handle) : status | fileOffset, seekStatus
             if field[IDToBlock][hHeadBlockID[handle]] < BLOCKS or hModified[handle] '..that holds data (one holding none is left as it is)
               fileOffset := hSeekFileOffset[handle]
               status := commit_new_chain(handle)                                '....commit it now
-              seekStatus := seek_no_locks(handle, fileOffset)                   '....and return to the position, which the commit may have left
-              if status == SUCCESS                                              '....a failed commit is the status, not the seek after it
-                status := seekStatus
+              if fsDeviceFault == FALSE                                         '....a failed flash write leaves the handle to the fault exit
+                seekStatus := seek_no_locks(handle, fileOffset)                 '....and return to the position, which the commit may have left
+                if status == SUCCESS                                            '....a failed commit is the status, not the seek after it
+                  status := seekStatus
           elseif hModified[handle]                                              'if block was modified...
             status := rewrite_block(handle)                                     '..rewrite block
             if status == SUCCESS                                                '..a block that is not rewritten stays modified in the buffer
@@ -802,7 +851,7 @@ PUB flush(handle) : status | fileOffset, seekStatus
         other:                                                                  'other mode?
           status := E_FILE_MODE                                                 'a read handle has nothing to flush, abort
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -817,7 +866,9 @@ PUB close(handle) : status
 '' @param handle - a handle to an open file
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
-'' .. E_BAD_HANDLE if the handle is not an open handle
+'' .. E_BAD_HANDLE if the handle is not an open handle,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the filesystem is unmounted and every
+''    handle freed, and the next mount() recovers the flash as it would after a power loss
 
   handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
@@ -840,7 +891,7 @@ PUB close(handle) : status
     else
       status := E_BAD_HANDLE                                                    'a handle that is not open frees nothing
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
     'debug("close(", sdec_(handle), ") EXIT freed sem #", udec_(fsLock))
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
@@ -861,7 +912,9 @@ PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
 '' .. E_FILE_NOT_FOUND if old file doesn't exist,
 '' .. E_FILE_OPEN if either file is open,
 '' .. E_FILE_EXISTS if new file already exists,
-'' .. E_DRIVE_FULL if no available space left in filesystem
+'' .. E_DRIVE_FULL if no available space left in filesystem,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the filesystem is unmounted, and the next
+''    mount() finds the file under its old name or its new one, as after a power loss
 
 ' Local Variables:
 ' @local signature - block state bits of block being renamed
@@ -902,7 +955,7 @@ PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
       ' a file rename consists of replacing the current head block of the file with a new head block containing the new filename
       ' then cancelling the old head block
       new_block_address := next_block_address(0)                                'get a new block to use for renaming (may move head block)
-      if new_block_address < 0                                                  'no free block: nothing was changed, error() holds E_DRIVE_FULL
+      if new_block_address < 0                                                  'no free block (E_DRIVE_FULL, nothing was changed), or a block move failed (E_FLASH_TIMEOUT)
         status := new_block_address
       else
         cur_block_address := field[IDToBlock][signature.[19..8]]                'get head block of file to rename (a block move may have changed it)
@@ -912,13 +965,16 @@ PUB rename(p_cur_filename, p_new_filename) : status | signature, new_block_addre
         bytefill(@tmpBlockBuffer + $008, $E5, FILENAME_SIZE)                    'clear filename space to prevent old trailing chrs
         strcopy(@tmpBlockBuffer + $008, p_new_filename, FILENAME_SIZE - 1)      'copy new filename into filename space
         flash_activate_updated_block(new_block_address, @tmpBlockBuffer)        'program updated block
-        flash_cancel_block(cur_block_address)                                   'cancel old block
+        if fsDeviceFault                                                        'the flash failed: the old head block stays, as a power loss here leaves it
+          status := E_FLASH_TIMEOUT
+        else
+          flash_cancel_block(cur_block_address)                                 'cancel old block
 
-        field[IDToBlock][signature.[19..8]] := new_block_address                'update IDToBlock
-        field[BlockState][new_block_address] := B_HEAD                          'make new block HEAD
-        field[BlockState][cur_block_address] := B_FREE                          'make old block FREE
+          field[IDToBlock][signature.[19..8]] := new_block_address              'update IDToBlock
+          field[BlockState][new_block_address] := B_HEAD                        'make new block HEAD
+          field[BlockState][cur_block_address] := B_FREE                        'make old block FREE
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -932,7 +988,9 @@ PUB delete(p_filename) : status | signature
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
 '' .. E_FILE_NOT_FOUND if file doesn't exist,
-'' .. E_FILE_OPEN if file is open
+'' .. E_FILE_OPEN if file is open,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the filesystem is unmounted, and the next
+''    mount() removes what is left of the file, as after a power loss
 
 ' Local Variables:
 ' @local signature - block state bits of block being removed
@@ -959,7 +1017,7 @@ PUB delete(p_filename) : status | signature
       ' a file delete consists of cancelling all blocks in the file chain
       delete_chain_from_id(signature.[19..8], 0, 0, False)                      'cancel and free all blocks in file, don't keep first ID valid
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -982,7 +1040,9 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
 '' .. E_BAD_FILE_LENGTH if byte_count is negative or zero (no file is created),
 '' .. E_FILE_OPEN if file is open,
 '' .. E_DRIVE_FULL if no available space left in filesystem,
-'' .. E_FILE_EXISTS if the file already exists
+'' .. E_FILE_EXISTS if the file already exists,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: nothing written is undone, the filesystem
+''    is unmounted, and the next mount() removes the blocks of the file, which was never activated
 
 ' Local Variables:
 ' @local signature - temporary block state bits
@@ -1034,7 +1094,7 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
       else
         repeat
           block_address := next_block_address(0)                                'get a new block now (may alter tmpBlockBuffer and IDToBlock)
-          if block_address < 0                                                  'no free block: error() holds E_DRIVE_FULL
+          if block_address < 0                                                  'no free block (E_DRIVE_FULL), or a block move failed (E_FLASH_TIMEOUT)
             status := block_address
             quit
           ifnot notHead                                                         'if HEAD block..
@@ -1056,9 +1116,15 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
           LONG[@tmpBlockBuffer].[19..8] := block_id                             'set ThisID
           LONG[@tmpBlockBuffer].[31..20] := NextID_EndPtr                       'set NextID or EndPtr
           flash_program_block(block_address, @tmpBlockBuffer, %011)             'program block
+          if fsDeviceFault                                                      'the flash failed: the file stops here, as a power loss here leaves it
+            status := E_FLASH_TIMEOUT
+            quit
           field[IDToBlock][block_id] := block_address                           'set IDToBlock
           if notHead                                                            'if not head block..
             flash_activate_block(block_address, %011)                           '..activate body block
+            if fsDeviceFault                                                    '..the flash failed: the file stops here
+              status := E_FLASH_TIMEOUT
+              quit
             field[BlockState][block_address] := B_BODY                          '..an active body block is B_BODY
           block_id := NextID_EndPtr                                             'switch to next ID
           notHead := true
@@ -1067,13 +1133,13 @@ PUB create_file(p_filename, fill_value, byte_count) : status | signature, head_b
         if status == SUCCESS
           block_address := field[IDToBlock][head_block_id]
           flash_activate_block(block_address, %011)                             'now activate head block to activate file
-          field[BlockState][block_address] := B_HEAD                            'the head block is B_HEAD only once it is active
-        else                                                                    'stopped short: undo every block this call wrote
+          field[BlockState][block_address] := B_HEAD                            'the head block is B_HEAD only once it is active (a failed activate is taken by the fault exit)
+        elseif fsDeviceFault == FALSE                                           'stopped short for lack of space: undo every block this call wrote (after a flash failure nothing is undone)
           if notHead                                                            'if the head block was written..
             delete_chain_from_id(head_block_id, block_id, 2, false)             '..cancel and free the head through the block that leads to block_id
           field[IDValid][block_id]~                                             'release the ID that got no block
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -1104,7 +1170,7 @@ PUB exists(p_filename) : bool | status
       status := SUCCESS                                                         ' a file that does not exist is an answer, not an error
       bool := exists_no_lock(p_filename)
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -1139,7 +1205,7 @@ PUB file_size(p_filename) : size_in_bytes | status, signature
     else
       status := E_FILE_NOT_FOUND
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   if status < 0
     size_in_bytes := status                                                     'a failed call returns its code in place of a size
@@ -1175,7 +1241,7 @@ PUB file_size_for_handle(handle) : size_in_bytes | status
     else
       status := E_BAD_HANDLE
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   if status < 0
     size_in_bytes := status                                                     'a failed call returns its code in place of a size
@@ -1214,7 +1280,7 @@ PUB file_size_unused(p_filename) : size_in_bytes_unused | status, signature
 
     'debug("file_size_unused(", zstr_(p_filename), ") = (", sdec_(size_in_bytes_unused), ")")
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   if status < 0
     size_in_bytes_unused := status                                              'a failed call returns its code in place of a size
@@ -1242,7 +1308,9 @@ PUB seek(handle, position, whence) : end_position | status, file_position, block
 '' .. E_BAD_SEEK_ARG if invalid whence value,
 '' .. E_FILE_MODE if the file is not open in a mode supporting seeks,
 '' .. E_FILE_SEEK if attempted seek past either end of file (and didn't use POSX for tail),
-'' .. E_DRIVE_FULL if a modified block could not be rewritten
+'' .. E_DRIVE_FULL if a modified block could not be rewritten,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified block in time (the filesystem
+''    is unmounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the position was not set
@@ -1304,7 +1372,7 @@ PUB seek(handle, position, whence) : end_position | status, file_position, block
           status := seek_to(handle, block_id, endPtr, fileOffset)               ' SUCCESS, or the reason the position was not set
           end_position := file_position
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   if status < 0
     end_position := status                                                      'a failed seek returns its code in place of a position
@@ -1323,6 +1391,7 @@ PUB write(handle, p_buffer, count) : bytes_written | status
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_MODE if the file is not open for writing,
 '' .. E_BAD_FILE_LENGTH if count is negative (nothing is written),
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the write stopped
@@ -1347,7 +1416,7 @@ PUB write(handle, p_buffer, count) : bytes_written | status
         'debug("write() [",zstr_(p_buffer),"](",udec_(count),")")
         bytes_written, status := wr_bytes_no_locks(handle, p_buffer, count)     ' the bytes written, and SUCCESS or the reason the write stopped (the bytes already written stay written)
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
     'debug("write(", udec_(handle), ") EXIT freed sem #", udec_(fsLock))
 
   if bytes_written == 0 and status < 0                                          ' no byte was written: return this cog's code
@@ -1364,7 +1433,8 @@ PUB wr_byte(handle, byte_value) : status
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
-'' .. E_FILE_MODE if the file is not open for writing
+'' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
   handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   ifnot fsMounted
@@ -1380,7 +1450,7 @@ PUB wr_byte(handle, byte_value) : status
       if status == SUCCESS
         _, status := wr_bytes_no_locks(handle, @byte_value, 1)                  ' the low byte of byte_value, the first in hub memory
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
     'debug("wr_byte(", udec_(handle), ") EXIT freed sem #", udec_(fsLock))
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
@@ -1396,7 +1466,8 @@ PUB wr_word(handle, word_value) : status | writeLength
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
-'' .. E_FILE_MODE if the file is not open for writing
+'' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
 ' Local Variables:
 ' @local writeLength - what write() returned: the bytes written, or its code
@@ -1421,7 +1492,8 @@ PUB wr_long(handle, long_value) : status | writeLength
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
-'' .. E_FILE_MODE if the file is not open for writing
+'' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
 ' Local Variables:
 ' @local writeLength - what write() returned: the bytes written, or its code
@@ -1445,7 +1517,8 @@ PUB wr_str(handle, p_str) : status | writeLength, strBytes
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
-'' .. E_FILE_MODE if the file is not open for writing
+'' .. E_FILE_MODE if the file is not open for writing,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
 ' Local Variables:
 ' @local writeLength - what write() returned: the bytes written, or its code
@@ -1480,7 +1553,9 @@ PUB read(handle, p_buffer, count) : bytes_read | status
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_MODE if the file is not open for reading,
 '' .. E_BAD_FILE_LENGTH if count is negative (no bytes are read),
-'' .. E_END_OF_FILE if attempted read beyond written data
+'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
+''    filesystem is unmounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the read stopped
@@ -1503,7 +1578,7 @@ PUB read(handle, p_buffer, count) : bytes_read | status
 
     'debug("read(", udec_(count),") = (", sdec_(bytes_read),")")
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -1518,7 +1593,9 @@ PUB rd_byte(handle) : byte_value | status
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_MODE if the file is not open for reading,
-'' .. E_END_OF_FILE if no more data
+'' .. E_END_OF_FILE if no more data,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
+''    filesystem is unmounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason no byte was read
@@ -1537,7 +1614,7 @@ PUB rd_byte(handle) : byte_value | status
       if status == SUCCESS
         _, status := rd_bytes_no_locks(handle, @byte_value, 1, FALSE)           ' read a byte from the file (or seek location), or the reason none was read
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   if status < 0
     byte_value := status                                                        'a failed read returns its code in place of a byte
@@ -1554,7 +1631,9 @@ PUB rd_word(handle) : word_value | status, readLength
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_WRITING if the file is not open for reading,
-'' .. E_END_OF_FILE if attempted read beyond written data
+'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
+''    filesystem is unmounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason read() stopped
@@ -1580,7 +1659,9 @@ PUB rd_long(handle) : long_value | status, readCount
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_WRITING if the file is not open for reading,
-'' .. E_END_OF_FILE if attempted read beyond written data
+'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
+''    filesystem is unmounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason read() stopped
@@ -1608,7 +1689,9 @@ PUB rd_str(handle, p_str, buf_size) : bytes_read | status
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_MODE if the file is not open for reading,
 '' .. E_BAD_FILE_LENGTH if buf_size is negative (no bytes are read, the buffer is untouched),
-'' .. E_END_OF_FILE if attempted read beyond written data
+'' .. E_END_OF_FILE if attempted read beyond written data,
+'' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
+''    filesystem is unmounted)
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the read stopped
@@ -1639,7 +1722,7 @@ PUB rd_str(handle, p_str, buf_size) : bytes_read | status
             BYTE[p_str][bytes_read] := 0                                        '....place a 0 terminator at its end in place of that byte
             status := E_TRUNCATED_STRING
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -1682,7 +1765,7 @@ PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
                   LONG[p_file_size], _, _ := count_file_bytes(block_address)    'get file size
                   quit
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
@@ -1721,7 +1804,7 @@ PUB stats() : used_blocks, free_blocks, file_count | status, block_address
                   file_count++
           B_BODY: used_blocks++
 
-    lockrel(fsLock)                                                             ' release the lock, we're done with it
+    status := release_lock(status)                                              ' release the lock, we're done with it
 
   if status < 0
     used_blocks := status                                                       'a failed call returns its code in place of the used count
@@ -1757,6 +1840,7 @@ PUB string_for_error(status) : p_interpretation
         E_BAD_FILE_LENGTH:      p_interpretation := @"E_BAD_FILE_LENGTH: File length is negative or zero"
         E_BAD_SEEK_ARG:         p_interpretation := @"E_BAD_SEEK_ARG: Invalid seek argument"
         E_BAD_FILENAME:         p_interpretation := @"E_BAD_FILENAME: Filename is a null pointer, empty or longer than 127 characters"
+        E_FLASH_TIMEOUT:        p_interpretation := @"E_FLASH_TIMEOUT: Flash chip did not finish an erase or program in time, filesystem unmounted"
         other:                  p_interpretation := @"???: Unknown error code ???"
 
 
@@ -1811,7 +1895,7 @@ PRI finish_open_read(p_filename, max_file_length, signature) : handle | block_id
         seek_no_locks(handle, 0)                                                'seek to start of file
 
   'debug(" -- open_read() freed sem #", udec_(fsLock))
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+  handle := release_lock(handle)                                                ' release the lock, we're done with it
 
 
 PRI finish_open_write(p_filename, max_file_length, signature) : handle | head_block_id
@@ -1855,7 +1939,7 @@ PRI finish_open_write(p_filename, max_file_length, signature) : handle | head_bl
         'debug("open() WRITE ", uhex_word(hEndPtr[handle], handle))
 
   'debug(" -- open_write() freed sem #", udec_(fsLock))
-  lockrel(fsLock)                                                             ' release the lock, we're done with it
+  handle := release_lock(handle)                                              ' release the lock, we're done with it
 
 
 PRI finish_open_append(p_filename, max_file_length, signature) : handle | head_block_id
@@ -1896,7 +1980,7 @@ PRI finish_open_append(p_filename, max_file_length, signature) : handle | head_b
         ' NO, we don't write empty files!
         'hModified[handle]~~                                                    'force first block to be written in case no data
 
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+  handle := release_lock(handle)                                                ' release the lock, we're done with it
 
 
 PRI finish_open_readwrite(p_filename, bNewFile, signature) : handle | head_block_id, pBuff
@@ -1944,7 +2028,7 @@ PRI finish_open_readwrite(p_filename, bNewFile, signature) : handle | head_block
         if signature
           hReplacedID[handle] := signature.[19..8]                              'the existing file that the commit replaces
 
-  lockrel(fsLock)                                                               ' release the lock, we're done with it
+  handle := release_lock(handle)                                                ' release the lock, we're done with it
 
 
 PRI valid_filename(p_filename) : bValid
@@ -2181,7 +2265,8 @@ PRI rd_bytes_no_locks(handle, p_buffer, count, bToTerminator) : bytes_read, stat
 ' @returns status - SUCCESS when count bytes were read, or the reason the read stopped:
 ' .. E_END_OF_FILE if no more data,
 ' .. E_FILE_MODE if read not allowed for this file,
-' .. E_DRIVE_FULL if a modified block could not be rewritten
+' .. E_DRIVE_FULL if a modified block could not be rewritten,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite in time (the read stops at the one exit)
 
 ' Local Variables:
 ' @local pBuff - the address of the 4KB buffer for the file associated with this handle
@@ -2263,7 +2348,9 @@ PRI wr_bytes_no_locks(handle, p_buffer, count) : bytes_written, status | pBuff, 
 ' @returns bytes_written - the count of bytes written to the file
 ' @returns status - SUCCESS when count bytes were written, or the reason the write stopped:
 ' .. E_FILE_MODE if the file is not open for writing,
-' .. E_DRIVE_FULL if the flash has no room for the block the next byte needs
+' .. E_DRIVE_FULL if the flash has no room for the block the next byte needs,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the write stops at the one exit, and
+'    nothing written is undone)
 
 ' Local Variables:
 ' @local pBuff - the address of the 4KB buffer for the file associated with this handle
@@ -2290,7 +2377,7 @@ PRI wr_bytes_no_locks(handle, p_buffer, count) : bytes_written, status | pBuff, 
             status := nextBlockID
           else
             status := write_block(handle, nextBlockID, true)                    '..write current full block with NextID link
-            if status < 0                                                       '..no free block for it and the next: error() holds E_DRIVE_FULL
+            if status < 0                                                       '..no free block for it and the next (E_DRIVE_FULL), or the flash failed (E_FLASH_TIMEOUT)
               field[IDValid][nextBlockID]~                                      '....release the ID that got no block
             else
               bytefill(pBuff, $FF, BLOCK_SIZE)                                  '..erase block buffer to build new body block
@@ -2304,7 +2391,7 @@ PRI wr_bytes_no_locks(handle, p_buffer, count) : bytes_written, status | pBuff, 
               status := nextBlockID
             else
               newBlockAddress := next_block_address(NEXT_BLOCK_SPARE)           '....get its block, keeping one for the rewrite of this block
-              if newBlockAddress < 0                                            '....no free block for both: error() holds E_DRIVE_FULL
+              if newBlockAddress < 0                                            '....no free block for both (E_DRIVE_FULL), or a block move failed (E_FLASH_TIMEOUT)
                 status := newBlockAddress
                 field[IDValid][nextBlockID]~                                    '......release the ID that got no block
               else
@@ -2315,19 +2402,22 @@ PRI wr_bytes_no_locks(handle, p_buffer, count) : bytes_written, status | pBuff, 
                 BYTE[@tmpBlockBuffer][ADDR_BODY_DATA] := BYTE[p_buffer][bytes_written] '......its data byte
                 flash_program_block(newBlockAddress, @tmpBlockBuffer, %011)     '....write and activate it before any block links to it
                 flash_activate_block(newBlockAddress, %011)
-                field[BlockState][newBlockAddress] := B_BODY
-                field[IDToBlock][nextBlockID] := newBlockAddress
-                long[pBuff].[0] := 1                                            '....this block now has a next block..
-                long[pBuff].[31..20] := nextBlockID                             '....and its NextID replaces its EndPtr
-                status := rewrite_block(handle)                                 '....rewrite this block with the link (might move a block)
-                if status == SUCCESS
-                  hModified[handle]~
-                else                                                            '....no block for the rewrite: undo the new last block
-                  long[pBuff].[0] := 0                                          '......this block is the last block again..
-                  long[pBuff].[31..20] := endPtr                                '......full to its end
-                  flash_cancel_block(newBlockAddress)
-                  field[BlockState][newBlockAddress] := B_FREE
-                  field[IDValid][nextBlockID]~                                  '......release the ID
+                if fsDeviceFault                                                '....the flash failed: the write stops here, as a power loss here leaves it
+                  status := E_FLASH_TIMEOUT
+                else
+                  field[BlockState][newBlockAddress] := B_BODY
+                  field[IDToBlock][nextBlockID] := newBlockAddress
+                  long[pBuff].[0] := 1                                          '....this block now has a next block..
+                  long[pBuff].[31..20] := nextBlockID                           '....and its NextID replaces its EndPtr
+                  status := rewrite_block(handle)                               '....rewrite this block with the link (might move a block)
+                  if status == SUCCESS
+                    hModified[handle]~
+                  elseif fsDeviceFault == FALSE                                 '....no block for the rewrite: undo the new last block (after a flash failure nothing is undone)
+                    long[pBuff].[0] := 0                                        '......this block is the last block again..
+                    long[pBuff].[31..20] := endPtr                              '......full to its end
+                    flash_cancel_block(newBlockAddress)
+                    field[BlockState][newBlockAddress] := B_FREE
+                    field[IDValid][nextBlockID]~                                '......release the ID
           elseif hModified[handle]                                              '..else if block was modified
             status := rewrite_block(handle)                                     '..then rewrite block (might move a block)
             if status == SUCCESS
@@ -2360,7 +2450,8 @@ PRI seek_no_locks(handle, file_position) : status | block_id, endPtr, fileOffset
 '
 ' @param handle - handle to open file
 ' @param file_position - desired file postion
-' @returns status - 0 (SUCCESS) if the position was set, E_DRIVE_FULL if a modified block could not be rewritten
+' @returns status - 0 (SUCCESS) if the position was set, E_DRIVE_FULL if a modified block could not be rewritten,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish that rewrite in time
 
 ' Local Variables:
 ' @local block_id - the block holding the located position
@@ -2420,7 +2511,8 @@ PRI seek_to(handle, block_id, endPtr, fileOffset) : status | pBuff, bInBuffer
 ' @param block_id - the block holding the located position
 ' @param endPtr - offset within the located block of the byte at the located position
 ' @param fileOffset - the position within the file that was located
-' @returns status - 0 (SUCCESS) if the position was set, E_DRIVE_FULL if a modified block could not be rewritten
+' @returns status - 0 (SUCCESS) if the position was set, E_DRIVE_FULL if a modified block could not be rewritten,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish that rewrite in time (the located block is not read)
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
@@ -2590,8 +2682,12 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
 '
 ' @param handle - a handle to an open file
 ' @param bFreeHandle - TRUE when the handle is freed after this close (close(), unmount()), FALSE for flush()
+' A flash write that fails stops the close at that step: nothing written is undone, and the status is
+' E_FLASH_TIMEOUT. The caller's release of the lock unmounts the filesystem.
+'
 ' @returns status - 0 (SUCCESS) if successful,
-' .. E_DRIVE_FULL if the flash has no free block for the last block, the trim, the rewrite or a "w+" head block
+' .. E_DRIVE_FULL if the flash has no free block for the last block, the trim, the rewrite or a "w+" head block,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time
 
 ' Local Variables:
 ' @local open_mode - the mode the handle is open in
@@ -2631,11 +2727,14 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
 
             flash_activate_block(chain_block_address, hChainLifeCycle[handle])  'replace old head block if rewrite or old last block if append
 
-            if open_mode & H_FORK                                               'if append..
+            if fsDeviceFault == FALSE and (open_mode & H_FORK)                  'if append (and the activate reached the flash)..
               delete_chain_from_id(chain_block_id, 0, 0, True)                  '..delete old fork block through end of file, keeping first ID valid
 
-            field[BlockState][chain_block_address] := chainState                'change new fork block status from sTEMP to sHEAD/sBODY
-            field[IDToBlock][chain_block_id] := chain_block_address             'update IDToBlock to point to new fork block
+            if fsDeviceFault                                                    'the flash failed: the commit stops here, as a power loss here leaves it
+              status := E_FLASH_TIMEOUT
+            else
+              field[BlockState][chain_block_address] := chainState              'change new fork block status from sTEMP to sHEAD/sBODY
+              field[IDToBlock][chain_block_id] := chain_block_address           'update IDToBlock to point to new fork block
 
           elseifnot bFreeHandle                                                 'flush(): nothing was committed, so the handle keeps its state..
             bKeepHandle := TRUE                                                 '..and its unwritten bytes, for a later commit
@@ -2656,6 +2755,9 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
 
   elseif open_mode == H_WRITE and bFreeHandle                                   ' a new "w"/"a" file with nothing written: no file is left
     field[IDValid][head_block_id]~                                              '..release the head block ID its open took
+
+  if fsDeviceFault                                                              ' a flash write of this close failed, at whichever step: that is the status
+    status := E_FLASH_TIMEOUT
 
   hCacheBlockID[handle] := NO_CACHED_BLOCK                                      ' a commit or a trim can take blocks out of the chain: empty the seek cache
   ifnot bKeepHandle
@@ -2679,7 +2781,11 @@ PRI write_block(handle, NextID_EndPtr, bHasNext) : status | pBuff, block_id, blo
 ' @param handle - a reference to a file open for write
 ' @param NextID_EndPtr - the next block id, -OR- the pointer to end of data in last block
 ' @param bHasNext - TRUE when NextID_EndPtr is the next block id, FALSE when this is the last block
-' @returns status - 0 (SUCCESS) if the block was written, E_DRIVE_FULL if the flash has no room for it
+' A flash write that fails leaves the block as a power loss would, changes no table, and the status is
+' E_FLASH_TIMEOUT.
+'
+' @returns status - 0 (SUCCESS) if the block was written, E_DRIVE_FULL if the flash has no room for it,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish the write in time
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
@@ -2689,7 +2795,7 @@ PRI write_block(handle, NextID_EndPtr, bHasNext) : status | pBuff, block_id, blo
   status := SUCCESS
   block_address := next_block_address(bHasNext ? NEXT_BLOCK_SPARE : 0)          'get a new block, keeping one for the next block (may alter IDToBlock)
 
-  if block_address < 0                                                          'no free block: error() holds E_DRIVE_FULL
+  if block_address < 0                                                          'no free block (E_DRIVE_FULL), or a block move failed (E_FLASH_TIMEOUT)
     status := block_address
   else
     pBuff := buffer_pointer(handle)                                             'get block buffer pointer
@@ -2704,10 +2810,15 @@ PRI write_block(handle, NextID_EndPtr, bHasNext) : status | pBuff, block_id, blo
 
     if block_id == hChainBlockID[handle]                                        'if this is the head of commit chain block
       flash_program_block(block_address, pBuff, hChainLifeCycle[handle])        '..program block with chain head cycle
-      hChainBlockAddr[handle] := block_address                                  '..remember the block so that it can be activated on close
     else                                                                        'else, this is a body block
       flash_program_block(block_address, pBuff, %011)                           '..program body block with new cycle
       flash_activate_block(block_address, %011)                                 '..activate block
+
+    if fsDeviceFault                                                            'the flash failed: no table is changed
+      status := E_FLASH_TIMEOUT
+    elseif block_id == hChainBlockID[handle]
+      hChainBlockAddr[handle] := block_address                                  '..remember the block so that it can be activated on close
+    else
       field[BlockState][block_address] := B_BODY                                '..change block state from sTEMP to sBODY
       field[IDToBlock][block_id] := block_address                               '..set IDToBlock
 
@@ -2725,7 +2836,10 @@ PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAdd
 ' the modified block.
 '
 ' @param handle - a reference to a file open for read/modify/write
-' @returns status - 0 (SUCCESS) if the block was rewritten, E_DRIVE_FULL if the flash has no free block for it
+' A flash write that fails leaves both copies as a power loss would, and the status is E_FLASH_TIMEOUT.
+'
+' @returns status - 0 (SUCCESS) if the block was rewritten, E_DRIVE_FULL if the flash has no free block for it,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite in time
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
@@ -2736,7 +2850,7 @@ PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAdd
   status := SUCCESS
   block_address := next_block_address(0)                                        'get a new block (may alter IDToBlock)
 
-  if block_address < 0                                                          'no free block: error() holds E_DRIVE_FULL
+  if block_address < 0                                                          'no free block (E_DRIVE_FULL), or a block move failed (E_FLASH_TIMEOUT)
     status := block_address
   else
     pBuff := buffer_pointer(handle)                                             'get block buffer pointer
@@ -2754,6 +2868,9 @@ PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAdd
       flash_cancel_block(oldBlockAddress)                                       'cancel the old block
       field[BlockState][block_address] := field[BlockState][oldBlockAddress]\B_FREE 'copy old block state to new -AND- free old
 
+    if fsDeviceFault                                                            'the flash failed at one of the writes above
+      status := E_FLASH_TIMEOUT
+
 
 PRI commit_new_chain(handle) : status | pBuff, head_block_id, replaced_block_id, head_address, block_address, cycleBits, oldCycleBits
 
@@ -2768,10 +2885,12 @@ PRI commit_new_chain(handle) : status | pBuff, head_block_id, replaced_block_id,
 ' activation the new head is inactive and mount() keeps the old file (cancelling the new file's body blocks as
 ' unreached), after it mount() keeps the newer of the two heads. With no free block for a rewrite or for the head
 ' block nothing is activated, the file stays uncommitted, any existing file stays as it was, and the status is
-' E_DRIVE_FULL.
+' E_DRIVE_FULL. A flash write that fails stops the commit at that step, as a power loss there would, and the
+' status is E_FLASH_TIMEOUT.
 '
 ' @param handle - a handle to a "w+" file that is not yet committed and holds data
-' @returns status - 0 (SUCCESS) if the file was committed, E_DRIVE_FULL if the flash has no free block for it
+' @returns status - 0 (SUCCESS) if the file was committed, E_DRIVE_FULL if the flash has no free block for it,
+' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time
 
 ' Local Variables:
 ' @local pBuff - a temporary pointer to the handles block buffer
@@ -2804,7 +2923,7 @@ PRI commit_new_chain(handle) : status | pBuff, head_block_id, replaced_block_id,
       field[BlockState][head_address] := B_HEAD
     else
       block_address := next_block_address(0)                                    'get a new block for the head (may alter IDToBlock)
-      if block_address < 0                                                      'no free block: error() holds E_DRIVE_FULL
+      if block_address < 0                                                      'no free block (E_DRIVE_FULL), or a block move failed (E_FLASH_TIMEOUT)
         status := block_address
       else
         cycleBits := %011                                                       'a new file starts at the first active lifecycle
@@ -2814,18 +2933,22 @@ PRI commit_new_chain(handle) : status | pBuff, head_block_id, replaced_block_id,
           long[pBuff].[19..8] := replaced_block_id
         flash_program_block(block_address, pBuff, cycleBits)                    'program the head..
         flash_activate_block(block_address, cycleBits)                          '..and activate it: the file is committed
-        if replaced_block_id <> NOT_VALID
-          delete_chain_from_id(replaced_block_id, 0, 0, True)                   'cancel the old head and its bodies, keeping the head ID valid
-          field[IDValid][head_block_id]~                                        'release the ID the new file took at open
-          field[IDToBlock][head_block_id] := 0
-          head_block_id := replaced_block_id
-          hHeadBlockID[handle] := head_block_id
-        if head_address < BLOCKS                                                'cancel the earlier inactive copy of the head
-          flash_cancel_block(head_address)
-          field[BlockState][head_address] := B_FREE
-        field[IDToBlock][head_block_id] := block_address
-        field[BlockState][block_address] := B_HEAD
-        hModified[handle]~
+        if fsDeviceFault == FALSE                                               'a failed head write leaves the old file and the new head as a power loss here would
+          if replaced_block_id <> NOT_VALID
+            delete_chain_from_id(replaced_block_id, 0, 0, True)                 'cancel the old head and its bodies, keeping the head ID valid
+            field[IDValid][head_block_id]~                                      'release the ID the new file took at open
+            field[IDToBlock][head_block_id] := 0
+            head_block_id := replaced_block_id
+            hHeadBlockID[handle] := head_block_id
+          if head_address < BLOCKS                                              'cancel the earlier inactive copy of the head
+            flash_cancel_block(head_address)
+            field[BlockState][head_address] := B_FREE
+          field[IDToBlock][head_block_id] := block_address
+          field[BlockState][block_address] := B_HEAD
+          hModified[handle]~
+
+  if fsDeviceFault                                                              'a flash write of the commit failed, at whichever step
+    status := E_FLASH_TIMEOUT
 
   if status == SUCCESS
     hHeadPending[handle] := FALSE                                               'the file is on the flash: from here the handle is an "r+" handle
@@ -2890,11 +3013,15 @@ PRI froncate_file(head_block_id, limit_in_bytes) : status | size_in_bytes, block
 ' Remove leading block(s) from file that exceeds the circular size limit
 '
 ' The trim writes a new head block first. With no free block for it nothing is changed and the file stays whole.
+' A flash write that fails stops the trim at that step, as a power loss there would.
+'
+' The walk to the block before the data block follows at most BLOCKS links, the longest a chain can be: a walk
+' that reaches that bound takes the last block it reached as that block, as it does at the end of the chain.
 '
 ' @param head_block_id - block id of file
 ' @param limit_in_bytes - the file size limit in bytes
 ' @returns status - 0 (SUCCESS) if the file is within the limit or was trimmed to it, E_DRIVE_FULL if the flash
-' .. has no free block for the new head block
+' .. has no free block for the new head block, E_FLASH_TIMEOUT if the flash chip did not finish a write in time
 
 ' Local Variables:
 ' @local size_in_bytes - current length of file in bytes
@@ -2912,7 +3039,7 @@ PRI froncate_file(head_block_id, limit_in_bytes) : status | size_in_bytes, block
   ' if have extra blocks beyond limit requested at open, then remove them
   if size_in_bytes > limit_in_bytes                                                                     'if file is oversize..
     block_address := next_block_address(0)                                                              'get a new block now (may alter tmpBlockBuffer and IDToBlock)
-    if block_address < 0                                                                                'no free block: the file stays whole, error() holds E_DRIVE_FULL
+    if block_address < 0                                                                                'no free block (E_DRIVE_FULL, the file stays whole), or a block move failed (E_FLASH_TIMEOUT)
       status := block_address
 
   if size_in_bytes > limit_in_bytes and status == SUCCESS                                               'if file is oversize and has its new head block..
@@ -2931,7 +3058,7 @@ PRI froncate_file(head_block_id, limit_in_bytes) : status | size_in_bytes, block
       ' locate prior block in chain to make it the new head with calc offset
         ' locate prior block
         prior_block_id := head_block_id
-        repeat
+        repeat BLOCKS                                                                                   'a chain has no more than BLOCKS blocks
           flash_read_block_id(prior_block_id, @body_signature, $000, $003)                              'get head block signature
           if body_signature.[0] == 1                                                                    ' if more block
             if body_signature.[31..20] <> new_head_block_id                                             ' ..if this block does NOT immediately preceed our data block
@@ -2960,10 +3087,14 @@ PRI froncate_file(head_block_id, limit_in_bytes) : status | size_in_bytes, block
 
       flash_activate_updated_block(block_address, @tmpBlockBuffer)                                      'program updated block
 
-      delete_chain_from_id(head_block_id, body_signature.[19..8], delete_mode, True)                    'delete old head block through or before data block, keep first block ID valid
+      if fsDeviceFault == FALSE                                                                         'a failed head write leaves the file as a power loss here would
+        delete_chain_from_id(head_block_id, body_signature.[19..8], delete_mode, True)                  'delete old head block through or before data block, keep first block ID valid
 
-      field[IDToBlock][head_block_id] := block_address                                                  'point IDToBlock to new head block
-      field[BlockState][block_address] := B_HEAD                                                        'change state of new head block from sTEMP to sHEAD
+        field[IDToBlock][head_block_id] := block_address                                                'point IDToBlock to new head block
+        field[BlockState][block_address] := B_HEAD                                                      'change state of new head block from sTEMP to sHEAD
+
+  if fsDeviceFault                                                                                      'a flash write of the trim failed, at whichever step
+    status := E_FLASH_TIMEOUT
 
 {
 PRI truncate_file(head_block_id, limit_in_bytes) | block_address, block_id, block_offset
@@ -3027,6 +3158,10 @@ PRI walk_file_bytes(block_id, startOfs, file_position) : rID, rBlockOfs, rLocati
 ' body block) stands for file offset startOfs, and reads each block's first long from the flash. A position before
 ' startOfs is never looked for, so the walk starts at the head block, or at a block before the position.
 '
+' The walk reads at most BLOCKS blocks, the longest a chain can be. A walk that reaches that bound ends at the
+' last block it read, as it ends at a last block: rID is that block, rBlockOfs the end of its data area, and
+' rLocation and rBlockStart count only the bytes of the blocks it read.
+'
 ' @param block_id - the block id of the block the walk starts at
 ' @param startOfs - the file offset of the first data byte position of that block (negative for a head block with a data offset)
 ' @param file_position - the byte offset from the beginning of the file
@@ -3046,7 +3181,7 @@ PRI walk_file_bytes(block_id, startOfs, file_position) : rID, rBlockOfs, rLocati
   currOfs := startOfs
   bFound := FALSE
 
-  repeat                                                                        'trace blocks to count file bytes
+  repeat BLOCKS                                                                 'trace blocks to count file bytes (a chain has no more than BLOCKS blocks)
     flash_read_block_id(block_id, @signature, $000, $003)                       'read block header
     srtOfs := signature.[1] ? ADDR_BODY_DATA : ADDR_HEAD_DATA                   'body or head?
     endOfs := signature.[0] ? ADDR_DATA_END : signature.[31..20]                'more or last?
@@ -3064,7 +3199,12 @@ PRI walk_file_bytes(block_id, startOfs, file_position) : rID, rBlockOfs, rLocati
         bFound := TRUE
       else
         block_id := signature.[31..20]                                          'get next block ID
-  until bFound
+    if bFound == TRUE
+      quit
+
+  if bFound == FALSE                                                            'BLOCKS blocks were read: the last one ends the walk, as a last block does
+    rBlockOfs := endOfs
+    rLocation := currOfs
 
 
 PRI head_data_start(head_block_id) : startOfs, bOldFmt
@@ -3088,6 +3228,8 @@ PRI head_data_start(head_block_id) : startOfs, bOldFmt
 PRI delete_chain_from_id(block_id, EndID, delete_mode, KeepFirstIDValid) | block_address, signature
 
 ' remove selected part of a file chain
+' -- a cancel that fails raises fsDeviceFault and ends the walk there: the rest of the chain stays on the flash, as
+'    a power loss at that point would leave it, and no block is read from a chip that may still be busy
 '
 ' @param block_id - starting block id
 ' @param EndID - ending block id
@@ -3118,6 +3260,8 @@ PRI delete_chain_from_id(block_id, EndID, delete_mode, KeepFirstIDValid) | block
     block_address := field[IDToBlock][block_id]                                 'translate block ID to block
     field[BlockState][block_address] := B_FREE                                  'set block state to sFREE
     flash_cancel_block(block_address)                                           'cancel block
+    if fsDeviceFault                                                            'the flash failed: the walk ends here
+      quit
     flash_read_block_addr(block_address, @signature, $000, $003)                'read block header
     block_id := signature.[31..20]                                              'get block ID of next block
   while lookupz(delete_mode: signature.[0], ...                                 'mode 0: delete to last block
@@ -3210,6 +3354,7 @@ PRI check_block_fix_dupe_id(thisBlockAddress) : bBadCancelled | otherBlockAddres
 ' If there is more than one block with this blocks ID, cancel the older block
 ' -- a good block that is kept is marked B_HEAD when it is a head block and B_TEMP when it is a body block, so
 '    that mount can find the head blocks without reading any block again; mount traces each B_HEAD block's chain
+' -- each cancel is the last flash write of a call; one that fails raises fsDeviceFault, which the caller tests
 '
 ' @param thisBlockAddress - the block offset within the file system for "this" block
 ' @returns bBadCancelled - TRUE when "this" block was cancelled because its CRC does not match, FALSE otherwise
@@ -3258,6 +3403,8 @@ PRI check_block_fix_dupe_id(thisBlockAddress) : bBadCancelled | otherBlockAddres
 PRI count_file_bytes(block_address) : bytes_used, bytes_free, block_count | signature
 
 ' Return information about a file: blocks allocated, bytes used, bytes free
+' -- the walk reads at most BLOCKS blocks, the longest a chain can be; a walk that reaches that bound stops there,
+'    as at a last block: the counts are those of the blocks it read, and bytes_free is 0 (each of them was full)
 '
 ' @param block_address - the offset within the file system of the first block of the file
 ' @returns bytes_used - the number of bytes written to file
@@ -3267,23 +3414,24 @@ PRI count_file_bytes(block_address) : bytes_used, bytes_free, block_count | sign
 ' Local Variables:
 ' @local signature - the block state bits of the block being counted
 
+  bytes_used := bytes_free := block_count := 0
   if block_address <> NOT_VALID
-    repeat                                                                      'trace blocks to count file bytes
+    repeat BLOCKS                                                               'trace blocks to count file bytes (a chain has no more than BLOCKS blocks)
         flash_read_block_addr(block_address, @signature, $000, $003)            'read the first long of the head/body block
         block_count++
         case signature.[1..0]
             %00:                                                                'head/last
                 bytes_used := signature.[31..20] - $088
                 bytes_free := $FFC - signature.[31..20]
-                return
             %01:                                                                'head/more
                 bytes_used := $FFC - $088
             %10:                                                                'body/last
                 bytes_used += signature.[31..20] - $004
                 bytes_free := $FFC - signature.[31..20]
-                return
             %11:                                                                'body/more
                 bytes_used += $FFC - $004
+        if signature.[0] == 0                                                   'the last block of the file has been counted
+            quit
         block_address := field[IDToBlock][signature.[31..20]]                   'get next block to count
 
 
@@ -3408,7 +3556,7 @@ PRI available_blocks() : bool | blk8Idx
     'debug("available_blocks() EXIT")
 
 
-PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockAddress, freeIndex, next_cycle_bits, pickAddress, bFull
+PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockAddress, freeIndex, next_cycle_bits, pickAddress, bFull, bFault
 
 ' Return the address of the next block to which we should write
 '
@@ -3427,9 +3575,12 @@ PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockA
 ' checked once, on from the last try, and the first one that is not B_TEMP is picked; when every block is B_TEMP
 ' there is nothing to pick and the result is E_DRIVE_FULL. Every E_DRIVE_FULL leaves at the one exit at the end.
 '
+' A flash write of a move that fails leaves the two copies as a power loss would, changes no table, and leaves at
+' the same exit with E_FLASH_TIMEOUT, so every caller stops on the negative result as it does on E_DRIVE_FULL.
+'
 ' @param spareBlocks - free blocks that must remain once this block is taken (0 when none need to)
 ' @returns block_address - the address of the next block to use, now B_TEMP, or E_DRIVE_FULL if no more than
-' .. spareBlocks blocks are free, or every block is B_TEMP
+' .. spareBlocks blocks are free, or every block is B_TEMP, or E_FLASH_TIMEOUT if a flash write of a move failed
 
 ' Local Variables:
 ' @local blockFreeCount - the count of free blocks
@@ -3438,8 +3589,10 @@ PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockA
 ' @local next_cycle_bits - the next lifecycle bits to use for the new block
 ' @local pickAddress - the block offset within the file system of the block a try or the scan checks
 ' @local bFull - TRUE when no block can be taken: the result is E_DRIVE_FULL and nothing is changed
+' @local bFault - TRUE when a flash write of the move failed: the result is E_FLASH_TIMEOUT and no table is changed
 
   bFull := FALSE
+  bFault := FALSE
   block_address := fsTargetBlock                                                'a named block is taken while it is not B_TEMP
   if block_address <> NOT_ENABLED
     if field[BlockState][block_address] == B_TEMP
@@ -3487,11 +3640,16 @@ PRI next_block_address(spareBlocks) : block_address | blockFreeCount, freeBlockA
       flash_activate_block(freeBlockAddress, next_cycle_bits)                   'activate the B_FREE block, now superior to the original block
       flash_cancel_block(block_address)                                         'cancel the original block to complete the move
 
-      field[IDToBlock][LONG[@tmpBlockBuffer].[19..8]] := freeBlockAddress         'update IDToBlock table
-      field[BlockState][freeBlockAddress] := field[BlockState][block_address]\B_TEMP 'free block gets curr block state, -AND- set new block to B_TEMP
+      if fsDeviceFault                                                          'the flash failed: no table is changed, the move is left as a power loss leaves it
+        bFault := TRUE
+      else
+        field[IDToBlock][LONG[@tmpBlockBuffer].[19..8]] := freeBlockAddress     'update IDToBlock table
+        field[BlockState][freeBlockAddress] := field[BlockState][block_address]\B_TEMP 'free block gets curr block state, -AND- set new block to B_TEMP
 
   if bFull                                                                      'no block can be taken: fail with E_DRIVE_FULL, nothing was changed
     block_address := (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
+  elseif bFault                                                                 'a flash write of the move failed
+    block_address := E_FLASH_TIMEOUT
 
 
 PRI mount_no_lock() : status | block_address, signature
@@ -3501,8 +3659,11 @@ PRI mount_no_lock() : status | block_address, signature
 ' -- every handle is freed, any open handle is abandoned; fsMounted becomes TRUE only once the tables are built
 ' -- the first pass reads every active block whole and leaves each good one B_HEAD (a head block) or B_TEMP (a body
 '    block); the second traces the chain of each B_HEAD block, and the third cancels the blocks no chain reached
+' -- a cancel that fails raises fsDeviceFault and stops the passes there: fsMounted stays FALSE, and the next
+'    mount() starts over
 '
-' @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed, otherwise 0 for success
+' @returns status - E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed, E_FLASH_TIMEOUT if the flash chip did
+' .. not finish a cancel in time, otherwise 0 for success
 
 ' Local Variables:
 ' @local block_address - the block offset within the file system
@@ -3527,29 +3688,90 @@ PRI mount_no_lock() : status | block_address, signature
     repeat BLOCKS with block_address                                            'check each block and fix any duplicate IDs
         if check_block_fix_dupe_id(block_address)                               '(recovers from incomplete block switchover due to power loss)
             status := (LONG[@errorCode][cogid()] := E_BAD_BLOCKS_REMOVED)       'a block whose CRC does not match was cancelled
+        if fsDeviceFault                                                        'a cancel failed: no further block is checked
+            quit
         ' leaves B_HEAD for each good head block and B_TEMP for each good body block
 
-    'debug("mnt: - locating files...")
-    ' the head blocks the first pass marked B_HEAD are the files to trace; no block is read again to find them
-    repeat BLOCKS with block_address                                            'trace head blocks and cancel any broken files
-        if field[BlockState][block_address] == B_HEAD                           'is this a good head block?
-            'debug("mnt: - head block ", uhex_word(block_address))
-            ifnot trace_file_set_flags(block_address, true)                     'yes, trace file, set block states to B_HEAD/B_BODY
-                trace_file_set_flags(block_address, false)                      'if error, retrace file, return block states to B_TEMP
-        ' actual files are now marked as B_HEAD/B_BODY while rest are now B_TEMP
+    if fsDeviceFault == FALSE
+        'debug("mnt: - locating files...")
+        ' the head blocks the first pass marked B_HEAD are the files to trace; no block is read again to find them
+        repeat BLOCKS with block_address                                        'trace head blocks and cancel any broken files
+            if field[BlockState][block_address] == B_HEAD                       'is this a good head block?
+                'debug("mnt: - head block ", uhex_word(block_address))
+                ifnot trace_file_set_flags(block_address, true)                 'yes, trace file, set block states to B_HEAD/B_BODY
+                    trace_file_set_flags(block_address, false)                  'if error, retrace file, return block states to B_TEMP
+            ' actual files are now marked as B_HEAD/B_BODY while rest are now B_TEMP
 
-    'debug("mnt: - clearing dead blocks...")
-    ' clear remaining B_TEMP blocks
-    repeat BLOCKS with block_address                                            'cancel B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
-        if field[BlockState][block_address] == B_TEMP                           'is this an B_TEMP block?
-            flash_read_block_addr(block_address, @signature, $000, $003)        'if so, read first long of block to get ID
-            field[IDValid][signature.[19..8]]~                                  '..cancel ID flag (bit := 0)
-            field[BlockState][block_address] := B_FREE                          '..return block state to B_FREE (zero)
-            flash_cancel_block(block_address)                                   '..cancel block to inhibit future CRC checks
-            'debug(" -- found dead block...")
-            status :=  (LONG[@errorCode][cogid()] := E_BAD_BLOCKS_REMOVED)
+        'debug("mnt: - clearing dead blocks...")
+        ' clear remaining B_TEMP blocks
+        repeat BLOCKS with block_address                                        'cancel B_TEMP blocks that didn't become B_HEAD/B_BODY blocks
+            if field[BlockState][block_address] == B_TEMP                       'is this an B_TEMP block?
+                flash_read_block_addr(block_address, @signature, $000, $003)    'if so, read first long of block to get ID
+                field[IDValid][signature.[19..8]]~                              '..cancel ID flag (bit := 0)
+                field[BlockState][block_address] := B_FREE                      '..return block state to B_FREE (zero)
+                flash_cancel_block(block_address)                               '..cancel block to inhibit future CRC checks
+                'debug(" -- found dead block...")
+                status :=  (LONG[@errorCode][cogid()] := E_BAD_BLOCKS_REMOVED)
+                if fsDeviceFault                                                '..a cancel failed: no further block is cancelled
+                    quit
 
-    fsMounted := true                                                           ' set "mounted" indication, now that the tables are built
+    if fsDeviceFault                                                            'a cancel failed: the filesystem stays unmounted
+        status := (LONG[@errorCode][cogid()] := E_FLASH_TIMEOUT)
+    else
+        fsMounted := true                                                       ' set "mounted" indication, now that the tables are built
+
+
+PRI release_lock(callStatus) : status
+
+' Release the lock a locked method holds, taking the fault exit when the call raised the device fault
+' -- every locked method releases the lock here and only here, and assigns the result to the variable it returns
+'    its status in, before its last statement leaves that status in error()
+' -- fsMounted and fsDeviceFault are both set only inside the call that raised the fault: the fault exit clears
+'    fsMounted before any other call can take the lock, mount() and format() clear fsDeviceFault before the tables
+'    are built, and mount_no_lock() leaves fsMounted clear after a fault. A call that finds the filesystem not
+'    mounted, or that raised the fault while it was not mounted, releases the lock as usual with its own status
+'
+' @param callStatus - the status of the call: SUCCESS, an error code, or a handle
+' @returns status - callStatus, or E_FLASH_TIMEOUT when this call raised the device fault while mounted
+
+    if fsMounted and fsDeviceFault                                              'this call raised the device fault..
+        status := unmount_on_fault()                                            '..unmount, which releases the lock
+    else
+        lockrel(fsLock)
+        status := callStatus
+
+
+PRI clear_device_fault() : status
+
+' Clear the device fault before the flash is scanned again: wait for the chip to finish any erase or program
+' that a failed flash wait left running, under the same bound, then clear fsDeviceFault
+' -- a busy W25Q ignores the read command, so no block is read before the chip is ready
+' -- the wait counts down an armed fault countdown like every other flash wait
+'
+' @returns status - SUCCESS when the chip is ready and the fault is cleared, E_FLASH_TIMEOUT when the chip was still
+' .. busy at the bound (fsDeviceFault is raised again)
+
+    status := flash_wait()
+    if status == SUCCESS
+        fsDeviceFault := FALSE
+
+
+PRI unmount_on_fault() : status
+
+' Unmount the filesystem after a device fault, and release the lock: the fault exit of a locked method whose call
+' raised fsDeviceFault while the filesystem was mounted, taken only through release_lock()
+' -- a flash wait that timed out, or a block program that was refused, leaves the flash as a power loss at that
+'    point would, so nothing on the flash is undone: the next mount() recovers it
+' -- every handle is freed without a commit, and every later call finds E_NOT_MOUNTED until mount()
+' -- fsDeviceFault stays set, so every block program is refused until mount() or format() clears it
+'
+' @returns status - E_FLASH_TIMEOUT
+
+    fsMounted := false                                                          'every later call finds the filesystem not mounted
+    bytefill(@hStatus, 0, MAX_FILES_OPEN)                                       'every handle is freed, any open handle is abandoned
+    fsFreeHndlCt := MAX_FILES_OPEN
+    lockrel(fsLock)                                                             'release the lock, it is kept for the next mount()
+    status := E_FLASH_TIMEOUT
 
 
 PRI setup_semaphore() : status | newLock
@@ -3726,7 +3948,11 @@ PRI flash_program_block(block_address, p_buffer, cycle_bits) | pageIndex
 ' the same cycle_bits.
 '
 ' A block_address outside 0..BLOCKS-1 is refused before any command reaches the chip: nothing is
-' sent to the flash and fsRefusedBlocks is incremented.
+' sent to the flash, fsRefusedBlocks is incremented and fsDeviceFault is raised.
+'
+' While fsDeviceFault is set every block is refused the same way, without the count: nothing is sent to the
+' flash. A wait that times out raises fsDeviceFault and stops the programming there, so no later page is sent;
+' the block is left erased or part programmed and inactive, as a power loss at that point would leave it.
 '
 ' @param block_address - the block offset within the file system
 ' @param p_buffer - memory location from which to get the data
@@ -3736,7 +3962,8 @@ PRI flash_program_block(block_address, p_buffer, cycle_bits) | pageIndex
 ' @local pageIndex - index [0-15] of 256-Byte page within 4KB block
   if block_address < 0 or block_address > BLOCKS - 1                            'refuse a block outside the file system, before any command reaches the chip
     fsRefusedBlocks++
-  else
+    fsDeviceFault := TRUE
+  elseif fsDeviceFault == FALSE                                                 'no flash wait has timed out and no program was refused
     if showRTdebug
       debug("- program_block() ", uhex_word(block_address))
 
@@ -3747,13 +3974,13 @@ PRI flash_program_block(block_address, p_buffer, cycle_bits) | pageIndex
     LONG[p_buffer + $FFC] := block_crc(p_buffer)                                'compute and install CRC
     BYTE[p_buffer].[7..5]~~                                                     'remove lifecycle (:= %111), block will be inactive until activated
 
-    flash_wait()                                                                'wait for erasure to complete (~45ms)
-
-    repeat 16 with pageIndex                                                    'program 16 pages within 4KB block
-      flash_command($06, 1)                                                     'enable write
-      flash_command($02 | (FIRST_BLOCK + block_address) << 20 | pageIndex << 16, 4)  'program
-      flash_send(p_buffer + pageIndex << 8, 256)                                'send 256 bytes
-      flash_wait()                                                              'wait for programming to complete (~400us)
+    if flash_wait() == SUCCESS                                                  'wait for erasure to complete (~45ms); a timeout sends no page
+      repeat 16 with pageIndex                                                  'program 16 pages within 4KB block
+        flash_command($06, 1)                                                   'enable write
+        flash_command($02 | (FIRST_BLOCK + block_address) << 20 | pageIndex << 16, 4)  'program
+        flash_send(p_buffer + pageIndex << 8, 256)                              'send 256 bytes
+        if flash_wait() <> SUCCESS                                              'wait for programming to complete (~400us)..
+          quit                                                                  '..a timeout sends no further page
 
     BYTE[p_buffer].[7..5] := cycle_bits                                         'the buffer again matches the block once activated, so a rewrite from it takes the next lifecycle
 
@@ -3787,31 +4014,64 @@ PRI flash_program_bit(block_address, bit_pattern)
 ' Write new bit_pattern into 1st byte of block (this contains the life-cycle bits) this is our most atomic operation
 '
 ' A block_address outside 0..BLOCKS-1 is refused before any command reaches the chip: nothing is
-' sent to the flash and fsRefusedBlocks is incremented.
+' sent to the flash, fsRefusedBlocks is incremented and fsDeviceFault is raised.
+'
+' While fsDeviceFault is set every block is refused the same way, without the count: nothing is sent to the
+' flash. A wait that times out raises fsDeviceFault.
 '
 ' @param block_address - the block offset within the file system
 ' @param bit_pattern - the value to be placed in first byte of block
 
   if block_address < 0 or block_address > BLOCKS - 1                            'refuse a block outside the file system, before any command reaches the chip
     fsRefusedBlocks++
-  else
+    fsDeviceFault := TRUE
+  elseif fsDeviceFault == FALSE                                                 'no flash wait has timed out and no program was refused
     flash_command($06, 1)                                                       'enable write
     flash_command($02 | (FIRST_BLOCK + block_address) << 20, 4)                 'program
     flash_send(@bit_pattern, 1)                                                 'send byte with bit pattern
-    flash_wait()                                                                'wait for programming to complete
+    flash_wait()                                                                'wait for programming to complete; a timeout raises fsDeviceFault
 
 
-PRI flash_wait()| statusBits
+PRI flash_wait() : status | statusBits, startTicks, boundTicks
 
-' Wait for FLASH Chip to become ready
+' Wait for FLASH Chip to become ready, for no longer than fsFlashWaitMs
+'
+' The BUSY bit of status register 1 is polled until it clears. The time is measured as the ticks elapsed since the
+' wait began, getct() - startTicks, compared signed against the bound: the subtraction is correct across a wrap of
+' the 32-bit counter, and the signed compare is correct while the elapsed count stays below 2^31 ticks, which the
+' bound keeps it (FLASH_TIMEOUT_MS). A chip still busy past the bound is a timeout, and raises fsDeviceFault.
+'
+' While fsFaultCountdown is not FAULT_OFF each wait counts it down by one, and the wait that finds it at
+' FAULT_THIS_WAIT reports a timeout without polling the chip, raises fsDeviceFault, and sets it to FAULT_OFF.
+'
+' @returns status - SUCCESS when the chip is ready, E_FLASH_TIMEOUT when it was still busy at the bound
 
 ' Local Variables:
 ' @local statusBits - status register bits read from FLASH Chip
+' @local startTicks - the system counter when the wait began
+' @local boundTicks - the bound in system clock ticks
 
-  repeat
-    flash_command($05, 1)                                                       ' read status register
-    flash_receive(@statusBits, 1)
-  while statusBits.[0]                                                          ' loop until BUSY bit clear
+  status := SUCCESS
+  if fsFaultCountdown <> FAULT_OFF                                              'a fault is armed: count this wait (the one test in normal operation)
+    if fsFaultCountdown == FAULT_THIS_WAIT                                      '..this is the wait that fails
+      fsFaultCountdown := FAULT_OFF
+      fsDeviceFault := TRUE
+      status := E_FLASH_TIMEOUT
+    else
+      fsFaultCountdown--
+
+  if status == SUCCESS
+    boundTicks := clkfreq / MS_PER_SECOND * fsFlashWaitMs
+    startTicks := getct()
+    repeat
+      flash_command($05, 1)                                                     ' read status register
+      flash_receive(@statusBits, 1)
+      if statusBits.[0] == 0                                                    ' BUSY bit clear: the chip is ready
+        quit
+      if getct() - startTicks > boundTicks                                      ' still busy at the bound (elapsed ticks, signed)
+        fsDeviceFault := TRUE
+        status := E_FLASH_TIMEOUT
+        quit
 
 {$flexspin
 ' flexspin stores local variables in registers, rather than HUB, so for flash commands we need HUB space for temporary storage
@@ -4379,9 +4639,14 @@ PUB TEST_changeBlock(blockOp, block_address, p_source, cycle_bits) : status | BY
 '' @param block_address - the block offset within the file system
 '' @param p_source - address of a 4KB block image, used by TEST_BLK_PROGRAM only; the image is copied, not changed
 '' @param cycle_bits - lifeCycle bit-pattern to place into block, used by TEST_BLK_PROGRAM and TEST_BLK_ACTIVATE only
+'' A flash wait that times out raises the device fault, and while it is raised every block program is refused;
+'' mount() and format() clear it. Called while the file system is mounted, such a call takes the fault exit and
+'' returns E_FLASH_TIMEOUT with the file system unmounted.
+''
 '' @returns status - SUCCESS (0) if the operation was performed, E_TEST_BAD_BLOCK_ARG if block_address is
-'' .. outside 0..BLOCKS-1 or blockOp is not one of the operations (nothing is sent to the flash), or
-'' .. E_NO_LOCK_AVAIL if the lock could not be created
+'' .. outside 0..BLOCKS-1 or blockOp is not one of the operations (nothing is sent to the flash),
+'' .. E_FLASH_TIMEOUT if it was called while mounted and the flash failed, or E_NO_LOCK_AVAIL if the lock
+'' .. could not be created
 
 ' Local Variables:
 ' @local firstByte - first byte of the block, read for TEST_BLK_CORRUPT
@@ -4408,7 +4673,7 @@ PUB TEST_changeBlock(blockOp, block_address, p_source, cycle_bits) : status | BY
             other:
                 flash_read_block_addr(block_address, @firstByte, $000, $000)    ' read first byte of block
                 flash_program_bit(block_address, firstByte & !TEST_CORRUPT_BIT) ' clear the reserved bit, nothing else
-        lockrel(fsLock)                                                         ' release the lock, we're done with it
+        status := release_lock(status)                                          ' release the lock, we're done with it
 
     LONG[@errorCode][cogid()] := status
 
@@ -4417,7 +4682,8 @@ PUB TEST_refusedBlockCount() : refusedCount
 '' TEST METHOD: return the number of block programs this object instance has refused
 ''
 '' The count rises by one each time flash_program_block() or flash_program_bit() is given a block address
-'' outside 0..BLOCKS-1. It belongs to the object instance, so read it through the instance that made the calls.
+'' outside 0..BLOCKS-1; a program refused because the device fault is raised is not counted. It belongs to the
+'' object instance, so read it through the instance that made the calls.
 ''
 '' @returns refusedCount - block programs refused so far
 
@@ -4454,11 +4720,18 @@ PUB TEST_programBelowFs(blockOp) : status
 ''
 '' This exists to prove the range check of flash_program_block() and flash_program_bit(): it calls the primitive
 '' directly with a block address outside 0..BLOCKS-1, which TEST_changeBlock() never does. Each call that is
-'' refused raises TEST_refusedBlockCount() by one. Call this while the file system is NOT mounted.
+'' refused raises TEST_refusedBlockCount() by one.
+''
+'' A refusal also raises the device fault, as a flash wait that times out does: every block program is then
+'' refused until the next mount() or format() clears it. Called while the file system is NOT mounted, the call
+'' returns SUCCESS and the fault waits for that mount(). Called while it is mounted, the call takes the fault exit:
+'' it returns E_FLASH_TIMEOUT with the file system unmounted, every later call returns E_NOT_MOUNTED, and mount()
+'' recovers it.
 ''
 '' @param blockOp - the primitive: TEST_BLK_PROGRAM calls flash_program_block(), TEST_BLK_CORRUPT calls flash_program_bit()
-'' @returns status - SUCCESS (0) if the primitive was called, E_TEST_BAD_BLOCK_ARG if blockOp is neither of those,
-'' .. or E_NO_LOCK_AVAIL if the lock could not be created
+'' @returns status - SUCCESS (0) if the primitive was called with the file system not mounted, E_FLASH_TIMEOUT if
+'' .. it was called with the file system mounted, E_TEST_BAD_BLOCK_ARG if blockOp is neither of those, or
+'' .. E_NO_LOCK_AVAIL if the lock could not be created
 
     status := SUCCESS
     if not lookdown(blockOp : TEST_BLK_PROGRAM, TEST_BLK_CORRUPT)
@@ -4473,9 +4746,22 @@ PUB TEST_programBelowFs(blockOp) : status
             flash_program_block(TEST_BLOCK_BELOW_FS, @block2ForUser, 0)
         else
             flash_program_bit(TEST_BLOCK_BELOW_FS, 0)
-        lockrel(fsLock)                                                         ' release the lock, we're done with it
+        status := release_lock(status)                                          ' release the lock, we're done with it
 
     LONG[@errorCode][cogid()] := status
+
+
+PUB TEST_armFlashFault(waitCount)
+'' TEST METHOD: make a later flash wait report a timeout, or disarm one that is armed
+''
+'' Armed at waitCount, each flash wait counts the countdown down by one, and the waitCount-th wait from now (1 is
+'' the next one) reports a timeout without polling the chip: it raises the device fault, as a chip still busy at
+'' the bound would, and disarms the countdown. Every flash erase, page program and lifecycle-bit program has one
+'' wait. A waitCount of 0, or below, disarms it. The countdown is shared by every cog. The lock is not taken.
+''
+'' @param waitCount - the flash wait, counted from 1, that reports the timeout, or 0 to disarm
+
+    fsFaultCountdown := waitCount #> FAULT_OFF
 
 
 PUB TEST_setElectionCounts(countValue)

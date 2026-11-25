@@ -38,7 +38,11 @@
   every call, and the first non-zero count ends the fill.  The count is logged before any other call is
   made.  Nothing but error() is called after that, and the boot sector CRC is not read again, because
   the comparison belongs to a clean build run after a power cycle.  A count of zero is not a pass: it
-  is reported as a count that must be confirmed, and the run still fails.
+  is reported as a count that must be confirmed, and the run still fails.  A refusal also raises the
+  driver's device fault, so the refused call returns E_FLASH_TIMEOUT and leaves the filesystem
+  unmounted, with error() holding the same code; the run checks both from what it already holds.  The
+  E_NOT_MOUNTED of a later call and the recovery by mount() are not checked here, because a lost run
+  makes no further driver call.
 
   Fixed mode.  The free blocks are counted with stats() and every expectation is computed from that
   count.  The survivors are a few small files.  The main file takes every free block but WORK_BLOCKS.
@@ -323,6 +327,11 @@ PRI runGuardOnly() | freeBlocks, expectedBytes, byteLimit, handle, status, refus
 
     utils.startTest(@"the first refusal came where the block IDs run out")
     expectValue(@"bytes accepted before the refused call", byteCount, expectedBytes)
+
+    if refusedCount <> NO_REFUSALS                      ' a refusal raises the device fault, so the refused call took the fault exit
+        utils.startTest(@"the refused call reported the device fault")
+        expectValue(@"status of the refused call", status, flash.E_FLASH_TIMEOUT)
+        expectValue(@"error() after the refused call", errorAtStop, flash.E_FLASH_TIMEOUT)
 
 
 PRI runFixed() | stepIdx
