@@ -197,6 +197,7 @@ PRI testWriteRows()
     runModeCase(@"open(,w) on a new file, no write", flash.FILEMODE_WRITE, FALSE, FALSE, OUTCOME_ABSENT)
     runModeCase(@"open(,w) on an existing file, then write", flash.FILEMODE_WRITE, TRUE, TRUE, OUTCOME_WRITTEN)
     runModeCase(@"open(,w) on an existing file, no write", flash.FILEMODE_WRITE, TRUE, FALSE, OUTCOME_ABSENT)
+    emptyNewFileIdCase(@"open(,w) on a new file, no write, counting free block IDs", flash.FILEMODE_WRITE)
 
 
 PRI testWritePlusRows()
@@ -207,6 +208,31 @@ PRI testWritePlusRows()
     runModeCase(@"open(,w+) on a new file, no write", flash.FILEMODE_WRITE_EXTENDED, FALSE, FALSE, OUTCOME_ABSENT)
     runModeCase(@"open(,w+) on an existing file, then write", flash.FILEMODE_WRITE_EXTENDED, TRUE, TRUE, OUTCOME_WRITTEN)
     runModeCase(@"open(,w+) on an existing file, no write", flash.FILEMODE_WRITE_EXTENDED, TRUE, FALSE, OUTCOME_ABSENT)
+    emptyNewFileIdCase(@"open(,w+) on a new file, no write, counting free block IDs", flash.FILEMODE_WRITE_EXTENDED)
+
+
+PRI emptyNewFileIdCase(pTitle, mode) | freeIdsBefore, handle
+' Open a new file in a writing mode and close it without a write: the head block ID the open took is free again.
+
+' @param pTitle - address of zstring naming the open
+' @param mode - open mode that makes a new file: "w", "a" or "w+"
+
+' Local Variables:
+' @local freeIdsBefore - the free block IDs before the open
+' @local handle - handle of the file being tested
+
+    freshFilesystem()
+    freeIdsBefore := flash.TEST_freeBlockIdCount()
+
+    handle := openChecked(@modelFile, mode, pTitle)
+    utils.startTest(@"close the file and check its head block ID is free again")
+    if requireHandle(handle)
+        ' the open takes one block ID for the head block of the new file
+        utils.evaluateSubValue(flash.TEST_freeBlockIdCount(), @"free block IDs while the file is open", freeIdsBefore - 1)
+        closeAndCheck(handle)
+        ' a file with no data is not created, so the close gives the ID back
+        utils.evaluateSubValue(flash.TEST_freeBlockIdCount(), @"free block IDs after close()", freeIdsBefore)
+        checkFileAbsent(@modelFile)
 
 
 PRI testAppendRows()
@@ -217,6 +243,7 @@ PRI testAppendRows()
     runModeCase(@"open(,a) on a new file, no write", flash.FILEMODE_APPEND, FALSE, FALSE, OUTCOME_ABSENT)
     runModeCase(@"open(,a) on an existing file, then write", flash.FILEMODE_APPEND, TRUE, TRUE, OUTCOME_APPENDED)
     runModeCase(@"open(,a) on an existing file, no write", flash.FILEMODE_APPEND, TRUE, FALSE, OUTCOME_UNCHANGED)
+    emptyNewFileIdCase(@"open(,a) on a new file, no write, counting free block IDs", flash.FILEMODE_APPEND)
 
 
 PRI testReadPlusRows() | handle, status

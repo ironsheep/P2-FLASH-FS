@@ -139,6 +139,10 @@ CON { PRIVATE driver constants }
 
   NEXT_BLOCK_SPARE = 1                                          ' free blocks a written block that has a next block leaves for it
 
+  ' the upper-case spellings of the extended open modes, packed as %"R+" and %"W+" pack
+  FILEMODE_READ_EXTENDED_UC = $2B52                             ' "R+", the same mode as FILEMODE_READ_EXTENDED
+  FILEMODE_WRITE_EXTENDED_UC = $2B57                            ' "W+", the same mode as FILEMODE_WRITE_EXTENDED
+
   NOT_ENABLED      = -1                                         ' this feature is NOT enabled (e.g., seeking)
   NOT_VALID        = -30                                        ' this value is not initialized
 
@@ -194,6 +198,8 @@ hEndPtr         WORD    0[MAX_FILES_OPEN]                                       
 hSeekPtr        LONG    NOT_ENABLED[MAX_FILES_OPEN]                             'handle: seek endptr within file
 hSeekFileOffset LONG    0[MAX_FILES_OPEN]                                       'handle: seek offset within entire file
 hCircularLength LONG    0[MAX_FILES_OPEN]                                       'handle: circular buffer length in byt
+hHeadPending    BYTE    0[MAX_FILES_OPEN]                                       'handle: TRUE while the head block of a "w+" file is not yet active on the flash
+hReplacedID     LONG    NOT_VALID[MAX_FILES_OPEN]                               'handle: head block ID of the existing file this handle replaces at close, or NOT_VALID
 hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                       'handle: 59+1 byte buffer for filename
 hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                          'handle: 4KB buffer for file data
 
@@ -460,7 +466,7 @@ PUB unmount() : status | handle, tmpStatus
       'debug("* unmount()")
       repeat MAX_FILES_OPEN with handle                                         ' for each handle
         if hStatus[handle]                                                      ' if handle is open...
-          tmpStatus := close_no_lock(handle)                                    ' ..commit it while its mode is still set
+          tmpStatus := close_no_lock(handle, TRUE)                              ' ..commit it while its mode is still set
           if tmpStatus < 0
             status := tmpStatus                                                 ' keep the failure of the close
           hStatus[handle]~                                                      ' ..then free it
@@ -489,10 +495,11 @@ PUB open(p_filename, mode) : handle | bFileExists
 '' @param p_filename - address of a zstring containing the filename
 '' @param mode - the mode in which to open the file:
 '' -- mode "r", "R" to read from an existing file
-'' -- mode "w", "W" to write to a new file (overwrites existing file)
+'' -- mode "w", "W" to write to a new file (an existing file is replaced at close; closed with no write, no file is left)
 '' -- mode "a", "A" to append to the end of an existing file (file is created if doesn't exist)
 '' -- mode "r+", "R+" to read/modify/write within an existing file
-'' -- mode "w+", "W+" to read/modify/write within a new file (overwrites existing file)
+'' -- mode "w+", "W+" to read/modify/write within a new file (an existing file is replaced at close; closed with
+''    no write, no file is left)
 '' @returns handle - handle to open file if successful,
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_FILENAME if the filename is a null pointer, empty or longer than 127 characters,
@@ -530,7 +537,7 @@ PUB open(p_filename, mode) : handle | bFileExists
     ' mode-specific checks
     case mode
       "r", "R":
-      "a", "A", "w", "W", FILEMODE_READ_EXTENDED, FILEMODE_WRITE_EXTENDED:
+      "a", "A", "w", "W", FILEMODE_READ_EXTENDED, FILEMODE_READ_EXTENDED_UC, FILEMODE_WRITE_EXTENDED, FILEMODE_WRITE_EXTENDED_UC:
         ifnot blocks_free()                                                     'if no free block exists, abort with error
           handle := (LONG[@errorCode][cogid()] := E_DRIVE_FULL)
       other: handle := (LONG[@errorCode][cogid()] := E_FILE_MODE)
@@ -549,9 +556,9 @@ PUB open(p_filename, mode) : handle | bFileExists
       bFileExists := exists_no_lock(p_filename)
 
       ' do checks that require the lock
-      if lookdown(mode : "a", "A", "w", "W", FILEMODE_READ_EXTENDED, FILEMODE_WRITE_EXTENDED) and not blocks_free()
+      if lookdown(mode : "a", "A", "w", "W", FILEMODE_READ_EXTENDED, FILEMODE_READ_EXTENDED_UC, FILEMODE_WRITE_EXTENDED, FILEMODE_WRITE_EXTENDED_UC) and not blocks_free()
         handle := (LONG[@errorCode][cogid()] := E_DRIVE_FULL)                   'no free block exists, abort with error
-      elseif lookdown(mode : "r", "R", FILEMODE_READ_EXTENDED) and not bFileExists
+      elseif lookdown(mode : "r", "R", FILEMODE_READ_EXTENDED, FILEMODE_READ_EXTENDED_UC) and not bFileExists
         'debug("open(", sdec_(handle), ") filename=[", zstr_(p_filename), "]")
         handle := (LONG[@errorCode][cogid()] := E_FILE_NOT_FOUND)               'the file to read does not exist, abort with error
 
@@ -574,8 +581,10 @@ PUB open(p_filename, mode) : handle | bFileExists
               handle := finish_open_append(p_filename, 0)                       ' append
           else
               handle := finish_open_write(p_filename, 0)                        ' create new
-        FILEMODE_READ_EXTENDED : handle := finish_open_readwrite(p_filename)    ' read/write/modify
-        FILEMODE_WRITE_EXTENDED: handle := finish_open_readwrite(p_filename)    ' read/write/modify
+        FILEMODE_READ_EXTENDED, FILEMODE_READ_EXTENDED_UC:
+          handle := finish_open_readwrite(p_filename, FALSE)                    ' read/write/modify the existing file
+        FILEMODE_WRITE_EXTENDED, FILEMODE_WRITE_EXTENDED_UC:
+          handle := finish_open_readwrite(p_filename, TRUE)                     ' read/write/modify a new file, which replaces any existing file at close
 
   if handle < 0
     LONG[@errorCode][cogid()] := handle
@@ -663,14 +672,20 @@ PUB open_circular(p_filename, mode, max_file_length) : handle | bFileExists
     LONG[@errorCode][cogid()] := handle
 
 
-PUB flush(handle) : status
+PUB flush(handle) : status | fileOffset
 
 '' Logically, "close", then "reopen file in same mode" (but you don't lose the file handle)
 '' -- (forces any pending writes to be completed)
+'' -- a handle with nothing written since it was opened or last flushed has nothing to flush and is left as it is
+'' -- a "w+" file is committed, replacing any existing file of the same name, and stays open at the same position
 '' @param handle - a handle to an open file
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
-'' .. E_BAD_HANDLE if the handle is not an open handle
+'' .. E_BAD_HANDLE if the handle is not an open handle,
+'' .. E_DRIVE_FULL if a "w+" file could not be committed for lack of a free block (it stays open, uncommitted)
+
+' Local Variables:
+' @local fileOffset - the position in a "w+" file, kept across its commit
 
   ifnot fsMounted
     status := (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
@@ -693,17 +708,22 @@ PUB flush(handle) : status
           status := (LONG[@errorCode][cogid()] := E_BAD_HANDLE)                 'nothing to flush, nothing to change
 
         H_WRITE, H_APPEND:                                                      'write/rewrite/append mode?
-          close_no_lock(handle)                                                 'close file
-          start_modify(handle, H_APPEND, hHeadBlockID[handle], $FFFFFF, true)   'reopen file in append mode
+          if hModified[handle]                                                  'only when something was written since the last commit
+            close_no_lock(handle, FALSE)                                        'close file, keeping the handle
+            start_modify(handle, H_APPEND, hHeadBlockID[handle], $FFFFFF, true) 'reopen file in append mode
 
         H_READWRITE:                                                            'modify mode?
-          if hModified[handle]                                                  'if block was modified...
+          if hHeadPending[handle]                                               'a "w+" file not yet committed..
+            if field[IDToBlock][hHeadBlockID[handle]] < BLOCKS or hModified[handle] '..that holds data (one holding none is left as it is)
+              fileOffset := hSeekFileOffset[handle]
+              status := commit_new_chain(handle)                                '....commit it now
+              seek_no_locks(handle, fileOffset)                                 '....and return to the position, which the commit may have left
+          elseif hModified[handle]                                              'if block was modified...
             rewrite_block(handle)                                               '..rewrite block
+            hModified[handle]~                                                  '..clear modified flag
 
         other:                                                                  'other mode?
           LONG[@errorCode][cogid()] := E_FILE_MODE                              'flush not allowed, abort
-
-      hModified[handle]~                                                        'clear modified flag
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
 
@@ -711,6 +731,8 @@ PUB flush(handle) : status
 PUB close(handle) : status
 
 '' Close an open file, completes any pending writes then frees the handle
+'' -- a file opened with "w" or "w+" replaces any existing file of the same name now; closed with no write, it
+''    leaves no file: an existing file of that name is deleted, and the status is still SUCCESS (use exists() to check)
 ''
 '' @param handle - a handle to an open file
 '' @returns status - 0 (SUCCESS) if successful,
@@ -728,7 +750,7 @@ PUB close(handle) : status
     ifnot fsMounted                                                             'unmount() may have run while this cog waited for the lock
       status := (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
     elseif hStatus[handle]                                                      'is this handle open?
-      status := close_no_lock(handle)                                           'commit our file changes
+      status := close_no_lock(handle, TRUE)                                     'commit our file changes
       hCircularLength[handle] := 0                                              'clear prior length
       hHeadBlockID[handle] := NOT_VALID                                         'clear association with external file
 
@@ -1046,7 +1068,10 @@ PUB file_size_for_handle(handle) : size_in_bytes
     ifnot fsMounted                                                             'unmount() may have run while this cog waited for the lock
       size_in_bytes := (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
     elseif hStatus[handle]                                                      'is this handle open?
-      size_in_bytes, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]])
+      if field[IDToBlock][hHeadBlockID[handle]] > BLOCKS - 1                    'no copy of the head on the flash yet: the file is the head block in the buffer
+        size_in_bytes := LONG[buffer_pointer(handle)].[31..20] - ADDR_HEAD_DATA
+      else
+        size_in_bytes, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]])
     else
       size_in_bytes := (LONG[@errorCode][cogid()] := E_BAD_HANDLE)
 
@@ -1142,7 +1167,10 @@ PUB seek(handle, position, whence) : end_position | file_length, file_position, 
         file_position := hSeekPtr[handle] <> NOT_ENABLED ? hSeekFileOffset[handle] : hEndPtr[handle] ' if seek mode enabled, use seek pointer, else use 0
         file_position += position                                               ' calculate the adjusted position
 
-      file_length, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]]) ' get the file length
+      if field[IDToBlock][hHeadBlockID[handle]] > BLOCKS - 1                    ' no copy of the head on the flash yet: the file is the head block in the buffer
+        file_length := LONG[buffer_pointer(handle)].[31..20] - ADDR_HEAD_DATA
+      else
+        file_length, _, _ := count_file_bytes(field[IDToBlock][hHeadBlockID[handle]]) ' get the file length
 
       if file_length > 0 and position == POSX                                   ' if have file length and attempting to seek beyond, limit to end of file
         file_position := file_length
@@ -1377,7 +1405,7 @@ PUB rd_byte(handle) : byte_value | checkValue
 
     ifnot fsMounted                                                             'unmount() may have run while this cog waited for the lock
       byte_value := (LONG[@errorCode][cogid()] := E_NOT_MOUNTED)
-    elseif (checkValue := ensure_handle_mode(handle, H_READ)) < 0               ' is handle valid and open for reading?
+    elseif (checkValue := ensure_handle_mode(handle, H_READ | H_MODIFY)) < 0    ' is handle valid and open for reading?
       byte_value := (LONG[@errorCode][cogid()] := checkValue)                   ' no, return error code
     else
       byte_value := rd_byte_no_locks(handle)                                    ' read a byte from the file (or seek location)
@@ -1418,20 +1446,20 @@ PUB rd_long(handle) : long_value | status, readCount
   read(handle, @long_value, 4)
 
 
-PUB rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
+PUB rd_str(handle, p_str, buf_size) : bytes_read | byteIndex, readValue, checkValue
 
-'' Read zstring from file at handle into buffer at p_str (count is max length of string + terminator)
+'' Read zstring from file at handle into buffer at p_str (buf_size is max length of string + terminator)
 '' -- check for error() == SUCCESS before using value
 ''
 '' @param handle - the handle to the file from which to read a zstring
 '' @param p_str - the address of the buffer into which to place the zstring
-'' @param count - the maximum number of bytes to place into the buffer (including the terminator; 0 reads nothing and is not an error)
+'' @param buf_size - the maximum number of bytes to place into the buffer (including the terminator; 0 reads nothing and is not an error)
 '' @returns bytes_read - the number of bytes placed into the buffer (strsize() of the string read)
 ''  error() when not SUCCESS could be:
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
 '' .. E_FILE_MODE if the file is not open for reading,
-'' .. E_BAD_FILE_LENGTH if count is negative (no bytes are read, the buffer is untouched),
+'' .. E_BAD_FILE_LENGTH if buf_size is negative (no bytes are read, the buffer is untouched),
 '' .. E_END_OF_FILE if attempted read beyond written data
 
 ' Local Variables:
@@ -1450,14 +1478,14 @@ PUB rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
     ifnot fsMounted                                                             'unmount() may have run while this cog waited for the lock
       LONG[@errorCode][cogid()] := E_NOT_MOUNTED
     else
-      if (checkValue := ensure_handle_mode(handle, H_READ)) < 0                 ' is handle valid and open for reading?
+      if (checkValue := ensure_handle_mode(handle, H_READ | H_MODIFY)) < 0      ' is handle valid and open for reading?
         LONG[@errorCode][cogid()] := checkValue                                 ' no, set error code, the users buffer is untouched
-      elseif count < 0                                                          ' a negative count reads nothing and leaves the users buffer untouched
+      elseif buf_size < 0                                                       ' a negative size reads nothing and leaves the users buffer untouched
         LONG[@errorCode][cogid()] := E_BAD_FILE_LENGTH
       else
-        bytefill(p_str, 0, count)                                               ' clear the users buffer
+        bytefill(p_str, 0, buf_size)                                            ' clear the users buffer
         ' every byte is read under the one hold of the lock taken above, so the whole string is read as one call
-        repeat count with byteIndex                                             ' for the max length of the buffer
+        repeat buf_size with byteIndex                                          ' for the max length of the buffer
           if (readValue := rd_byte_no_locks(handle)) < 0                        ' read a byte from the file, have error?
             'debug("EEE: ", sdec(readValue))
             if readValue == E_END_OF_FILE                                       ' yes, if we've reached end of file return the number of bytes read
@@ -1471,7 +1499,7 @@ PUB rd_str(handle, p_str, count) : bytes_read | byteIndex, readValue, checkValue
             quit  ' have one of the above errors, end loop
           else
             'debug("ok: ", uhex_byte(readValue))
-            if byteIndex == count - 1 and readValue <> 0                        ' no error, if we've reached the end of the buffer and the byte read is not a 0 terminator
+            if byteIndex == buf_size - 1 and readValue <> 0                     ' no error, if we've reached the end of the buffer and the byte read is not a 0 terminator
               BYTE[p_str][byteIndex] := 0                                       ' ..place a 0 terminator in the users buffer
               LONG[@errorCode][cogid()] := E_TRUNCATED_STRING                   ' ..abort with error
               quit  ' have error end loop
@@ -1516,10 +1544,11 @@ PUB directory(p_block_id, p_filename, p_file_size) : status | blockID, block_add
             blockID := LONG[p_block_id]++                                       'get current blockID and post-increment it
             if field[IDValid][blockID]                                          'block ID valid?
               block_address := field[IDToBlock][blockID]                        'yes, get block addr from block ID
-              if field[BlockState][block_address] == B_HEAD                     'is this a HEAD block?
-                flash_read_block_addr(block_address, p_filename, $008, $087)    'yes, read filename
-                LONG[p_file_size], _, _ := count_file_bytes(block_address)      'get file size
-                quit
+              if block_address < BLOCKS                                         'the head of a new "w+" file may have no copy on the flash yet
+                if field[BlockState][block_address] == B_HEAD                   'is this a HEAD block?
+                  flash_read_block_addr(block_address, p_filename, $008, $087)  'yes, read filename
+                  LONG[p_file_size], _, _ := count_file_bytes(block_address)    'get file size
+                  quit
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
 
@@ -1644,6 +1673,8 @@ PRI finish_open_write(p_filename, max_file_length) : handle | signature, head_bl
 
 ' Open a file for (re)writing, returning handle if success
 ' -- (overwrites existing file, if you wish to prevent overwrite, use exists() to check!)
+' -- an existing file stays on the flash, untouched, until close() replaces it, or deletes it when nothing was
+'    written
 ' -- a new file takes a free block ID for its head block before anything else changes; with none free,
 '    no handle is taken and E_DRIVE_FULL is returned
 '
@@ -1671,6 +1702,7 @@ PRI finish_open_write(p_filename, max_file_length) : handle | signature, head_bl
       if signature
         'file already exists, overwrite it
         start_write(handle, H_APPEND, signature.[19..8], next_active_cycle(signature.[7..5]))
+        hReplacedID[handle] := signature.[19..8]                                'close() deletes it if nothing is written
       else                          'else, write it
         start_write(handle, H_WRITE, head_block_id, %011)
         ' NO, we don't write empty files!
@@ -1722,14 +1754,19 @@ PRI finish_open_append(p_filename, max_file_length) : handle | signature, head_b
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
 
-PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id, pBuff
-' Open an existing file for reading and writing within current file boundaries, returns handle
+PRI finish_open_readwrite(p_filename, bNewFile) : handle | signature, head_block_id, pBuff
+' Open a file for reading and writing, returns handle
+' -- "r+" (bNewFile FALSE) opens the existing file, to modify it in place and extend it at its end (no gaps)
+' -- "w+" (bNewFile TRUE) starts a new file, which an existing file of the same name does not change: that file
+'    stays on the flash, untouched, until close() replaces it with the new file, or deletes it when nothing was written
 ' -- a new file takes a free block ID for its head block before anything else changes; with none free,
 '    no handle is taken and E_DRIVE_FULL is returned
 ' -- the head block of a new file is built in the buffer, holding no data, and has no copy on the flash until
-'    its first rewrite: IDToBlock holds an address outside the file system for it, so that rewrite cancels nothing
+'    its first rewrite: IDToBlock holds an address outside the file system for it, so that rewrite cancels nothing.
+'    Every copy of it stays inactive on the flash until close() or flush() commits the file
 '
 ' @param p_filename - address of a zstring containing the filename
+' @param bNewFile - TRUE for "w+": start a new file, which replaces an existing file at close
 ' @returns handle - handle to open file, E_NO_HANDLE if no handle is available,
 ' .. or E_DRIVE_FULL if a new file has no free block ID for its head block
 
@@ -1739,7 +1776,8 @@ PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id, pBuff
 ' @local pBuff - the address of the 4KB buffer for the new file's head block
 
   head_block_id := 0
-  ifnot signature := get_file_head_signature(p_filename)                        'a new file needs a free block ID first
+  signature := get_file_head_signature(p_filename)                              'the existing file, if any
+  if bNewFile or signature == 0                                                 'a new file needs a free block ID first
     head_block_id := next_available_block_id()                                  'get initial ID
 
   if head_block_id < 0                                                          'no free block ID: nothing was changed, error() holds E_DRIVE_FULL
@@ -1747,17 +1785,20 @@ PRI finish_open_readwrite(p_filename) : handle | signature, head_block_id, pBuff
   else
     handle := new_handle(p_filename)                                            'get new handle, E_NO_HANDLE if none is available
     if handle >= 0                                                              'no handle: nothing else is touched, error() holds E_NO_HANDLE
-      if signature                                                              'if file already exists
+      if signature and not bNewFile                                             'if "r+" of a file that exists
         ' file exists, allow modification and append-only extension (no gaps)
         start_modify(handle, H_READWRITE, signature.[19..8], 0, true)
       else
-        ' file DOES NOT exist, create it, allow modification after append-only extension (no gaps)
+        ' a new file, allow modification after append-only extension (no gaps)
         ' no starting block-id means create new head!
         pBuff := buffer_pointer(handle)                                         'get block buffer pointer
         build_head_block(pBuff, filename_pointer(handle), head_block_id)        'build head block in buffer
         long[pBuff].[31..20] := $088                                            'EndPtr at the first data byte: the new file holds no data
         field[IDToBlock][head_block_id] := BLOCKS                               'the head has no copy on the flash yet
         start_modify(handle, H_READWRITE, head_block_id, 0, false)              'go to start of file
+        hHeadPending[handle] := TRUE                                            'the head stays inactive until the file is committed
+        if signature
+          hReplacedID[handle] := signature.[19..8]                              'the existing file that the commit replaces
 
   lockrel(fsLock)                                                               ' release the lock, we're done with it
 
@@ -1898,6 +1939,8 @@ PRI new_handle(p_filename) : handle | possible_handle
     ' NOTE this buffer is $00-filled while in our blocks they are $FF-filled
     bytefill(@hFilename + handle * FILENAME_SIZE, 0, FILENAME_SIZE)             ' empty filename buffer
     strcopy(@hFilename + handle * FILENAME_SIZE, p_filename, FILENAME_SIZE - 1) ' copy new filename into buffer
+    hHeadPending[handle] := FALSE                                               ' a handle starts with no new head and replaces no file,
+    hReplacedID[handle] := NOT_VALID                                            ' .. whatever a handle abandoned by mount() left here
 
 
 PRI filename_crc(p_filename) : filenameCRC
@@ -2142,7 +2185,8 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
 ' and any edits in it, and the block is not read again. A seek to another block first rewrites a modified block.
 ' With no free block for the rewrite the position does not change, the block stays in the buffer still modified,
 ' and the status is E_DRIVE_FULL. In read mode the located block is always read: the buffer of a newly opened
-' handle can hold a block left from an earlier file.
+' handle can hold a block left from an earlier file. The head block of a new "w+" file with no copy on the flash
+' yet is the whole file, and the position is found in the buffer without reading the flash.
 '
 ' @param handle - handle to open file
 ' @param file_position - desired file postion
@@ -2158,7 +2202,12 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
     status := SUCCESS
     bInBuffer := FALSE
     pBuff := buffer_pointer(handle)                                             'get block buffer pointer
-    block_id, endPtr, fileOffset := locate_file_byte(hHeadBlockID[handle], file_position) 'locate byte in file
+    if field[IDToBlock][hHeadBlockID[handle]] > BLOCKS - 1                      'no copy of the head on the flash yet: the file is the head block in the buffer
+      block_id := hHeadBlockID[handle]
+      fileOffset := file_position #> 0 <# (long[pBuff].[31..20] - ADDR_HEAD_DATA) '..a position past the end is the end, as locate_file_byte() gives it
+      endPtr := ADDR_HEAD_DATA + fileOffset
+    else
+      block_id, endPtr, fileOffset := locate_file_byte(hHeadBlockID[handle], file_position) 'locate byte in file
     'debug("seek_no_locks() ", udec(block_id, file_position, fileOffset), uhex_word(endPtr))
     if hStatus[handle] & H_MODIFY                                               'if modify mode..
       if block_id == long[pBuff].[19..8]                                        '..and the block is the one in the buffer, keep it
@@ -2175,7 +2224,7 @@ PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fil
         flash_read_block_id(block_id, pBuff, $000, $FFF)                        'read new block into buffer
 
 
-PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_id, chain_block_id, chainState
+PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address, head_block_id, chain_block_id, chainState
 
 ' Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
 ' . (do all the close operations, caller has locked and will release)
@@ -2187,9 +2236,19 @@ PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_
 ' committed and whole, and the status is E_DRIVE_FULL. A modified block of a file open for read/write that cannot
 ' be rewritten keeps its last written contents on the flash, and the status is E_DRIVE_FULL.
 '
+' A file opened with "w" or "w+" that holds no data is not created: an existing file it would replace is deleted,
+' the head block ID a new "w+" file took is released, and the status is SUCCESS. A "w+" file that holds data is
+' committed by commit_new_chain(), which replaces an existing file of the same name.
+'
+' When the handle is being freed, a new file that is not created gives back the head block ID its open took: a new
+' "w"/"a" file closed with nothing written, and a new "w"/"a" or "w+" file whose commit finds no free block. No
+' committed block uses that ID. An ID that a committed block uses (the head of an existing file being replaced or
+' appended to, the last block of an appended file) is kept. A flush() keeps the handle, and with it the ID.
+'
 ' @param handle - a handle to an open file
+' @param bFreeHandle - TRUE when the handle is freed after this close (close(), unmount()), FALSE for flush()
 ' @returns status - 0 (SUCCESS) if successful,
-' .. E_DRIVE_FULL if the flash has no free block for the last block, the trim or the rewrite
+' .. E_DRIVE_FULL if the flash has no free block for the last block, the trim, the rewrite or a "w+" head block
 
 ' Local Variables:
 ' @local open_mode - the mode the handle is open in
@@ -2199,15 +2258,27 @@ PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_
 ' @local chainState - the block state the first block the handle wrote takes once active
 
   status := LONG[@errorCode][cogid()] := SUCCESS                                'new operation clear any prior error code
+  open_mode := hStatus[handle]                                                  'get file open mode for handle
+  head_block_id := hHeadBlockID[handle]                                         'get head ID
 
-  if hModified[handle]                                                          ' if modified
-    open_mode := hStatus[handle]                                                'get file open mode for handle
+  if hHeadPending[handle]                                                       'a "w+" file, not yet committed..
+    if field[IDToBlock][head_block_id] > BLOCKS - 1 and not hModified[handle]   '..that holds no data: no file is left
+      field[IDValid][head_block_id]~                                            '....release the head block ID it took
+      field[IDToBlock][head_block_id] := 0                                      '....which no longer marks a head with no copy
+      if hReplacedID[handle] <> NOT_VALID                                       '....and delete the existing file it replaces
+        delete_chain_from_id(hReplacedID[handle], 0, 0, False)
+    else
+      status := commit_new_chain(handle)                                        '..that holds data: commit it
+      if status < 0 and bFreeHandle                                             '..not committed: no committed block uses the ID its open took
+        field[IDValid][head_block_id]~                                          '....release it
+        field[IDToBlock][head_block_id] := 0
+
+  elseif hModified[handle]                                                      ' if modified
     case open_mode
       H_WRITE, H_APPEND:                                                        'write/rewrite/append mode?
         status := write_block(handle, hEndPtr[handle], false)                   'write updated last block with EndPtr
 
         if status == SUCCESS                                                    'commit only once the last block is written
-          head_block_id := hHeadBlockID[handle]                                 'get head ID
           chain_block_id := hChainBlockID[handle]                               'get fork ID
           chain_block_address := hChainBlockAddr[handle]                        'get fork block
           chainState := chain_block_id == head_block_id ? B_HEAD : B_BODY       'get fork block state
@@ -2223,17 +2294,28 @@ PRI close_no_lock(handle) : status | open_mode, chain_block_address, head_block_
           if hCircularLength[handle]                                            'if size limit non-zero..
             status := froncate_file(head_block_id, hCircularLength[handle])     '..froncate file to size limit
 
+        elseif open_mode == H_WRITE and bFreeHandle                             'a new file not created: no committed block uses the head ID its open took
+          field[IDValid][head_block_id]~                                        '..release it
+
       H_READWRITE:                                                              'modify mode?
         if hModified[handle]~                                                   '..and if block was modified (post-clears)
           status := rewrite_block(handle)                                       '..rewrite block
 
-  hEndPtr[handle] := 0                                                          ' no valid end pointer any more
+  elseif hReplacedID[handle] <> NOT_VALID                                       ' a "w" file of an existing name with nothing written: no file is left
+    delete_chain_from_id(hReplacedID[handle], 0, 0, False)                      '..delete the existing file, as replacing it with no data would
+
+  elseif open_mode == H_WRITE and bFreeHandle                                   ' a new "w"/"a" file with nothing written: no file is left
+    field[IDValid][head_block_id]~                                              '..release the head block ID its open took
+
+  hEndPtr[handle] := 0                                                         ' no valid end pointer any more
   hSeekPtr[handle] := NOT_ENABLED                                               ' Ensure seek mode is disabled for this handle
   hSeekFileOffset[handle] := 0                                                  ' reset user requested postion within file
   hChainBlockID[handle] := 0                                                    ' Clear commit-chain info
   hChainBlockAddr[handle] := 0
   hChainLifeCycle[handle] := 0
   hModified[handle]~                                                            ' clear modified flag
+  hHeadPending[handle] := FALSE                                                 ' the handle has no new head and replaces no file
+  hReplacedID[handle] := NOT_VALID
 
 PRI write_block(handle, NextID_EndPtr, bHasNext) : status | pBuff, block_id, block_address
 
@@ -2282,9 +2364,11 @@ PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAdd
 
 ' Write block over existing (issed mew lifeCycle to make heigher priority
 '
-' The new copy takes the next lifecycle of the old copy, is activated, and then the old copy is cancelled. A block
-' with no copy on the flash yet, which IDToBlock shows with an address outside 0..BLOCKS-1 (the head of a new
-' "r+"/"w+" file), is written with the first active lifecycle and becomes B_HEAD or B_BODY; nothing is cancelled.
+' The new copy takes the next lifecycle of the old copy, is activated, and then the old copy is cancelled. The head
+' block of a "w+" file not yet committed is the exception: its copy stays inactive on the flash, B_TEMP, until
+' commit_new_chain() activates it, so the file is not on the flash before it is committed. Each copy is programmed
+' with the first active lifecycle, and any earlier copy, also inactive, is cancelled. The head of a new file with
+' no copy on the flash yet, which IDToBlock shows with an address outside 0..BLOCKS-1, has nothing to cancel.
 ' With no free block for the new copy nothing is changed: the old copy stays on the flash and the buffer keeps
 ' the modified block.
 '
@@ -2308,14 +2392,91 @@ PRI rewrite_block(handle) : status | pBuff, block_id, block_address, oldBlockAdd
 
     oldBlockAddress := field[IDToBlock][block_id]\block_address                 'get the old block -AND- update IDToBlock to new block
 
-    if oldBlockAddress > BLOCKS - 1                                             'no copy on the flash yet..
-      flash_program_block(block_address, pBuff, %011)                           '..program the first copy with the first active lifecycle
-      flash_activate_block(block_address, %011)                                 '..activate it
-      field[BlockState][block_address] := long[pBuff].[1] ? B_BODY : B_HEAD     '..an active block is B_HEAD or B_BODY by its type bit
+    if hHeadPending[handle] and block_id == hHeadBlockID[handle]                'the head of a "w+" file not yet committed..
+      flash_program_block(block_address, pBuff, %011)                           '..program the copy with the first active lifecycle, not activated: it stays B_TEMP
+      if oldBlockAddress < BLOCKS                                               '..an earlier copy, never activated, is cancelled
+        flash_cancel_block(oldBlockAddress)
+        field[BlockState][oldBlockAddress] := B_FREE
     else
       flash_activate_updated_block(block_address, pBuff)                        'program updated block
       flash_cancel_block(oldBlockAddress)                                       'cancel the old block
       field[BlockState][block_address] := field[BlockState][oldBlockAddress]\B_FREE 'copy old block state to new -AND- free old
+
+
+PRI commit_new_chain(handle) : status | pBuff, head_block_id, replaced_block_id, head_address, block_address, cycleBits, oldCycleBits
+
+' Commit a "w+" file that holds data: activate its head block, which has stayed inactive on the flash until now
+'
+' A modified body block in the buffer is rewritten first, and the head block is brought back into the buffer. A new
+' file whose head copy on the flash is current has that copy activated. Otherwise the head block is written to a
+' new block and activated, and an earlier inactive copy is cancelled. When the file replaces an existing file, the
+' head block is written with the head block ID of that file and the next lifecycle of its head, so that one
+' activation makes the new head supersede the old one; only then is the old file's chain cancelled, and the ID the
+' new file took at open is released. A power loss at any step leaves the old file or the new one: before the
+' activation the new head is inactive and mount() keeps the old file (cancelling the new file's body blocks as
+' unreached), after it mount() keeps the newer of the two heads. With no free block for a rewrite or for the head
+' block nothing is activated, the file stays uncommitted, any existing file stays as it was, and the status is
+' E_DRIVE_FULL.
+'
+' @param handle - a handle to a "w+" file that is not yet committed and holds data
+' @returns status - 0 (SUCCESS) if the file was committed, E_DRIVE_FULL if the flash has no free block for it
+
+' Local Variables:
+' @local pBuff - a temporary pointer to the handles block buffer
+' @local head_block_id - the head block ID of the file: at open, then once committed
+' @local replaced_block_id - the head block ID of the existing file being replaced, or NOT_VALID
+' @local head_address - the block offset within the file system of the inactive head copy, or BLOCKS for none
+' @local block_address - the block offset within the file system of the head block being committed
+' @local cycleBits - the lifecycle the committed head block is activated with
+' @local oldCycleBits - first byte of the head block of the file being replaced, holding its lifecycle
+
+  status := SUCCESS
+  pBuff := buffer_pointer(handle)                                               'get block buffer pointer
+  head_block_id := hHeadBlockID[handle]
+  replaced_block_id := hReplacedID[handle]
+  head_address := field[IDToBlock][head_block_id]
+
+  if long[pBuff].[19..8] <> head_block_id                                       'the buffer holds a body block..
+    if hModified[handle]                                                        '..rewrite it if it was modified
+      status := rewrite_block(handle)
+      if status == SUCCESS
+        hModified[handle]~
+    if status == SUCCESS                                                        '..then bring back the head, which has a copy whenever a body exists
+      flash_read_block_addr(head_address, pBuff, $000, $FFF)
+
+  if status == SUCCESS
+    if head_address < BLOCKS and replaced_block_id == NOT_VALID and not hModified[handle] 'a new file whose inactive head copy is current..
+      flash_activate_block(head_address, %011)                                  '..activate it with the first active lifecycle it was programmed with
+      BYTE[pBuff].[7..5] := %011                                                '..the buffer, read back from an inactive copy, takes that lifecycle too
+      field[BlockState][head_address] := B_HEAD
+    else
+      block_address := next_block_address(0)                                    'get a new block for the head (may alter IDToBlock)
+      if block_address < 0                                                      'no free block: error() holds E_DRIVE_FULL
+        status := block_address
+      else
+        cycleBits := %011                                                       'a new file starts at the first active lifecycle
+        if replaced_block_id <> NOT_VALID                                       'a replacement takes the old head's ID and its next lifecycle,
+          flash_read_block_addr(field[IDToBlock][replaced_block_id], @oldCycleBits, $000, $000) '..read after the allocation, which may have moved that head
+          cycleBits := next_active_cycle(oldCycleBits.[7..5])
+          long[pBuff].[19..8] := replaced_block_id
+        flash_program_block(block_address, pBuff, cycleBits)                    'program the head..
+        flash_activate_block(block_address, cycleBits)                          '..and activate it: the file is committed
+        if replaced_block_id <> NOT_VALID
+          delete_chain_from_id(replaced_block_id, 0, 0, True)                   'cancel the old head and its bodies, keeping the head ID valid
+          field[IDValid][head_block_id]~                                        'release the ID the new file took at open
+          field[IDToBlock][head_block_id] := 0
+          head_block_id := replaced_block_id
+          hHeadBlockID[handle] := head_block_id
+        if head_address < BLOCKS                                                'cancel the earlier inactive copy of the head
+          flash_cancel_block(head_address)
+          field[BlockState][head_address] := B_FREE
+        field[IDToBlock][head_block_id] := block_address
+        field[BlockState][block_address] := B_HEAD
+        hModified[handle]~
+
+  if status == SUCCESS
+    hHeadPending[handle] := FALSE                                               'the file is on the flash: from here the handle is an "r+" handle
+    hReplacedID[handle] := NOT_VALID
 
 
 PRI filename_pointer(handle) : p_filename
@@ -3615,6 +3776,27 @@ PUB TEST_getBlockAddressForId(blockID, possHandle) : block_address
                 block_address := hChainBlockAddr[possHandle]
             else
                 block_address := field[IDToBlock][blockID]
+        lockrel(fsLock)                                                         ' release the lock, we're done with it
+    else
+        LONG[@errorCode][cogid()] := E_NOT_MOUNTED
+
+
+PUB TEST_freeBlockIdCount() : idCount | blockID
+'' TEST METHOD: Return the number of block IDs that are free: not marked valid, so a new block can take one
+''
+'' @returns idCount - the count of free block IDs, or 0 if the file system is NOT mounted
+'' .. (error() then holds E_NOT_MOUNTED)
+
+' Local Variables:
+' @local blockID - the ID being checked
+
+    idCount := 0
+    if fsMounted
+        repeat while locktry(fsLock) == 0                                       ' lock for exlusive use
+
+        repeat BLOCKS with blockID
+            ifnot field[IDValid][blockID]
+                idCount++
         lockrel(fsLock)                                                         ' release the lock, we're done with it
     else
         LONG[@errorCode][cogid()] := E_NOT_MOUNTED

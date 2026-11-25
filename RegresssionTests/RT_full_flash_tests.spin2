@@ -7,8 +7,9 @@
 ''               at the first refusal. The fixed mode fills the flash with ordinary write() calls and
 ''               probes every route to E_DRIVE_FULL: open(), a write that runs out of blocks,
 ''               open_circular(), create_file() and rename(), then the edge cases of append, r+ rewrite,
-''               circular close, rename and create_file with exactly the free blocks and one block more,
-''               and create_file() running out inside its block loop with its space checks skipped.
+''               circular close, the close of a new file that finds no block left for it, rename and
+''               create_file with exactly the free blocks and one block more, and create_file() running out
+''               inside its block loop with its space checks skipped.
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -108,11 +109,12 @@ CON ' ---- Fixed Mode Steps ----
     '  STEP_APPEND       - append with one free block
     '  STEP_RMW          - r+ rewrite with one free block
     '  STEP_CIRCULAR     - circular close with the trim out of blocks
+    '  STEP_NEW_CLOSE    - the close of a new "w", "a" or "w+" file with no block left for it
     '  STEP_RENAME       - rename with one free block and with none
     '  STEP_CREATE       - create_file with one block too many and with exactly enough
     '  STEP_CREATE_LOOP  - create_file with its space checks skipped, running out inside its block loop
     '  STEP_COUNT        - the number of steps
-    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
+    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_NEW_CLOSE, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
 
 CON ' ---- Case Sizes ----
 
@@ -139,6 +141,8 @@ CON ' ---- Case Sizes ----
     CIRC_BYTES = HEAD_BYTES + ((CIRC_BLOCKS - ONE_BLOCK) * BODY_BYTES) ' bytes that fill the circular file's blocks
     CIRC_LIMIT_BYTES = 1000                             ' length limit of the circular file, below what it holds
     RENAME_BYTES = 64                                   ' bytes of the file that is renamed
+    NEW_CLOSE_BYTES = 64                                ' bytes of the new file whose close finds no block, all in its head block
+    ONE_BLOCK_ID = 1                                    ' block IDs the open of a new file takes, for its head block
     CREATE_BLOCKS = 3                                   ' blocks create_file() has free in its case
     CREATE_BYTES = HEAD_BYTES + ((CREATE_BLOCKS - ONE_BLOCK) * BODY_BYTES) ' bytes that fill those blocks
     WORD_VALUE = $BEEF                                  ' value of the short wr_word()
@@ -160,6 +164,7 @@ CON ' ---- Test Data ----
     SEED_CIRC = 17                                      ' pattern of the circular file
     SEED_RENAME = 19                                    ' pattern of the file that is renamed
     SEED_EXACT = 21                                     ' pattern of the file that fills the workspace exactly
+    SEED_NEW_CLOSE = 23                                 ' pattern of the new file whose close finds no block
     CREATE_FILL = $5A                                   ' fill value of the files made with create_file()
     MAIN_FILL = $C3                                     ' fill value of the main file
     PAD_FILL = $3C                                      ' fill value of the files that pad the workspace
@@ -316,6 +321,7 @@ PRI runFixed() | stepIdx
             STEP_APPEND: testAppend()
             STEP_RMW: testRewrite()
             STEP_CIRCULAR: testCircular()
+            STEP_NEW_CLOSE: testNewFileClose()
             STEP_RENAME: testRename()
             STEP_CREATE: testCreate()
             STEP_CREATE_LOOP: testCreateInLoop()
@@ -734,6 +740,55 @@ PRI testCircular() | handle, status, writeCount, closeStatus, closeError
         closeError := flash.error()
         expectStatus(@"close()", closeStatus, flash.SUCCESS)
         expectStatus(@"error() after close()", closeError, flash.SUCCESS)
+    checkWitness()
+
+
+PRI testNewFileClose()
+' Close a new file whose bytes are all still in its buffer after another file took every free block, in each mode that makes a new file.
+
+    utils.startTestGroup(@"close of a new file with no block left for it")
+    newFileCloseCase(@"open(,w) of a new file, then close() with no free block", flash.FILEMODE_WRITE)
+    newFileCloseCase(@"open(,a) of a new file, then close() with no free block", flash.FILEMODE_APPEND)
+    newFileCloseCase(@"open(,w+) of a new file, then close() with no free block", flash.FILEMODE_WRITE_EXTENDED)
+
+
+PRI newFileCloseCase(pTitle, mode) | handle, status, writeCount, freeIdsBefore, freeIdsAtClose, closeStatus, closeError
+' Open a new file and write bytes that stay in its buffer, pad the workspace to no free block, then close the file, as one test.
+
+' @param pTitle - address of zstring naming the test
+' @param mode - open mode that makes a new file: "w", "a" or "w+"
+
+' Local Variables:
+' @local handle - handle of the new file
+' @local status - status of the open
+' @local writeCount - what write() returned
+' @local freeIdsBefore - free block IDs before the open
+' @local freeIdsAtClose - free block IDs just before close()
+' @local closeStatus - what close() returned
+' @local closeError - error() after close()
+
+    utils.startTest(pTitle)
+    clearWorkspace()
+    freeIdsBefore := flash.TEST_freeBlockIdCount()
+    fillPattern(@writeBuf, FIRST_OFFSET, NEW_CLOSE_BYTES, SEED_NEW_CLOSE)
+    handle, status := utils.openWaitOnHandle(@caseFile, mode)
+    expectStatus(@"open() of the new file", status, flash.SUCCESS)
+    if status == flash.SUCCESS
+        expectValue(@"free block IDs once the open took one for the head block", flash.TEST_freeBlockIdCount(), freeIdsBefore - ONE_BLOCK_ID)
+        ' the bytes fit the head block, so nothing of the file is written to the flash before close()
+        writeCount := flash.write(handle, @writeBuf, NEW_CLOSE_BYTES)
+        expectValue(@"bytes write() returned", writeCount, NEW_CLOSE_BYTES)
+        ' another file takes every free block, so close() finds none for the head block
+        expectStatus(@"pad of the workspace", padTo(NO_BLOCKS, @padFile), flash.SUCCESS)
+        expectValue(@"free blocks before close()", freeBlockCount(), NO_BLOCKS)
+        freeIdsAtClose := flash.TEST_freeBlockIdCount()
+        closeStatus := utils.closeHandle(handle)
+        closeError := flash.error()
+        expectStatus(@"close()", closeStatus, flash.E_DRIVE_FULL)
+        expectStatus(@"error() after close()", closeError, flash.E_DRIVE_FULL)
+        ' the file is not created, so no committed block uses the head block ID and the close gives it back
+        expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + ONE_BLOCK_ID)
+    expectValue(@"exists() of the file", flash.exists(@caseFile), FALSE)
     checkWitness()
 
 
