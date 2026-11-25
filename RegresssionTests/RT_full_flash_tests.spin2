@@ -9,6 +9,9 @@
 ''               cog and from another cog), open_circular(), create_file() and rename(), then the edge
 ''               cases of append, r+ rewrite, circular close, the close of a new file that finds no block
 ''               left for it, a flush that finds no block and a later close that commits the file, an
+''               r+ read that must rewrite a modified block to go on, the flush of an r+ handle whose
+''               rewrite finds no block, the flush of a circular file whose trim finds no block and the
+''               later close that trims it, an
 ''               unmount whose first close fails, rename and create_file with exactly the free blocks and
 ''               one block more, and create_file() running out inside its block loop with its space checks
 ''               skipped.
@@ -113,12 +116,15 @@ CON ' ---- Fixed Mode Steps ----
     '  STEP_CIRCULAR     - circular close with the trim out of blocks
     '  STEP_NEW_CLOSE    - the close of a new "w", "a" or "w+" file with no block left for it
     '  STEP_FLUSH        - the flush of a "w" file with no block left for it, then its close once a block is free
+    '  STEP_RMW_READ     - an r+ read that must rewrite a modified block with no block free, then the read once one is
+    '  STEP_FLUSH_RMW    - the flush of an r+ handle with no block for the rewrite, then its close once a block is free
+    '  STEP_FLUSH_CIRC   - the flush of a circular file with no block for the trim, then its close once a block is free
     '  STEP_UNMOUNT      - unmount with a close that finds no block, then a close that succeeds
     '  STEP_RENAME       - rename with one free block and with none
     '  STEP_CREATE       - create_file with one block too many and with exactly enough
     '  STEP_CREATE_LOOP  - create_file with its space checks skipped, running out inside its block loop
     '  STEP_COUNT        - the number of steps
-    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_NEW_CLOSE, STEP_FLUSH, STEP_UNMOUNT, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
+    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_NEW_CLOSE, STEP_FLUSH, STEP_RMW_READ, STEP_FLUSH_RMW, STEP_FLUSH_CIRC, STEP_UNMOUNT, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
 
 CON ' ---- Case Sizes ----
 
@@ -141,6 +147,9 @@ CON ' ---- Case Sizes ----
     RMW_BASE_BYTES = HEAD_BYTES + 100                   ' bytes of the file that is rewritten in place, two blocks
     RMW_TAIL_BYTES = 50                                 ' bytes rewritten in the second block
     RMW_BYTES = HEAD_BYTES + RMW_TAIL_BYTES             ' bytes rewritten, a whole head block and the start of the second block
+    RMW_EDIT_BYTES = 10                                 ' bytes an r+ handle rewrites at the start of the head block, which stay in its buffer
+    RMW_REST_BYTES = RMW_BASE_BYTES - RMW_EDIT_BYTES    ' bytes of the file after the edit
+    HEAD_REST_BYTES = HEAD_BYTES - RMW_EDIT_BYTES       ' bytes of the head block after the edit, read before the next block is needed
     CIRC_BLOCKS = 3                                     ' blocks of the circular file
     CIRC_BYTES = HEAD_BYTES + ((CIRC_BLOCKS - ONE_BLOCK) * BODY_BYTES) ' bytes that fill the circular file's blocks
     CIRC_LIMIT_BYTES = 1000                             ' length limit of the circular file, below what it holds
@@ -338,6 +347,9 @@ PRI runFixed() | stepIdx
             STEP_CIRCULAR: testCircular()
             STEP_NEW_CLOSE: testNewFileClose()
             STEP_FLUSH: testFlushFull()
+            STEP_RMW_READ: testReadRewriteFull()
+            STEP_FLUSH_RMW: testFlushRewriteFull()
+            STEP_FLUSH_CIRC: testFlushCircularFull()
             STEP_UNMOUNT: testUnmountFailure()
             STEP_RENAME: testRename()
             STEP_CREATE: testCreate()
@@ -897,6 +909,134 @@ PRI flushFullCase(pTitle, bExisting) | handle, status, writeCount, closeStatus, 
         expectStatus(@"close()", closeStatus, flash.SUCCESS)
         expectStatus(@"error() after close()", closeError, flash.SUCCESS)
     checkFileHolds(@caseFile, @writeBuf, NEW_CLOSE_BYTES)
+    checkWitness()
+
+
+PRI buildEditModel()
+' Build the contents the edited file should hold: the base pattern with its first bytes replaced by the new pattern.
+
+    fillPattern(@modelBuf, FIRST_OFFSET, RMW_BASE_BYTES, SEED_BASE)
+    fillPattern(@modelBuf, FIRST_OFFSET, RMW_EDIT_BYTES, SEED_NEW)
+
+
+PRI openEditedFile() : handle | status
+' Write the two-block base file, pad the workspace to one free block, open the file r+ and edit its start in the buffer, then take the last free block.
+
+' @returns handle - handle of the r+ file whose head block is modified in its buffer, or the code of the open that failed
+
+' Local Variables:
+' @local status - status of the open
+
+    clearWorkspace()
+    fillPattern(@writeBuf, FIRST_OFFSET, RMW_BASE_BYTES, SEED_BASE)
+    expectStatus(@"write of the base file", writeBufferFile(@caseFile, @writeBuf, RMW_BASE_BYTES), flash.SUCCESS)
+    expectStatus(@"pad of the workspace", padTo(ONE_BLOCK, @padFile), flash.SUCCESS)
+    handle, status := utils.openWaitOnHandle(@caseFile, flash.FILEMODE_READ_EXTENDED)
+    expectStatus(@"open(,r+)", status, flash.SUCCESS)
+    if status == flash.SUCCESS
+        ' the edit lands in the head block in the buffer, so nothing is written to the flash yet
+        fillPattern(@writeBuf, FIRST_OFFSET, RMW_EDIT_BYTES, SEED_NEW)
+        expectValue(@"bytes write() returned", flash.write(handle, @writeBuf, RMW_EDIT_BYTES), RMW_EDIT_BYTES)
+        expectStatus(@"pad of the workspace to no free block", padTo(NO_BLOCKS, @padTwoFile), flash.SUCCESS)
+        expectValue(@"free blocks with the edit in the buffer", freeBlockCount(), NO_BLOCKS)
+    else
+        handle := status
+
+
+PRI testReadRewriteFull() | handle, readCount, readError, closeStatus
+' Read on through an r+ handle whose modified head block must be rewritten before the next block is read, first with no free block and then with one.
+
+' Local Variables:
+' @local handle - handle of the r+ file
+' @local readCount - what read() returned
+' @local readError - error() after the read
+' @local closeStatus - what close() returned
+
+    utils.startTestGroup(@"r+ read that must rewrite a modified block on a full drive")
+    utils.startTest(@"read() in r+ that needs a rewrite with no free block returns the bytes read with E_DRIVE_FULL, keeps the edit, and goes on once a block is free")
+    handle := openEditedFile()
+    if handle >= flash.HANDLE_BASE
+        buildEditModel()
+        bytefill(@readBuf, POISON_BYTE, RMW_REST_BYTES)
+        ' the rest of the head block comes from the buffer; the modified head block must then be rewritten before the body block is read, and no block is free for it
+        readCount := flash.read(handle, @readBuf, RMW_REST_BYTES)
+        readError := flash.error()
+        expectValue(@"bytes read() returned", readCount, HEAD_REST_BYTES)
+        expectStatus(@"error() after the read", readError, flash.E_DRIVE_FULL)
+        expectValue(@"first byte that differs in the bytes read", firstMismatch(@modelBuf + RMW_EDIT_BYTES, @readBuf, HEAD_REST_BYTES), NO_MISMATCH)
+        expectStatus(@"delete() of the second pad file frees its block", flash.delete(@padTwoFile), flash.SUCCESS)
+        ' the head block is still modified, so the next read rewrites it and reads on into the body block
+        readCount := flash.read(handle, @readBuf + HEAD_REST_BYTES, RMW_REST_BYTES - HEAD_REST_BYTES)
+        readError := flash.error()
+        expectValue(@"bytes the next read() returned", readCount, RMW_REST_BYTES - HEAD_REST_BYTES)
+        expectStatus(@"error() after the next read", readError, flash.SUCCESS)
+        expectValue(@"first byte that differs in everything read", firstMismatch(@modelBuf + RMW_EDIT_BYTES, @readBuf, RMW_REST_BYTES), NO_MISMATCH)
+        closeStatus := utils.closeHandle(handle)
+        expectStatus(@"close()", closeStatus, flash.SUCCESS)
+    buildEditModel()
+    checkFileHolds(@caseFile, @modelBuf, RMW_BASE_BYTES)
+    checkWitness()
+
+
+PRI testFlushRewriteFull() | handle, closeStatus, closeError
+' Flush an r+ handle whose modified head block has no free block for its rewrite, then close it once a block is free.
+
+' Local Variables:
+' @local handle - handle of the r+ file
+' @local closeStatus - what close() returned
+' @local closeError - error() after close()
+
+    utils.startTestGroup(@"flush of an r+ handle with no block for the rewrite")
+    utils.startTest(@"flush() of an r+ handle with no free block gives E_DRIVE_FULL and keeps the edit, and close() commits it once a block is free")
+    handle := openEditedFile()
+    if handle >= flash.HANDLE_BASE
+        expectFull(@"flush()", flash.flush(handle))
+        expectStatus(@"delete() of the second pad file frees its block", flash.delete(@padTwoFile), flash.SUCCESS)
+        ' the block is still modified after the failed flush, so close() rewrites it
+        closeStatus := utils.closeHandle(handle)
+        closeError := flash.error()
+        expectStatus(@"close()", closeStatus, flash.SUCCESS)
+        expectStatus(@"error() after close()", closeError, flash.SUCCESS)
+    buildEditModel()
+    checkFileHolds(@caseFile, @modelBuf, RMW_BASE_BYTES)
+    checkWitness()
+
+
+PRI testFlushCircularFull() | handle, status, writeCount, closeStatus, closeError
+' Flush a new circular file written with exactly its blocks free: the commit takes the last free block and the trim finds none.
+
+' Local Variables:
+' @local handle - handle of the circular file
+' @local status - error() after the open
+' @local writeCount - what write() returned
+' @local closeStatus - what close() returned
+' @local closeError - error() after close()
+
+    utils.startTestGroup(@"flush of a circular file with no block for the trim")
+    utils.startTest(@"flush() of a circular a handle whose trim finds no free block gives E_DRIVE_FULL and commits the file whole, and close() trims it once a block is free")
+    clearWorkspace()
+    expectStatus(@"pad of the workspace", padTo(CIRC_BLOCKS, @padFile), flash.SUCCESS)
+    expectValue(@"free blocks before the write", freeBlockCount(), CIRC_BLOCKS)
+    fillPattern(@writeBuf, FIRST_OFFSET, CIRC_BYTES, SEED_CIRC)
+    handle := flash.open_circular(@caseFile, flash.FILEMODE_APPEND, CIRC_LIMIT_BYTES)
+    status := flash.error()
+    expectStatus(@"open_circular(,a)", status, flash.SUCCESS)
+    if status == flash.SUCCESS
+        writeCount := flash.write(handle, @writeBuf, CIRC_BYTES)
+        expectValue(@"bytes write() returned", writeCount, CIRC_BYTES)
+        expectValue(@"exists() of the new file before the flush", flash.exists(@caseFile), FALSE)
+        ' the flush writes the last block, which takes the last free block, so the trim after the commit has none
+        expectFull(@"flush()", flash.flush(handle))
+        expectValue(@"free blocks after flush()", freeBlockCount(), NO_BLOCKS)
+        expectValue(@"file_size() of the file the flush committed, whole", flash.file_size(@caseFile), CIRC_BYTES)
+        expectStatus(@"delete() of the pad file frees its blocks", flash.delete(@padFile), flash.SUCCESS)
+        ' nothing more is written, and close() still makes the trim the flush could not
+        closeStatus := utils.closeHandle(handle)
+        closeError := flash.error()
+        expectStatus(@"close()", closeStatus, flash.SUCCESS)
+        expectStatus(@"error() after close()", closeError, flash.SUCCESS)
+    ' the trim keeps the last CIRC_LIMIT_BYTES bytes written
+    checkFileHolds(@caseFile, @writeBuf + CIRC_BYTES - CIRC_LIMIT_BYTES, CIRC_LIMIT_BYTES)
     checkWitness()
 
 

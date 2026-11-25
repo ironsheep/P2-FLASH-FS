@@ -116,6 +116,7 @@ CON { PRIVATE driver constants }
   ADDR_HEAD_SONAME  = $008                                      ' Offset in head block of first filename byte
   ADDR_HEAD_DATA    = $088                                      ' Offset in head block of first data byte
   ADDR_BODY_DATA    = $004                                      ' Offset in body block of first data byte
+  ADDR_DATA_END     = BLOCK_SIZE - 4                            ' Offset in any block of its CRC: the data area ends just before it
 
   FILENAME_SIZE    = $088-$008                                  ' File name string length: 127 characters plus 0 terminator
   FILENAME_SIZE_EXP   = encod FILENAME_SIZE
@@ -203,6 +204,7 @@ hSeekPtr        LONG    NOT_ENABLED[MAX_FILES_OPEN]                             
 hSeekFileOffset LONG    0[MAX_FILES_OPEN]                                       'handle: seek offset within entire file
 hCircularLength LONG    0[MAX_FILES_OPEN]                                       'handle: circular buffer length in byt
 hHeadPending    BYTE    0[MAX_FILES_OPEN]                                       'handle: TRUE while the head block of a "w+" file is not yet active on the flash
+hTrimPending    BYTE    0[MAX_FILES_OPEN]                                       'handle: TRUE while a committed circular file is over its limit because its trim found no free block
 hWindowStart    LONG    0[MAX_FILES_OPEN]                                       'handle: file offset of the first byte of an old-format circular read, 0 for every other handle; seek positions count from it
 hReplacedID     LONG    NOT_VALID[MAX_FILES_OPEN]                             'handle: head block ID of the existing file this handle replaces at close, or NOT_VALID
 hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                       'handle: 59+1 byte buffer for filename
@@ -793,6 +795,7 @@ PUB close(handle) : status
 '' Close an open file, completes any pending writes then frees the handle
 '' -- a file opened with "w" or "w+" replaces any existing file of the same name now; closed with no write, it
 ''    leaves no file: an existing file of that name is deleted, and the status is still SUCCESS (use exists() to check)
+'' -- a circular file that a flush() committed over its limit, because the trim found no free block, is trimmed now
 ''
 '' @param handle - a handle to an open file
 '' @returns status - 0 (SUCCESS) if successful,
@@ -1290,7 +1293,7 @@ PUB seek(handle, position, whence) : end_position | status, file_length, file_po
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
 
-PUB write(handle, p_buffer, count) : bytes_written | status, byteIndex
+PUB write(handle, p_buffer, count) : bytes_written | status
 
 '' Write count bytes from p_buffer to the file (open for write/append) associated with the handle
 ''
@@ -1305,7 +1308,6 @@ PUB write(handle, p_buffer, count) : bytes_written | status, byteIndex
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the write stopped
-' @local byteIndex - the index into the users' buffer for the next byte to write
 
   handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   bytes_written := 0
@@ -1325,11 +1327,7 @@ PUB write(handle, p_buffer, count) : bytes_written | status, byteIndex
         status := E_BAD_FILE_LENGTH
       if status == SUCCESS
         'debug("write() [",zstr_(p_buffer),"](",udec_(count),")")
-        repeat count with byteIndex                                             ' for the max length of the buffer
-          status := wr_byte_no_locks(handle, BYTE[p_buffer][byteIndex])         ' write a byte to the file (or to seek location in file)
-          if status < 0                                                         ' an error occured: stop, the bytes already written stay written
-            quit
-          bytes_written++                                                       ' keep track of bytes written
+        bytes_written, status := wr_bytes_no_locks(handle, p_buffer, count)     ' the bytes written, and SUCCESS or the reason the write stopped (the bytes already written stay written)
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
     'debug("write(", udec_(handle), ") EXIT freed sem #", udec_(fsLock))
@@ -1362,7 +1360,7 @@ PUB wr_byte(handle, byte_value) : status
     else
       status := ensure_handle_mode(handle, H_WRITE)                             ' E_BAD_HANDLE or E_FILE_MODE unless the handle is open for writing
       if status == SUCCESS
-        status := wr_byte_no_locks(handle, byte_value)
+        _, status := wr_bytes_no_locks(handle, @byte_value, 1)                  ' the low byte of byte_value, the first in hub memory
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
     'debug("wr_byte(", udec_(handle), ") EXIT freed sem #", udec_(fsLock))
@@ -1447,7 +1445,7 @@ PUB wr_str(handle, p_str) : status | writeLength, strBytes
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
 
-PUB read(handle, p_buffer, count) : bytes_read | status, byteIndex, readValue
+PUB read(handle, p_buffer, count) : bytes_read | status
 
 '' Read count bytes from the file associated with handle into p_buffer
 '' -- returns count of bytes read (may be less than requested if reached end of file)
@@ -1468,8 +1466,6 @@ PUB read(handle, p_buffer, count) : bytes_read | status, byteIndex, readValue
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the read stopped
-' @local byteIndex - the index into the users' buffer for the next byte to be read
-' @local readValue - a temporary variable to hold the byte read from the file (or the returned error code)
 
   handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   bytes_read := 0
@@ -1485,13 +1481,7 @@ PUB read(handle, p_buffer, count) : bytes_read | status, byteIndex, readValue
       if status == SUCCESS and count < 0                                        ' a negative count reads nothing
         status := E_BAD_FILE_LENGTH
       if status == SUCCESS
-        repeat count with byteIndex                                             ' for the max length of the buffer
-          if (readValue := rd_byte_no_locks(handle)) < 0                        ' read a byte from the file (or seek location)
-            status := readValue                                                 ' another error occured, stop
-            quit
-          else
-            BYTE[p_buffer][byteIndex] := readValue                              ' no error, place byte in the users buffer
-            bytes_read++                                                        ' update count of bytes read
+        bytes_read, status := rd_bytes_no_locks(handle, p_buffer, count, FALSE) ' the bytes read, and SUCCESS or the reason the read stopped
 
     'debug("read(", udec_(count),") = (", sdec_(bytes_read),")")
 
@@ -1516,6 +1506,7 @@ PUB rd_byte(handle) : byte_value | status
 ' @local status - SUCCESS, or the reason no byte was read
 
   handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
+  byte_value := 0                                                               'the byte read lands in the low byte, so the value is 0..255
   ifnot fsMounted
     status := E_NOT_MOUNTED
   else
@@ -1526,9 +1517,7 @@ PUB rd_byte(handle) : byte_value | status
     else
       status := ensure_handle_mode(handle, H_READ | H_MODIFY)                   ' E_BAD_HANDLE or E_FILE_MODE unless the handle is open for reading
       if status == SUCCESS
-        byte_value := rd_byte_no_locks(handle)                                  ' read a byte from the file (or seek location)
-        if byte_value < 0
-          status := byte_value                                                  ' the reason no byte was read
+        _, status := rd_bytes_no_locks(handle, @byte_value, 1, FALSE)           ' read a byte from the file (or seek location), or the reason none was read
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
 
@@ -1587,7 +1576,7 @@ PUB rd_long(handle) : long_value | status, readCount
   LONG[@errorCode][cogid()] := status                                           'every path leaves its status in error() for this cog
 
 
-PUB rd_str(handle, p_str, buf_size) : bytes_read | status, byteIndex, readValue
+PUB rd_str(handle, p_str, buf_size) : bytes_read | status
 
 '' Read zstring from file at handle into buffer at p_str (buf_size is max length of string + terminator)
 '' -- check for error() == SUCCESS before using value
@@ -1605,8 +1594,6 @@ PUB rd_str(handle, p_str, buf_size) : bytes_read | status, byteIndex, readValue
 
 ' Local Variables:
 ' @local status - SUCCESS, or the reason the read stopped
-' @local byteIndex - the index into the users' buffer for the next byte to be read
-' @local readValue - a temporary variable to hold the byte read from the file (or the returned error code)
 
   handle := handle_index(handle)                                                'from here on handle is the index in the handle tables
   bytes_read := 0
@@ -1624,30 +1611,15 @@ PUB rd_str(handle, p_str, buf_size) : bytes_read | status, byteIndex, readValue
       if status == SUCCESS
         bytefill(p_str, 0, buf_size)                                            ' clear the users buffer
         ' every byte is read under the one hold of the lock taken above, so the whole string is read as one call
-        repeat buf_size with byteIndex                                          ' for the max length of the buffer
-          if (readValue := rd_byte_no_locks(handle)) < 0                        ' read a byte from the file, have error?
-            'debug("EEE: ", sdec(readValue))
-            if readValue == E_END_OF_FILE                                       ' yes, if we've reached end of file return the number of bytes read
-              if byteIndex == 0                                                 ' if we've not read any bytes
-                status := readValue                                             ' ..abort with end of file
-              else                                                              ' else
-                BYTE[p_str][byteIndex] := 0                                     ' place a 0 terminator in the users buffer
-                status := E_INCOMPLETE_STRING                                   ' return error saying file ended without string terminator
-            else
-              status := readValue                                               ' another error occured, return the error code
-            quit  ' have one of the above errors, end loop
-          else
-            'debug("ok: ", uhex_byte(readValue))
-            if byteIndex == buf_size - 1 and readValue <> 0                     ' no error, if we've reached the end of the buffer and the byte read is not a 0 terminator
-              BYTE[p_str][byteIndex] := 0                                       ' ..place a 0 terminator in the users buffer
-              status := E_TRUNCATED_STRING                                      ' ..abort with error
-              quit  ' have error end loop
-            else
-                BYTE[p_str][byteIndex] := readValue                             ' no error, place byte in the users buffer (could be terminator)
-                if readValue == 0                                               ' if this is a string terminator...
-                  quit                                                          '  found terminator, end loop
-                else
-                  bytes_read++                                                  ' count this byte received
+        bytes_read, status := rd_bytes_no_locks(handle, p_str, buf_size, TRUE)  ' read through the terminator, and no more than buf_size bytes
+        if status == E_END_OF_FILE and bytes_read > 0                           ' the file ended before a terminator..
+          BYTE[p_str][bytes_read] := 0                                          '..place a 0 terminator after the bytes read
+          status := E_INCOMPLETE_STRING
+        elseif status == SUCCESS and bytes_read > 0                             ' the last byte read is the terminator, or the byte at the end of the buffer
+          bytes_read--                                                          '..which is not counted
+          if BYTE[p_str][bytes_read] <> 0                                       '..the buffer filled before a terminator was read
+            BYTE[p_str][bytes_read] := 0                                        '....place a 0 terminator at its end in place of that byte
+            status := E_TRUNCATED_STRING
 
     lockrel(fsLock)                                                             ' release the lock, we're done with it
 
@@ -2090,6 +2062,7 @@ PRI new_handle(p_filename) : handle | possible_handle
     bytefill(@hFilename + handle * FILENAME_SIZE, 0, FILENAME_SIZE)             ' empty filename buffer
     strcopy(@hFilename + handle * FILENAME_SIZE, p_filename, FILENAME_SIZE - 1) ' copy new filename into buffer
     hHeadPending[handle] := FALSE                                               ' a handle starts with no new head and replaces no file,
+    hTrimPending[handle] := FALSE                                               ' .. owes no trim,
     hReplacedID[handle] := NOT_VALID                                            ' .. whatever a handle abandoned by mount() left here
     hWindowStart[handle] := 0                                                   ' and its positions count from the first byte of the file
 
@@ -2158,174 +2131,198 @@ PRI start_modify(handle, open_mode, head_block_id, file_position, bFileExists) |
     'debug(" -- ", uhex_word(hChainBlockAddr[handle]), udec(block_id), uhex_word(hEndPtr[handle]), udec(hSeekFileOffset[handle]))
 
 
-PRI rd_byte_no_locks(handle) : byte_value | pBuff, signature, isSeeking, endPtr, status
+PRI rd_bytes_no_locks(handle, p_buffer, count, bToTerminator) : bytes_read, status | pBuff, signature, bSeeking, endPtr, runLength, bTerminated, scanIdx
 
-' Read next BYTE from file associated with handle
-'  -- negative value indicates error or end of file
+' Read up to count bytes from the file associated with handle into p_buffer, moving one run of bytes per block
 '
-' In modify mode a modified block is rewritten before the next block is read. With no free block for the rewrite
-' the read stops where it is, the block stays in the buffer still modified, and the result is E_DRIVE_FULL.
-
-' @param handle - the handle to the file from which to read a byte
-' @returns byte_value - the next byte [0-255] from the file, or:
+' Each run is copied with BYTEMOVE out of the block buffer: as many bytes as are still wanted, no more than the
+' buffered block holds before the end of its data area, and in the last block no more than the file holds. The next
+' block is read only when another byte is wanted from it, so a read that ends at the end of a block leaves that
+' block in the buffer. In modify mode a modified block is rewritten before the next block is read. With no free
+' block for the rewrite the read stops where it is, the block stays in the buffer still modified, and the status is
+' E_DRIVE_FULL. The seek pointer, when it is in use, or else the end pointer moves with every run.
+'
+' With bToTerminator TRUE the bytes of each run are scanned in the block buffer before they are moved, and the run
+' ends at the first 0 byte: the read stops just past that terminator, which is the last byte moved.
+'
+' @param handle - the handle to the file from which to read bytes
+' @param p_buffer - address of the buffer into which to place the bytes read
+' @param count - the maximum number of bytes to place into the buffer (0 or below reads nothing and is not an error)
+' @param bToTerminator - TRUE to stop just past the first 0 byte read, FALSE to read count bytes
+' @returns bytes_read - the number of bytes actually read from the file
+' @returns status - SUCCESS when count bytes were read, or the reason the read stopped:
 ' .. E_END_OF_FILE if no more data,
 ' .. E_FILE_MODE if read not allowed for this file,
 ' .. E_DRIVE_FULL if a modified block could not be rewritten
 
 ' Local Variables:
 ' @local pBuff - the address of the 4KB buffer for the file associated with this handle
-' @local signature - the block state bits of the block being checked
-' @local isSeeking - temporary variable T/F where T we use hSeekPtr vs hEndPtr
-' @local endPtr - temporary variable value of whichever Ptr we are using
-' @local status - SUCCESS, or the reason no byte is read
+' @local signature - the first long of the buffered block: its type bits and its NextID or EndPtr
+' @local bSeeking - TRUE when the seek pointer is in use in place of the end pointer
+' @local endPtr - offset in the buffered block of the next byte to read
+' @local runLength - the count of bytes one run moves out of the buffered block
+' @local bTerminated - TRUE once a run has ended at a terminator
+' @local scanIdx - the index in a run of the byte being checked for a terminator
 
-  isSeeking := (hSeekPtr[handle] <> NOT_ENABLED) ? true : false                 ' is seek pointer in use?
-  endPtr := isSeeking ? hSeekPtr[handle] : hEndPtr[handle]
-
-  pBuff := buffer_pointer(handle)                                               ' get buffer pointer
-  signature := LONG[pBuff]                                                      ' get first long
+  bytes_read := 0
   status := SUCCESS
-
-  case hStatus[handle]
-
-    H_READ, H_READWRITE:                                                        'read/modify mode?
-      ifnot signature.[0]                                                       ' if last block ...
-        if endPtr == LONG[pBuff].[31..20]                                       ' ..if no more data, return error code
-          'debug("* rdByte EOF")
-          status := E_END_OF_FILE
-      else                                                                      ' not last block...
-        if endPtr == $FFC                                                       ' else, if no more data...
-          if hStatus[handle] & H_MODIFY                                         '..and if modify mode..
-            if hModified[handle]                                                '..and if block was modified..
-              status := rewrite_block(handle)                                   '..then rewrite block (might move a block)
-              if status == SUCCESS
-                hModified[handle]~
-          if status == SUCCESS
-            flash_read_block_addr(field[IDToBlock][signature.[31..20]], pBuff, $000, $FFF) ' load next block
-            endPtr := $004                                                      ' point to first data byte
-
-    other:                      'other mode?
-      'debug("* rdByte FILE MODE ERR")
-      status := E_FILE_MODE                                                     'read not allowed, abort
-
-  if status <> SUCCESS
-    byte_value := (LONG[@errorCode][cogid()] := status)
-  else
-    byte_value := BYTE[pBuff][endPtr++]                                         ' get data byte to return and increment pointer
-    if isSeeking
-      hSeekPtr[handle] := endPtr                                                ' point to start of data in body block
-      hSeekFileOffset[handle]++                                                 ' we moved keep track
+  bTerminated := FALSE
+  if count > 0                                                                  'a count of zero or below moves nothing
+    if hStatus[handle] <> H_READ and hStatus[handle] <> H_READWRITE
+      status := E_FILE_MODE                                                     'read not allowed, nothing is moved
     else
-      hEndPtr[handle] := endPtr                                                 ' point to start of data in body block
-      'debug("+ rd_byte() ", uhex_word(hEndPtr[handle], handle))
-    'debug("rd_byte() [",uhex_byte_(byte_value),"]")
+      bSeeking := hSeekPtr[handle] <> NOT_ENABLED                               'is the seek pointer in use?
+      endPtr := bSeeking ? hSeekPtr[handle] : hEndPtr[handle]
+      pBuff := buffer_pointer(handle)
+      repeat
+        runLength := 0
+        signature := LONG[pBuff]
+        if signature.[0] and endPtr == ADDR_DATA_END                            'the data of a block that has a next block is used up..
+          if (hStatus[handle] & H_MODIFY) and hModified[handle]                 '..in modify mode a modified block is rewritten first (might move a block)
+            status := rewrite_block(handle)
+            if status == SUCCESS
+              hModified[handle]~
+          if status == SUCCESS
+            flash_read_block_addr(field[IDToBlock][signature.[31..20]], pBuff, 0, BLOCK_SIZE - 1) '..load the next block
+            endPtr := ADDR_BODY_DATA                                            '..its first data byte
+            signature := LONG[pBuff]
+        if status == SUCCESS
+          runLength := ((signature.[0] ? ADDR_DATA_END : signature.[31..20]) - endPtr) #> 0 <# (count - bytes_read)
+          if runLength == 0                                                     'the last block holds no more data
+            status := E_END_OF_FILE
+          else
+            if bToTerminator                                                    'a string read: the run ends at the first terminator in it
+              repeat runLength with scanIdx
+                if BYTE[pBuff][endPtr + scanIdx] == 0
+                  runLength := scanIdx + 1
+                  bTerminated := TRUE
+                  quit
+            bytemove(p_buffer + bytes_read, pBuff + endPtr, runLength)
+            endPtr += runLength
+            bytes_read += runLength
+        if bSeeking == TRUE                                                     'the pointer names the block now in the buffer, after every pass
+          hSeekPtr[handle] := endPtr
+          hSeekFileOffset[handle] += runLength                                  '..and the seek offset counts every byte read
+        else
+          hEndPtr[handle] := endPtr
+        if status <> SUCCESS                                                    'the one exit from the loop on a failure: whatever a pass leaves in status (the end
+          quit                                                                  '..of the file, a next block that could not be reached) stops the read here, the bytes already moved kept
+      while bytes_read < count and bTerminated == FALSE
 
 
-PRI wr_byte_no_locks(handle, byte_value) : status | pBuff, nextBlockID, isSeeking, endPtr, newBlockAddress
+PRI wr_bytes_no_locks(handle, p_buffer, count) : bytes_written, status | pBuff, nextBlockID, bSeeking, endPtr, newBlockAddress, runLength
 
-' Write a byte to a file that is open for write or rewrite
+' Write up to count bytes from p_buffer to a file that is open for write or rewrite, moving one run of bytes per block
+'
+' Each run is copied with BYTEMOVE into the block buffer: as many bytes as are still to be written, and no more than
+' fit before the end of the block's data area. The next block is started only when another byte is to be written,
+' so a write that ends at the end of a block leaves that block full in the buffer.
 '
 ' A full block is written to the flash only when the next block can follow it: a free block ID for the next block,
-' and a free block left over for it once this one is written. Otherwise the byte is not written, the full block
+' and a free block left over for it once this one is written. Otherwise the write stops where it is, the full block
 ' stays in the buffer for close() to write, and the status is E_DRIVE_FULL. In modify mode a modified block that
 ' cannot be rewritten for lack of a free block stays in the buffer, still modified, with the same status.
 '
 ' In modify mode a write at or past the end of the file grows it, as in C. Within the last block the EndPtr moves
-' with the write. At the end of a full last block a new last block holding the byte is written and activated
+' with the write. At the end of a full last block a new last block holding the next byte is written and activated
 ' first, then the full block is rewritten with a NextID link to it, so the chain on the flash is whole at every
-' step. That needs a free block ID and two free blocks; without them the byte is not written, nothing changes,
-' and the status is E_DRIVE_FULL.
+' step. That needs a free block ID and two free blocks; without them the write stops where it is, nothing more
+' changes, and the status is E_DRIVE_FULL.
 '
 ' @param handle - handle to a file that is open for write or rewrite
-' @param byte_value - value to write to the file
-' @returns status - 0 (SUCCESS) if successful,
+' @param p_buffer - the address of the buffer containing the users' data to write
+' @param count - the number of bytes to write to the file (0 or below writes nothing and is not an error)
+' @returns bytes_written - the count of bytes written to the file
+' @returns status - SUCCESS when count bytes were written, or the reason the write stopped:
 ' .. E_FILE_MODE if the file is not open for writing,
-' .. E_DRIVE_FULL if the flash has no room for the block the byte needs
+' .. E_DRIVE_FULL if the flash has no room for the block the next byte needs
 
 ' Local Variables:
 ' @local pBuff - the address of the 4KB buffer for the file associated with this handle
 ' @local nextBlockID - block ID of the next block to write to the file
-' @local isSeeking - temporary variable T/F where T we use hSeekPtr vs hEndPtr
-' @local endPtr - temporary variable value of whichever Ptr we are using
+' @local bSeeking - TRUE when the seek pointer is in use in place of the end pointer
+' @local endPtr - offset in the buffered block of the next byte to write
 ' @local newBlockAddress - the block offset within the file system of the new last block of a growing file
+' @local runLength - the count of bytes one run moves into the buffered block
 
-  isSeeking := (hSeekPtr[handle] <> NOT_ENABLED) ? true : false                 ' is seek pointer in use?
-  endPtr := isSeeking ? hSeekPtr[handle] : hEndPtr[handle]
-
-  pBuff := buffer_pointer(handle)                                               'get buffer pointer
-  status:= SUCCESS
-
-  case hStatus[handle]
-    H_WRITE, H_APPEND:                                                          'write/rewrite/append mode?
-      if endPtr == $FFC                                                         'if current block full..
-        nextBlockID := next_available_block_id()                                '..get next ID to link to
-        if nextBlockID < 0                                                      '..no free block ID: error() holds E_DRIVE_FULL
-          status := nextBlockID
-        else
-          status := write_block(handle, nextBlockID, true)                      '..write current full block with NextID link
-          if status < 0                                                         '..no free block for it and the next: error() holds E_DRIVE_FULL
-            field[IDValid][nextBlockID]~                                        '....release the ID that got no block
-          else
-            bytefill(pBuff, $FF, BLOCK_SIZE)                                    '..erase block buffer to build new body block
-            long[pBuff].[0]~                                                    '..make last block
-            long[pBuff].[19..8] := nextBlockID                                  '..set ID
-            endPtr := $004                                                      '..point to start of data in new block
-
-    H_READWRITE:                                                                'modify mode?
-      if endPtr == $FFC                                                         '..and if block full
-        if long[pBuff].[0] == 0                                                 '..and if it is the last block, the file grows into a new last block
-          nextBlockID := next_available_block_id()                              '....get the ID of the new last block
-          if nextBlockID < 0                                                    '....no free block ID: error() holds E_DRIVE_FULL
+  bytes_written := 0
+  status := SUCCESS
+  if count > 0                                                                  'a count of zero or below moves nothing
+    if hStatus[handle] <> H_WRITE and hStatus[handle] <> H_APPEND and hStatus[handle] <> H_READWRITE
+      status := E_FILE_MODE                                                     'write not allowed, nothing is moved
+    else
+      bSeeking := hSeekPtr[handle] <> NOT_ENABLED                               'is the seek pointer in use?
+      endPtr := bSeeking ? hSeekPtr[handle] : hEndPtr[handle]
+      pBuff := buffer_pointer(handle)
+      repeat
+        runLength := 0
+        if endPtr >= ADDR_DATA_END and hStatus[handle] <> H_READWRITE           'write/rewrite/append mode, and the block is full..
+          nextBlockID := next_available_block_id()                              '..get next ID to link to
+          if nextBlockID < 0                                                    '..no free block ID: error() holds E_DRIVE_FULL
             status := nextBlockID
           else
-            newBlockAddress := next_block_address(NEXT_BLOCK_SPARE)             '....get its block, keeping one for the rewrite of this block
-            if newBlockAddress < 0                                              '....no free block for both: error() holds E_DRIVE_FULL
-              status := newBlockAddress
-              field[IDValid][nextBlockID]~                                      '......release the ID that got no block
+            status := write_block(handle, nextBlockID, true)                    '..write current full block with NextID link
+            if status < 0                                                       '..no free block for it and the next: error() holds E_DRIVE_FULL
+              field[IDValid][nextBlockID]~                                      '....release the ID that got no block
             else
-              bytefill(@tmpBlockBuffer, $FF, BLOCK_SIZE)                        '....build the new last block, holding this byte
-              LONG[@tmpBlockBuffer].[1..0] := %10                               '......body/last
-              LONG[@tmpBlockBuffer].[19..8] := nextBlockID                      '......set ID
-              LONG[@tmpBlockBuffer].[31..20] := $005                            '......EndPtr after its one data byte
-              BYTE[@tmpBlockBuffer][$004] := byte_value                         '......its data byte
-              flash_program_block(newBlockAddress, @tmpBlockBuffer, %011)       '....write and activate it before any block links to it
-              flash_activate_block(newBlockAddress, %011)
-              field[BlockState][newBlockAddress] := B_BODY
-              field[IDToBlock][nextBlockID] := newBlockAddress
-              long[pBuff].[0] := 1                                              '....this block now has a next block..
-              long[pBuff].[31..20] := nextBlockID                               '....and its NextID replaces its EndPtr
-              status := rewrite_block(handle)                                   '....rewrite this block with the link (might move a block)
-              if status == SUCCESS
-                hModified[handle]~
-              else                                                              '....no block for the rewrite: undo the new last block
-                long[pBuff].[0] := 0                                            '......this block is the last block again..
-                long[pBuff].[31..20] := endPtr                                  '......full to its end
-                flash_cancel_block(newBlockAddress)
-                field[BlockState][newBlockAddress] := B_FREE
-                field[IDValid][nextBlockID]~                                    '......release the ID
-        elseif hModified[handle]                                                '..else if block was modified
-          status := rewrite_block(handle)                                       '..then rewrite block (might move a block)
+              bytefill(pBuff, $FF, BLOCK_SIZE)                                  '..erase block buffer to build new body block
+              long[pBuff].[0]~                                                  '..make last block
+              long[pBuff].[19..8] := nextBlockID                                '..set ID
+              endPtr := ADDR_BODY_DATA                                          '..point to start of data in new block
+        elseif endPtr >= ADDR_DATA_END                                          'modify mode, and the block is full..
+          if long[pBuff].[0] == 0                                               '..and if it is the last block, the file grows into a new last block
+            nextBlockID := next_available_block_id()                            '....get the ID of the new last block
+            if nextBlockID < 0                                                  '....no free block ID: error() holds E_DRIVE_FULL
+              status := nextBlockID
+            else
+              newBlockAddress := next_block_address(NEXT_BLOCK_SPARE)           '....get its block, keeping one for the rewrite of this block
+              if newBlockAddress < 0                                            '....no free block for both: error() holds E_DRIVE_FULL
+                status := newBlockAddress
+                field[IDValid][nextBlockID]~                                    '......release the ID that got no block
+              else
+                bytefill(@tmpBlockBuffer, $FF, BLOCK_SIZE)                      '....build the new last block, holding the next byte
+                LONG[@tmpBlockBuffer].[1..0] := %10                             '......body/last
+                LONG[@tmpBlockBuffer].[19..8] := nextBlockID                    '......set ID
+                LONG[@tmpBlockBuffer].[31..20] := ADDR_BODY_DATA + 1            '......EndPtr after its one data byte
+                BYTE[@tmpBlockBuffer][ADDR_BODY_DATA] := BYTE[p_buffer][bytes_written] '......its data byte
+                flash_program_block(newBlockAddress, @tmpBlockBuffer, %011)     '....write and activate it before any block links to it
+                flash_activate_block(newBlockAddress, %011)
+                field[BlockState][newBlockAddress] := B_BODY
+                field[IDToBlock][nextBlockID] := newBlockAddress
+                long[pBuff].[0] := 1                                            '....this block now has a next block..
+                long[pBuff].[31..20] := nextBlockID                             '....and its NextID replaces its EndPtr
+                status := rewrite_block(handle)                                 '....rewrite this block with the link (might move a block)
+                if status == SUCCESS
+                  hModified[handle]~
+                else                                                            '....no block for the rewrite: undo the new last block
+                  long[pBuff].[0] := 0                                          '......this block is the last block again..
+                  long[pBuff].[31..20] := endPtr                                '......full to its end
+                  flash_cancel_block(newBlockAddress)
+                  field[BlockState][newBlockAddress] := B_FREE
+                  field[IDValid][nextBlockID]~                                  '......release the ID
+          elseif hModified[handle]                                              '..else if block was modified
+            status := rewrite_block(handle)                                     '..then rewrite block (might move a block)
+            if status == SUCCESS
+              hModified[handle]~
           if status == SUCCESS
-            hModified[handle]~
+            flash_read_block_id(long[pBuff].[31..20], pBuff, 0, BLOCK_SIZE - 1) '..read next block (a new last block already holds the next byte)
+            endPtr := ADDR_BODY_DATA                                            '..point to start of data in next block
         if status == SUCCESS
-          flash_read_block_id(long[pBuff].[31..20], pBuff, $000, $FFF)          '..read next block
-          endPtr := $004                                                        '..point to start of data in next block
-
-    other:                                                                      'other mode?
-      status := E_FILE_MODE                                                     'write not allowed, abort
-
-  if status == SUCCESS
-    hModified[handle]~~                                                         'set modified flag
-    byte[pBuff][endPtr++] := byte_value                                         'write byte into block buffer, post-increment pointer
-    if hStatus[handle] == H_READWRITE and long[pBuff].[0] == 0 and endPtr > long[pBuff].[31..20]
-      long[pBuff].[31..20] := endPtr                                            'a write past the end of the last block moves its EndPtr: the file grows
-    if isSeeking
-        hSeekPtr[handle] := endPtr                                              ' point to start of data in body block
-        hSeekFileOffset[handle]++                                               ' we moved keep track
-    else
-        hEndPtr[handle] := endPtr                                               ' point to start of data in body block
-        'if (hEndPtr[handle] +// 32) == 8
-        '    debug("+ wr_byte() ", uhex_word(hEndPtr[handle], handle))
+          runLength := (ADDR_DATA_END - endPtr) <# (count - bytes_written)      'the bytes that fit in this block
+          hModified[handle]~~                                                   'set modified flag
+          bytemove(pBuff + endPtr, p_buffer + bytes_written, runLength)
+          endPtr += runLength
+          bytes_written += runLength
+          if hStatus[handle] == H_READWRITE and long[pBuff].[0] == 0 and endPtr > long[pBuff].[31..20]
+            long[pBuff].[31..20] := endPtr                                      'a write past the end of the last block moves its EndPtr: the file grows
+        if bSeeking == TRUE                                                     'the pointer names the block now in the buffer, after every pass
+          hSeekPtr[handle] := endPtr
+          hSeekFileOffset[handle] += runLength                                  '..and the seek offset counts every byte written
+        else
+          hEndPtr[handle] := endPtr
+        if status <> SUCCESS                                                    'the one exit from the loop on a failure: whatever a pass leaves in status (a next
+          quit                                                                  '..block that could not be started) stops the write here, the bytes already written kept
+      while bytes_written < count
 
 
 PRI seek_no_locks(handle, file_position) : status | pBuff, block_id, endPtr, fileOffset, bInBuffer, extraBytes
@@ -2462,7 +2459,9 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
 ' for the last block, which is still in the buffer. With no free block the last block is not written and nothing is
 ' activated, so the file stays as it was at its last commit (a new file is not created) and the status is
 ' E_DRIVE_FULL. A circular file is committed first and then trimmed; with no free block for the trim it stays
-' committed and whole, and the status is E_DRIVE_FULL. A modified block of a file open for read/write that cannot
+' committed and whole, and the status is E_DRIVE_FULL. After a flush() whose trim found no free block the handle
+' owes that trim (hTrimPending), and the close() that follows retries it even when nothing more was written; a
+' retried trim with no free block is again E_DRIVE_FULL. A modified block of a file open for read/write that cannot
 ' be rewritten keeps its last written contents on the flash, and the status is E_DRIVE_FULL.
 '
 ' A file opened with "w" or "w+" that holds no data is not created: an existing file it would replace is deleted,
@@ -2507,32 +2506,34 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
         field[IDValid][head_block_id]~                                          '....release it
         field[IDToBlock][head_block_id] := 0
 
-  elseif hModified[handle]                                                      ' if modified
+  elseif hModified[handle] or hTrimPending[handle]                              ' if modified, or committed and still owing its trim
     case open_mode
       H_WRITE, H_APPEND:                                                        'write/rewrite/append mode?
-        status := write_block(handle, hEndPtr[handle], false)                   'write updated last block with EndPtr
+        if hModified[handle]                                                    'bytes written since the last commit: write the last block and commit
+          status := write_block(handle, hEndPtr[handle], false)                 'write updated last block with EndPtr
 
-        if status == SUCCESS                                                    'commit only once the last block is written
-          chain_block_id := hChainBlockID[handle]                               'get fork ID
-          chain_block_address := hChainBlockAddr[handle]                        'get fork block
-          chainState := chain_block_id == head_block_id ? B_HEAD : B_BODY       'get fork block state
+          if status == SUCCESS                                                  'commit only once the last block is written
+            chain_block_id := hChainBlockID[handle]                             'get fork ID
+            chain_block_address := hChainBlockAddr[handle]                      'get fork block
+            chainState := chain_block_id == head_block_id ? B_HEAD : B_BODY     'get fork block state
 
-          flash_activate_block(chain_block_address, hChainLifeCycle[handle])    'replace old head block if rewrite or old last block if append
+            flash_activate_block(chain_block_address, hChainLifeCycle[handle])  'replace old head block if rewrite or old last block if append
 
-          if open_mode & H_FORK                                                 'if append..
-            delete_chain_from_id(chain_block_id, 0, 0, True)                    '..delete old fork block through end of file, keeping first ID valid
+            if open_mode & H_FORK                                               'if append..
+              delete_chain_from_id(chain_block_id, 0, 0, True)                  '..delete old fork block through end of file, keeping first ID valid
 
-          field[BlockState][chain_block_address] := chainState                  'change new fork block status from sTEMP to sHEAD/sBODY
-          field[IDToBlock][chain_block_id] := chain_block_address               'update IDToBlock to point to new fork block
+            field[BlockState][chain_block_address] := chainState                'change new fork block status from sTEMP to sHEAD/sBODY
+            field[IDToBlock][chain_block_id] := chain_block_address             'update IDToBlock to point to new fork block
 
-          if hCircularLength[handle]                                            'if size limit non-zero..
-            status := froncate_file(head_block_id, hCircularLength[handle])     '..froncate file to size limit
+          elseifnot bFreeHandle                                                 'flush(): nothing was committed, so the handle keeps its state..
+            bKeepHandle := TRUE                                                 '..and its unwritten bytes, for a later commit
 
-        elseifnot bFreeHandle                                                   'flush(): nothing was committed, so the handle keeps its state..
-          bKeepHandle := TRUE                                                   '..and its unwritten bytes, for a later commit
+          elseif open_mode == H_WRITE                                           'a new file not created: no committed block uses the head ID its open took
+            field[IDValid][head_block_id]~                                      '..release it
 
-        elseif open_mode == H_WRITE                                             'a new file not created: no committed block uses the head ID its open took
-          field[IDValid][head_block_id]~                                        '..release it
+        if status == SUCCESS and hCircularLength[handle]                        'a committed file with a size limit: committed now, or by a flush whose trim found no free block..
+          status := froncate_file(head_block_id, hCircularLength[handle])       '..froncate file to size limit
+          hTrimPending[handle] := status < 0                                    '..a trim with no free block is owed until a later close() finds one
 
       H_READWRITE:                                                              'modify mode?
         if hModified[handle]~                                                   '..and if block was modified (post-clears)
