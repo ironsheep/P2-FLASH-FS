@@ -1,9 +1,9 @@
 # Measuring flash\_fs Memory Consumption with pnut-ts
 
-A practical guide to determining how much hub RAM the `flash_fs` driver consumes -- method table, DAT buffers, bytecodes, and total runtime footprint -- using the pnut-ts compiler's `-m` (map) and `-l` (listing) output files.
+A practical guide to determining how much hub RAM the `flash_fs` driver consumes - the method table, the DAT buffers, the bytecodes and the total runtime footprint - using the pnut-ts compiler's `-m` (map) and `-l` (listing) output files.
 
-- **Compiler**: pnut-ts v1.52.2+
-- **Driver**: flash\_fs v2.0.0
+- **Compiler**: pnut-ts v1.55.12 (every figure below was measured with it)
+- **Driver**: flash\_fs v2.1.0
 - **Author**: Stephen M. Moraco, Iron Sheep Productions, LLC
 
 ---
@@ -24,7 +24,7 @@ A practical guide to determining how much hub RAM the `flash_fs` driver consumes
 
 ## 1. Background: flash\_fs and Hub RAM
 
-The Propeller 2 has **512 KB of hub RAM**. Every Spin2 program must fit within this space along with its runtime data. The `flash_fs` driver is a single monolithic object that manages the onboard 16 MB SPI flash chip as a block-based filesystem. Because all driver state -- translation tables, per-handle buffers, and a temporary block buffer -- lives in DAT (static data), the driver has a significant and predictable memory footprint.
+The Propeller 2 has **512 KB of hub RAM**. Every Spin2 program must fit within this space along with its runtime data. The `flash_fs` driver is a single monolithic object that manages the onboard 16 MB SPI flash chip as a block-based filesystem. Because all driver state - translation tables, per-handle buffers and a temporary block buffer - lives in DAT (static data), the driver has a significant and predictable memory footprint.
 
 A compiled Spin2 program consists of three memory regions loaded into hub RAM:
 
@@ -34,11 +34,11 @@ A compiled Spin2 program consists of three memory regions loaded into hub RAM:
 | **VAR** | Instance variables declared in `VAR` blocks, for all object instances | At load time (fixed) |
 | **Stack** | Call stack for each running COG (not in the binary) | At runtime |
 
-The **binary file** (.bin) includes the code/data region plus a ~6 KB P2 loader stub. The VAR region is not stored in the binary -- it is allocated in hub RAM at load time immediately following code/data.
+The **binary file** (.bin) includes the code/data region plus a ~6 KB P2 loader stub. The VAR region is not stored in the binary - it is allocated in hub RAM at load time immediately following code/data.
 
 ### Why flash\_fs is DAT-Heavy
 
-Unlike many Spin2 objects that store per-instance state in VAR, `flash_fs` stores nearly all state in DAT. This is a deliberate design choice: DAT variables are shared across all COGs and accessible via absolute addresses, which is required for the driver's LOCK-based multi-cog synchronization. The consequence is that the driver's VAR footprint is minimal (4 bytes) while its DAT footprint dominates (~20 KB at default settings).
+Unlike many Spin2 objects that store per-instance state in VAR, `flash_fs` stores nearly all state in DAT. This is a deliberate design choice: DAT variables are shared across all COGs and accessible via absolute addresses, which is required for the driver's LOCK-based multi-cog synchronization. The consequence is that the driver's VAR footprint is minimal (8 bytes) while its DAT footprint dominates (about 20 KB at default settings).
 
 ---
 
@@ -48,7 +48,7 @@ The pnut-ts compiler has two diagnostic output flags:
 
 | Flag | Output File | Purpose |
 |---|---|---|
-| `-m` | `.map` | Memory map: object hierarchy, memory layout, per-object details (methods, DAT variables, sizes) |
+| `-m` | `.map` | Memory map: object tree, memory layout, per-object details (methods, DAT variables, VAR) |
 | `-l` | `.lst` | Listing: symbol table (constants, method names, struct definitions with values) |
 
 ### Compiling the Driver Standalone
@@ -61,9 +61,9 @@ pnut-ts -m -l flash_fs.spin2
 ```
 
 This produces:
-- `flash_fs.map` -- memory map (primary sizing tool)
-- `flash_fs.lst` -- symbol listing
-- `flash_fs.bin` -- binary (34,956 bytes including ~6 KB P2 loader stub)
+- `flash_fs.map` - memory map (primary sizing tool)
+- `flash_fs.lst` - symbol listing
+- `flash_fs.bin` - binary (38,684 bytes including the ~6 KB P2 loader stub)
 
 ### Compiling a Program That Uses flash\_fs
 
@@ -81,70 +81,77 @@ pnut-ts -m -I .. RegresssionTests/RT_read_write_tests.spin2
 
 Compiling `flash_fs.spin2` standalone with `-m` produces a map file showing the driver's intrinsic footprint.
 
-### Program Summary
+### Summary
 
 ```
-=== PROGRAM SUMMARY ===
+=== SUMMARY ===
 
-  Total Size:    28748 bytes (28744 code/data + 4 var bytes)
-  Objects:       1
-  Methods:       85
+  The top object became 1 instance, built from 1 image; no image is shared.
+
+  Code/DAT bytes  32404
+  VAR bytes           8
+  Total bytes     32412
+  Hub base        $01888
 ```
 
-The driver consumes **28,748 bytes** of hub RAM total: 28,744 bytes of code/data (in the binary) plus 4 bytes of VAR (allocated at load time).
+The driver consumes **32,412 bytes** of hub RAM in total: 32,404 bytes of code/data (in the binary) plus 8 bytes of VAR (allocated at load time).
 
 ### Memory Layout
 
 ```
 === MEMORY LAYOUT ===
 
-  Start   End      Size  Object           Instance         Overrides
-  ------  ------  -----  ---------------  ---------------  ---------
-  $00000  $07046  28743  flash_fs         (entry)
+  Images
+  Range           Size  Image  Source          Instances
+  -------------  -----  -----  --------------  ---------
+  $00000-$07E92  32403  #1     flash_fs.spin2  (top)
 
-    CODE/DATA TOTAL:   28744 bytes
-
-  $07048  $0704B      4  VAR SPACE        (runtime)
-
-    PROGRAM TOTAL:     28748 bytes
+  VAR blocks
+  Range          Size  Image  Instance
+  -------------  ----  -----  --------
+  $07E94-$07E9B     8  #1     (top)
 ```
 
 ### Object Details: Methods
 
-The map lists all 85 methods with their entry indices:
+The map lists all 101 methods with their offsets:
 
 ```
-    Methods:
-      NULL                  Entry $00000  ($00000)
-      VERSION               Entry $00001  ($00001)
-      SERIAL_NUMBER         Entry $00002  ($00002)
-      FORMAT                Entry $00003  ($00003)
-      MOUNT                 Entry $00004  ($00004)
-      ...
-      FLASH_RECEIVE         Entry $00054  ($00054)
+  Methods
+  Name                          Offset   Address
+  ----------------------------  -------  -------
+  NULL                          +$0506C  $0506C
+  VERSION                       +$0506E  $0506E
+  SERIAL_NUMBER                 +$0507D  $0507D
+  FORMAT                        +$050D7  $050D7
+  MOUNT                         +$05166  $05166
+  ...
+  FLASH_RECEIVE                 +$07E4F  $07E4F
 ```
 
-The first 34 methods (entries $00000–$00021) are public API. The remaining 51 (entries $00022–$00054) are private implementation methods.
+The first 34 methods (`NULL` to `STRING_FOR_ERROR`) are the public API. The remaining 67 are private implementation methods.
 
 ### Object Details: DAT
 
-Each DAT variable shows its type, name, relative offset within the object, and absolute hub address:
+Each DAT variable shows its type, name and offset within the object:
 
 ```
-    DAT:
-      LONG      ERRORCODE             +$00158  ($00158)
-      LONG      FSLOCK                +$00178  ($00178)
-      ...
-      BYTE      HBLOCKBUFF            +$01FF2  ($01FF2)
-      BYTE      TMPBLOCKBUFFER        +$03FF2  ($03FF2)
+  DAT
+  Type  Name                Offset   Address
+  ----  ------------------  -------  -------
+  LONG  ERRORCODE           +$00198  $00198
+  LONG  FSLOCK              +$001B8  $001B8
+  ...
+  BYTE  HBLOCKBUFF          +$02064  $02064
+  BYTE  TMPBLOCKBUFFER      +$04064  $04064
 ```
 
 To calculate the size of a DAT variable, subtract its offset from the next variable's offset:
 
 ```
-HBLOCKBUFF      at +$01FF2
-TMPBLOCKBUFFER  at +$03FF2
-  => HBLOCKBUFF size = $03FF2 - $01FF2 = $2000 = 8,192 bytes (2 handles x 4,096 bytes)
+HBLOCKBUFF      at +$02064
+TMPBLOCKBUFFER  at +$04064
+  => HBLOCKBUFF size = $04064 - $02064 = $2000 = 8,192 bytes (2 handles x 4,096 bytes)
 ```
 
 ---
@@ -155,36 +162,42 @@ The DAT section is the dominant consumer of the driver's memory. Using the map f
 
 ### Region Overview
 
-The 28,743-byte object breaks down into three regions:
+The 32,403-byte image breaks down into three regions:
 
-| Region | Size | % of Object |
+| Region | Size | % of Image |
 |---|---|---|
-| Method table (86 entries x 4 B) | 344 B | 1.2% |
-| DAT section (static data) | 20,122 B | 70.0% |
-| Bytecodes (compiled methods) | 8,277 B | 28.8% |
-| **Total** | **28,743 B** | **100%** |
+| Method table (102 entries x 4 B) | 408 B | 1.3% |
+| DAT section (static data) | 20,180 B | 62.3% |
+| Bytecodes (compiled methods) | 11,815 B | 36.5% |
+| **Total** | **32,403 B** | **100%** |
 
 ### DAT Variables by Category
 
-#### Driver State — Per-COG (64 bytes)
+#### Driver State - Per-COG (64 bytes)
 
 | Variable | Type | Size | Purpose |
 |---|---|---|---|
 | `errorCode` | LONG[8] | 32 B | Last error code, one per COG |
-| `fsCogCts` | LONG[8] | 32 B | COG mount attempt counters |
+| `fsCogCts` | LONG[8] | 32 B | Lock-election counts, one per COG |
 
-#### Driver State — Global (16 bytes)
+#### Driver State - Global (40 bytes)
 
 | Variable | Type | Size | Purpose |
 |---|---|---|---|
 | `fsLock` | LONG | 4 B | LOCK semaphore for multi-cog access |
+| `fsElection` | LONG | 4 B | State of the election that creates the lock |
 | `fsFreeHndlCt` | LONG | 4 B | Count of available handles |
 | `showRTdebug` | LONG | 4 B | Debug output flag |
 | `fsMounted` | LONG | 4 B | Filesystem mounted flag |
+| `fsDeviceFault` | LONG | 4 B | Set after a flash timeout, cleared by `mount()` |
+| `fsFlashWaitMs` | LONG | 4 B | Longest flash wait, in milliseconds |
+| `fsFaultCountdown` | LONG | 4 B | Flash fault countdown (off in normal operation) |
+| `fsSkipCreateChecks` | LONG | 4 B | Test flag, off in normal operation |
+| `fsTargetBlock` | LONG | 4 B | Test flag, off in normal operation |
 
 #### Block Translation Tables (7,452 bytes)
 
-These tables map the filesystem's 3,968 logical block IDs (range `$080`–`$FFF`) to physical flash addresses and track block states:
+These tables map the filesystem's 3,968 logical block IDs (the 4 KB blocks at flash addresses `$080` to `$FFF`) to physical flash addresses and track block states:
 
 | Variable | Type | Size | Purpose |
 |---|---|---|---|
@@ -192,12 +205,12 @@ These tables map the filesystem's 3,968 logical block IDs (range `$080`–`$FFF`
 | `IDToBlock` | LONG | 4 B | Field pointer for 12-bit access |
 | `IDValids` | BYTE[] | 496 B | 1-bit valid flag per ID |
 | `IDValid` | LONG | 4 B | Field pointer for 1-bit access |
-| `BlockStates` | BYTE[] | 992 B | 2-bit state per ID (free/temp/head/body) |
+| `BlockStates` | BYTE[] | 992 B | 2-bit state per block (free/temp/head/body) |
 | `BlockState` | LONG | 4 B | Field pointer for 2-bit access |
 
-The translation tables are fixed-size -- they always cover all `BLOCKS` (= `LAST_BLOCK - FIRST_BLOCK + 1` = 3,968) regardless of how many files exist.
+The translation tables are fixed-size - they always cover all `BLOCKS` (= `LAST_BLOCK - FIRST_BLOCK + 1` = 3,968) regardless of how many files exist.
 
-#### Per-Handle State (46 bytes for 2 handles)
+#### Per-Handle State (80 bytes for 2 handles, 40 bytes each)
 
 | Variable | Type | Per Handle | Total | Purpose |
 |---|---|---|---|---|
@@ -211,6 +224,13 @@ The translation tables are fixed-size -- they always cover all `BLOCKS` (= `LAST
 | `hSeekPtr` | LONG | 4 B | 8 B | Seek position within block |
 | `hSeekFileOffset` | LONG | 4 B | 8 B | Seek offset within file |
 | `hCircularLength` | LONG | 4 B | 8 B | Circular buffer length |
+| `hHeadPending` | BYTE | 1 B | 2 B | A `"w+"` head block not yet committed |
+| `hTrimPending` | BYTE | 1 B | 2 B | A circular trim still owed after a flush |
+| `hWindowStart` | LONG | 4 B | 8 B | First byte of an old-format circular read |
+| `hReplacedID` | LONG | 4 B | 8 B | Head block of the file this handle replaces at close |
+| `hCacheBlockID` | WORD | 2 B | 4 B | Seek cache: block last located |
+| `hCacheStart` | LONG | 4 B | 8 B | Seek cache: file offset of that block |
+| `hCacheOldFmt` | BYTE | 1 B | 2 B | Seek cache: old-format head flag |
 
 #### Per-Handle Buffers (8,448 bytes for 2 handles)
 
@@ -231,12 +251,12 @@ The per-handle block buffers are the largest scaling component. Each open file h
 
 | Category | Size | % of DAT |
 |---|---|---|
-| Driver state (per-COG + global) | 80 B | 0.4% |
-| Block translation tables | 7,452 B | 37.0% |
-| Per-handle state | 46 B | 0.2% |
-| Per-handle buffers (2 handles) | 8,448 B | 42.0% |
-| Temporary block buffer | 4,096 B | 20.4% |
-| **Total DAT** | **20,122 B** | **100%** |
+| Driver state (per-COG + global) | 104 B | 0.5% |
+| Block translation tables | 7,452 B | 36.9% |
+| Per-handle state (2 handles) | 80 B | 0.4% |
+| Per-handle buffers (2 handles) | 8,448 B | 41.9% |
+| Temporary block buffer | 4,096 B | 20.3% |
+| **Total DAT** | **20,180 B** | **100%** |
 
 The two dominant categories are **per-handle buffers** (42%) and **block translation tables** (37%). Together they account for nearly 80% of the DAT section.
 
@@ -244,19 +264,21 @@ The two dominant categories are **per-handle buffers** (42%) and **block transla
 
 ## 5. Impact of MAX\_FILES\_OPEN
 
-The `MAX_FILES_OPEN` constant (default: 2) controls how many files can be open simultaneously. Changing it affects per-handle state and buffers:
+The `MAX_FILES_OPEN` constant (default: 2) controls how many files can be open simultaneously. Changing it affects per-handle state and buffers.
+
+**Each handle takes 4,264 bytes of hub RAM**: the 4,096-byte block buffer, the 128-byte filename buffer and 40 bytes of state. The figure is the growth of the image between a build with `MAX_FILES_OPEN = 2` and one with 3 (pnut-ts v1.55.12 listing, `-l`), and the code/data in the map grows by the same amount from 2 to 4 (a build with `MAX_FILES_OPEN = 4` is 47,212 bytes as a binary, 8,528 bytes more than the default build).
 
 | MAX\_FILES\_OPEN | Handle Buffers | Handle State | DAT Delta | Total Code/Data |
 |---|---|---|---|---|
-| 1 | 4,224 B | 23 B | -4,247 B | ~24,497 B |
-| 2 (default) | 8,448 B | 46 B | baseline | 28,744 B |
-| 3 | 12,672 B | 69 B | +4,247 B | ~32,991 B |
-| 4 | 16,896 B | 92 B | +8,494 B | ~37,238 B |
-| 6 | 25,344 B | 138 B | +16,988 B | ~45,732 B |
+| 1 | 4,224 B | 40 B | -4,264 B | 28,140 B (computed) |
+| 2 (default) | 8,448 B | 80 B | baseline | 32,404 B |
+| 3 | 12,672 B | 120 B | +4,264 B | 36,668 B (computed) |
+| 4 | 16,896 B | 160 B | +8,528 B | 40,932 B |
+| 6 | 25,344 B | 240 B | +17,056 B | 49,460 B (computed) |
 
-**Each additional open file handle adds ~4,247 bytes** (dominated by the 4,096-byte block buffer plus 128-byte filename buffer and 23 bytes of state).
+Rows marked *computed* multiply the per-handle figure; the other rows come from a compiled map.
 
-The block translation tables and temporary buffer are not affected by `MAX_FILES_OPEN` -- they remain at 7,452 B and 4,096 B respectively regardless of handle count.
+The block translation tables and temporary buffer are not affected by `MAX_FILES_OPEN` - they remain at 7,452 B and 4,096 B respectively regardless of handle count.
 
 ---
 
@@ -264,13 +286,15 @@ The block translation tables and temporary buffer are not affected by `MAX_FILES
 
 When `flash_fs` is included as a child object in a program, the map file shows each object's contribution. Here is the `flash_fs_demo` program:
 
-### Object Hierarchy
+### Object Tree
 
 ```
-=== OBJECT HIERARCHY ===
+=== OBJECT TREE ===
 
-  flash_fs_demo  (6 methods)
-      \-- FLASH : flash_fs  (85 methods)
+  Instance  Image  Source               Overrides
+  --------  -----  -------------------  ---------
+  (top)     #1     flash_fs_demo.spin2  -
+    FLASH   #2     flash_fs.spin2       -
 ```
 
 ### Memory Layout
@@ -278,36 +302,30 @@ When `flash_fs` is included as a child object in a program, the map file shows e
 ```
 === MEMORY LAYOUT ===
 
-  Start   End      Size  Object           Instance         Overrides
-  ------  ------  -----  ---------------  ---------------  ---------
-  $00000  $001E6    487  flash_fs_demo    (entry)
-  $001E8  $0722E  28743  flash_fs         FLASH
+  Images
+  Range           Size  Image  Source               Instances
+  -------------  -----  -----  -------------------  ---------
+  $00000-$001EA    491  #1     flash_fs_demo.spin2  (top)
+  $001EC-$0807E  32403  #2     flash_fs.spin2       FLASH
 
-    CODE/DATA TOTAL:   29232 bytes
-
-  $07230  $07237      8  VAR SPACE        (runtime)
-
-    PROGRAM TOTAL:     29240 bytes
+  VAR blocks
+  Range          Size  Image  Instance
+  -------------  ----  -----  --------
+  $08080-$08083     4  #1     (top)
+  $08084-$0808B     8  #2     FLASH
 ```
 
 ### Per-Object Breakdown
 
 | Object | Code/Data | % of Total | Purpose |
 |---|---|---|---|
-| flash\_fs\_demo (top-level) | 487 B | 1.7% | Demo application logic |
-| flash\_fs (driver) | 28,743 B | 98.3% | Flash filesystem driver |
-| **Total** | **29,232 B** | **100%** | |
+| flash\_fs\_demo (top-level) | 491 B | 1.5% | Demo application logic |
+| flash\_fs (driver) | 32,403 B | 98.5% | Flash filesystem driver |
+| **Total** | **32,896 B** | **100%** | (includes 2 bytes of alignment padding) |
 
-The driver dominates at 98.3% of code/data. The demo application adds only 487 bytes of its own code. VAR is 8 bytes total (4 bytes for each object's minimum allocation).
+The driver dominates at 98.5% of code/data. The demo application adds only 491 bytes of its own code. VAR is 12 bytes in total (4 bytes for the demo and 8 for the driver).
 
-### What the Consumer Program Adds
-
-The consumer's overhead is small:
-- **Method table**: 6 methods plus header = 7 entries x 4 bytes = 28 bytes
-- **DAT**: 3 filename string constants = ~45 bytes
-- **Bytecodes**: 6 compiled methods = ~414 bytes
-
-The binary file is 35,444 bytes (29,232 code/data + ~6 KB P2 loader stub).
+The binary file is 39,176 bytes (32,896 code/data plus the ~6 KB P2 loader stub).
 
 ---
 
@@ -319,29 +337,29 @@ The binary file size is NOT your runtime memory footprint. Runtime hub RAM usage
 Runtime Hub RAM = Code/Data + VAR + Stacks
 ```
 
-The map file gives you the first two directly from the PROGRAM SUMMARY line. Stacks must be accounted for separately.
+The map file gives you the first two directly from the SUMMARY block. Stacks must be accounted for separately.
 
 ### Stack Estimation
 
 Every COG running Spin2 code needs a stack. The top-level COG uses the remainder of hub RAM above the program as its stack. Additional COGs launched with `cogspin()` use explicitly allocated stack buffers (typically declared in DAT or VAR).
 
-The `flash_fs` driver itself does not launch any additional COGs -- it runs entirely within the calling COG's context using LOCK-based synchronization. So there are no hidden stack allocations within the driver.
+The `flash_fs` driver itself does not launch any additional COGs - it runs entirely within the calling COG's context using LOCK-based synchronization. So there are no hidden stack allocations within the driver.
 
 ### Complete Accounting Example
 
 For the `flash_fs_demo` program:
 
 ```
-Code/Data:           29,232 bytes   (from map: CODE/DATA TOTAL)
-VAR:                      8 bytes   (from map: VAR SPACE size)
+Code/Data:           32,896 bytes   (from map: Code/DAT bytes)
+VAR:                     12 bytes   (from map: VAR bytes)
                     ---------
-Program Total:       29,240 bytes
+Program Total:       32,908 bytes
 
 P2 Hub RAM:         524,288 bytes   (512 KB)
-Available:          495,048 bytes   (for main COG stack + other uses)
+Available:          491,380 bytes   (for main COG stack + other uses)
 ```
 
-The driver leaves ample room for application code and data. Even with `MAX_FILES_OPEN` set to 6 (~45,732 bytes for the driver alone), the total program would consume under 10% of hub RAM.
+The driver leaves ample room for application code and data. Even with `MAX_FILES_OPEN` set to 6 (about 49,460 bytes for the driver alone), the total program would consume under 10% of hub RAM.
 
 ---
 
@@ -357,27 +375,27 @@ Compile `flash_fs.spin2` as top-level to measure its intrinsic footprint:
 pnut-ts -m flash_fs.spin2
 ```
 
-Record from the PROGRAM SUMMARY:
-- Total code/data size (28,744 bytes at default settings)
-- Method count (85)
-- VAR size (4 bytes)
+Record from the SUMMARY:
+- Total code/data size (32,404 bytes at default settings)
+- Method count (101)
+- VAR size (8 bytes)
 
 ### Step 2: Extract Region Sizes from the Map
 
 Open the map file and identify the three regions:
 
-- **Method table**: from `$00000` to first DAT variable's offset (`$00158`) = 344 bytes
-- **DAT section**: from first DAT variable to end of last buffer = 20,122 bytes
-- **Bytecodes**: object total minus method table minus DAT = 8,277 bytes
+- **Method table**: from `$00000` to the first DAT variable's offset (`$00198`) = 408 bytes
+- **DAT section**: from the first DAT variable (`ERRORCODE`) to the first method (`NULL`, `$0506C`) = 20,180 bytes
+- **Bytecodes**: image size minus method table minus DAT = 11,815 bytes
 
 ### Step 3: Itemize the DAT Section
 
 Walk the DAT variables in the map file. For each variable, compute its size by subtracting its offset from the next variable's offset:
 
 ```
-IDTOBLOCKS      +$001A8
-IDTOBLOCK       +$018E8
-  => IDTOBLOCKS is $018E8 - $001A8 = $1740 = 5,952 bytes
+IDTOBLOCKS      +$001F8
+IDTOBLOCK       +$01938
+  => IDTOBLOCKS is $01938 - $001F8 = $1740 = 5,952 bytes
 ```
 
 Group variables into logical categories (translation tables, handle buffers, state) and total each category. See [Section 4](#4-dat-section-breakdown) for the complete breakdown.
@@ -425,11 +443,11 @@ pnut-ts -m -d flash_fs.spin2           # Map with debug enabled
 
 | Section | What It Tells You |
 |---|---|
-| PROGRAM SUMMARY | Total size = code/data + VAR |
-| OBJECT HIERARCHY | Which objects are included and their nesting |
-| MEMORY LAYOUT | Per-object code/data size and address ranges |
-| Object Details: Methods | Every method name and entry index |
-| Object Details: DAT | Every DAT variable with offset and absolute address |
+| SUMMARY | Total size = code/data + VAR |
+| OBJECT TREE | Which objects are included and their nesting |
+| MEMORY LAYOUT | Per-image code/data size and address ranges, and the VAR blocks |
+| Object Details: Methods | Every method name and offset |
+| Object Details: DAT | Every DAT variable with offset and address |
 
 ### Size Formulas
 
@@ -445,13 +463,13 @@ Available RAM       = 524,288 - Runtime Hub RAM
 
 | Metric | Value |
 |---|---|
-| Code/Data (standalone) | 28,744 B |
-| Methods | 85 (34 public + 51 private) |
-| VAR | 4 B |
-| Binary size | 34,956 B |
-| DAT section | 20,122 B (70% of code/data) |
-| Method table | 344 B |
-| Bytecodes | 8,277 B |
+| Code/Data (standalone) | 32,404 B |
+| Methods | 101 (34 public + 67 private) |
+| VAR | 8 B |
+| Binary size | 38,684 B |
+| DAT section | 20,180 B (62% of the image) |
+| Method table | 408 B |
+| Bytecodes | 11,815 B |
 
 ### DAT Category Summary
 
@@ -460,12 +478,12 @@ Available RAM       = 524,288 - Runtime Hub RAM
 | Block translation tables | 7,452 B | BLOCKS (fixed at 3,968) |
 | Per-handle buffers | 8,448 B | MAX\_FILES\_OPEN (default 2) |
 | Temporary block buffer | 4,096 B | Fixed |
-| Per-handle state | 46 B | MAX\_FILES\_OPEN (default 2) |
-| Driver state | 80 B | Fixed |
-| **Total DAT** | **20,122 B** | |
+| Per-handle state | 80 B | MAX\_FILES\_OPEN (default 2) |
+| Driver state | 104 B | Fixed |
+| **Total DAT** | **20,180 B** | |
 
 ### Per-Handle Cost
 
 ```
-Additional handle = 4,096 B (block buffer) + 128 B (filename) + 23 B (state) ≈ 4,247 B
+Additional handle = 4,096 B (block buffer) + 128 B (filename) + 40 B (state) = 4,264 B
 ```

@@ -9,8 +9,8 @@
 #      are not part of the public signature and are ignored
 #   2. the E_* codes in the driver's CON against the string_for_error cases (and that
 #      each message begins with its code name), against the E_* names flash_fs.txt uses
-#   3. version strings: LIB_VERSION (and its comment), the newest header history line,
-#      the newest flash_fs.txt history line, README.md, CHANGELOG.md (absent is reported,
+#   3. version strings: LIB_VERSION (and its comment), the newest flash_fs.txt history
+#      line (the driver header points to CHANGELOG.md for its history), README.md, CHANGELOG.md (absent is reported,
 #      not an error) and DOCs/*.md "flash_fs vX.Y.Z" lines, all against LIB_VERSION
 #   4. the `[P passes, F fails]` counts RegresssionTests/README.md lists per log against
 #      the last `RESULT: PASS|FAIL <program> P/T` line of each RegresssionTests/*.log;
@@ -222,8 +222,6 @@ else
     }
     version_agrees "$(grep -E '^[[:space:]]*LIB_VERSION[[:space:]]*=' "$PROD" | head -n 1 | sed -nE "s/.*'[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p")" \
         "$DRIVER: the LIB_VERSION line carries no X.Y.Z comment" "$DRIVER: LIB_VERSION comment says"
-    version_agrees "$(grep -E "^'' v[0-9]+\.[0-9]+\.[0-9]+" "$PROD" | tail -n 1 | sed -nE "s/^'' v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p")" \
-        "$DRIVER: no 'vX.Y.Z' header history line" "$DRIVER: newest header history line is"
     version_agrees "$(grep -E '^ v[0-9]+\.[0-9]+\.[0-9]+' "$APITXT" | tail -n 1 | sed -nE 's/^ v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')" \
         "$APITXT: no ' vX.Y.Z' history line" "$APITXT: newest history line is"
     mapfile -t rv < <(grep -o -E '\bv?[0-9]+\.[0-9]+\.[0-9]+\b' "$README" | sort -u)
@@ -260,7 +258,7 @@ fi
 echo ""
 echo "== 4. test counts: $TESTREADME vs RegresssionTests/*.log RESULT lines"
 c4=$drifts
-declare -A RPASS RFAIL
+declare -A RPASS=() RFAIL=()
 while IFS=$'\t' read -r name p f; do
     RPASS[$name]="$p"; RFAIL[$name]="$f"
 done < <(sed -nE 's/^\|[[:space:]]*\[([^]]*\.log)\].*\[([0-9]+) passes, ([0-9]+) fails\].*/\1\t\2\t\3/p' "$TESTREADME" | sed 's/\\//g')
