@@ -1369,8 +1369,9 @@ PRI canMountStep(pTitle, bExpected) | bCanMount, touchIdx
         recordPrints(@printsAfter)
         utils.evaluateSubValue(bCanMount, @"can_mount()", bExpected)
         utils.evaluateSubValue(flash.mounted(), @"the filesystem is still not mounted", FALSE)
-        repeat touchedCount with touchIdx
-            utils.evaluateSubValue(printsAfter[touchIdx], @"a touched block is unchanged by can_mount()", printsBefore[touchIdx])
+        if touchedCount > 0
+            repeat touchedCount with touchIdx
+                utils.evaluateSubValue(printsAfter[touchIdx], @"a touched block is unchanged by can_mount()", printsBefore[touchIdx])
 
 
 PRI survivorsStep(bOneBlockFileKept) | fileCount
@@ -1471,8 +1472,9 @@ PRI recordPrints(pPrints) | touchIdx
 ' Local Variables:
 ' @local touchIdx - number of the touched block being fingerprinted
 
-    repeat touchedCount with touchIdx
-        LONG[pPrints][touchIdx] := blockPrint(touchedAddr[touchIdx])
+    if touchedCount > 0
+        repeat touchedCount with touchIdx
+            LONG[pPrints][touchIdx] := blockPrint(touchedAddr[touchIdx])
 
 
 PRI blockPrint(blockAddr) : blockCrc | pBlock
@@ -1683,10 +1685,11 @@ PRI fileMatches(pName, byteCount, seed) : bMatches | handle, readCount, byteIdx
             readCount := flash.read(handle, @dataBuf, byteCount)
             utils.closeHandle(handle)
             bMatches := readCount == byteCount
-            repeat byteCount with byteIdx
-                if dataBuf[byteIdx] <> (seed + byteIdx) & BYTE_MASK
-                    bMatches := FALSE
-                    quit
+            if byteCount > 0
+                repeat byteCount with byteIdx
+                    if dataBuf[byteIdx] <> (seed + byteIdx) & BYTE_MASK
+                        bMatches := FALSE
+                        quit
 
 
 PRI fillMatches(pName, byteCount, fillValue) : bMatches | handle, readCount, chunkBytes, doneBytes, byteIdx

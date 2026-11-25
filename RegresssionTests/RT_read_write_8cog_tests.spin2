@@ -454,8 +454,9 @@ PRI fillString(pDest, myId, strIdx) | charCount, charIdx
 
     charCount := (strIdx +// STRESS_MAX_CHARS) + 1
     BYTE[pDest][0] := "A" + myId
-    repeat charCount - 1 with charIdx
-        BYTE[pDest][charIdx + 1] := "a" + ((strIdx + charIdx) +// LETTER_COUNT)
+    if charCount > 1
+        repeat charCount - 1 with charIdx
+            BYTE[pDest][charIdx + 1] := "a" + ((strIdx + charIdx) +// LETTER_COUNT)
     BYTE[pDest][charCount] := 0
 
 

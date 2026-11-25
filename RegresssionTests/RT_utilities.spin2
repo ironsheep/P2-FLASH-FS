@@ -834,21 +834,22 @@ pub testVerifyRecords(pFilename, totalRecordsWritten, pRcdBuffer, rcdSize, circu
         setCheckCountPerTest(3)
         status := flash.SUCCESS
         readCount := (totalRecordsWritten - startRcdNbr + 1) #> 0
-        repeat readCount with recordIdx
-            recordNbr := startRcdNbr + recordIdx
-            setMsgRcdNbr(recordNbr)
-            rdLength := flash.read(handle, pRcdBuffer, rcdSize)
-            evaluateSubValue(rdLength, @readMsg, rcdSize)
-            if rdLength <> rcdSize
-                status := flash.error()
-                quit
-            storedId := LONG[pRcdBuffer][RCD_ID_LONG]
-            storedCrc := LONG[pRcdBuffer][(rcdSize / 4) - 1]
-            evaluateSubValue(storedId, @idMsg, recordNbr)
-            calcCrc := record_crc(pRcdBuffer, rcdSize)
-            evaluateSubValue(calcCrc, @crcMsg, storedCrc)
-            if calcCrc <> storedCrc
-                dumpBlocksAtSplice(pFilename, recordIdx, pRcdBuffer, rcdSize, rcdSize <# RCD_DUMP_BYTES, SPLICE_DUMP_BYTES)
+        if readCount > 0
+            repeat readCount with recordIdx
+                recordNbr := startRcdNbr + recordIdx
+                setMsgRcdNbr(recordNbr)
+                rdLength := flash.read(handle, pRcdBuffer, rcdSize)
+                evaluateSubValue(rdLength, @readMsg, rcdSize)
+                if rdLength <> rcdSize
+                    status := flash.error()
+                    quit
+                storedId := LONG[pRcdBuffer][RCD_ID_LONG]
+                storedCrc := LONG[pRcdBuffer][(rcdSize / 4) - 1]
+                evaluateSubValue(storedId, @idMsg, recordNbr)
+                calcCrc := record_crc(pRcdBuffer, rcdSize)
+                evaluateSubValue(calcCrc, @crcMsg, storedCrc)
+                if calcCrc <> storedCrc
+                    dumpBlocksAtSplice(pFilename, recordIdx, pRcdBuffer, rcdSize, rcdSize <# RCD_DUMP_BYTES, SPLICE_DUMP_BYTES)
 
         startTest(@"ensure no errors on reads")
         evaluateResultNegError(status, flash.SUCCESS)

@@ -1189,11 +1189,11 @@ PRI testPoolAfterDoubleClose() | handle, dumpBytes, mismatchIdx
 
 
 PRI setPendingError() : code
-' Leave E_FILE_NOT_FOUND in error() by opening a file that does not exist, and check that it got there.
+' Leave E_FILE_NOT_FOUND in error() by asking for the size of a file that does not exist, which needs no free handle, and check that it got there.
 
-' @returns code - the code open() returned
+' @returns code - the code file_size() returned
 
-    code := flash.open(@missingFile, flash.FILEMODE_READ)
+    code := flash.file_size(@missingFile)
     utils.evaluateSubStatus(flash.error(), @"setup: the pending code", flash.E_FILE_NOT_FOUND)
 
 
@@ -1396,9 +1396,10 @@ PRI isNewHandle(slotIdx) : bNew | priorIdx
 ' @local priorIdx - number of the earlier slot being compared
 
     bNew := TRUE
-    repeat slotIdx with priorIdx
-        if heldHandles[priorIdx] == heldHandles[slotIdx]
-            bNew := FALSE
+    if slotIdx > 0
+        repeat slotIdx with priorIdx
+            if heldHandles[priorIdx] == heldHandles[slotIdx]
+                bNew := FALSE
 
 
 PRI badHandle(kindIdx) : handle

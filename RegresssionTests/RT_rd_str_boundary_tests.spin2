@@ -284,8 +284,9 @@ PRI writeStringFile(stringLen, bTerminated) | charIdx, fileBytes
 ' @local fileBytes - bytes the file holds
 
     bytefill(@fileModel, 0, FILE_MODEL_BYTES)
-    repeat stringLen with charIdx
-        BYTE[@fileModel][charIdx] := stringChar(charIdx)
+    if stringLen > 0
+        repeat stringLen with charIdx
+            BYTE[@fileModel][charIdx] := stringChar(charIdx)
     fileBytes := stringLen
     if bTerminated
         bytemove(@fileModel + stringLen + 1, @stringTail, TAIL_BYTES)
@@ -374,10 +375,11 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' @local byteIdx - number of the byte being compared
 
     mismatchIdx := NO_MISMATCH
-    repeat byteCount with byteIdx
-        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-            mismatchIdx := byteIdx
-            quit
+    if byteCount > 0
+        repeat byteCount with byteIdx
+            if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+                mismatchIdx := byteIdx
+                quit
 
 
 PRI firstNotPoison(startIdx, byteCount) : changedIdx | byteIdx
@@ -391,10 +393,11 @@ PRI firstNotPoison(startIdx, byteCount) : changedIdx | byteIdx
 ' @local byteIdx - number of the byte being checked
 
     changedIdx := NO_MISMATCH
-    repeat byteCount with byteIdx
-        if BYTE[@strBuf][startIdx + byteIdx] <> POISON_BYTE
-            changedIdx := startIdx + byteIdx
-            quit
+    if byteCount > 0
+        repeat byteCount with byteIdx
+            if BYTE[@strBuf][startIdx + byteIdx] <> POISON_BYTE
+                changedIdx := startIdx + byteIdx
+                quit
 
 
 con { license }

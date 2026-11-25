@@ -752,9 +752,10 @@ PRI countReadable(handle, firstKept) : readable, mismatchIdx | chunkCount, byteI
     mismatchIdx := NO_MISMATCH
     repeat
         chunkCount := flash.read(handle, @chunkBuf, CHUNK_BYTES)
-        repeat chunkCount with byteIdx
-            if mismatchIdx == NO_MISMATCH and BYTE[@chunkBuf][byteIdx] <> patternByte(firstKept + readable + byteIdx, SEED_ORIGINAL)
-                mismatchIdx := readable + byteIdx
+        if chunkCount > 0
+            repeat chunkCount with byteIdx
+                if mismatchIdx == NO_MISMATCH and BYTE[@chunkBuf][byteIdx] <> patternByte(firstKept + readable + byteIdx, SEED_ORIGINAL)
+                    mismatchIdx := readable + byteIdx
         readable += chunkCount
         if chunkCount < CHUNK_BYTES or readable > TRIM_WRITE_BYTES     ' a short read is the end of the file, the size bound stops a file that never ends
             quit
