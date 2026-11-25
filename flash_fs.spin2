@@ -223,7 +223,7 @@ BlockState    LONG      0                                                       
 ' handle-related variables and buffers
 '   handle is index into each of the arrays below
 
-hStatus         BYTE    0[MAX_FILES_OPEN]                                       'handle: status [H_READ, H_WRITE, H_REPLACE]
+hStatus         BYTE    0[MAX_FILES_OPEN]                                       'handle: open mode bits, a combination of H_READ, H_WRITE, H_FORK and H_MODIFY
 hHeadBlockID    WORD    NOT_VALID[MAX_FILES_OPEN]                               'handle: first blockID of file chain
 hChainBlockID   WORD    0[MAX_FILES_OPEN]                                       'handle: first blockID of commit chain
 hChainBlockAddr WORD    0[MAX_FILES_OPEN]                                       'handle: first block_address of commit chain
@@ -244,7 +244,7 @@ hReplacedID     LONG    NOT_VALID[MAX_FILES_OPEN]                             'h
 hCacheBlockID   WORD    NO_CACHED_BLOCK[MAX_FILES_OPEN]                         'handle: ID of the block the last locate found, or NO_CACHED_BLOCK when the cache is empty
 hCacheStart     LONG    0[MAX_FILES_OPEN]                                       'handle: file offset of the first data byte position of that block (negative for a head block with a data offset)
 hCacheOldFmt    BYTE    0[MAX_FILES_OPEN]                                       'handle: TRUE when the file's head block is old format (CRC32 filename CRC, no data offset); valid while the cache holds a block
-hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                       'handle: 59+1 byte buffer for filename
+hFilename       BYTE    0[MAX_FILES_OPEN * FILENAME_SIZE]                       'handle: FILENAME_SIZE byte buffer for filename
 hBlockBuff      BYTE    0[MAX_FILES_OPEN * BLOCK_SIZE]                          'handle: 4KB buffer for file data
 
 tmpBlockBuffer  BYTE     0[BLOCK_SIZE]                                          'buffer used for copying blocks
@@ -348,7 +348,6 @@ PUB format() : status | block_address, cycleBits
 '' @returns status - 0 (SUCCESS) if successful,
 '' .. E_BAD_BLOCKS_REMOVED if BAD blocks were found and fixed,
 '' .. E_NO_LOCK_AVAIL if all 16 LOCKs are in use,
-'' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish an erase or program in time: the filesystem is left
 ''    unmounted and is not mounted again, and the next mount() or format() starts over
 
@@ -871,8 +870,9 @@ PUB close(handle) : status
 ''
 '' @param handle - a handle to an open file
 '' @returns status - 0 (SUCCESS) if successful,
-'' .. E_FILE_MODE if close doesn't recognize this file mode (internal error),
+'' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not an open handle,
+'' .. E_DRIVE_FULL if the flash has no free block for the commit, the trim or the rewrite,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time: the filesystem is unmounted and every
 ''    handle freed, and the next mount() recovers the flash as it would after a power loss
 
@@ -1640,7 +1640,7 @@ PUB rd_word(handle) : word_value | status, readLength
 '' @returns result - the WORD value read from the file, or:
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
-'' .. E_FILE_WRITING if the file is not open for reading,
+'' .. E_FILE_MODE if the file is not open for reading,
 '' .. E_END_OF_FILE if attempted read beyond written data,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
 ''    filesystem is unmounted)
@@ -1668,7 +1668,7 @@ PUB rd_long(handle) : long_value | status, readCount
 ''  error() when not SUCCESS could be:
 '' .. E_NOT_MOUNTED if filesystem has not been mounted,
 '' .. E_BAD_HANDLE if the handle is not valid,
-'' .. E_FILE_WRITING if the file is not open for reading,
+'' .. E_FILE_MODE if the file is not open for reading,
 '' .. E_END_OF_FILE if attempted read beyond written data,
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in time (the
 ''    filesystem is unmounted)
@@ -2132,16 +2132,18 @@ PRI is_file_open(p_filename, open_mode_bits) : result | handle
 ' Return true if named file is open
 '
 ' @param p_filename - address of a zstring containing the filename
-' @param open_mode_bits - some combiantion of H_READ, H_WRITE, and H_REPLACE
-' @returns status - True/False where True means the file is open
+' @param open_mode_bits - some combination of H_READ, H_WRITE, H_FORK and H_MODIFY
+' @returns result - True/False where True means the file is open
 
 ' Local Variables:
 ' @local handle - temporary handle to check for availability
 
+  result := FALSE
   repeat MAX_FILES_OPEN with handle                                             'for each handle is already open?
     if hStatus[handle] & open_mode_bits
       if strcomp(@hFilename + handle * FILENAME_SIZE, p_filename)
-        return true
+        result := TRUE
+        quit
 {
       else
         debug("is_open() no filename match ", zstr_(p_filename), " vs ", zstr_(@hFilename + handle * FILENAME_SIZE))
@@ -2989,10 +2991,10 @@ PRI handle_index(handle) : hndlIdx
 
 PRI ensure_handle_mode(handle, open_mode_bits) : status
 
-' Determine if handle is open with dedired mode
+' Determine if handle is open with desired mode
 '
 ' @param handle - index in the handle tables of a file that might be open for read or read/write (not the caller's handle)
-' @param open_mode_bits - some combiantion of H_READ, H_WRITE, and H_REPLACE
+' @param open_mode_bits - some combination of H_READ, H_WRITE, H_FORK and H_MODIFY
 ' @returns status - 0 (SUCCESS) if successful,
 ' .. E_BAD_HANDLE if the handle is outside the range of handles or is not open,
 ' .. E_FILE_MODE if the file is open, but not in desired mode,
@@ -3096,37 +3098,6 @@ PRI froncate_file(head_block_id, limit_in_bytes) : status | size_in_bytes, block
 
   if fsDeviceFault                                                                                      'a flash write of the trim failed, at whichever step
     status := E_FLASH_TIMEOUT
-
-{
-PRI truncate_file(head_block_id, limit_in_bytes) | block_address, block_id, block_offset
-
-' Remove trailing block(s) of file leaving limit_in_bytes mstill in file
-'
-' @param head_block_id - the head block id for this new file
-' @param limit_in_bytes - the file size limit in bytes
-
-' Local Variables:
-' @local block_address - the block offset within the file system
-' @local block_id - temporary block id
-' @local block_offset - temporary offset into block
-
-  if count_file_bytes_id(head_block_id) > limit_in_bytes                        'if file is oversize..
-
-    block_address := next_block_address()                                       'get a new block now (may alter tmpBlockBuffer and IDToBlock)
-
-    block_id, block_offset, _ := locate_file_byte(head_block_id, limit_in_bytes) 'find block with new last byte (might be head block)
-    flash_read_block_id(block_id, @tmpBlockBuffer, $000, block_offset - 1)      'read block, minus excess data area
-    bytefill(@tmpBlockBuffer + block_offset, $FF, $FFC - block_offset)          'clear excess data area
-    LONG[@tmpBlockBuffer].[0] := 0                                              'make into last block
-    LONG[@tmpBlockBuffer].[31..20] := block_offset                              'set EndPtr
-    flash_activate_updated_block(block_address, @tmpBlockBuffer)               'program updated last block
-
-    delete_chain_from_id(block_id, 0, 0, True)                                  'delete old block through end of file, keep first block ID valid
-
-    field[IDToBlock][block_id] := block_address                                 'point IDToBlock to new last block
-    field[BlockState][block_address] := LONG[@tmpBlockBuffer].[1] ? B_BODY : B_HEAD    'change state of new last block from sTEMP to sHEAD/sBODY
-
-'}
 
 PRI count_file_bytes(block_id, startOfs) : bytes_used, bytes_free, block_count | endPtr
 
@@ -3337,39 +3308,6 @@ PRI delete_chain_from_id(block_id, EndID, delete_mode, KeepFirstIDValid) | block
 
 
 CON ' >>>  parameter type (block_address)  <<<
-
-PRI offset_head_block(start_block_address, offset_in_blocks) : head_block_address | signature, nextBlockId
-
-' locate the address of the block offset into the chain
-'  (of offset_in_blocks == 0 just return address of start_block_address)
-'
-' @param start_block_address - the block address of the first block in the chain
-' @param offset_in_blocks - the number of blocks to skip head block is first after skipped blocks
-' @returns head_block_address - return the block address of the proposed head block
-
-' Local Variables:
-' @local signature - the block state bits of the block being checked
-' @local nextBlockId - the id next possible head block
-
-' hrmf error conditions, (1) not a valid block, or (2) found a tail block
-'  both of these are unexpected, so we'll ???
-
-  'debug("offset_head_block(", uhex_word(start_block_address), ", ", sdec(offset_in_blocks), ")")
-
-  head_block_address := start_block_address
-  if offset_in_blocks > 0
-    repeat
-        flash_read_block_addr(head_block_address, @signature, $000, $003)       'read the block into the buffer
-        ifnot signature.[0]                                                     ' if last block, exit loop
-            quit
-        nextBlockId := signature.[31..20]                                       '..no, get ID of next block
-        head_block_address := field[IDToBlock][nextBlockId]                     'get address of block
-        'debug("  -- ", uhex_word(head_block_address), "( id#", udec_(nextBlockId), " )")
-        if --offset_in_blocks <= 0                                              'count this, abort loop if have answer
-            quit
-
-  'debug("offset_head_block() = ", uhex_word(head_block_address))
-
 
 PRI check_block_read_only(thisBlockAddress): bad_count, dupe_count | otherBlockAddress, thisCycleBits, otherCycleBits, thisBlockID
 
