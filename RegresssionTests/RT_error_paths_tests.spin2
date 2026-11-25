@@ -4,8 +4,8 @@
 ''   Purpose.... This object exercises the error() contract of the flash filesystem: after every call
 ''               error() holds SUCCESS when the call succeeded and the call's own code when it failed,
 ''               the accessors error(), string_for_error(), null() and mounted() leave a pending code
-''               alone, and a handle outside the range, a handle not open and a handle closed twice
-''               are refused without touching any state of another handle
+''               alone, and a handle outside the range, a handle not open, a handle opened and closed
+''               and a handle closed twice are refused without touching any state of another handle
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -196,6 +196,7 @@ PUB go() | status, pFailedCall
         testCircularOpenFailures()
         testFileOperationFailures()
         testModeMismatches()
+        testClosedHandle()
         testReadResults()
         testStringReads()
         testSeekCodes()
@@ -760,6 +761,23 @@ PRI readSideRefused(handle) | callIdx
     refusedCall(HM_SEEK, handle)
     repeat callIdx from HM_READ to HM_RD_STR
         refusedCall(callIdx, handle)
+
+
+PRI testClosedHandle() | handle, methodIdx
+' Make each call that seeks, writes or reads with a handle in the range that was opened and then closed: each fails with E_BAD_HANDLE.
+
+' Local Variables:
+' @local handle - handle of the file, closed before the calls are made
+' @local methodIdx - number of the handle call being made
+
+    utils.startTestGroup(@"calls with a handle that was opened and closed")
+    handle := openFor(@dataFile, flash.FILEMODE_READ, @"open(,r) a handle the next calls find closed")
+    utils.startTest(@"close() of the handle")
+    closeSub(handle)
+
+    repeat methodIdx from HM_SEEK to HM_RD_STR
+        utils.startTest(handleMethodName(methodIdx))
+        checkValue(callHandleMethod(methodIdx, handle), expectedReturn(methodIdx, flash.E_BAD_HANDLE), flash.E_BAD_HANDLE)
 
 
 PRI refusedCall(methodIdx, handle)

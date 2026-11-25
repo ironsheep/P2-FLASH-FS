@@ -5,11 +5,13 @@
 ''               of space. A run has one of two modes. The guard-only mode fills the flash with wr_byte(),
 ''               one byte per call, reads the count of refused block programs after every call and stops
 ''               at the first refusal. The fixed mode fills the flash with ordinary write() calls and
-''               probes every route to E_DRIVE_FULL: open(), a write that runs out of blocks,
-''               open_circular(), create_file() and rename(), then the edge cases of append, r+ rewrite,
-''               circular close, the close of a new file that finds no block left for it, rename and
-''               create_file with exactly the free blocks and one block more, and create_file() running out
-''               inside its block loop with its space checks skipped.
+''               probes every route to E_DRIVE_FULL: open(), a write that runs out of blocks (from this
+''               cog and from another cog), open_circular(), create_file() and rename(), then the edge
+''               cases of append, r+ rewrite, circular close, the close of a new file that finds no block
+''               left for it, a flush that finds no block and a later close that commits the file, an
+''               unmount whose first close fails, rename and create_file with exactly the free blocks and
+''               one block more, and create_file() running out inside its block loop with its space checks
+''               skipped.
 ''   Author..... Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
@@ -110,11 +112,13 @@ CON ' ---- Fixed Mode Steps ----
     '  STEP_RMW          - r+ rewrite with one free block
     '  STEP_CIRCULAR     - circular close with the trim out of blocks
     '  STEP_NEW_CLOSE    - the close of a new "w", "a" or "w+" file with no block left for it
+    '  STEP_FLUSH        - the flush of a "w" file with no block left for it, then its close once a block is free
+    '  STEP_UNMOUNT      - unmount with a close that finds no block, then a close that succeeds
     '  STEP_RENAME       - rename with one free block and with none
     '  STEP_CREATE       - create_file with one block too many and with exactly enough
     '  STEP_CREATE_LOOP  - create_file with its space checks skipped, running out inside its block loop
     '  STEP_COUNT        - the number of steps
-    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_NEW_CLOSE, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
+    #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_NEW_CLOSE, STEP_FLUSH, STEP_UNMOUNT, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
 
 CON ' ---- Case Sizes ----
 
@@ -147,6 +151,12 @@ CON ' ---- Case Sizes ----
     CREATE_BYTES = HEAD_BYTES + ((CREATE_BLOCKS - ONE_BLOCK) * BODY_BYTES) ' bytes that fill those blocks
     WORD_VALUE = $BEEF                                  ' value of the short wr_word()
     LONG_VALUE = $DEAD_BEEF                             ' value of the short wr_long()
+
+CON ' ---- Worker Cog ----
+
+    WORKER_STACK_LONGS = 256                            ' stack of the cog that calls write()
+    WORKER_WAIT_MS = 10_000                             ' time the worker cog has to finish
+    WORKER_POLL_MS = 10                                 ' pause between looks at the worker's flag
 
 CON ' ---- Test Data ----
 
@@ -193,6 +203,11 @@ chunkBuf        BYTE    0[CHUNK_BYTES]                  ' one chunk of the main 
 bootCrcBefore   LONG    0                               ' CRC of the sector below the filesystem before the run wrote anything
 mainFileBytes   LONG    0                               ' bytes the main file holds
 bRunLost        LONG    FALSE                           ' TRUE once a block program was refused, which ends the fixed run
+workHandle      LONG    0                               ' handle the worker cog calls write() with
+workResult      LONG    0                               ' what write() returned in the worker cog
+workError       LONG    0                               ' error() of the worker cog after it
+workDone        LONG    FALSE                           ' set by the worker cog when it has recorded its result
+workStack       LONG    0[WORKER_STACK_LONGS]           ' stack of the worker cog
 
 
 PUB go() | status, pFailedCall, crcRead
@@ -322,6 +337,8 @@ PRI runFixed() | stepIdx
             STEP_RMW: testRewrite()
             STEP_CIRCULAR: testCircular()
             STEP_NEW_CLOSE: testNewFileClose()
+            STEP_FLUSH: testFlushFull()
+            STEP_UNMOUNT: testUnmountFailure()
             STEP_RENAME: testRename()
             STEP_CREATE: testCreate()
             STEP_CREATE_LOOP: testCreateInLoop()
@@ -438,6 +455,11 @@ PRI testMidBlockWrite() | handle, status, writeCount, writeError, closeStatus
         expectFull(@"wr_word()", flash.wr_word(handle, WORD_VALUE))
         expectFull(@"wr_long()", flash.wr_long(handle, LONG_VALUE))
         expectFull(@"wr_str()", flash.wr_str(handle, @shortText))
+
+    utils.startTest(@"write() from another cog with no room left returns the E_DRIVE_FULL of that cog")
+    expectStatus(@"the file is open", status, flash.SUCCESS)
+    if status == flash.SUCCESS
+        otherCogWrite(handle)
 
     utils.startTest(@"close() keeps the bytes that were accepted")
     expectStatus(@"the file is open", status, flash.SUCCESS)
@@ -789,6 +811,130 @@ PRI newFileCloseCase(pTitle, mode) | handle, status, writeCount, freeIdsBefore, 
         ' the file is not created, so no committed block uses the head block ID and the close gives it back
         expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + ONE_BLOCK_ID)
     expectValue(@"exists() of the file", flash.exists(@caseFile), FALSE)
+    checkWitness()
+
+
+PRI otherCogWrite(handle) | pending, workerCog, waitLimit
+' From a new cog, write one byte to a handle whose buffered block is full on a full drive, and check what that cog got back.
+
+' @param handle - handle of the file, whose next byte needs a block the drive does not have
+
+' Local Variables:
+' @local pending - the code this cog has in error() while the worker runs
+' @local workerCog - number of the cog the worker runs in
+' @local waitLimit - time at which the wait for the worker ends
+
+    flash.version()                                     ' leaves SUCCESS in this cog's error(), a code the worker's write() must not return
+    pending := flash.error()
+    workHandle := handle
+    workDone := FALSE
+    workerCog := cogspin(NEWCOG, writeWorker(), @workStack)
+    expectValue(@"worker cog started", workerCog >= 0, TRUE)
+    if workerCog >= 0
+        waitLimit := getms() + WORKER_WAIT_MS
+        repeat until workDone
+            if getms() - waitLimit > 0                  ' signed difference, so a wrap of the millisecond count is harmless
+                quit
+            waitms(WORKER_POLL_MS)
+    expectValue(@"worker cog finished", workDone, TRUE)
+    expectValue(@"the worker runs in a cog other than this one", workerCog <> cogid(), TRUE)
+    expectStatus(@"write() of one byte from the worker cog", workResult, flash.E_DRIVE_FULL)
+    expectStatus(@"error() of the worker cog", workError, flash.E_DRIVE_FULL)
+    expectStatus(@"error() of this cog, left alone by the worker", flash.error(), pending)
+
+
+PRI writeWorker()
+' Run in its own cog: write one byte to the handle the first cog holds, and record what write() returned and what error() held.
+
+    workResult := flash.write(workHandle, @writeBuf, ONE_BYTE)
+    workError := flash.error()
+    workDone := TRUE
+
+
+PRI testFlushFull()
+' Flush a "w" file whose bytes are all in its buffer on a full drive, for a new file and for a file that exists.
+
+    utils.startTestGroup(@"flush with no block left for the commit")
+    flushFullCase(@"flush() of a new file with no free block fails and keeps the bytes, and close() commits them once a block is free", FALSE)
+    flushFullCase(@"flush() over an existing file with no free block fails and keeps the old file, and close() replaces it once a block is free", TRUE)
+
+
+PRI flushFullCase(pTitle, bExisting) | handle, status, writeCount, closeStatus, closeError
+' Write bytes that stay in the buffer, take every free block, flush, free the blocks again and close, as one test.
+
+' @param pTitle - address of zstring naming the test
+' @param bExisting - TRUE to open over a file that exists, FALSE to open a new file
+
+' Local Variables:
+' @local handle - handle of the file
+' @local status - status of the open
+' @local writeCount - what write() returned
+' @local closeStatus - what close() returned
+' @local closeError - error() after close()
+
+    utils.startTest(pTitle)
+    clearWorkspace()
+    if bExisting
+        fillPattern(@modelBuf, FIRST_OFFSET, RENAME_BYTES, SEED_RENAME)
+        expectStatus(@"write of the existing file", writeBufferFile(@caseFile, @modelBuf, RENAME_BYTES), flash.SUCCESS)
+    fillPattern(@writeBuf, FIRST_OFFSET, NEW_CLOSE_BYTES, SEED_NEW_CLOSE)
+    handle, status := utils.openWaitOnHandle(@caseFile, flash.FILEMODE_WRITE)
+    expectStatus(@"open(,w)", status, flash.SUCCESS)
+    if status == flash.SUCCESS
+        ' the bytes fit the head block, so nothing of the file is written to the flash before the commit
+        writeCount := flash.write(handle, @writeBuf, NEW_CLOSE_BYTES)
+        expectValue(@"bytes write() returned", writeCount, NEW_CLOSE_BYTES)
+        expectStatus(@"pad of the workspace", padTo(NO_BLOCKS, @padFile), flash.SUCCESS)
+        expectValue(@"free blocks before flush()", freeBlockCount(), NO_BLOCKS)
+        expectFull(@"flush()", flash.flush(handle))
+        if bExisting
+            expectValue(@"file_size() of the file the flush did not replace", flash.file_size(@caseFile), RENAME_BYTES)
+        else
+            expectValue(@"exists() of the file the flush did not create", flash.exists(@caseFile), FALSE)
+        expectStatus(@"delete() of the pad file frees its blocks", flash.delete(@padFile), flash.SUCCESS)
+        closeStatus := utils.closeHandle(handle)
+        closeError := flash.error()
+        expectStatus(@"close()", closeStatus, flash.SUCCESS)
+        expectStatus(@"error() after close()", closeError, flash.SUCCESS)
+    checkFileHolds(@caseFile, @writeBuf, NEW_CLOSE_BYTES)
+    checkWitness()
+
+
+PRI testUnmountFailure() | writeHandle, readHandle, status, writeCount, unmountStatus, unmountError
+' Unmount with a new file whose close finds no block on the lower handle and a read handle on the higher one.
+
+' Local Variables:
+' @local writeHandle - handle of the new file, whose bytes are all in its buffer
+' @local readHandle - handle of a survivor opened to read, whose close succeeds
+' @local status - status of each open and of the mount
+' @local writeCount - what write() returned
+' @local unmountStatus - what unmount() returned
+' @local unmountError - error() after unmount()
+
+    utils.startTestGroup(@"unmount with a close that fails")
+    utils.startTest(@"unmount() keeps the failure of the first close in its status and in error(), and closes the next handle too")
+    clearWorkspace()
+    fillPattern(@writeBuf, FIRST_OFFSET, NEW_CLOSE_BYTES, SEED_NEW_CLOSE)
+    writeHandle, status := utils.openWaitOnHandle(@caseFile, flash.FILEMODE_WRITE)
+    expectStatus(@"open(,w) of the new file", status, flash.SUCCESS)
+    if status == flash.SUCCESS
+        writeCount := flash.write(writeHandle, @writeBuf, NEW_CLOSE_BYTES)
+        expectValue(@"bytes write() returned", writeCount, NEW_CLOSE_BYTES)
+        expectStatus(@"pad of the workspace", padTo(NO_BLOCKS, @padFile), flash.SUCCESS)
+        readHandle, status := utils.openWaitOnHandle(@survivorOne, flash.FILEMODE_READ)
+        expectStatus(@"open(,r) of a survivor", status, flash.SUCCESS)
+        ' unmount() closes the handles in order, so the close that fails comes before the close that succeeds
+        expectValue(@"the handle whose close fails is the lower one", writeHandle < readHandle, TRUE)
+        unmountStatus := flash.unmount()
+        unmountError := flash.error()
+        expectStatus(@"unmount()", unmountStatus, flash.E_DRIVE_FULL)
+        expectStatus(@"error() after unmount()", unmountError, flash.E_DRIVE_FULL)
+        expectValue(@"mounted() after unmount()", flash.mounted(), FALSE)
+        utils.releaseHandle(writeHandle)
+        utils.releaseHandle(readHandle)
+        status := flash.mount()
+        expectStatus(@"mount()", status, flash.SUCCESS)
+        expectValue(@"exists() of the file that was not committed", flash.exists(@caseFile), FALSE)
     checkWitness()
 
 
