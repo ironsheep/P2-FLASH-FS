@@ -141,6 +141,7 @@ PUB go() | status, pFailedCall
         testReadWriteSeekCycle()
         testReadsOnReadPlus()
         testFlushRemount()
+        testWritePlusFlushSeek()
         testSeekAfterWrite()
         testSeekPastEnd()
         testExtendInBlock()
@@ -391,6 +392,37 @@ PRI testFlushRemount() | handle, roundIdx
     remount()
     utils.startTest(@"file holds every flushed edit after the remount")
     checkFileContent(@modelFile, @modelBuf, SMALL_BYTES)
+
+
+PRI testWritePlusFlushSeek() | handle
+' Write a w+ file over an existing three block file, seek into its head block, flush, then seek and read in every block.
+
+' Local Variables:
+' @local handle - handle of the file being tested
+
+    utils.startTestGroup(@"w+ over an existing file, flush, then seek")
+    freshFilesystem()
+    fillPattern(@guardBuf, MODEL_BYTES, SEED_ORIGINAL)
+    fillPattern(@modelBuf, MODEL_BYTES, SEED_REPLACEMENT)
+    createFile(@"set up the three block file the w+ file replaces", @modelFile, @guardBuf, MODEL_BYTES)
+
+    handle := openChecked(@modelFile, flash.FILEMODE_WRITE_EXTENDED, @"open(,w+) over an existing three block file")
+    utils.startTest(@"write, seek into the head block, flush, then seek and read in every block")
+    if requireHandle(handle)
+        utils.evaluateSubValue(flash.write(handle, @modelBuf, MODEL_BYTES), @"write()", MODEL_BYTES)
+        ' the flush commits the file under the head block ID of the file it replaces, and returns to this position
+        seekAndCheck(handle, OFFSET_IN_HEAD)
+        utils.evaluateSubStatus(flash.flush(handle), @"flush()", flash.SUCCESS)
+        utils.evaluateSubValue(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"position after flush()", OFFSET_IN_HEAD)
+        readAndCheck(handle, OFFSET_IN_HEAD, EDIT_BYTES)
+        seekAndCheck(handle, OFFSET_IN_BODY)
+        readAndCheck(handle, OFFSET_IN_BODY, EDIT_BYTES)
+        seekAndCheck(handle, OFFSET_IN_TAIL)
+        readAndCheck(handle, OFFSET_IN_TAIL, EDIT_BYTES)
+        seekAndCheck(handle, 0)
+        readAndCheck(handle, 0, MODEL_BYTES)
+        closeAndCheck(handle)
+        checkFileContent(@modelFile, @modelBuf, MODEL_BYTES)
 
 
 PRI testSeekAfterWrite()
