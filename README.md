@@ -305,7 +305,7 @@ The driver does not check or handle these. They are also listed in the driver's 
 - **Two copies of an ID, at most.** A power loss part-way through moving a block leaves two blocks with one ID, and `mount()` resolves the pair by keeping the newer. It assumes no ID is held by more than two blocks.
 - **Moving a block does not check its CRC first.** When the driver moves a block to wear-level the flash, it copies the data and computes a new CRC over the copy. The CRC of the block being moved is not checked, so a bit error in it is copied into a block that then looks good.
 - **Pins 58 to 61 are taken on every call.** Every call that reaches the flash drives the flash chip's pins and does not check whether another user of those pins (an SD card, for example) holds them.
-- **The SPI timing is written for system clocks up to about 350 MHz.** It is not verified above that.
+- **The driver is certified at a 320 MHz system clock.** Every regression run uses 320 MHz. The SPI timing has been verified up to 350 MHz, but 320 MHz is the clock this release is certified for.
 
 ## Adding the Flash FS to your own project
 

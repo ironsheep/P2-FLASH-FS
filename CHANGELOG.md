@@ -50,7 +50,7 @@ Compilers tested: **[measured at bench visit 10: TESTED_COMPILERS]**
 - `mount()` assumes no block ID is held by more than two blocks.
 - A block moved to wear-level the flash is copied with a new CRC, and the CRC of the block being moved is not checked first, so a bit error in it is copied.
 - Every call that reaches the flash takes over pins 58 to 61 and does not check whether another user of those pins, such as an SD card, holds them.
-- The SPI timing is written for system clocks up to about 350 MHz and is not verified above that.
+- The driver is certified at a 320 MHz system clock, the clock every regression run uses. The SPI timing has been verified up to 350 MHz, but only 320 MHz is certified.
 
 ## Earlier releases
 

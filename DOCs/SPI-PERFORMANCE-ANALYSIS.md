@@ -82,8 +82,8 @@ Each byte requires the COG to **reset and restart the smart pin clock** (`fltl`/
 |---|---|---|
 | 200 MHz | 25.0 MHz | 200 / 8 |
 | 300 MHz | 37.5 MHz | 300 / 8 |
-| 320 MHz | 40.0 MHz | 320 / 8 (common in test/demo code) |
-| 350 MHz | 43.75 MHz | 350 / 8 |
+| 320 MHz | 40.0 MHz | 320 / 8 (the certified clock: every regression run uses it) |
+| 350 MHz | 43.75 MHz | 350 / 8 (verified, not certified) |
 
 All of these are under the 50 MHz limit of the Read Data (`$03`) command, so the implementation works correctly. This is the rate **within** a byte. Between bytes the loop adds the restart cost below, so the rate a block read achieves is lower.
 
@@ -323,7 +323,7 @@ Ranked by impact and implementation effort. Each applies to the SPI share only; 
 
 **Complexity**: Moderate - the streamer mode word configuration and clock alignment require careful timing. The P2 boot ROM's `flash_loader` is a proven reference implementation of streamer-based SPI flash access.
 
-**Trade-off**: The current implementation works at any sysclk from DC to about 350 MHz (the driver header says its SPI timing is not verified above that). A streamer-based approach would need the NCO frequency set correctly for the system clock, and timing alignment verified at the target speed.
+**Trade-off**: The current implementation is certified at a 320 MHz sysclk, and its SPI timing has been verified up to 350 MHz. A streamer-based approach would need the NCO frequency set correctly for the system clock, and timing alignment verified at the target speed.
 
 ### Option 3: Dual SPI Reads - Higher Effort
 
