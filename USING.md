@@ -5,7 +5,7 @@ Flash FS - a filesystem for the FLASH chip on the P2 Edge Module.
 
 [![License][license-shield]](LICENSE)
 
-This page is for the day after you have the driver mounted: what each call does, where it differs from the C file API, and the modes beyond plain read and write. The method-by-method reference, with every parameter and error code, is [flash_fs.txt](flash_fs.txt).
+What each call does, where it differs from the C file API, and the modes beyond plain read and write: circular files, read-modify-write and multi-cog use. The method-by-method reference, with every parameter and error code, is [flash_fs.txt](flash_fs.txt).
 
 ## Table of Contents
 
