@@ -12,7 +12,8 @@
 #   3. version strings: LIB_VERSION (and its comment), the newest flash_fs.txt history
 #      line (the driver header points to CHANGELOG.md for its history), README.md, CHANGELOG.md (absent is reported,
 #      not an error) and DOCs/*.md "flash_fs vX.Y.Z" lines, all against LIB_VERSION
-#   4. the `[P passes, F fails]` counts RegresssionTests/README.md lists per log against
+#   4. the `PASS P/T` (or `FAIL P/T`) count each RegresssionTests/README.md table row gives,
+#      read with the first `(<name>.log)` link after it, against
 #      the last `RESULT: PASS|FAIL <program> P/T` line of each RegresssionTests/*.log;
 #      a log with no RESULT line is reported
 #   5. the flash_fs.spin2 inside cgsm_flash_file_demo.zip (and cgsm_flash_file_demo/
@@ -259,9 +260,9 @@ echo ""
 echo "== 4. test counts: $TESTREADME vs RegresssionTests/*.log RESULT lines"
 c4=$drifts
 declare -A RPASS=() RFAIL=()
-while IFS=$'\t' read -r name p f; do
-    RPASS[$name]="$p"; RFAIL[$name]="$f"
-done < <(sed -nE 's/^\|[[:space:]]*\[([^]]*\.log)\].*\[([0-9]+) passes, ([0-9]+) fails\].*/\1\t\2\t\3/p' "$TESTREADME" | sed 's/\\//g')
+while IFS=$'\t' read -r name p t; do
+    RPASS[$name]="$p"; RFAIL[$name]=$((t - p))
+done < <(sed -nE 's/^\|.*[[:space:]](PASS|FAIL) ([0-9]+)\/([0-9]+)[^(]*\(([^)]*\.log)\).*/\4\t\2\t\3/p' "$TESTREADME" | sed 's/\\//g')
 shopt -s nullglob
 logs=(RegresssionTests/*.log)
 shopt -u nullglob

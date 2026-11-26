@@ -38,7 +38,7 @@ Every call reports its error, the file modes follow ANSI C except where the flas
 
   **[measured at bench visit 7: SPEEDUP_TABLE]**
 
-  The SPI share of block-read time after this change: **[measured at bench visit 7: SPI_SHARE]**.
+  After this change, 96.7 % of the time a block read takes is the SPI transfer from the flash, measured at 320 MHz.
 - Every call sets `error()` for the calling cog, on every path: SUCCESS, or the reason it failed.
 - The hub lock is kept from the first `mount()` until power-down, and `unmount()` no longer returns it. Each call holds the lock from start to finish.
 - E_FILE_WRITING (-5), E_FILE_READING (-6) and E_SHORT_TRANSER (-16) are reserved: the driver never returns them.

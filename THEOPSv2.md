@@ -113,9 +113,9 @@ The bits of this first long in the block are interpreted as follows:
 The LifeCycle  3-bit field describes the state of the block as inactive, canceled, or active. Active and Canceled LifeCycle values follow rules which are based upon the fact that 1-bits can only transition to 0 on a flash device.  These rules are:
 
 - Active block values follow the single-zero ring counter state sequence: 011..101..110..repeat
-- The block with the greater state is the valid block between two blocks with identical IDs
+- Of two blocks with identical IDs, the valid block is the one whose state comes later in that ring. The order is a ring, not a numeric one: 011 is later than 110.
  (Which allows for make-before-break block replacement that can be recovered after unexpected power loss)
-- To cancel a block we write a 2nd zero to the life-cycle bits of that block, this returns the block back to an unused state.
+- To cancel a block the driver clears all three life-cycle bits (it writes 000). Any value with two or more zeroes reads as canceled, and the block is then free again.
 
 This is an overview of the possible values of the three bits:
  
@@ -131,11 +131,11 @@ This is an overview of the possible values of the three bits:
 
 This is how we determine age of two blocks with identical Block IDs but the life-cycle bits are different. When we find these we want to finish the transaction by cancelling the older of the two blocks having these matching IDs. The driver assumes no ID is held by more than two blocks.
 
-| two life-cycle values compared | age relationship
-| --- | --- |
-| 011 3 -> 110 6 | new > old (we wrapped from 6 back to 3)
-| 101 5 -> 011 3 | new > old
-| 110 6 -> 101 5 | new > old
+| newer block | older block | note
+| --- | --- | --- |
+| 011 (3) | 110 (6) | the ring wrapped from 6 back to 3
+| 101 (5) | 011 (3) |
+| 110 (6) | 101 (5) |
 
 
 Blocks written to our flash filesystem are of the following formats:
@@ -175,9 +175,9 @@ A file made up of these blocks can exist in one of three shapes:
 
 | Constituency | Max size | Notes
 | --- | --- | --- |
-| Head/Last block | 0 - 3,956 bytes | 1 block file
-| Head/More block -> Body/Last block | 0 - 8,044 bytes | 2 block file
-| Head/More block -> (1 or more) Body/More block -> Body/Last block | 0 - 16,221,052 bytes | up to a 3,968-block file
+| Head/Last block | 3,956 bytes | 1 block file
+| Head/More block -> Body/Last block | 8,044 bytes | 2 block file
+| Head/More block -> (1 or more) Body/More block -> Body/Last block | 16,221,052 bytes | up to a 3,968-block file
 
 **NOTE1**: the largest file would be a 1 x **Head/More block** (3,956 bytes) -> 3,966 x **Body/More block**s (4,088 bytes ea.) -> 1x **Body/Last block** (4,088 bytes) which yields a max length of 16,221,052 bytes.
 
@@ -221,7 +221,7 @@ Internally this is all handled very simply. The user seeks to the location in th
 
 Replacing is different from writing or appending in that in this "extended" file mode (R+, W+) the changes are made one block at a time: a rewrite of a block is its own commit, and the file's chain of blocks is the same before and after it. For R+ that is true from the first write. For W+ the file as a whole is not committed until close() or flush(); see below.
 
-When there is no free block for a rewrite, nothing is changed: the old block stays on the flash, the modified block stays in the handle's buffer, and the call that needed the rewrite (a seek, a read or a flush) returns E_DRIVE_FULL.
+When there is no free block for a rewrite, nothing is changed: the old block stays on the flash, the modified block stays in the handle's buffer, and the call that needed the rewrite (a seek, a read, a write that runs into the next block, a flush() or a close()) returns E_DRIVE_FULL.
 
 
 #### BEHAVIOR: Writing, Overwriting, Appending
@@ -266,10 +266,10 @@ Maintaining an existing file in a circular fashion is supported without any cont
 
 | Open_circular() Mode | supports seek() | description |
 | --- | --- | ---|
-| <pre>read [%"r", %"R"] limit</pre> | YES | Read from an **existing file**, first byte read is exactly **max\_file\_length** from the end of the file (Allocated space will be max\_file\_length rounded up to end of block) Or it will be from first byte if file has not yet grown to max\_file\_length. |
+| <pre>read [%"r", %"R"] limit</pre> | YES | Read from an **existing file**, from its first byte. A circular file is trimmed to **max\_file\_length** each time it is committed, so its first byte is the oldest byte kept. For a file written by v1.4 (an old-format head block) that is longer than max\_file\_length, the first byte read is exactly max\_file\_length from the end of the file. |
 | <pre>append [%"a", %"A"] limit </pre>  | no | Write to an **existing file**, extending the existing file. If the file didn't exist it will be created, upon close() or flush() if the file exceeds limit then the file will be froncated (truncated from the front) leaving limit bytes, from the tail of the file, active |
 
-Under the covers this circular behavior affect reads and writes. When **opened for read as circular** the first data returned will be from the front of the file unless the file has reached the max size. If it has then the first data returned will instead be the data at the (file length - max size) offet (The front of your circular buffer.)
+Under the covers this circular behavior affect reads and writes. When **opened for read as circular** the first data returned is from the front of the file. The trim at each commit (below) has already removed what lies before the front of your circular buffer. A v1.4 file was not trimmed this way: when one is longer than the limit, the first data returned is at the (file length - max size) offset, and seek positions count from there.
 
 When the file is **opened for write as circular** after the writes are completed and the file is being closed or flushed then the entire write commit chain is written to flash. After this file is complete on flash then the file is froncated (Front Truncated) removing any/all leading blocks leaving enough blocks to contain the **max\_file\_length** bytes at the tail of the file blocks. If any blocks are removed during Froncation this means the file head block effectively moves to be the new leading block of the file blocks not removed during this Froncate process. A trimmed file's size, as file_size() and file_size_for_handle() report it, is the length that can be read from it: the bytes the trim dropped from the first kept block are not counted.
 
@@ -291,7 +291,7 @@ There are really only two underlying forms of transactions when handling extende
 
 - **Case #2**: The record being replaced overflows from the current block into the next block. In this case, as we run off the end of the current buffer we have to write the first part of the record by replacing the block containing it. The current modified block buffer contents are written to a new block with the same block ID, but the next LifeCycle value of the block it is replacing. After the block is written and activated, the prior block is cancelled. Then we resume the record write by loading the next block and continuing to write the remainder of the record into the buffer containing this next block. Lastly, when we close(), flush(), or seek to another location away from this block the current modified block buffer contents are written to a new block with the same block ID and the next LifeCycle value of the block it is replacing. After the block is written and activated, the prior block is cancelled.
 
-A write at or past the end of the file extends it, as C's `r+` does, in both modes. Within the last block the end pointer moves with the write. When the last block is full, a new last block holding the next byte is written and activated first, and only then is the full block rewritten with a link to it, so the chain on the flash is whole at every step. That needs one free block ID and two free blocks; without them the write stops with E_DRIVE_FULL and nothing more changes. A "w+" file has one difference in how its first block is handled: while the file is uncommitted, the head block is rewritten as an **inactive copy** (see Concepts), because activating it is what makes the file exist. close() or flush() writes the modified body block, then activates the head, and cancels the chain of any file it replaces.
+A write at or past the end of the file extends it, as C's `r+` does, in both modes. Within the last block the end pointer moves with the write. When the last block is full, a new last block holding the next byte is written and activated first, and only then is the full block rewritten with a link to it, so the chain on the flash is whole at every step. That needs one free block ID and two free blocks; without them the write stops with E_DRIVE_FULL and nothing more changes. A "w+" file has one difference in how its first block is handled: while the file is uncommitted, the head block is rewritten as an **inactive copy** (see Concepts), because activating it is what makes the file exist. close() or flush() writes the modified body block, then activates the head, and cancels the chain of any file it replaces. When close() finds no free block to commit a new "w+" file, it cancels the inactive head copy and the body blocks it links to, and frees their IDs, so the next mount() finds nothing to remove. After a flash fault they are left as a power loss would leave them. A flush() that cannot commit keeps them, so a later flush() or close() can commit once a block is free.
 
 
 ## Tracking Data (State of Filesystem)
@@ -408,7 +408,7 @@ For each open file (handle) the driver maintains the following information:
 | hTrimPending | BYTE    0[MAX\_FILES_OPEN] | handle: T while a committed circular file is over its limit because its trim found no free block | 1 byte
 | hWindowStart | LONG    0[MAX\_FILES_OPEN] | handle: file offset of the first byte of an old-format circular read, 0 for every other handle | 4 bytes
 | hCacheBlockID | WORD    NO\_CACHED\_BLOCK[MAX\_FILES_OPEN] | handle: seek cache, the ID of the block the last locate found | 2 bytes
-| hCacheStart | LONG    0[MAX\_FILES_OPEN] | handle: seek cache, the file offset of that block | 4 bytes
+| hCacheStart | LONG    0[MAX\_FILES_OPEN] | handle: seek cache, the file offset of that block's first data byte position (negative for a head block with a data offset) | 4 bytes
 | hCacheOldFmt | BYTE    0[MAX\_FILES_OPEN] | handle: seek cache, T when the file's head block is old format | 1 byte
 | | | | **4,264 bytes / handle**
 
@@ -448,7 +448,7 @@ The end product of this seach is that all file locations are now known in additi
 
 The final pass then clears the blocks still marked B_TEMP, the active blocks no file reaches, by canceling each of them effectively marking each of them as free/not in use.  The body blocks written for a file whose head was never activated are such blocks. This "clearing" of damaged blocks is not a normal case. It only happens when the flash memory has somehow changed state (or aged.). In the case of blocks being found during the mount effort and then canceled an error code **E\_BAD\_BLOCKS_REMOVED** is returned from the mount call: for a block whose CRC did not match, for a block with an out-of-range field, and for a block no file reaches. A duplicate ID alone, which a power loss during a block move leaves, is resolved with no status: mount() returns SUCCESS. This is to allow and application to be able to detect if files are somehow being lost to the aging effects of the flash chip.
 
-can_mount() makes the same reads and the same checks without changing any block. It answers TRUE when mount() would change no block, and FALSE with E_BAD_BLOCKS_REMOVED for a bad block or an unreached one. A duplicate ID alone gives FALSE with error() SUCCESS: a mount would resolve it. A filesystem that is already mounted would not change, so can_mount() answers TRUE.
+can_mount() makes the same reads and the same checks without changing any block. It answers TRUE when mount() would change no block, and FALSE with E_BAD_BLOCKS_REMOVED for a bad block or an unreached one. A duplicate ID alone gives FALSE with error() SUCCESS: a mount would resolve it. A filesystem that is already mounted would not change, so can_mount() answers TRUE. When the check cannot be made, can_mount() answers FALSE and error() holds the reason: E_NO_HANDLE or E_BAD_HANDLE for a driver built with a `MAX_FILES_OPEN` below 1 or a `HANDLE_BASE` other than 0 or 1 (even when mounted), E_NO_LOCK_AVAIL when no hub lock was free, and E_FLASH_TIMEOUT when the chip was still busy.
 
 A mount builds the tables from the flash and frees every handle. A filesystem that is already mounted is left as it is: mount() returns SUCCESS and the open files stay open.
 
@@ -468,7 +468,7 @@ Every public method that reads or changes the filesystem holds one hub lock for 
 - **Taking the lock.** A cog spins on LOCKTRY until it gets the lock. The driver keeps no queue and makes no claim about which waiting cog gets the lock next: that is up to the hub. A cog could in principle wait through many other cogs' calls.
 - **Creating the lock.** The first mount(), format() or can_mount() of the run finds no lock, and the cogs that call at about the same time hold an election: each cog writes its system counter into its slot, waits 10 ms for other cogs to arrive, and the cog with the lowest count (the lower cog ID on a tie) asks the hub for a lock with LOCKNEW. The others wait until the lock exists. If the hub has no free lock, every cog in the election returns E_NO_LOCK_AVAIL and the next call elects again.
 - **Keeping the lock.** The lock is kept from the first mount() until reset or power-off. unmount() does not return it. The driver launches no cog and has no stop call, so there is no later point at which to return it, and it uses exactly one of the hub's 16 locks.
-- **Checks before the lock.** A call tests that the filesystem is mounted and that its arguments are usable before it takes the lock, so a failing call returns at once. It tests both again once it holds the lock.
+- **Checks before the lock.** Every call that needs a mounted filesystem tests that before it takes the lock, and a call that takes a filename tests the name there too, so such a failing call returns at once. The handle and the count of `read()`, `write()` and the typed `rd_`/`wr_` calls are tested once the lock is held. Each of these calls tests the mount again once it holds the lock.
 - **Per-cog results.** error() is kept for each cog, so one cog's failed call never changes what another cog reads from error().
 
 The tables, the handle arrays and the block buffers are in DAT, shared by every cog. A handle belongs to the program, not to a cog: any cog can use a handle another cog opened, and the lock serializes the calls.

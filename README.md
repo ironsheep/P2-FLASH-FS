@@ -38,7 +38,7 @@ Additional pages:
 - [FS Theory of Operations](THEOPSv2.md) - a detailed description of key concepts of this filesystem (See [v1.x FS Theory of...](THEOPS.md) for earlier version)
 - [Memory Sizing Guide](./DOCs/MEMORY-SIZING-GUIDE.md) - what the driver costs in hub RAM, measured with pnut-ts
 - [SPI Performance Analysis](./DOCs/SPI-PERFORMANCE-ANALYSIS.md) - where the time goes in a read, a write and a mount
-- [Regression Testing Status](./RegresssionTests) - regression test code and output logs, certified for each release (**[measured at bench visit 10: TEST_COUNTS]**)
+- [Regression Testing Status](./RegresssionTests) - regression test code and output logs, certified for each release (v2.1.0: 21 programs, 2,126 tests, all passing)
 
 ## Flash Filesystem Features
 
@@ -191,9 +191,9 @@ These are not constants to override:
 Every cog that has the object can call it. The first `mount()` of the run (or `format()` or `can_mount()`) creates the driver's lock; if several cogs call at about the same moment they hold an election, which makes the first call take at least 10 ms. After that, one lock covers the whole filesystem:
 
 - **Each call is exclusive.** A call takes the lock, does all its work, and releases it. No other cog's call runs in between, so a call never sees another call half done. Your program still has to order its own calls: the lock serializes calls, not your sequence of them.
-- **A long call delays the other cogs.** A long `write()`, `create_file()`, `format()` or a `close()` that commits a circular file holds the lock for as long as it takes, and every other cog's call waits. The delay is about **[measured at bench visit 7: LOCK_DELAY_PER_4KB]** for each 4 KB the call writes (a block erase and program), at the clkfreq the figure states.
+- **A long call delays the other cogs.** A long `write()`, `create_file()`, `format()` or a `close()` that commits a circular file holds the lock for as long as it takes, and every other cog's call waits. The delay is about 55 to 59 ms for each 4 KB the call writes (a block erase and program), measured at 320 MHz.
 - **Waiting cogs spin.** A cog waiting for the lock repeats `locktry()` in a loop. It does not sleep, and it does nothing else meanwhile.
-- **No fairness is claimed.** The driver keeps no queue. Which waiting cog gets the lock next is up to the hardware, and a cog could wait through several other cogs' calls. The longest wait we have observed is **[measured at bench visit 5: WORST_LOCK_WAIT]**.
+- **No fairness is claimed.** The driver keeps no queue. Which waiting cog gets the lock next is up to the hardware, and a cog could wait through several other cogs' calls. The longest wait we have observed is 252,513 µs (about a quarter of a second) at 320 MHz: one `wr_str()` or `rd_str()` call in the 8-cog stress test, waiting while other cogs' calls ran. It differs from run to run; four runs gave 149,788 to 252,513 µs.
 - **If you need bounded latency, write in chunks.** Each call to `write()` is its own lock hold. A cog that writes 4 KB at a time lets the other cogs in between the chunks, where one 100 KB call would hold them out for the whole of it.
 - **One hub lock, for the life of the run.** The lock is kept from the first `mount()` until reset or power-off. `unmount()` does not return it, and a call another cog makes after it returns E_NOT_MOUNTED. The driver uses exactly one of the P2's 16 hub locks, and `mount()` returns E_NO_LOCK_AVAIL when none is free.
 - **A device fault is handled as a power loss.** When the flash chip does not finish an erase or program in time, the call that hit it returns E_FLASH_TIMEOUT and the filesystem is left unmounted. The data every open file held and had not yet committed is lost, as at a power cut, in every file and for every cog. Every later call returns E_NOT_MOUNTED until a cog calls `mount()`, which rebuilds the state from the flash.

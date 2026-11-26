@@ -110,7 +110,7 @@ The earlier revision of this page took 8 clocks per byte-bit and no restart, whi
 
 The share of a driver-level block read that this SPI work takes is a bench measurement:
 
-**[measured at bench visit 7: SPI_SHARE]** - the SPI share of block-read time after the Spin2-level speed-up, as a percentage of `read()` time for a 690 KB file, with clkfreq stated.
+Measured on v2.1.0 at 320 MHz: one `read()` that loads a body block and copies its 4,088 data bytes out takes 381,192 ticks (1,191 µs). The raw receive of the same 4 KB block alone (the read command and 4,096 bytes, with the lock taken and released as `read()` does) takes 368,728 ticks (1,152 µs). **The SPI share of a block read is 96.7 %.** Eight measurements gave the same figures, at two bench sessions. The rest, about 39 µs a block, is the Spin2 that finds the block and copies the bytes.
 
 ### Write Throughput (4 KB Block)
 
@@ -253,7 +253,7 @@ The streamer would help reads in two ways:
 **However**, there are two limits:
 
 - A prerequisite is switching from **Read Data (`$03`)** to **Fast Read (`$0B`)**. The `$03` command limits the clock to 50 MHz - even with the streamer, you would only gain from 40 MHz to 50 MHz. Fast Read unlocks the full 133 MHz chip limit.
-- A streamer shortens only the SPI time. What it can gain from a driver-level read is bounded by the SPI share of that read: if SPI is a fraction *s* of the time `read()` takes, the best case is a speed-up of 1 / (1 - *s*), however fast the SPI becomes. The share, after the Spin2 speed-up, is the measurement in [Section 2](#read-throughput-4-kb-block): **[measured at bench visit 7: SPI_SHARE]**.
+- A streamer shortens only the SPI time. What it can gain from a driver-level read is bounded by the SPI share of that read: if SPI is a fraction *s* of the time `read()` takes, the best case is a speed-up of 1 / (1 - *s*), however fast the SPI becomes. The share, after the Spin2 speed-up, is the measurement in [Section 2](#read-throughput-4-kb-block): 96.7 %. A faster SPI is now the only way to make a block read much faster.
 
 Streamer work was ranked behind the Spin2-level work for this reason: v2.0.0 spent most of a read in Spin2, one call per byte, and moving bytes in runs removed that cost first.
 
