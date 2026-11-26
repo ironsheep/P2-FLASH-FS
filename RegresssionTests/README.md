@@ -118,7 +118,7 @@ tools/run_tests.sh --judge RegresssionTests/RT_rmw_extended_tests.log
 
 The runner prints one line per program: `PASS`, `FAIL`, `UNKNOWN` (no usable summary in the log) or, in compile-only mode, `COMPILED`; and a `TOTAL` line. It exits 0 when every program passed or compiled. A program passes when its log carries a `RESULT: PASS` line with equal counts. A plain run writes the log to `RegresssionTests/<program>.log`, replacing the tracked log; a run with `--set` or `--define` writes under `RegresssionTests/build/` so a tracked log is only replaced by a plain run. `tools/run_tests.sh --help` lists everything.
 
-Running a program needs the bench: a P2 Edge on the host's serial port. `--compile-only` needs none and checks only that every program compiles against the driver.
+Running a program needs a P2 Edge on a serial port of the computer. `--compile-only` needs none and checks only that every program compiles against the driver.
 
 #### Determine debug output routing (RT_*.spin2 files)
 

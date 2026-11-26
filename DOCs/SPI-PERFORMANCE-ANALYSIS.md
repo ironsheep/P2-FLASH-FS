@@ -7,13 +7,6 @@ An analysis of the SPI implementation in `flash_fs.spin2`, the W25Q128JV flash c
 - **Hardware**: P2 Edge Module (Rev D) - pins P58-P61
 - **Author**: Stephen M. Moraco, Iron Sheep Productions, LLC
 
-**NOTE:** *An earlier revision of this page (written for v2.0.0) drew four conclusions the driver's own code does not support. This revision corrects them:*
-
-- *It said writes are flash-bound. That ignored the Spin2 cost of moving one byte per call, which v2.0.0 paid for every byte of every `write()`. The Spin2 cost is now a separate line in [Section 2](#write-throughput-4-kb-block).*
-- *It said `mount()` reads 1 byte per block. `mount()` reads the first byte of every block, and then reads every active block in full (4,096 bytes) and checks its CRC. See [Section 2](#mount-time).*
-- *It took the read rate to be 8 system clocks per bit. The receive loop costs about 89 system clocks per byte, because the smart-pin clock restarts for each byte. See [Section 2](#read-throughput-4-kb-block).*
-- *Its streamer advice is valid, but secondary to the Spin2-level work: the streamer can speed up only the SPI share of a read, and [Section 6](#6-could-the-streamer-help) now says how large that share is.*
-
 ---
 
 ## Table of Contents
@@ -106,11 +99,9 @@ That is a count from the source, not a measurement. It gives:
 At 320 MHz:  364,544 / 320 MHz = 1,139 µs per block  (3.6 MB/s)
 ```
 
-The earlier revision of this page took 8 clocks per byte-bit and no restart, which gives 820 µs per block (5.0 MB/s at 320 MHz). The restart and loop overhead add 25 clocks per byte (89 against 64 for the eight bits), so a block read takes about 1.4 times as long as the clocking alone.
+The clocking alone, 8 clocks per bit with no restart, would give 820 µs per block (5.0 MB/s at 320 MHz). The restart and loop overhead add 25 clocks per byte (89 against 64 for the eight bits), so a block read takes about 1.4 times as long as the clocking alone.
 
-The share of a driver-level block read that this SPI work takes is a bench measurement:
-
-Measured on v2.1.0 at 320 MHz: one `read()` that loads a body block and copies its 4,088 data bytes out takes 381,192 ticks (1,191 µs). The raw receive of the same 4 KB block alone (the read command and 4,096 bytes, with the lock taken and released as `read()` does) takes 368,728 ticks (1,152 µs). **The SPI share of a block read is 96.7 %.** Eight measurements gave the same figures, at two bench sessions. The rest, about 39 µs a block, is the Spin2 that finds the block and copies the bytes.
+The share of a driver-level block read that this SPI work takes, measured on v2.1.0 at 320 MHz: one `read()` that loads a body block and copies its 4,088 data bytes out takes 381,192 ticks (1,191 µs). The raw receive of the same 4 KB block alone (the read command and 4,096 bytes, with the lock taken and released as `read()` does) takes 368,728 ticks (1,152 µs). **The SPI share of a block read is 96.7 %.** Eight measurements gave the same figures. The rest, about 39 µs a block, is the Spin2 that finds the block and copies the bytes.
 
 ### Write Throughput (4 KB Block)
 
@@ -125,7 +116,7 @@ Flash time per block:                                  51,400 µs  (51.4 ms)
 Ceiling:  4096 B / 51.4 ms  =  79.7 KB/s
 ```
 
-On top of that, each block pays for the SPI transfers (command bytes, 16 pages of 256 bytes, status polls) and for the Spin2 that moves the caller's bytes into the block buffer. v2.0.0 moved them one byte per call: the reporting user measured about 12 µs per `rd_byte_no_locks` call, and at 4,088 bytes per block the write loop costs about 49 ms of Spin2 per block, serialized with the 51.4 ms of flash time. So v2.0.0 wrote at about half the flash-bound ceiling. v2.1.0 copies runs of bytes with `bytemove` instead.
+On top of that, each block pays for the SPI transfers (command bytes, 16 pages of 256 bytes, status polls) and for the Spin2 that moves the caller's bytes into the block buffer. v2.0.0 moved them one byte per call, at about 12 µs per `rd_byte_no_locks` call, and at 4,088 bytes per block the write loop costs about 49 ms of Spin2 per block, serialized with the 51.4 ms of flash time. So v2.0.0 wrote at about half the flash-bound ceiling. v2.1.0 copies runs of bytes with `bytemove` instead.
 
 Measured on a P2 Edge at 320 MHz (1 µs = 320 ticks), built with pnut-ts v1.55.12; each figure is the median of three runs of each driver:
 
