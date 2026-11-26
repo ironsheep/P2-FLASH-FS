@@ -156,6 +156,30 @@ Measured as above, on a flash holding 104 files in 294 blocks (100 files of 16 b
 
 At 1,139 µs per block, the full reads of the 294 blocks are about 335 ms of the 457 ms `mount()` takes.
 
+### Reads, seeks and the typed calls
+
+Measured as above:
+
+| Read or seek | v2.0.0 ticks | v2.0.0 µs | v2.1.0 ticks | v2.1.0 µs | Change |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 4 KB: `read()` calls | 11,706,848 | 36,583 | 389,696 | 1,217 | 30.0x faster |
+| 64 KB: `read()` calls | 187,088,024 | 584,650 | 6,115,392 | 19,110 | 30.6x faster |
+| 690 KB: `read()` calls | 2,016,909,488 | 6,302,842 | 65,665,464 | 205,204 | 30.7x faster |
+| `seek()` from the start to the last byte of the 690 KB file | 1,942,088 | 6,069 | 1,260,464 | 3,938 | 1.5x faster |
+
+| Call, mean per call | v2.0.0 ticks | v2.0.0 µs | v2.1.0 ticks | v2.1.0 µs | Change |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `wr_byte()`, each byte of a 4 KB file | 9,819 | 30.7 | 10,344 | 32.3 | 5 % slower |
+| `rd_byte()`, each byte of a 4 KB file | 4,349 | 13.6 | 4,882 | 15.3 | 12 % slower |
+| `wr_word()`, each word of a 4 KB file | 17,166 | 53.6 | 14,012 | 43.8 | 1.2x faster |
+| `rd_word()`, each word of a 4 KB file | 8,338 | 26.1 | 5,749 | 18.0 | 1.5x faster |
+| `wr_long()`, each long of a 4 KB file | 32,085 | 100.3 | 22,058 | 68.9 | 1.5x faster |
+| `rd_long()`, each long of a 4 KB file | 13,868 | 43.3 | 5,966 | 18.6 | 2.3x faster |
+| `wr_str()`, 256 strings of 31 characters | 235,609 | 736.3 | 144,304 | 450.9 | 1.6x faster |
+| `rd_str()`, 256 strings of 31 characters, 32-byte buffer | 163,144 | 509.8 | 23,592 | 73.7 | 6.9x faster |
+
+`rd_byte()` and `wr_byte()` are about 1.6 µs per call slower than in v2.0.0. Each call now re-tests the mount after it takes the lock, and releases the lock through the method that unmounts on a device fault; v2.0.0 did neither.
+
 ---
 
 ## 3. Flash Chip Capabilities
