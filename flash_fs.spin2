@@ -2958,8 +2958,10 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
         delete_chain_from_id(hReplacedID[handle], 0, 0, False)
     else
       status := commit_new_chain(handle)                                        '..that holds data: commit it
-      if status < 0 and bFreeHandle                                             '..not committed: no committed block uses the ID its open took
-        field[IDValid][head_block_id]~                                          '....release it
+      if status < 0 and bFreeHandle                                             '..not committed: no committed block uses the IDs it took
+        if fsDeviceFault == FALSE and field[IDToBlock][head_block_id] < BLOCKS  '....no room, and its inactive head copy is on the flash:
+          delete_chain_from_id(head_block_id, 0, 0, false)                      '......cancel and free the copy and the body blocks it links to
+        field[IDValid][head_block_id]~                                          '....release the head block ID its open took
         field[IDToBlock][head_block_id] := 0
 
   elseif hModified[handle] or hTrimPending[handle]                              ' if modified, or committed and still owing its trim

@@ -832,11 +832,15 @@ PRI lastBlockCloseCase(pTitle, mode) | bNewFile, writeBytes, idsTaken, handle, s
     closeError := flash.error()
     expectStatus(@"close()", closeStatus, flash.E_DRIVE_FULL)
     expectStatus(@"error() after close()", closeError, flash.E_DRIVE_FULL)
-    ' a new file is not created, so no committed block uses its head block ID and the close gives it back; the IDs of a file that exists are kept
-    expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + idsTaken)
+    ' a new file is not created, so the close cancels the blocks it wrote and gives back every ID it took; the IDs of a file that exists are kept
+    if bNewFile
+      expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + NEW_SPAN_BLOCKS)
+    else
+      expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + idsTaken)
   if bNewFile
     expectValue(@"exists() of the file", flash.exists(@caseFile), FALSE)
-    ' the blocks the failed close left written are not part of any file, so the next mount() frees them
+    expectValue(@"free blocks after close()", freeBlockCount(), NEW_SPAN_BLOCKS)
+    ' nothing the failed close wrote is left on the flash, so the remount finds no block to cancel
     remountChecks()
     expectValue(@"free blocks after mount()", freeBlockCount(), NEW_SPAN_BLOCKS)
     expectValue(@"exists() of the file after mount()", flash.exists(@caseFile), FALSE)
