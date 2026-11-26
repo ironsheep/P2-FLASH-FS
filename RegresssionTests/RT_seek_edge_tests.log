@@ -1,0 +1,596 @@
+=== Headless Mode Session Started at 2026-11-25T17:47:04.831 ===
+PNut-Term-TS: v1.1.2
+Mode: Headless (no GUI)
+End Markers: "END_SESSION", "DEBUG_END_SESSION"
+Timeout: 180 seconds
+=====================================
+
+[2026-11-25T17:47:04.829] [SYSTEM] Headless mode started
+[2026-11-25T17:47:04.829] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-25T17:47:04.830] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-25T17:47:04.872] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-25T17:47:04.872] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_seek_edge_tests.bin to RAM
+[2026-11-25T17:47:05.238] 
+[2026-11-25T17:47:05.239] Prop_Ver G
+[2026-11-25T17:47:06.501] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_seek_edge_tests.bin
+[2026-11-25T17:47:06.511] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-25T17:47:06.526] Cog0  INIT $0000_0FA8 $0001_3C6C jump
+[2026-11-25T17:47:06.645] Cog0  * init VAR
+[2026-11-25T17:47:06.645] Cog0  * Random seed (cog 0): $7D0E_E17C
+[2026-11-25T17:47:06.645] Cog0   
+[2026-11-25T17:47:06.646] Cog0  * Test #1: driver instance matches the harness instance
+[2026-11-25T17:47:06.646] Cog0    MAX_FILES_OPEN: 2
+[2026-11-25T17:47:06.646] Cog0     -> pass
+[2026-11-25T17:47:06.646] Cog0   
+[2026-11-25T17:47:06.646] Cog0  * Environment: Chip S/N and Driver Version
+[2026-11-25T17:47:06.646] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:47:06.646] Cog0     Driver: flash_fs v2.1.0
+[2026-11-25T17:47:06.646] Cog0   
+[2026-11-25T17:47:06.646] Cog0   
+[2026-11-25T17:47:06.647] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:06.647] Cog0  * Test Group: negative seeks
+[2026-11-25T17:47:06.647] Cog0   
+[2026-11-25T17:47:06.663] Cog0  * Test #2: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:06.747] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:06.747] Cog0     -> pass
+[2026-11-25T17:47:06.747] Cog0   
+[2026-11-25T17:47:06.754] Cog0  * Test #3: set up a one block file
+[2026-11-25T17:47:06.754] Cog0  * wr_block() block_address = $0DC4, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:06.769] Cog0  - program_block() block_address = $0DC4
+[2026-11-25T17:47:06.808] Cog0  - activate_block() block_address = $0DC4
+[2026-11-25T17:47:06.808] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:06.808] Cog0     -> pass
+[2026-11-25T17:47:06.815] Cog0   
+[2026-11-25T17:47:06.815] Cog0  * Test #4: open(,r) for negative seeks
+[2026-11-25T17:47:06.816] Cog0    open(,r) for negative seeks: 0
+[2026-11-25T17:47:06.816] Cog0     -> pass
+[2026-11-25T17:47:06.816] Cog0   
+[2026-11-25T17:47:06.816] Cog0  * Test #5: negative absolute seeks are refused and leave the position alone
+[2026-11-25T17:47:06.817] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:47:06.817] Cog0     -> pass
+[2026-11-25T17:47:06.817] Cog0   
+[2026-11-25T17:47:06.820] Cog0  * Test #6: negative relative seek before the first byte is refused and leaves the position alone
+[2026-11-25T17:47:06.820] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:06.820] Cog0     -> pass
+[2026-11-25T17:47:06.820] Cog0   
+[2026-11-25T17:47:06.823] Cog0  * Test #7: negative relative seeks inside the file move backward
+[2026-11-25T17:47:06.824] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:47:06.824] Cog0     -> pass
+[2026-11-25T17:47:06.824] Cog0   
+[2026-11-25T17:47:06.824] Cog0   
+[2026-11-25T17:47:06.824] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:06.824] Cog0  * Test Group: seek to the end of a file
+[2026-11-25T17:47:06.825] Cog0   
+[2026-11-25T17:47:06.840] Cog0  * Test #8: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:06.872] Cog0  - cancel_block() block_address = $0DC4
+[2026-11-25T17:47:06.936] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:06.936] Cog0     -> pass
+[2026-11-25T17:47:06.936] Cog0   
+[2026-11-25T17:47:06.942] Cog0  * Test #9: set up a file shorter than a block
+[2026-11-25T17:47:06.957] Cog0  * wr_block() block_address = $059C, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:06.957] Cog0  - program_block() block_address = $059C
+[2026-11-25T17:47:06.991] Cog0  - activate_block() block_address = $059C
+[2026-11-25T17:47:06.991] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:06.991] Cog0     -> pass
+[2026-11-25T17:47:06.995] Cog0   
+[2026-11-25T17:47:06.995] Cog0  * Test #10: open(,r) to seek to the end
+[2026-11-25T17:47:06.996] Cog0    open(,r) to seek to the end: 0
+[2026-11-25T17:47:06.996] Cog0     -> pass
+[2026-11-25T17:47:06.996] Cog0   
+[2026-11-25T17:47:07.001] Cog0  * Test #11: seek to exactly the end, one byte past it, and to POSX
+[2026-11-25T17:47:07.002] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:47:07.002] Cog0     -> pass
+[2026-11-25T17:47:07.002] Cog0   
+[2026-11-25T17:47:07.004] Cog0  * Test #12: set up a file that fills its block
+[2026-11-25T17:47:07.005] Cog0  * wr_block() block_address = $093D, block_id = 0, NextID_EndPtr = $0FFC
+[2026-11-25T17:47:07.020] Cog0  - program_block() block_address = $093D
+[2026-11-25T17:47:07.059] Cog0  - activate_block() block_address = $093D
+[2026-11-25T17:47:07.060] Cog0  * delChnFmID() [$059C] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:47:07.060] Cog0  - cancel_block() block_address = $059C
+[2026-11-25T17:47:07.060] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:07.061] Cog0     -> pass
+[2026-11-25T17:47:07.061] Cog0   
+[2026-11-25T17:47:07.066] Cog0  * Test #13: open(,r) on a file that fills its block
+[2026-11-25T17:47:07.066] Cog0    open(,r) on a file that fills its block: 0
+[2026-11-25T17:47:07.066] Cog0     -> pass
+[2026-11-25T17:47:07.066] Cog0   
+[2026-11-25T17:47:07.068] Cog0  * Test #14: seek to the end of a file that fills its last block
+[2026-11-25T17:47:07.068] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:07.068] Cog0     -> pass
+[2026-11-25T17:47:07.068] Cog0   
+[2026-11-25T17:47:07.069] Cog0   
+[2026-11-25T17:47:07.069] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:07.069] Cog0  * Test Group: relative seeks follow the file offset
+[2026-11-25T17:47:07.069] Cog0   
+[2026-11-25T17:47:07.085] Cog0  * Test #15: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:07.101] Cog0  - cancel_block() block_address = $093D
+[2026-11-25T17:47:07.181] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:07.181] Cog0     -> pass
+[2026-11-25T17:47:07.181] Cog0   
+[2026-11-25T17:47:07.187] Cog0  * Test #16: set up a two block file
+[2026-11-25T17:47:07.187] Cog0  * wr_block() block_address = $07F1, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:47:07.203] Cog0  - program_block() block_address = $07F1
+[2026-11-25T17:47:07.240] Cog0  * wr_block() block_address = $03DB, block_id = 1, NextID_EndPtr = $00CC
+[2026-11-25T17:47:07.257] Cog0  - program_block() block_address = $03DB
+[2026-11-25T17:47:07.288] Cog0  - activate_block() block_address = $03DB
+[2026-11-25T17:47:07.288] Cog0  - activate_block() block_address = $07F1
+[2026-11-25T17:47:07.288] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:07.288] Cog0     -> pass
+[2026-11-25T17:47:07.288] Cog0   
+[2026-11-25T17:47:07.293] Cog0  * Test #17: open(,r) for relative seeks across blocks
+[2026-11-25T17:47:07.293] Cog0    open(,r) for relative seeks across blocks: 0
+[2026-11-25T17:47:07.293] Cog0     -> pass
+[2026-11-25T17:47:07.294] Cog0   
+[2026-11-25T17:47:07.300] Cog0  * Test #18: relative seeks across the block boundary and to the end
+[2026-11-25T17:47:07.300] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:47:07.300] Cog0     -> pass
+[2026-11-25T17:47:07.300] Cog0   
+[2026-11-25T17:47:07.305] Cog0  * Test #19: open(,r+) for a relative seek after a write
+[2026-11-25T17:47:07.305] Cog0    open(,r+) for a relative seek after a write: 0
+[2026-11-25T17:47:07.305] Cog0     -> pass
+[2026-11-25T17:47:07.305] Cog0   
+[2026-11-25T17:47:07.306] Cog0  * Test #20: relative seek moves on from the end of a write
+[2026-11-25T17:47:07.306] Cog0  * program_updated_block() block_address = $09B2
+[2026-11-25T17:47:07.321] Cog0  - program_block() block_address = $09B2
+[2026-11-25T17:47:07.358] Cog0  - activate_block() block_address = $09B2
+[2026-11-25T17:47:07.358] Cog0  - cancel_block() block_address = $07F1
+[2026-11-25T17:47:07.358] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:07.358] Cog0     -> pass
+[2026-11-25T17:47:07.358] Cog0   
+[2026-11-25T17:47:07.358] Cog0   
+[2026-11-25T17:47:07.359] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:07.359] Cog0  * Test Group: invalid whence values
+[2026-11-25T17:47:07.359] Cog0   
+[2026-11-25T17:47:07.370] Cog0  * Test #21: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:07.386] Cog0  - cancel_block() block_address = $03DB
+[2026-11-25T17:47:07.402] Cog0  - cancel_block() block_address = $09B2
+[2026-11-25T17:47:07.461] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:07.461] Cog0     -> pass
+[2026-11-25T17:47:07.461] Cog0   
+[2026-11-25T17:47:07.467] Cog0  * Test #22: set up a one block file
+[2026-11-25T17:47:07.467] Cog0  * wr_block() block_address = $0933, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:07.482] Cog0  - program_block() block_address = $0933
+[2026-11-25T17:47:07.514] Cog0  - activate_block() block_address = $0933
+[2026-11-25T17:47:07.515] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:07.515] Cog0     -> pass
+[2026-11-25T17:47:07.515] Cog0   
+[2026-11-25T17:47:07.520] Cog0  * Test #23: open(,r) to seek with a bad whence
+[2026-11-25T17:47:07.520] Cog0    open(,r) to seek with a bad whence: 0
+[2026-11-25T17:47:07.521] Cog0     -> pass
+[2026-11-25T17:47:07.521] Cog0   
+[2026-11-25T17:47:07.522] Cog0  * Test #24: whence 0 and the value above SK_CURRENT_POSN are refused
+[2026-11-25T17:47:07.523] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:47:07.523] Cog0     -> pass
+[2026-11-25T17:47:07.523] Cog0   
+[2026-11-25T17:47:07.523] Cog0   
+[2026-11-25T17:47:07.523] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:07.523] Cog0  * Test Group: seek on an append handle
+[2026-11-25T17:47:07.523] Cog0   
+[2026-11-25T17:47:07.539] Cog0  * Test #25: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:07.555] Cog0  - cancel_block() block_address = $0933
+[2026-11-25T17:47:07.624] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:07.624] Cog0     -> pass
+[2026-11-25T17:47:07.624] Cog0   
+[2026-11-25T17:47:07.630] Cog0  * Test #26: set up an existing file
+[2026-11-25T17:47:07.630] Cog0  * wr_block() block_address = $0A24, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:07.647] Cog0  - program_block() block_address = $0A24
+[2026-11-25T17:47:07.680] Cog0  - activate_block() block_address = $0A24
+[2026-11-25T17:47:07.680] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:07.680] Cog0     -> pass
+[2026-11-25T17:47:07.685] Cog0   
+[2026-11-25T17:47:07.685] Cog0  * Test #27: open(,a) on an existing file
+[2026-11-25T17:47:07.686] Cog0    open(,a) on an existing file: 0
+[2026-11-25T17:47:07.686] Cog0     -> pass
+[2026-11-25T17:47:07.686] Cog0   
+[2026-11-25T17:47:07.690] Cog0  * Test #28: seek on an append handle is refused and the file is unchanged
+[2026-11-25T17:47:07.691] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:47:07.691] Cog0     -> pass
+[2026-11-25T17:47:07.691] Cog0   
+[2026-11-25T17:47:07.691] Cog0   
+[2026-11-25T17:47:07.691] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:07.692] Cog0  * Test Group: seek past the circular limit
+[2026-11-25T17:47:07.692] Cog0   
+[2026-11-25T17:47:07.708] Cog0  * Test #29: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:07.724] Cog0  - cancel_block() block_address = $0A24
+[2026-11-25T17:47:07.797] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:07.797] Cog0     -> pass
+[2026-11-25T17:47:07.797] Cog0   
+[2026-11-25T17:47:07.803] Cog0  * Test #30: set up a file longer than the limit
+[2026-11-25T17:47:07.819] Cog0  * wr_block() block_address = $0507, block_id = 0, NextID_EndPtr = $0858
+[2026-11-25T17:47:07.819] Cog0  - program_block() block_address = $0507
+[2026-11-25T17:47:07.855] Cog0  - activate_block() block_address = $0507
+[2026-11-25T17:47:07.855] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:07.855] Cog0     -> pass
+[2026-11-25T17:47:07.855] Cog0   
+[2026-11-25T17:47:07.859] Cog0  * Test #31: open_circular(,r) with a limit below the file length
+[2026-11-25T17:47:07.859] Cog0    open_circular(,r) with a limit below the file length: 0
+[2026-11-25T17:47:07.859] Cog0     -> pass
+[2026-11-25T17:47:07.859] Cog0   
+[2026-11-25T17:47:07.862] Cog0  * Test #32: absolute seek stops at the limit
+[2026-11-25T17:47:07.862] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:07.862] Cog0     -> pass
+[2026-11-25T17:47:07.862] Cog0   
+[2026-11-25T17:47:07.865] Cog0  * Test #33: relative seek stops at the limit
+[2026-11-25T17:47:07.866] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:07.866] Cog0     -> pass
+[2026-11-25T17:47:07.866] Cog0   
+[2026-11-25T17:47:07.866] Cog0   
+[2026-11-25T17:47:07.866] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:07.866] Cog0  * Test Group: seek after an edit
+[2026-11-25T17:47:07.866] Cog0   
+[2026-11-25T17:47:07.883] Cog0  * Test #34: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:07.883] Cog0  - cancel_block() block_address = $0507
+[2026-11-25T17:47:07.968] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:07.968] Cog0     -> pass
+[2026-11-25T17:47:07.968] Cog0   
+[2026-11-25T17:47:07.973] Cog0  * Test #35: set up the file to edit
+[2026-11-25T17:47:07.974] Cog0  * wr_block() block_address = $00B1, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:07.990] Cog0  - program_block() block_address = $00B1
+[2026-11-25T17:47:08.020] Cog0  - activate_block() block_address = $00B1
+[2026-11-25T17:47:08.020] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:08.020] Cog0     -> pass
+[2026-11-25T17:47:08.020] Cog0   
+[2026-11-25T17:47:08.022] Cog0  * Test #36: open(,r+) to seek within the block after an edit
+[2026-11-25T17:47:08.022] Cog0    open(,r+) to seek within the block after an edit: 0
+[2026-11-25T17:47:08.022] Cog0     -> pass
+[2026-11-25T17:47:08.022] Cog0   
+[2026-11-25T17:47:08.023] Cog0  * Test #37: edit, seek away and back, and read the edit back
+[2026-11-25T17:47:08.023] Cog0  * program_updated_block() block_address = $0EC8
+[2026-11-25T17:47:08.039] Cog0  - program_block() block_address = $0EC8
+[2026-11-25T17:47:08.072] Cog0  - activate_block() block_address = $0EC8
+[2026-11-25T17:47:08.072] Cog0  - cancel_block() block_address = $00B1
+[2026-11-25T17:47:08.073] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:47:08.073] Cog0     -> pass
+[2026-11-25T17:47:08.073] Cog0   
+[2026-11-25T17:47:08.088] Cog0  * Test #38: file holds the edit after the handle closes
+[2026-11-25T17:47:08.092] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:08.092] Cog0     -> pass
+[2026-11-25T17:47:08.092] Cog0   
+[2026-11-25T17:47:08.108] Cog0  * Test #39: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:08.140] Cog0  - cancel_block() block_address = $0EC8
+[2026-11-25T17:47:08.204] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:08.204] Cog0     -> pass
+[2026-11-25T17:47:08.204] Cog0   
+[2026-11-25T17:47:08.210] Cog0  * Test #40: set up the file to edit
+[2026-11-25T17:47:08.210] Cog0  * wr_block() block_address = $030F, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:47:08.226] Cog0  - program_block() block_address = $030F
+[2026-11-25T17:47:08.263] Cog0  * wr_block() block_address = $03DB, block_id = 1, NextID_EndPtr = $00CC
+[2026-11-25T17:47:08.279] Cog0  - program_block() block_address = $03DB
+[2026-11-25T17:47:08.310] Cog0  - activate_block() block_address = $03DB
+[2026-11-25T17:47:08.310] Cog0  - activate_block() block_address = $030F
+[2026-11-25T17:47:08.311] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:08.311] Cog0     -> pass
+[2026-11-25T17:47:08.311] Cog0   
+[2026-11-25T17:47:08.314] Cog0  * Test #41: open(,r+) to seek to another block after an edit
+[2026-11-25T17:47:08.314] Cog0    open(,r+) to seek to another block after an edit: 0
+[2026-11-25T17:47:08.314] Cog0     -> pass
+[2026-11-25T17:47:08.314] Cog0   
+[2026-11-25T17:47:08.315] Cog0  * Test #42: edit, seek away and back, and read the edit back
+[2026-11-25T17:47:08.315] Cog0  * program_updated_block() block_address = $0965
+[2026-11-25T17:47:08.331] Cog0  - program_block() block_address = $0965
+[2026-11-25T17:47:08.368] Cog0  - activate_block() block_address = $0965
+[2026-11-25T17:47:08.371] Cog0  - cancel_block() block_address = $030F
+[2026-11-25T17:47:08.371] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:47:08.371] Cog0     -> pass
+[2026-11-25T17:47:08.371] Cog0   
+[2026-11-25T17:47:08.386] Cog0  * Test #43: file holds the edit after the handle closes
+[2026-11-25T17:47:08.390] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:08.390] Cog0     -> pass
+[2026-11-25T17:47:08.390] Cog0   
+[2026-11-25T17:47:08.390] Cog0   
+[2026-11-25T17:47:08.390] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:08.391] Cog0  * Test Group: size of a trimmed circular file
+[2026-11-25T17:47:08.391] Cog0   
+[2026-11-25T17:47:08.401] Cog0  * Test #44: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:08.416] Cog0  - cancel_block() block_address = $03DB
+[2026-11-25T17:47:08.432] Cog0  - cancel_block() block_address = $0965
+[2026-11-25T17:47:08.491] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:08.491] Cog0     -> pass
+[2026-11-25T17:47:08.491] Cog0   
+[2026-11-25T17:47:08.497] Cog0  * Test #45: open_circular(,a) with a limit that keeps data from deep inside the second block
+[2026-11-25T17:47:08.498] Cog0    open_circular(,a) with a limit that keeps data from deep inside the second block: 0
+[2026-11-25T17:47:08.498] Cog0     -> pass
+[2026-11-25T17:47:08.498] Cog0   
+[2026-11-25T17:47:08.510] Cog0  * Test #46: write past the limit, then close
+[2026-11-25T17:47:08.510] Cog0  * wr_block() block_address = $0359, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:47:08.526] Cog0  - program_block() block_address = $0359
+[2026-11-25T17:47:08.575] Cog0  * wr_block() block_address = $008C, block_id = 1, NextID_EndPtr = $0002
+[2026-11-25T17:47:08.590] Cog0  - program_block() block_address = $008C
+[2026-11-25T17:47:08.637] Cog0  - activate_block() block_address = $008C
+[2026-11-25T17:47:08.653] Cog0  * wr_block() block_address = $0B71, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:47:08.653] Cog0  - program_block() block_address = $0B71
+[2026-11-25T17:47:08.688] Cog0  - activate_block() block_address = $0B71
+[2026-11-25T17:47:08.703] Cog0  * wr_block() block_address = $0119, block_id = 3, NextID_EndPtr = $01F8
+[2026-11-25T17:47:08.703] Cog0  - program_block() block_address = $0119
+[2026-11-25T17:47:08.734] Cog0  - activate_block() block_address = $0119
+[2026-11-25T17:47:08.735] Cog0  - activate_block() block_address = $0359
+[2026-11-25T17:47:08.736] Cog0  * froncate(id=0, 5_000) size_in_bytes = 12_632, new_head_block_id = 1, block_offset = $0E60(3_680)
+[2026-11-25T17:47:08.737] Cog0  - header [$050F] thisID=0, nextID=2, sig=[$0020_007D]
+[2026-11-25T17:47:08.752] Cog0  * program_updated_block() block_address = $050F
+[2026-11-25T17:47:08.752] Cog0  - program_block() block_address = $050F
+[2026-11-25T17:47:08.790] Cog0  - activate_block() block_address = $050F
+[2026-11-25T17:47:08.791] Cog0  * delChnFmID() [$0359] block_id = 0, EndID = 1, delete_mode = 1, KeepFirstIDValid = -1
+[2026-11-25T17:47:08.791] Cog0  - cancel_block() block_address = $0359
+[2026-11-25T17:47:08.791] Cog0  - cancel_block() block_address = $008C
+[2026-11-25T17:47:08.791] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:08.791] Cog0     -> pass
+[2026-11-25T17:47:08.795] Cog0   
+[2026-11-25T17:47:08.795] Cog0  * Test #47: open(,r) to read the trimmed file
+[2026-11-25T17:47:08.795] Cog0    open(,r) to read the trimmed file: 0
+[2026-11-25T17:47:08.795] Cog0     -> pass
+[2026-11-25T17:47:08.795] Cog0   
+[2026-11-25T17:47:08.811] Cog0  * Test #48: file holds the newest bytes, as many as the limit
+[2026-11-25T17:47:08.816] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:08.816] Cog0     -> pass
+[2026-11-25T17:47:08.816] Cog0   
+[2026-11-25T17:47:08.818] Cog0  * Test #49: file_size() reports the bytes that can be read
+[2026-11-25T17:47:08.819] Cog0  * file_size() 5_000, bytes readable 5_000, difference 0
+[2026-11-25T17:47:08.819] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:47:08.819] Cog0     -> pass
+[2026-11-25T17:47:08.819] Cog0   
+[2026-11-25T17:47:08.822] Cog0  * Test #50: file_size_unused() and directory() agree with the bytes that can be read
+[2026-11-25T17:47:08.822] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:47:08.822] Cog0     -> pass
+[2026-11-25T17:47:08.822] Cog0   
+[2026-11-25T17:47:08.826] Cog0  * Test #51: open(,r) to seek in the trimmed file
+[2026-11-25T17:47:08.826] Cog0    open(,r) to seek in the trimmed file: 0
+[2026-11-25T17:47:08.826] Cog0     -> pass
+[2026-11-25T17:47:08.826] Cog0   
+[2026-11-25T17:47:08.829] Cog0  * Test #52: seek reaches the last readable byte and not past it
+[2026-11-25T17:47:08.829] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:08.829] Cog0     -> pass
+[2026-11-25T17:47:08.829] Cog0   
+[2026-11-25T17:47:08.833] Cog0  * Test #53: open_circular(,a) to append to the trimmed file
+[2026-11-25T17:47:08.834] Cog0    open_circular(,a) to append to the trimmed file: 0
+[2026-11-25T17:47:08.834] Cog0     -> pass
+[2026-11-25T17:47:08.834] Cog0   
+[2026-11-25T17:47:08.834] Cog0  * Test #54: file_size_for_handle() of an append handle counts the readable bytes and the bytes appended
+[2026-11-25T17:47:08.835] Cog0  * wr_block() block_address = $0D4A, block_id = 3, NextID_EndPtr = $022A
+[2026-11-25T17:47:08.850] Cog0  - program_block() block_address = $0D4A
+[2026-11-25T17:47:08.884] Cog0  - activate_block() block_address = $0D4A
+[2026-11-25T17:47:08.884] Cog0  * delChnFmID() [$0119] block_id = 3, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:47:08.885] Cog0  - cancel_block() block_address = $0119
+[2026-11-25T17:47:08.886] Cog0  * froncate(id=0, 5_000) size_in_bytes = 5_050, new_head_block_id = 0, block_offset = $0E92(3_730)
+[2026-11-25T17:47:08.887] Cog0  - header [$0E7F] thisID=0, nextID=2, sig=[$0020_00BD]
+[2026-11-25T17:47:08.887] Cog0  * program_updated_block() block_address = $0E7F
+[2026-11-25T17:47:08.902] Cog0  - program_block() block_address = $0E7F
+[2026-11-25T17:47:08.943] Cog0  - activate_block() block_address = $0E7F
+[2026-11-25T17:47:08.944] Cog0  * delChnFmID() [$050F] block_id = 0, EndID = 0, delete_mode = 1, KeepFirstIDValid = -1
+[2026-11-25T17:47:08.950] Cog0  - cancel_block() block_address = $050F
+[2026-11-25T17:47:08.950] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:08.950] Cog0     -> pass
+[2026-11-25T17:47:08.950] Cog0   
+[2026-11-25T17:47:08.965] Cog0  * Test #55: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:08.982] Cog0  - cancel_block() block_address = $0B71
+[2026-11-25T17:47:08.988] Cog0  - cancel_block() block_address = $0D4A
+[2026-11-25T17:47:09.005] Cog0  - cancel_block() block_address = $0E7F
+[2026-11-25T17:47:09.050] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:09.050] Cog0     -> pass
+[2026-11-25T17:47:09.050] Cog0   
+[2026-11-25T17:47:09.057] Cog0  * Test #56: open_circular(,a) with a limit that keeps data from just inside the second block
+[2026-11-25T17:47:09.057] Cog0    open_circular(,a) with a limit that keeps data from just inside the second block: 0
+[2026-11-25T17:47:09.057] Cog0     -> pass
+[2026-11-25T17:47:09.057] Cog0   
+[2026-11-25T17:47:09.069] Cog0  * Test #57: write past the limit, then close
+[2026-11-25T17:47:09.069] Cog0  * wr_block() block_address = $05ED, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:47:09.084] Cog0  - program_block() block_address = $05ED
+[2026-11-25T17:47:09.135] Cog0  * wr_block() block_address = $05C0, block_id = 1, NextID_EndPtr = $0002
+[2026-11-25T17:47:09.150] Cog0  - program_block() block_address = $05C0
+[2026-11-25T17:47:09.199] Cog0  - activate_block() block_address = $05C0
+[2026-11-25T17:47:09.203] Cog0  * wr_block() block_address = $0BAE, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:47:09.219] Cog0  - program_block() block_address = $0BAE
+[2026-11-25T17:47:09.260] Cog0  - activate_block() block_address = $0BAE
+[2026-11-25T17:47:09.276] Cog0  * wr_block() block_address = $0236, block_id = 3, NextID_EndPtr = $01F8
+[2026-11-25T17:47:09.276] Cog0  - program_block() block_address = $0236
+[2026-11-25T17:47:09.311] Cog0  - activate_block() block_address = $0236
+[2026-11-25T17:47:09.311] Cog0  - activate_block() block_address = $05ED
+[2026-11-25T17:47:09.312] Cog0  * froncate(id=0, 8_666) size_in_bytes = 12_632, new_head_block_id = 1, block_offset = $000E(14)
+[2026-11-25T17:47:09.313] Cog0  * froncate(id=0, 8_666) size_in_bytes = 12_632, AWAKEN PRIOR HEAD prior_block_id = 0
+[2026-11-25T17:47:09.314] Cog0  - header [$024D] thisID=0, nextID=1, sig=[$0010_007D]
+[2026-11-25T17:47:09.314] Cog0  * program_updated_block() block_address = $024D
+[2026-11-25T17:47:09.330] Cog0  - program_block() block_address = $024D
+[2026-11-25T17:47:09.366] Cog0  - activate_block() block_address = $024D
+[2026-11-25T17:47:09.366] Cog0  * delChnFmID() [$05ED] block_id = 0, EndID = 0, delete_mode = 1, KeepFirstIDValid = -1
+[2026-11-25T17:47:09.367] Cog0  - cancel_block() block_address = $05ED
+[2026-11-25T17:47:09.367] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:09.367] Cog0     -> pass
+[2026-11-25T17:47:09.367] Cog0   
+[2026-11-25T17:47:09.370] Cog0  * Test #58: open(,r) to read the trimmed file
+[2026-11-25T17:47:09.370] Cog0    open(,r) to read the trimmed file: 0
+[2026-11-25T17:47:09.370] Cog0     -> pass
+[2026-11-25T17:47:09.370] Cog0   
+[2026-11-25T17:47:09.386] Cog0  * Test #59: file holds the newest bytes, as many as the limit
+[2026-11-25T17:47:09.403] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:09.404] Cog0     -> pass
+[2026-11-25T17:47:09.404] Cog0   
+[2026-11-25T17:47:09.405] Cog0  * Test #60: file_size() reports the bytes that can be read
+[2026-11-25T17:47:09.405] Cog0  * file_size() 8_666, bytes readable 8_666, difference 0
+[2026-11-25T17:47:09.405] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:47:09.405] Cog0     -> pass
+[2026-11-25T17:47:09.405] Cog0   
+[2026-11-25T17:47:09.407] Cog0  * Test #61: file_size_unused() and directory() agree with the bytes that can be read
+[2026-11-25T17:47:09.407] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:47:09.407] Cog0     -> pass
+[2026-11-25T17:47:09.408] Cog0   
+[2026-11-25T17:47:09.410] Cog0  * Test #62: open(,r) to seek in the trimmed file
+[2026-11-25T17:47:09.410] Cog0    open(,r) to seek in the trimmed file: 0
+[2026-11-25T17:47:09.410] Cog0     -> pass
+[2026-11-25T17:47:09.410] Cog0   
+[2026-11-25T17:47:09.413] Cog0  * Test #63: seek reaches the last readable byte and not past it
+[2026-11-25T17:47:09.414] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:09.414] Cog0     -> pass
+[2026-11-25T17:47:09.414] Cog0   
+[2026-11-25T17:47:09.417] Cog0  * Test #64: open_circular(,a) to append to the trimmed file
+[2026-11-25T17:47:09.417] Cog0    open_circular(,a) to append to the trimmed file: 0
+[2026-11-25T17:47:09.417] Cog0     -> pass
+[2026-11-25T17:47:09.417] Cog0   
+[2026-11-25T17:47:09.418] Cog0  * Test #65: file_size_for_handle() of an append handle counts the readable bytes and the bytes appended
+[2026-11-25T17:47:09.418] Cog0  * wr_block() block_address = $0D31, block_id = 3, NextID_EndPtr = $022A
+[2026-11-25T17:47:09.434] Cog0  - program_block() block_address = $0D31
+[2026-11-25T17:47:09.466] Cog0  - activate_block() block_address = $0D31
+[2026-11-25T17:47:09.466] Cog0  * delChnFmID() [$0236] block_id = 3, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:47:09.466] Cog0  - cancel_block() block_address = $0236
+[2026-11-25T17:47:09.467] Cog0  * froncate(id=0, 8_666) size_in_bytes = 8_716, new_head_block_id = 1, block_offset = $0040(64)
+[2026-11-25T17:47:09.469] Cog0  * froncate(id=0, 8_666) size_in_bytes = 8_716, AWAKEN PRIOR HEAD prior_block_id = 0
+[2026-11-25T17:47:09.469] Cog0  - header [$0537] thisID=0, nextID=1, sig=[$0010_00BD]
+[2026-11-25T17:47:09.485] Cog0  * program_updated_block() block_address = $0537
+[2026-11-25T17:47:09.485] Cog0  - program_block() block_address = $0537
+[2026-11-25T17:47:09.521] Cog0  - activate_block() block_address = $0537
+[2026-11-25T17:47:09.521] Cog0  * delChnFmID() [$024D] block_id = 0, EndID = 0, delete_mode = 1, KeepFirstIDValid = -1
+[2026-11-25T17:47:09.524] Cog0  - cancel_block() block_address = $024D
+[2026-11-25T17:47:09.524] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:09.524] Cog0     -> pass
+[2026-11-25T17:47:09.524] Cog0   
+[2026-11-25T17:47:09.524] Cog0   
+[2026-11-25T17:47:09.524] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:09.525] Cog0  * Test Group: seek to the end of an empty file
+[2026-11-25T17:47:09.525] Cog0   
+[2026-11-25T17:47:09.539] Cog0  * Test #66: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:09.540] Cog0  - cancel_block() block_address = $0537
+[2026-11-25T17:47:09.557] Cog0  - cancel_block() block_address = $05C0
+[2026-11-25T17:47:09.557] Cog0  - cancel_block() block_address = $0BAE
+[2026-11-25T17:47:09.573] Cog0  - cancel_block() block_address = $0D31
+[2026-11-25T17:47:09.626] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:09.626] Cog0     -> pass
+[2026-11-25T17:47:09.626] Cog0   
+[2026-11-25T17:47:09.632] Cog0  * Test #67: open(,w+) on a new file
+[2026-11-25T17:47:09.632] Cog0    open(,w+) on a new file: 0
+[2026-11-25T17:47:09.632] Cog0     -> pass
+[2026-11-25T17:47:09.632] Cog0   
+[2026-11-25T17:47:09.633] Cog0  * Test #68: seek to POSX in a new w+ file before any write
+[2026-11-25T17:47:09.633] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:09.633] Cog0     -> pass
+[2026-11-25T17:47:09.633] Cog0   
+[2026-11-25T17:47:09.633] Cog0   
+[2026-11-25T17:47:09.634] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:09.634] Cog0  * Test Group: seek into bytes written past the end and not flushed
+[2026-11-25T17:47:09.634] Cog0   
+[2026-11-25T17:47:09.650] Cog0  * Test #69: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:09.735] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:09.735] Cog0     -> pass
+[2026-11-25T17:47:09.735] Cog0   
+[2026-11-25T17:47:09.741] Cog0  * Test #70: set up the file to extend
+[2026-11-25T17:47:09.741] Cog0  * wr_block() block_address = $0C8C, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:09.757] Cog0  - program_block() block_address = $0C8C
+[2026-11-25T17:47:09.793] Cog0  - activate_block() block_address = $0C8C
+[2026-11-25T17:47:09.794] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:09.794] Cog0     -> pass
+[2026-11-25T17:47:09.800] Cog0   
+[2026-11-25T17:47:09.800] Cog0  * Test #71: open(,r+) to extend the file
+[2026-11-25T17:47:09.800] Cog0    open(,r+) to extend the file: 0
+[2026-11-25T17:47:09.800] Cog0     -> pass
+[2026-11-25T17:47:09.800] Cog0   
+[2026-11-25T17:47:09.801] Cog0  * Test #72: extend, seek into the extension and read it back
+[2026-11-25T17:47:09.801] Cog0  * program_updated_block() block_address = $0C2A
+[2026-11-25T17:47:09.817] Cog0  - program_block() block_address = $0C2A
+[2026-11-25T17:47:09.848] Cog0  - activate_block() block_address = $0C2A
+[2026-11-25T17:47:09.848] Cog0  - cancel_block() block_address = $0C8C
+[2026-11-25T17:47:09.849] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:47:09.849] Cog0     -> pass
+[2026-11-25T17:47:09.849] Cog0   
+[2026-11-25T17:47:09.864] Cog0  * Test #73: file holds the extension after the handle closes
+[2026-11-25T17:47:09.865] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:47:09.865] Cog0     -> pass
+[2026-11-25T17:47:09.865] Cog0   
+[2026-11-25T17:47:09.865] Cog0   
+[2026-11-25T17:47:09.865] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:09.866] Cog0  * Test Group: size of a new file before it is closed
+[2026-11-25T17:47:09.866] Cog0   
+[2026-11-25T17:47:09.882] Cog0  * Test #74: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:09.914] Cog0  - cancel_block() block_address = $0C2A
+[2026-11-25T17:47:09.966] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:09.966] Cog0     -> pass
+[2026-11-25T17:47:09.966] Cog0   
+[2026-11-25T17:47:09.972] Cog0  * Test #75: open(,w) with the bytes in the head block
+[2026-11-25T17:47:09.972] Cog0    open(,w) with the bytes in the head block: 0
+[2026-11-25T17:47:09.972] Cog0     -> pass
+[2026-11-25T17:47:09.972] Cog0   
+[2026-11-25T17:47:09.974] Cog0  * Test #76: file_size_for_handle() counts the bytes written so far
+[2026-11-25T17:47:09.974] Cog0  * wr_block() block_address = $028D, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:09.990] Cog0  - program_block() block_address = $028D
+[2026-11-25T17:47:10.021] Cog0  - activate_block() block_address = $028D
+[2026-11-25T17:47:10.021] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:10.021] Cog0     -> pass
+[2026-11-25T17:47:10.021] Cog0   
+[2026-11-25T17:47:10.037] Cog0  * Test #77: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:10.037] Cog0  - cancel_block() block_address = $028D
+[2026-11-25T17:47:10.121] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:10.121] Cog0     -> pass
+[2026-11-25T17:47:10.121] Cog0   
+[2026-11-25T17:47:10.127] Cog0  * Test #78: open(,w) with the bytes in two blocks
+[2026-11-25T17:47:10.127] Cog0    open(,w) with the bytes in two blocks: 0
+[2026-11-25T17:47:10.128] Cog0     -> pass
+[2026-11-25T17:47:10.128] Cog0   
+[2026-11-25T17:47:10.140] Cog0  * Test #79: file_size_for_handle() counts the bytes written so far
+[2026-11-25T17:47:10.140] Cog0  * wr_block() block_address = $0DC3, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:47:10.155] Cog0  - program_block() block_address = $0DC3
+[2026-11-25T17:47:10.197] Cog0  * wr_block() block_address = $0397, block_id = 1, NextID_EndPtr = $00CC
+[2026-11-25T17:47:10.212] Cog0  - program_block() block_address = $0397
+[2026-11-25T17:47:10.243] Cog0  - activate_block() block_address = $0397
+[2026-11-25T17:47:10.243] Cog0  - activate_block() block_address = $0DC3
+[2026-11-25T17:47:10.243] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:10.243] Cog0     -> pass
+[2026-11-25T17:47:10.243] Cog0   
+[2026-11-25T17:47:10.243] Cog0   
+[2026-11-25T17:47:10.244] Cog0   ------------------------------------------------------------
+[2026-11-25T17:47:10.244] Cog0  * Test Group: size of an existing name before the handle is closed
+[2026-11-25T17:47:10.244] Cog0   
+[2026-11-25T17:47:10.254] Cog0  * Test #80: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:10.269] Cog0  - cancel_block() block_address = $0397
+[2026-11-25T17:47:10.285] Cog0  - cancel_block() block_address = $0DC3
+[2026-11-25T17:47:10.345] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:10.346] Cog0     -> pass
+[2026-11-25T17:47:10.346] Cog0   
+[2026-11-25T17:47:10.352] Cog0  * Test #81: set up the file to append to
+[2026-11-25T17:47:10.367] Cog0  * wr_block() block_address = $0B6C, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:10.367] Cog0  - program_block() block_address = $0B6C
+[2026-11-25T17:47:10.400] Cog0  - activate_block() block_address = $0B6C
+[2026-11-25T17:47:10.400] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:10.400] Cog0     -> pass
+[2026-11-25T17:47:10.406] Cog0   
+[2026-11-25T17:47:10.406] Cog0  * Test #82: open(,a) on an existing file
+[2026-11-25T17:47:10.407] Cog0    open(,a) on an existing file: 0
+[2026-11-25T17:47:10.407] Cog0     -> pass
+[2026-11-25T17:47:10.407] Cog0   
+[2026-11-25T17:47:10.408] Cog0  * Test #83: file_size_for_handle() counts the committed bytes and the bytes appended
+[2026-11-25T17:47:10.408] Cog0  * wr_block() block_address = $043A, block_id = 0, NextID_EndPtr = $01E6
+[2026-11-25T17:47:10.424] Cog0  - program_block() block_address = $043A
+[2026-11-25T17:47:10.456] Cog0  - activate_block() block_address = $043A
+[2026-11-25T17:47:10.457] Cog0  * delChnFmID() [$0B6C] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:47:10.457] Cog0  - cancel_block() block_address = $0B6C
+[2026-11-25T17:47:10.457] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:47:10.457] Cog0     -> pass
+[2026-11-25T17:47:10.457] Cog0   
+[2026-11-25T17:47:10.469] Cog0  * Test #84: format() and mount() leave an empty filesystem
+[2026-11-25T17:47:10.484] Cog0  - cancel_block() block_address = $043A
+[2026-11-25T17:47:10.557] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:47:10.557] Cog0     -> pass
+[2026-11-25T17:47:10.557] Cog0   
+[2026-11-25T17:47:10.563] Cog0  * Test #85: set up the file to overwrite
+[2026-11-25T17:47:10.579] Cog0  * wr_block() block_address = $0766, block_id = 0, NextID_EndPtr = $01B4
+[2026-11-25T17:47:10.579] Cog0  - program_block() block_address = $0766
+[2026-11-25T17:47:10.615] Cog0  - activate_block() block_address = $0766
+[2026-11-25T17:47:10.615] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:47:10.615] Cog0     -> pass
+[2026-11-25T17:47:10.619] Cog0   
+[2026-11-25T17:47:10.619] Cog0  * Test #86: open(,w) over an existing file
+[2026-11-25T17:47:10.619] Cog0    open(,w) over an existing file: 0
+[2026-11-25T17:47:10.619] Cog0     -> pass
+[2026-11-25T17:47:10.619] Cog0   
+[2026-11-25T17:47:10.620] Cog0  * Test #87: file_size_for_handle() counts only the bytes written since the open
+[2026-11-25T17:47:10.620] Cog0  * wr_block() block_address = $0DE5, block_id = 0, NextID_EndPtr = $00B0
+[2026-11-25T17:47:10.635] Cog0  - program_block() block_address = $0DE5
+[2026-11-25T17:47:10.675] Cog0  - activate_block() block_address = $0DE5
+[2026-11-25T17:47:10.675] Cog0  * delChnFmID() [$0766] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:47:10.676] Cog0  - cancel_block() block_address = $0766
+[2026-11-25T17:47:10.676] Cog0  * Test Complete
+[2026-11-25T17:47:10.676] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:47:10.676] Cog0     -> pass
+[2026-11-25T17:47:10.676] Cog0   
+[2026-11-25T17:47:10.677] Cog0  * 87 Tests - Pass: 87, Fail: 0
+[2026-11-25T17:47:10.692] Cog0  RESULT: PASS RT_seek_edge_tests 87/87
+[2026-11-25T17:47:10.693] Cog0  <END_SESSION>
+[2026-11-25T17:47:10.693] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-25T17:47:10.693] [SYSTEM] Shutdown initiated: End marker detected
+
+=== Headless Mode Session Ended at 2026-11-25T17:47:10.722 ===

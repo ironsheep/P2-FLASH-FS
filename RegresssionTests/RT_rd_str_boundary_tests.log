@@ -1,0 +1,273 @@
+=== Headless Mode Session Started at 2026-11-25T17:44:32.602 ===
+PNut-Term-TS: v1.1.2
+Mode: Headless (no GUI)
+End Markers: "END_SESSION", "DEBUG_END_SESSION"
+Timeout: 180 seconds
+=====================================
+
+[2026-11-25T17:44:32.601] [SYSTEM] Headless mode started
+[2026-11-25T17:44:32.601] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-25T17:44:32.601] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-25T17:44:32.645] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-25T17:44:32.646] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_rd_str_boundary_tests.bin to RAM
+[2026-11-25T17:44:33.017] 
+[2026-11-25T17:44:33.018] Prop_Ver G
+[2026-11-25T17:44:34.104] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-25T17:44:34.106] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_rd_str_boundary_tests.bin
+[2026-11-25T17:44:34.120] Cog0  INIT $0000_0FA8 $0001_01D4 jump
+[2026-11-25T17:44:34.220] Cog0  * init VAR
+[2026-11-25T17:44:34.220] Cog0  * Random seed (cog 0): $F004_8348
+[2026-11-25T17:44:34.220] Cog0   
+[2026-11-25T17:44:34.220] Cog0  * Test #1: driver instance matches the harness instance
+[2026-11-25T17:44:34.220] Cog0    MAX_FILES_OPEN: 2
+[2026-11-25T17:44:34.220] Cog0     -> pass
+[2026-11-25T17:44:34.220] Cog0   
+[2026-11-25T17:44:34.221] Cog0  * Environment: Chip S/N and Driver Version
+[2026-11-25T17:44:34.221] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:44:34.221] Cog0     Driver: flash_fs v2.1.0
+[2026-11-25T17:44:34.221] Cog0   
+[2026-11-25T17:44:34.221] Cog0   
+[2026-11-25T17:44:34.221] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:34.222] Cog0  * Test Group: string lengths around buf_size
+[2026-11-25T17:44:34.222] Cog0   
+[2026-11-25T17:44:34.228] Cog0  * Test #2: set up the string file
+[2026-11-25T17:44:34.228] Cog0  * wr_block() block_address = $0C61, block_id = 0, NextID_EndPtr = $009A
+[2026-11-25T17:44:34.244] Cog0  - program_block() block_address = $0C61
+[2026-11-25T17:44:34.280] Cog0  - activate_block() block_address = $0C61
+[2026-11-25T17:44:34.280] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.281] Cog0     -> pass
+[2026-11-25T17:44:34.281] Cog0   
+[2026-11-25T17:44:34.287] Cog0  * Test #3: open(,r) for a string two bytes shorter than buf_size
+[2026-11-25T17:44:34.287] Cog0    open(,r) for a string two bytes shorter than buf_size: 0
+[2026-11-25T17:44:34.287] Cog0     -> pass
+[2026-11-25T17:44:34.287] Cog0   
+[2026-11-25T17:44:34.288] Cog0  * Test #4: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.288] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.293] Cog0     -> pass
+[2026-11-25T17:44:34.293] Cog0   
+[2026-11-25T17:44:34.293] Cog0  * Test #5: set up the string file
+[2026-11-25T17:44:34.310] Cog0  * wr_block() block_address = $028D, block_id = 0, NextID_EndPtr = $009B
+[2026-11-25T17:44:34.310] Cog0  - program_block() block_address = $028D
+[2026-11-25T17:44:34.342] Cog0  - activate_block() block_address = $028D
+[2026-11-25T17:44:34.343] Cog0  * delChnFmID() [$0C61] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.343] Cog0  - cancel_block() block_address = $0C61
+[2026-11-25T17:44:34.343] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.343] Cog0     -> pass
+[2026-11-25T17:44:34.343] Cog0   
+[2026-11-25T17:44:34.346] Cog0  * Test #6: open(,r) for a string one byte shorter than buf_size
+[2026-11-25T17:44:34.346] Cog0    open(,r) for a string one byte shorter than buf_size: 0
+[2026-11-25T17:44:34.346] Cog0     -> pass
+[2026-11-25T17:44:34.346] Cog0   
+[2026-11-25T17:44:34.347] Cog0  * Test #7: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.348] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.348] Cog0     -> pass
+[2026-11-25T17:44:34.348] Cog0   
+[2026-11-25T17:44:34.349] Cog0  * Test #8: set up the string file
+[2026-11-25T17:44:34.349] Cog0  * wr_block() block_address = $013E, block_id = 0, NextID_EndPtr = $009C
+[2026-11-25T17:44:34.366] Cog0  - program_block() block_address = $013E
+[2026-11-25T17:44:34.400] Cog0  - activate_block() block_address = $013E
+[2026-11-25T17:44:34.401] Cog0  * delChnFmID() [$028D] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.401] Cog0  - cancel_block() block_address = $028D
+[2026-11-25T17:44:34.401] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.401] Cog0     -> pass
+[2026-11-25T17:44:34.401] Cog0   
+[2026-11-25T17:44:34.404] Cog0  * Test #9: open(,r) for a string exactly buf_size long
+[2026-11-25T17:44:34.404] Cog0    open(,r) for a string exactly buf_size long: 0
+[2026-11-25T17:44:34.404] Cog0     -> pass
+[2026-11-25T17:44:34.404] Cog0   
+[2026-11-25T17:44:34.404] Cog0  * Test #10: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.405] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.405] Cog0     -> pass
+[2026-11-25T17:44:34.405] Cog0   
+[2026-11-25T17:44:34.405] Cog0   
+[2026-11-25T17:44:34.405] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:34.407] Cog0  * Test Group: buf_size 1 and 2
+[2026-11-25T17:44:34.407] Cog0   
+[2026-11-25T17:44:34.407] Cog0  * Test #11: set up the string file
+[2026-11-25T17:44:34.423] Cog0  * wr_block() block_address = $0443, block_id = 0, NextID_EndPtr = $008C
+[2026-11-25T17:44:34.423] Cog0  - program_block() block_address = $0443
+[2026-11-25T17:44:34.457] Cog0  - activate_block() block_address = $0443
+[2026-11-25T17:44:34.458] Cog0  * delChnFmID() [$013E] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.458] Cog0  - cancel_block() block_address = $013E
+[2026-11-25T17:44:34.458] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.458] Cog0     -> pass
+[2026-11-25T17:44:34.458] Cog0   
+[2026-11-25T17:44:34.462] Cog0  * Test #12: open(,r) for an empty string and buf_size 1
+[2026-11-25T17:44:34.462] Cog0    open(,r) for an empty string and buf_size 1: 0
+[2026-11-25T17:44:34.462] Cog0     -> pass
+[2026-11-25T17:44:34.462] Cog0   
+[2026-11-25T17:44:34.462] Cog0  * Test #13: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.463] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.465] Cog0     -> pass
+[2026-11-25T17:44:34.465] Cog0   
+[2026-11-25T17:44:34.465] Cog0  * Test #14: set up the string file
+[2026-11-25T17:44:34.481] Cog0  * wr_block() block_address = $09B5, block_id = 0, NextID_EndPtr = $008D
+[2026-11-25T17:44:34.481] Cog0  - program_block() block_address = $09B5
+[2026-11-25T17:44:34.517] Cog0  - activate_block() block_address = $09B5
+[2026-11-25T17:44:34.517] Cog0  * delChnFmID() [$0443] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.518] Cog0  - cancel_block() block_address = $0443
+[2026-11-25T17:44:34.518] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.518] Cog0     -> pass
+[2026-11-25T17:44:34.518] Cog0   
+[2026-11-25T17:44:34.523] Cog0  * Test #15: open(,r) for a one character string and buf_size 1
+[2026-11-25T17:44:34.524] Cog0    open(,r) for a one character string and buf_size 1: 0
+[2026-11-25T17:44:34.524] Cog0     -> pass
+[2026-11-25T17:44:34.524] Cog0   
+[2026-11-25T17:44:34.525] Cog0  * Test #16: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.525] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.525] Cog0     -> pass
+[2026-11-25T17:44:34.525] Cog0   
+[2026-11-25T17:44:34.529] Cog0  * Test #17: set up the string file
+[2026-11-25T17:44:34.529] Cog0  * wr_block() block_address = $0CE8, block_id = 0, NextID_EndPtr = $008D
+[2026-11-25T17:44:34.545] Cog0  - program_block() block_address = $0CE8
+[2026-11-25T17:44:34.579] Cog0  - activate_block() block_address = $0CE8
+[2026-11-25T17:44:34.580] Cog0  * delChnFmID() [$09B5] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.580] Cog0  - cancel_block() block_address = $09B5
+[2026-11-25T17:44:34.580] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.581] Cog0     -> pass
+[2026-11-25T17:44:34.581] Cog0   
+[2026-11-25T17:44:34.587] Cog0  * Test #18: open(,r) for a one character string and buf_size 2
+[2026-11-25T17:44:34.587] Cog0    open(,r) for a one character string and buf_size 2: 0
+[2026-11-25T17:44:34.588] Cog0     -> pass
+[2026-11-25T17:44:34.588] Cog0   
+[2026-11-25T17:44:34.588] Cog0  * Test #19: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.588] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.589] Cog0     -> pass
+[2026-11-25T17:44:34.589] Cog0   
+[2026-11-25T17:44:34.594] Cog0  * Test #20: set up the string file
+[2026-11-25T17:44:34.595] Cog0  * wr_block() block_address = $0623, block_id = 0, NextID_EndPtr = $008E
+[2026-11-25T17:44:34.611] Cog0  - program_block() block_address = $0623
+[2026-11-25T17:44:34.641] Cog0  - activate_block() block_address = $0623
+[2026-11-25T17:44:34.641] Cog0  * delChnFmID() [$0CE8] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.642] Cog0  - cancel_block() block_address = $0CE8
+[2026-11-25T17:44:34.642] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.642] Cog0     -> pass
+[2026-11-25T17:44:34.642] Cog0   
+[2026-11-25T17:44:34.646] Cog0  * Test #21: open(,r) for a two character string and buf_size 2
+[2026-11-25T17:44:34.646] Cog0    open(,r) for a two character string and buf_size 2: 0
+[2026-11-25T17:44:34.646] Cog0     -> pass
+[2026-11-25T17:44:34.646] Cog0   
+[2026-11-25T17:44:34.647] Cog0  * Test #22: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.647] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.647] Cog0     -> pass
+[2026-11-25T17:44:34.647] Cog0   
+[2026-11-25T17:44:34.647] Cog0   
+[2026-11-25T17:44:34.648] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:34.648] Cog0  * Test Group: unterminated string at the end of the file
+[2026-11-25T17:44:34.648] Cog0   
+[2026-11-25T17:44:34.651] Cog0  * Test #23: set up the string file
+[2026-11-25T17:44:34.651] Cog0  * wr_block() block_address = $030A, block_id = 0, NextID_EndPtr = $008D
+[2026-11-25T17:44:34.667] Cog0  - program_block() block_address = $030A
+[2026-11-25T17:44:34.698] Cog0  - activate_block() block_address = $030A
+[2026-11-25T17:44:34.699] Cog0  * delChnFmID() [$0623] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.699] Cog0  - cancel_block() block_address = $0623
+[2026-11-25T17:44:34.699] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.699] Cog0     -> pass
+[2026-11-25T17:44:34.699] Cog0   
+[2026-11-25T17:44:34.702] Cog0  * Test #24: open(,r) for a short string with no terminator
+[2026-11-25T17:44:34.703] Cog0    open(,r) for a short string with no terminator: 0
+[2026-11-25T17:44:34.703] Cog0     -> pass
+[2026-11-25T17:44:34.703] Cog0   
+[2026-11-25T17:44:34.703] Cog0  * Test #25: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.704] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.705] Cog0     -> pass
+[2026-11-25T17:44:34.705] Cog0   
+[2026-11-25T17:44:34.705] Cog0  * Test #26: set up the string file
+[2026-11-25T17:44:34.706] Cog0  * wr_block() block_address = $0B14, block_id = 0, NextID_EndPtr = $0097
+[2026-11-25T17:44:34.706] Cog0  - program_block() block_address = $0B14
+[2026-11-25T17:44:34.753] Cog0  - activate_block() block_address = $0B14
+[2026-11-25T17:44:34.753] Cog0  * delChnFmID() [$030A] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.754] Cog0  - cancel_block() block_address = $030A
+[2026-11-25T17:44:34.754] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.754] Cog0     -> pass
+[2026-11-25T17:44:34.754] Cog0   
+[2026-11-25T17:44:34.760] Cog0  * Test #27: open(,r) for a string with no terminator that ends in the last byte
+[2026-11-25T17:44:34.761] Cog0    open(,r) for a string with no terminator that ends in the last byte: 0
+[2026-11-25T17:44:34.761] Cog0     -> pass
+[2026-11-25T17:44:34.761] Cog0   
+[2026-11-25T17:44:34.761] Cog0  * Test #28: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.762] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.762] Cog0     -> pass
+[2026-11-25T17:44:34.762] Cog0   
+[2026-11-25T17:44:34.762] Cog0   
+[2026-11-25T17:44:34.762] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:34.762] Cog0  * Test Group: empty string
+[2026-11-25T17:44:34.762] Cog0   
+[2026-11-25T17:44:34.767] Cog0  * Test #29: set up the string file
+[2026-11-25T17:44:34.767] Cog0  * wr_block() block_address = $023F, block_id = 0, NextID_EndPtr = $008C
+[2026-11-25T17:44:34.783] Cog0  - program_block() block_address = $023F
+[2026-11-25T17:44:34.816] Cog0  - activate_block() block_address = $023F
+[2026-11-25T17:44:34.816] Cog0  * delChnFmID() [$0B14] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.817] Cog0  - cancel_block() block_address = $0B14
+[2026-11-25T17:44:34.817] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.817] Cog0     -> pass
+[2026-11-25T17:44:34.817] Cog0   
+[2026-11-25T17:44:34.820] Cog0  * Test #30: open(,r) for an empty string
+[2026-11-25T17:44:34.820] Cog0    open(,r) for an empty string: 0
+[2026-11-25T17:44:34.820] Cog0     -> pass
+[2026-11-25T17:44:34.820] Cog0   
+[2026-11-25T17:44:34.820] Cog0  * Test #31: rd_str() count, error, buffer, and the byte that follows
+[2026-11-25T17:44:34.821] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:44:34.821] Cog0     -> pass
+[2026-11-25T17:44:34.821] Cog0   
+[2026-11-25T17:44:34.822] Cog0  * Test #32: set up the string file
+[2026-11-25T17:44:34.822] Cog0  * wr_block() block_address = $0B79, block_id = 0, NextID_EndPtr = $008C
+[2026-11-25T17:44:34.838] Cog0  - program_block() block_address = $0B79
+[2026-11-25T17:44:34.868] Cog0  - activate_block() block_address = $0B79
+[2026-11-25T17:44:34.868] Cog0  * delChnFmID() [$023F] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.869] Cog0  - cancel_block() block_address = $023F
+[2026-11-25T17:44:34.869] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.869] Cog0     -> pass
+[2026-11-25T17:44:34.869] Cog0   
+[2026-11-25T17:44:34.875] Cog0  * Test #33: open(,r) to read the empty string and then the end of the file
+[2026-11-25T17:44:34.875] Cog0    open(,r) to read the empty string and then the end of the file: 0
+[2026-11-25T17:44:34.876] Cog0     -> pass
+[2026-11-25T17:44:34.876] Cog0   
+[2026-11-25T17:44:34.876] Cog0  * Test #34: error() tells an empty string from the end of the file
+[2026-11-25T17:44:34.876] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:44:34.876] Cog0     -> pass
+[2026-11-25T17:44:34.876] Cog0   
+[2026-11-25T17:44:34.876] Cog0   
+[2026-11-25T17:44:34.877] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:34.877] Cog0  * Test Group: invalid handle
+[2026-11-25T17:44:34.877] Cog0   
+[2026-11-25T17:44:34.877] Cog0  * Test #35: rd_str() with a handle below every valid handle
+[2026-11-25T17:44:34.878] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.878] Cog0     -> pass
+[2026-11-25T17:44:34.878] Cog0   
+[2026-11-25T17:44:34.878] Cog0  * Test #36: rd_str() with the handle after the last valid handle
+[2026-11-25T17:44:34.879] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.879] Cog0     -> pass
+[2026-11-25T17:44:34.879] Cog0   
+[2026-11-25T17:44:34.879] Cog0   
+[2026-11-25T17:44:34.879] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:34.879] Cog0  * Test Group: buf_size 0, measured
+[2026-11-25T17:44:34.880] Cog0   
+[2026-11-25T17:44:34.885] Cog0  * Test #37: set up the string file
+[2026-11-25T17:44:34.885] Cog0  * wr_block() block_address = $0592, block_id = 0, NextID_EndPtr = $0091
+[2026-11-25T17:44:34.901] Cog0  - program_block() block_address = $0592
+[2026-11-25T17:44:34.932] Cog0  - activate_block() block_address = $0592
+[2026-11-25T17:44:34.932] Cog0  * delChnFmID() [$0B79] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:44:34.933] Cog0  - cancel_block() block_address = $0B79
+[2026-11-25T17:44:34.933] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:34.933] Cog0     -> pass
+[2026-11-25T17:44:34.933] Cog0   
+[2026-11-25T17:44:34.937] Cog0  * Test #38: open(,r) for the buffer size probes
+[2026-11-25T17:44:34.937] Cog0    open(,r) for the buffer size probes: 0
+[2026-11-25T17:44:34.938] Cog0     -> pass
+[2026-11-25T17:44:34.940] Cog0  * measure: calling rd_str() with buf_size 0
+[2026-11-25T17:44:34.940] Cog0  * measure: buf_size 0 returned 0, error() 0 SUCCESS: No error, position after 0, next rd_byte() 97
+[2026-11-25T17:44:34.941] Cog0  * measure: buf_size 0 buffer starts $A5 $A5 $A5 $A5, first byte of the buffer area written -1
+[2026-11-25T17:44:34.941] Cog0   
+[2026-11-25T17:44:34.941] Cog0  * Test #39: close the file after the buffer size probe
+[2026-11-25T17:44:34.941] Cog0  * Test Complete
+[2026-11-25T17:44:34.942] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:34.942] Cog0     -> pass
+[2026-11-25T17:44:34.942] Cog0   
+[2026-11-25T17:44:34.942] Cog0  * 39 Tests - Pass: 39, Fail: 0
+[2026-11-25T17:44:34.958] Cog0  RESULT: PASS RT_rd_str_boundary_tests 39/39
+[2026-11-25T17:44:34.958] Cog0  <END_SESSION>
+[2026-11-25T17:44:34.958] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-25T17:44:34.959] [SYSTEM] Shutdown initiated: End marker detected
+
+=== Headless Mode Session Ended at 2026-11-25T17:44:34.985 ===

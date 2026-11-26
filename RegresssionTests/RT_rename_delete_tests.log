@@ -1,0 +1,482 @@
+=== Headless Mode Session Started at 2026-11-25T17:44:19.622 ===
+PNut-Term-TS: v1.1.2
+Mode: Headless (no GUI)
+End Markers: "END_SESSION", "DEBUG_END_SESSION"
+Timeout: 180 seconds
+=====================================
+
+[2026-11-25T17:44:19.620] [SYSTEM] Headless mode started
+[2026-11-25T17:44:19.620] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-25T17:44:19.620] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-25T17:44:19.664] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-25T17:44:19.664] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_rename_delete_tests.bin to RAM
+[2026-11-25T17:44:20.027] 
+[2026-11-25T17:44:20.027] Prop_Ver G
+[2026-11-25T17:44:21.258] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-25T17:44:21.259] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_rename_delete_tests.bin
+[2026-11-25T17:44:21.274] Cog0  INIT $0000_0FA8 $0001_2EE8 jump
+[2026-11-25T17:44:21.373] Cog0  * init VAR
+[2026-11-25T17:44:21.373] Cog0  * Random seed (cog 0): $3162_20AD
+[2026-11-25T17:44:21.373] Cog0   
+[2026-11-25T17:44:21.373] Cog0  * Test #1: driver instance matches the harness instance
+[2026-11-25T17:44:21.373] Cog0    MAX_FILES_OPEN: 2
+[2026-11-25T17:44:21.373] Cog0     -> pass
+[2026-11-25T17:44:21.373] Cog0   
+[2026-11-25T17:44:21.373] Cog0  * Environment: Chip S/N and Driver Version
+[2026-11-25T17:44:21.374] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:44:21.379] Cog0     Driver: flash_fs v2.1.0
+[2026-11-25T17:44:21.379] Cog0   
+[2026-11-25T17:44:21.379] Cog0   
+[2026-11-25T17:44:21.380] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:21.380] Cog0  * Test Group: handles available to the cases
+[2026-11-25T17:44:21.380] Cog0   
+[2026-11-25T17:44:21.380] Cog0  * Test #2: MAX_FILES_OPEN covers the files the cases hold at one time
+[2026-11-25T17:44:21.380] Cog0    MAX_FILES_OPEN is enough: -1
+[2026-11-25T17:44:21.380] Cog0     -> pass
+[2026-11-25T17:44:21.381] Cog0   
+[2026-11-25T17:44:21.381] Cog0   
+[2026-11-25T17:44:21.381] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:21.381] Cog0  * Test Group: rename() of closed files
+[2026-11-25T17:44:21.381] Cog0   
+[2026-11-25T17:44:21.387] Cog0  * Test #3: set up the one-block file
+[2026-11-25T17:44:21.387] Cog0  * wr_block() block_address = $0CAA, block_id = 0, NextID_EndPtr = $00C8
+[2026-11-25T17:44:21.403] Cog0  - program_block() block_address = $0CAA
+[2026-11-25T17:44:21.438] Cog0  - activate_block() block_address = $0CAA
+[2026-11-25T17:44:21.438] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:21.438] Cog0     -> pass
+[2026-11-25T17:44:21.444] Cog0   
+[2026-11-25T17:44:21.444] Cog0  * Test #4: set up the multi-block file
+[2026-11-25T17:44:21.460] Cog0  * wr_block() block_address = $079B, block_id = 1, NextID_EndPtr = $0002
+[2026-11-25T17:44:21.460] Cog0  - program_block() block_address = $079B
+[2026-11-25T17:44:21.500] Cog0  * wr_block() block_address = $0749, block_id = 2, NextID_EndPtr = $0068
+[2026-11-25T17:44:21.515] Cog0  - program_block() block_address = $0749
+[2026-11-25T17:44:21.547] Cog0  - activate_block() block_address = $0749
+[2026-11-25T17:44:21.548] Cog0  - activate_block() block_address = $079B
+[2026-11-25T17:44:21.548] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:21.548] Cog0     -> pass
+[2026-11-25T17:44:21.548] Cog0   
+[2026-11-25T17:44:21.564] Cog0  * Test #5: rename() of a one-block file
+[2026-11-25T17:44:21.567] Cog0  * program_updated_block() block_address = $03BA
+[2026-11-25T17:44:21.583] Cog0  - program_block() block_address = $03BA
+[2026-11-25T17:44:21.615] Cog0  - activate_block() block_address = $03BA
+[2026-11-25T17:44:21.622] Cog0  - cancel_block() block_address = $0CAA
+[2026-11-25T17:44:21.622] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.622] Cog0     -> pass
+[2026-11-25T17:44:21.622] Cog0   
+[2026-11-25T17:44:21.634] Cog0  * Test #6: the one-block file is under its new name only
+[2026-11-25T17:44:21.634] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.634] Cog0     -> pass
+[2026-11-25T17:44:21.650] Cog0   
+[2026-11-25T17:44:21.650] Cog0  * Test #7: rename() of a multi-block file
+[2026-11-25T17:44:21.651] Cog0  * program_updated_block() block_address = $0ED7
+[2026-11-25T17:44:21.667] Cog0  - program_block() block_address = $0ED7
+[2026-11-25T17:44:21.706] Cog0  - activate_block() block_address = $0ED7
+[2026-11-25T17:44:21.714] Cog0  - cancel_block() block_address = $079B
+[2026-11-25T17:44:21.714] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.714] Cog0     -> pass
+[2026-11-25T17:44:21.714] Cog0   
+[2026-11-25T17:44:21.729] Cog0  * Test #8: the multi-block file is under its new name only
+[2026-11-25T17:44:21.745] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.745] Cog0     -> pass
+[2026-11-25T17:44:21.745] Cog0   
+[2026-11-25T17:44:21.760] Cog0  * Test #9: rename() of the one-block file back to its first name
+[2026-11-25T17:44:21.761] Cog0  * program_updated_block() block_address = $0C8C
+[2026-11-25T17:44:21.776] Cog0  - program_block() block_address = $0C8C
+[2026-11-25T17:44:21.814] Cog0  - activate_block() block_address = $0C8C
+[2026-11-25T17:44:21.822] Cog0  - cancel_block() block_address = $03BA
+[2026-11-25T17:44:21.822] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.822] Cog0     -> pass
+[2026-11-25T17:44:21.822] Cog0   
+[2026-11-25T17:44:21.837] Cog0  * Test #10: the first name holds the file again
+[2026-11-25T17:44:21.843] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.844] Cog0     -> pass
+[2026-11-25T17:44:21.844] Cog0   
+[2026-11-25T17:44:21.844] Cog0   
+[2026-11-25T17:44:21.844] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:21.845] Cog0  * Test Group: rename() of files that are open
+[2026-11-25T17:44:21.845] Cog0   
+[2026-11-25T17:44:21.851] Cog0  * Test #11: set up the file the next calls hold open
+[2026-11-25T17:44:21.851] Cog0  * wr_block() block_address = $0132, block_id = 3, NextID_EndPtr = $00C8
+[2026-11-25T17:44:21.866] Cog0  - program_block() block_address = $0132
+[2026-11-25T17:44:21.897] Cog0  - activate_block() block_address = $0132
+[2026-11-25T17:44:21.897] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:21.897] Cog0     -> pass
+[2026-11-25T17:44:21.904] Cog0   
+[2026-11-25T17:44:21.904] Cog0  * Test #12: set up a second file
+[2026-11-25T17:44:21.904] Cog0  * wr_block() block_address = $0943, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:44:21.920] Cog0  - program_block() block_address = $0943
+[2026-11-25T17:44:21.951] Cog0  - activate_block() block_address = $0943
+[2026-11-25T17:44:21.951] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:21.951] Cog0     -> pass
+[2026-11-25T17:44:21.953] Cog0   
+[2026-11-25T17:44:21.953] Cog0  * Test #13: open(,r) the first file
+[2026-11-25T17:44:21.954] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:21.954] Cog0     -> pass
+[2026-11-25T17:44:21.954] Cog0   
+[2026-11-25T17:44:21.968] Cog0  * Test #14: rename() of a file that is open for reading
+[2026-11-25T17:44:21.969] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.969] Cog0     -> pass
+[2026-11-25T17:44:21.969] Cog0   
+[2026-11-25T17:44:21.983] Cog0  * Test #15: rename() to the name of a file that is open for reading
+[2026-11-25T17:44:21.983] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:21.983] Cog0     -> pass
+[2026-11-25T17:44:21.983] Cog0   
+[2026-11-25T17:44:21.985] Cog0  * Test #16: the file open for reading is still there with its size
+[2026-11-25T17:44:21.985] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:21.985] Cog0     -> pass
+[2026-11-25T17:44:21.985] Cog0   
+[2026-11-25T17:44:21.991] Cog0  * Test #17: the name the calls renamed to was not made
+[2026-11-25T17:44:21.992] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:21.992] Cog0     -> pass
+[2026-11-25T17:44:21.992] Cog0   
+[2026-11-25T17:44:21.992] Cog0  * Test #18: close() of the file open for reading
+[2026-11-25T17:44:21.993] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:21.993] Cog0     -> pass
+[2026-11-25T17:44:21.993] Cog0   
+[2026-11-25T17:44:21.999] Cog0  * Test #19: open(,w) a new file
+[2026-11-25T17:44:21.999] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:21.999] Cog0     -> pass
+[2026-11-25T17:44:21.999] Cog0   
+[2026-11-25T17:44:22.000] Cog0  * Test #20: wr_byte() of one byte
+[2026-11-25T17:44:22.000] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.000] Cog0     -> pass
+[2026-11-25T17:44:22.000] Cog0   
+[2026-11-25T17:44:22.014] Cog0  * Test #21: rename() of a file that is open for writing
+[2026-11-25T17:44:22.014] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.014] Cog0     -> pass
+[2026-11-25T17:44:22.014] Cog0   
+[2026-11-25T17:44:22.029] Cog0  * Test #22: rename() to the name of a file that is open for writing
+[2026-11-25T17:44:22.029] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.029] Cog0     -> pass
+[2026-11-25T17:44:22.029] Cog0   
+[2026-11-25T17:44:22.035] Cog0  * Test #23: the name the calls renamed to was not made
+[2026-11-25T17:44:22.036] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.036] Cog0     -> pass
+[2026-11-25T17:44:22.036] Cog0   
+[2026-11-25T17:44:22.036] Cog0  * Test #24: close() of the file open for writing
+[2026-11-25T17:44:22.036] Cog0  * wr_block() block_address = $0373, block_id = 5, NextID_EndPtr = $0089
+[2026-11-25T17:44:22.052] Cog0  - program_block() block_address = $0373
+[2026-11-25T17:44:22.086] Cog0  - activate_block() block_address = $0373
+[2026-11-25T17:44:22.087] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.087] Cog0     -> pass
+[2026-11-25T17:44:22.087] Cog0   
+[2026-11-25T17:44:22.102] Cog0  * Test #25: rename() of the file once its handle is closed
+[2026-11-25T17:44:22.117] Cog0  * program_updated_block() block_address = $03BD
+[2026-11-25T17:44:22.118] Cog0  - program_block() block_address = $03BD
+[2026-11-25T17:44:22.151] Cog0  - activate_block() block_address = $03BD
+[2026-11-25T17:44:22.158] Cog0  - cancel_block() block_address = $0132
+[2026-11-25T17:44:22.159] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.159] Cog0     -> pass
+[2026-11-25T17:44:22.159] Cog0   
+[2026-11-25T17:44:22.170] Cog0  * Test #26: the file is under its new name only
+[2026-11-25T17:44:22.171] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.171] Cog0     -> pass
+[2026-11-25T17:44:22.171] Cog0   
+[2026-11-25T17:44:22.171] Cog0   
+[2026-11-25T17:44:22.171] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:22.171] Cog0  * Test Group: rename() onto the name of an existing file
+[2026-11-25T17:44:22.171] Cog0   
+[2026-11-25T17:44:22.178] Cog0  * Test #27: set up the file to rename
+[2026-11-25T17:44:22.178] Cog0  * wr_block() block_address = $01CF, block_id = 6, NextID_EndPtr = $00C8
+[2026-11-25T17:44:22.193] Cog0  - program_block() block_address = $01CF
+[2026-11-25T17:44:22.227] Cog0  - activate_block() block_address = $01CF
+[2026-11-25T17:44:22.227] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.227] Cog0     -> pass
+[2026-11-25T17:44:22.233] Cog0   
+[2026-11-25T17:44:22.233] Cog0  * Test #28: set up the file that holds the name
+[2026-11-25T17:44:22.249] Cog0  * wr_block() block_address = $0B6F, block_id = 7, NextID_EndPtr = $00EC
+[2026-11-25T17:44:22.249] Cog0  - program_block() block_address = $0B6F
+[2026-11-25T17:44:22.285] Cog0  - activate_block() block_address = $0B6F
+[2026-11-25T17:44:22.286] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.286] Cog0     -> pass
+[2026-11-25T17:44:22.286] Cog0   
+[2026-11-25T17:44:22.301] Cog0  * Test #29: rename() onto the name of an existing file
+[2026-11-25T17:44:22.305] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.305] Cog0     -> pass
+[2026-11-25T17:44:22.305] Cog0   
+[2026-11-25T17:44:22.309] Cog0  * Test #30: the file to rename is unchanged
+[2026-11-25T17:44:22.309] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:44:22.309] Cog0     -> pass
+[2026-11-25T17:44:22.309] Cog0   
+[2026-11-25T17:44:22.324] Cog0  * Test #31: the file that holds the name is unchanged
+[2026-11-25T17:44:22.325] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:44:22.325] Cog0     -> pass
+[2026-11-25T17:44:22.325] Cog0   
+[2026-11-25T17:44:22.325] Cog0   
+[2026-11-25T17:44:22.325] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:22.325] Cog0  * Test Group: rename() of a file that does not exist
+[2026-11-25T17:44:22.340] Cog0   
+[2026-11-25T17:44:22.340] Cog0  * Test #32: rename() of a name no file has
+[2026-11-25T17:44:22.351] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.357] Cog0     -> pass
+[2026-11-25T17:44:22.357] Cog0   
+[2026-11-25T17:44:22.357] Cog0  * Test #33: neither name exists
+[2026-11-25T17:44:22.358] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.364] Cog0     -> pass
+[2026-11-25T17:44:22.364] Cog0   
+[2026-11-25T17:44:22.364] Cog0  * Test #34: the new name was not made
+[2026-11-25T17:44:22.364] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.365] Cog0     -> pass
+[2026-11-25T17:44:22.365] Cog0   
+[2026-11-25T17:44:22.365] Cog0   
+[2026-11-25T17:44:22.365] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:22.365] Cog0  * Test Group: the order of the checks of rename()
+[2026-11-25T17:44:22.365] Cog0   
+[2026-11-25T17:44:22.372] Cog0  * Test #35: set up the first file
+[2026-11-25T17:44:22.372] Cog0  * wr_block() block_address = $00F3, block_id = 8, NextID_EndPtr = $00C8
+[2026-11-25T17:44:22.387] Cog0  - program_block() block_address = $00F3
+[2026-11-25T17:44:22.420] Cog0  - activate_block() block_address = $00F3
+[2026-11-25T17:44:22.420] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.420] Cog0     -> pass
+[2026-11-25T17:44:22.427] Cog0   
+[2026-11-25T17:44:22.427] Cog0  * Test #36: set up the second file
+[2026-11-25T17:44:22.443] Cog0  * wr_block() block_address = $0D0A, block_id = 9, NextID_EndPtr = $00EC
+[2026-11-25T17:44:22.443] Cog0  - program_block() block_address = $0D0A
+[2026-11-25T17:44:22.474] Cog0  - activate_block() block_address = $0D0A
+[2026-11-25T17:44:22.474] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.474] Cog0     -> pass
+[2026-11-25T17:44:22.476] Cog0   
+[2026-11-25T17:44:22.476] Cog0  * Test #37: open(,r) the first file
+[2026-11-25T17:44:22.477] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.477] Cog0     -> pass
+[2026-11-25T17:44:22.477] Cog0   
+[2026-11-25T17:44:22.491] Cog0  * Test #38: old name open and new name taken: E_FILE_OPEN
+[2026-11-25T17:44:22.491] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.492] Cog0     -> pass
+[2026-11-25T17:44:22.492] Cog0   
+[2026-11-25T17:44:22.492] Cog0  * Test #39: close() of the first file
+[2026-11-25T17:44:22.492] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.492] Cog0     -> pass
+[2026-11-25T17:44:22.492] Cog0   
+[2026-11-25T17:44:22.499] Cog0  * Test #40: open(,r) the second file
+[2026-11-25T17:44:22.499] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.499] Cog0     -> pass
+[2026-11-25T17:44:22.499] Cog0   
+[2026-11-25T17:44:22.514] Cog0  * Test #41: old name missing and new name open: E_FILE_OPEN
+[2026-11-25T17:44:22.514] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.514] Cog0     -> pass
+[2026-11-25T17:44:22.514] Cog0   
+[2026-11-25T17:44:22.514] Cog0  * Test #42: close() of the second file
+[2026-11-25T17:44:22.514] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.514] Cog0     -> pass
+[2026-11-25T17:44:22.515] Cog0   
+[2026-11-25T17:44:22.530] Cog0  * Test #43: old name missing and new name taken: E_FILE_EXISTS
+[2026-11-25T17:44:22.534] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.535] Cog0     -> pass
+[2026-11-25T17:44:22.535] Cog0   
+[2026-11-25T17:44:22.550] Cog0  * Test #44: old name missing and new name missing: E_FILE_NOT_FOUND
+[2026-11-25T17:44:22.560] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.561] Cog0     -> pass
+[2026-11-25T17:44:22.561] Cog0   
+[2026-11-25T17:44:22.561] Cog0   
+[2026-11-25T17:44:22.561] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:22.561] Cog0  * Test Group: delete() of closed files
+[2026-11-25T17:44:22.561] Cog0   
+[2026-11-25T17:44:22.568] Cog0  * Test #45: set up the one-block file
+[2026-11-25T17:44:22.568] Cog0  * wr_block() block_address = $0799, block_id = 10, NextID_EndPtr = $00C8
+[2026-11-25T17:44:22.584] Cog0  - program_block() block_address = $0799
+[2026-11-25T17:44:22.616] Cog0  - activate_block() block_address = $0799
+[2026-11-25T17:44:22.616] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.616] Cog0     -> pass
+[2026-11-25T17:44:22.616] Cog0   
+[2026-11-25T17:44:22.623] Cog0  * Test #46: set up the multi-block file
+[2026-11-25T17:44:22.623] Cog0  * wr_block() block_address = $03F3, block_id = 11, NextID_EndPtr = $000C
+[2026-11-25T17:44:22.639] Cog0  - program_block() block_address = $03F3
+[2026-11-25T17:44:22.678] Cog0  * wr_block() block_address = $04F6, block_id = 12, NextID_EndPtr = $0068
+[2026-11-25T17:44:22.694] Cog0  - program_block() block_address = $04F6
+[2026-11-25T17:44:22.727] Cog0  - activate_block() block_address = $04F6
+[2026-11-25T17:44:22.727] Cog0  - activate_block() block_address = $03F3
+[2026-11-25T17:44:22.727] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.727] Cog0     -> pass
+[2026-11-25T17:44:22.727] Cog0   
+[2026-11-25T17:44:22.738] Cog0  * Test #47: delete() of a one-block file
+[2026-11-25T17:44:22.746] Cog0  * delChnFmID() [$0799] block_id = 10, EndID = 0, delete_mode = 0, KeepFirstIDValid = 0
+[2026-11-25T17:44:22.746] Cog0  - cancel_block() block_address = $0799
+[2026-11-25T17:44:22.746] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.746] Cog0     -> pass
+[2026-11-25T17:44:22.746] Cog0   
+[2026-11-25T17:44:22.762] Cog0  * Test #48: the deleted one-block file is gone
+[2026-11-25T17:44:22.764] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.764] Cog0     -> pass
+[2026-11-25T17:44:22.764] Cog0   
+[2026-11-25T17:44:22.773] Cog0  * Test #49: delete() of a multi-block file
+[2026-11-25T17:44:22.773] Cog0  * delChnFmID() [$03F3] block_id = 11, EndID = 0, delete_mode = 0, KeepFirstIDValid = 0
+[2026-11-25T17:44:22.774] Cog0  - cancel_block() block_address = $03F3
+[2026-11-25T17:44:22.781] Cog0  - cancel_block() block_address = $04F6
+[2026-11-25T17:44:22.781] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.782] Cog0     -> pass
+[2026-11-25T17:44:22.782] Cog0   
+[2026-11-25T17:44:22.797] Cog0  * Test #50: the deleted multi-block file is gone
+[2026-11-25T17:44:22.800] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.800] Cog0     -> pass
+[2026-11-25T17:44:22.800] Cog0   
+[2026-11-25T17:44:22.816] Cog0  * Test #51: delete() of a file that was deleted
+[2026-11-25T17:44:22.821] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.821] Cog0     -> pass
+[2026-11-25T17:44:22.821] Cog0   
+[2026-11-25T17:44:22.836] Cog0  * Test #52: delete() of a name no file has
+[2026-11-25T17:44:22.841] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.841] Cog0     -> pass
+[2026-11-25T17:44:22.841] Cog0   
+[2026-11-25T17:44:22.848] Cog0  * Test #53: make the deleted name again with other contents
+[2026-11-25T17:44:22.848] Cog0  * wr_block() block_address = $0559, block_id = 10, NextID_EndPtr = $00EC
+[2026-11-25T17:44:22.863] Cog0  - program_block() block_address = $0559
+[2026-11-25T17:44:22.897] Cog0  - activate_block() block_address = $0559
+[2026-11-25T17:44:22.898] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.898] Cog0     -> pass
+[2026-11-25T17:44:22.906] Cog0   
+[2026-11-25T17:44:22.906] Cog0  * Test #54: the name holds the new file
+[2026-11-25T17:44:22.906] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:44:22.906] Cog0     -> pass
+[2026-11-25T17:44:22.907] Cog0   
+[2026-11-25T17:44:22.907] Cog0   
+[2026-11-25T17:44:22.907] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:22.907] Cog0  * Test Group: delete() of files that are open
+[2026-11-25T17:44:22.907] Cog0   
+[2026-11-25T17:44:22.913] Cog0  * Test #55: set up the file the next calls hold open
+[2026-11-25T17:44:22.913] Cog0  * wr_block() block_address = $002E, block_id = 11, NextID_EndPtr = $00C8
+[2026-11-25T17:44:22.929] Cog0  - program_block() block_address = $002E
+[2026-11-25T17:44:22.961] Cog0  - activate_block() block_address = $002E
+[2026-11-25T17:44:22.961] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:22.961] Cog0     -> pass
+[2026-11-25T17:44:22.963] Cog0   
+[2026-11-25T17:44:22.963] Cog0  * Test #56: open(,r) the file
+[2026-11-25T17:44:22.963] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.963] Cog0     -> pass
+[2026-11-25T17:44:22.963] Cog0   
+[2026-11-25T17:44:22.977] Cog0  * Test #57: delete() of a file that is open for reading
+[2026-11-25T17:44:22.977] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.978] Cog0     -> pass
+[2026-11-25T17:44:22.978] Cog0   
+[2026-11-25T17:44:22.978] Cog0  * Test #58: the file open for reading is still there with its size
+[2026-11-25T17:44:22.979] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:44:22.979] Cog0     -> pass
+[2026-11-25T17:44:22.979] Cog0   
+[2026-11-25T17:44:22.979] Cog0  * Test #59: close() of the file open for reading
+[2026-11-25T17:44:22.979] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:22.979] Cog0     -> pass
+[2026-11-25T17:44:22.979] Cog0   
+[2026-11-25T17:44:22.980] Cog0  * Test #60: delete() of the file once its handle is closed
+[2026-11-25T17:44:22.988] Cog0  * delChnFmID() [$002E] block_id = 11, EndID = 0, delete_mode = 0, KeepFirstIDValid = 0
+[2026-11-25T17:44:22.995] Cog0  - cancel_block() block_address = $002E
+[2026-11-25T17:44:22.995] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:22.995] Cog0     -> pass
+[2026-11-25T17:44:22.995] Cog0   
+[2026-11-25T17:44:23.002] Cog0  * Test #61: open(,w) a new file
+[2026-11-25T17:44:23.002] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:23.002] Cog0     -> pass
+[2026-11-25T17:44:23.002] Cog0   
+[2026-11-25T17:44:23.002] Cog0  * Test #62: wr_byte() of one byte
+[2026-11-25T17:44:23.002] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:23.003] Cog0     -> pass
+[2026-11-25T17:44:23.003] Cog0   
+[2026-11-25T17:44:23.017] Cog0  * Test #63: delete() of a file that is open for writing
+[2026-11-25T17:44:23.017] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.017] Cog0     -> pass
+[2026-11-25T17:44:23.017] Cog0   
+[2026-11-25T17:44:23.018] Cog0  * Test #64: close() of the file open for writing
+[2026-11-25T17:44:23.018] Cog0  * wr_block() block_address = $0682, block_id = 11, NextID_EndPtr = $0089
+[2026-11-25T17:44:23.033] Cog0  - program_block() block_address = $0682
+[2026-11-25T17:44:23.065] Cog0  - activate_block() block_address = $0682
+[2026-11-25T17:44:23.066] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:44:23.066] Cog0     -> pass
+[2026-11-25T17:44:23.066] Cog0   
+[2026-11-25T17:44:23.076] Cog0  * Test #65: delete() of the file once it is written and closed
+[2026-11-25T17:44:23.076] Cog0  * delChnFmID() [$0682] block_id = 11, EndID = 0, delete_mode = 0, KeepFirstIDValid = 0
+[2026-11-25T17:44:23.083] Cog0  - cancel_block() block_address = $0682
+[2026-11-25T17:44:23.083] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.084] Cog0     -> pass
+[2026-11-25T17:44:23.084] Cog0   
+[2026-11-25T17:44:23.084] Cog0   
+[2026-11-25T17:44:23.084] Cog0   ------------------------------------------------------------
+[2026-11-25T17:44:23.084] Cog0  * Test Group: rename() and delete() across an unmount and a mount
+[2026-11-25T17:44:23.084] Cog0   
+[2026-11-25T17:44:23.091] Cog0  * Test #66: set up the file to rename
+[2026-11-25T17:44:23.091] Cog0  * wr_block() block_address = $08DF, block_id = 11, NextID_EndPtr = $00C8
+[2026-11-25T17:44:23.107] Cog0  - program_block() block_address = $08DF
+[2026-11-25T17:44:23.143] Cog0  - activate_block() block_address = $08DF
+[2026-11-25T17:44:23.143] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:23.143] Cog0     -> pass
+[2026-11-25T17:44:23.149] Cog0   
+[2026-11-25T17:44:23.149] Cog0  * Test #67: set up the file to delete
+[2026-11-25T17:44:23.165] Cog0  * wr_block() block_address = $0671, block_id = 12, NextID_EndPtr = $00EC
+[2026-11-25T17:44:23.165] Cog0  - program_block() block_address = $0671
+[2026-11-25T17:44:23.198] Cog0  - activate_block() block_address = $0671
+[2026-11-25T17:44:23.198] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:23.198] Cog0     -> pass
+[2026-11-25T17:44:23.198] Cog0   
+[2026-11-25T17:44:23.205] Cog0  * Test #68: set up the multi-block file nothing touches
+[2026-11-25T17:44:23.205] Cog0  * wr_block() block_address = $03A8, block_id = 13, NextID_EndPtr = $000E
+[2026-11-25T17:44:23.220] Cog0  - program_block() block_address = $03A8
+[2026-11-25T17:44:23.259] Cog0  * wr_block() block_address = $0396, block_id = 14, NextID_EndPtr = $0068
+[2026-11-25T17:44:23.274] Cog0  - program_block() block_address = $0396
+[2026-11-25T17:44:23.309] Cog0  - activate_block() block_address = $0396
+[2026-11-25T17:44:23.310] Cog0  - activate_block() block_address = $03A8
+[2026-11-25T17:44:23.310] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:23.310] Cog0     -> pass
+[2026-11-25T17:44:23.310] Cog0   
+[2026-11-25T17:44:23.325] Cog0  * Test #69: rename() before the remount
+[2026-11-25T17:44:23.328] Cog0  * program_updated_block() block_address = $03D8
+[2026-11-25T17:44:23.343] Cog0  - program_block() block_address = $03D8
+[2026-11-25T17:44:23.378] Cog0  - activate_block() block_address = $03D8
+[2026-11-25T17:44:23.385] Cog0  - cancel_block() block_address = $08DF
+[2026-11-25T17:44:23.385] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.385] Cog0     -> pass
+[2026-11-25T17:44:23.385] Cog0   
+[2026-11-25T17:44:23.395] Cog0  * Test #70: delete() before the remount
+[2026-11-25T17:44:23.403] Cog0  * delChnFmID() [$0671] block_id = 12, EndID = 0, delete_mode = 0, KeepFirstIDValid = 0
+[2026-11-25T17:44:23.403] Cog0  - cancel_block() block_address = $0671
+[2026-11-25T17:44:23.403] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.403] Cog0     -> pass
+[2026-11-25T17:44:23.403] Cog0   
+[2026-11-25T17:44:23.418] Cog0  * Test #71: unmount() and mount() keep the counts
+[2026-11-25T17:44:23.496] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:44:23.496] Cog0     -> pass
+[2026-11-25T17:44:23.496] Cog0   
+[2026-11-25T17:44:23.508] Cog0  * Test #72: the renamed file is under its new name only
+[2026-11-25T17:44:23.508] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.508] Cog0     -> pass
+[2026-11-25T17:44:23.508] Cog0   
+[2026-11-25T17:44:23.523] Cog0  * Test #73: the deleted file is still gone
+[2026-11-25T17:44:23.527] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:23.527] Cog0     -> pass
+[2026-11-25T17:44:23.527] Cog0   
+[2026-11-25T17:44:23.539] Cog0  * Test #74: the file nothing touched is intact
+[2026-11-25T17:44:23.539] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:44:23.539] Cog0     -> pass
+[2026-11-25T17:44:23.539] Cog0   
+[2026-11-25T17:44:23.556] Cog0  * Test #75: rename() on the remounted filesystem
+[2026-11-25T17:44:23.556] Cog0  * program_updated_block() block_address = $08A0
+[2026-11-25T17:44:23.556] Cog0  - program_block() block_address = $08A0
+[2026-11-25T17:44:23.605] Cog0  - activate_block() block_address = $08A0
+[2026-11-25T17:44:23.613] Cog0  - cancel_block() block_address = $03D8
+[2026-11-25T17:44:23.613] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.613] Cog0     -> pass
+[2026-11-25T17:44:23.613] Cog0   
+[2026-11-25T17:44:23.622] Cog0  * Test #76: delete() of the multi-block file on the remounted filesystem
+[2026-11-25T17:44:23.622] Cog0  * delChnFmID() [$03A8] block_id = 13, EndID = 0, delete_mode = 0, KeepFirstIDValid = 0
+[2026-11-25T17:44:23.623] Cog0  - cancel_block() block_address = $03A8
+[2026-11-25T17:44:23.631] Cog0  - cancel_block() block_address = $0396
+[2026-11-25T17:44:23.631] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.631] Cog0     -> pass
+[2026-11-25T17:44:23.631] Cog0   
+[2026-11-25T17:44:23.647] Cog0  * Test #77: unmount() and mount() a second time keep the counts
+[2026-11-25T17:44:23.720] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:44:23.720] Cog0     -> pass
+[2026-11-25T17:44:23.720] Cog0   
+[2026-11-25T17:44:23.735] Cog0  * Test #78: the file is under its last name only
+[2026-11-25T17:44:23.738] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:44:23.738] Cog0     -> pass
+[2026-11-25T17:44:23.738] Cog0   
+[2026-11-25T17:44:23.754] Cog0  * Test #79: the multi-block file is still gone
+[2026-11-25T17:44:23.756] Cog0  * Test Complete
+[2026-11-25T17:44:23.757] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:44:23.757] Cog0     -> pass
+[2026-11-25T17:44:23.757] Cog0   
+[2026-11-25T17:44:23.757] Cog0  * 79 Tests - Pass: 79, Fail: 0
+[2026-11-25T17:44:23.772] Cog0  RESULT: PASS RT_rename_delete_tests 79/79
+[2026-11-25T17:44:23.773] Cog0  <END_SESSION>
+[2026-11-25T17:44:23.773] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-25T17:44:23.773] [SYSTEM] Shutdown initiated: End marker detected
+
+=== Headless Mode Session Ended at 2026-11-25T17:44:23.800 ===

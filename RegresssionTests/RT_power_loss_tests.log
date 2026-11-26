@@ -1,0 +1,1374 @@
+=== Headless Mode Session Started at 2026-11-25T17:48:05.872 ===
+PNut-Term-TS: v1.1.2
+Mode: Headless (no GUI)
+End Markers: "END_SESSION", "DEBUG_END_SESSION"
+Timeout: 180 seconds
+=====================================
+
+[2026-11-25T17:48:05.870] [SYSTEM] Headless mode started
+[2026-11-25T17:48:05.870] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-25T17:48:05.871] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-25T17:48:05.913] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-25T17:48:05.914] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_power_loss_tests.bin to RAM
+[2026-11-25T17:48:06.280] 
+[2026-11-25T17:48:06.280] Prop_Ver G
+[2026-11-25T17:48:07.704] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_power_loss_tests.bin
+[2026-11-25T17:48:07.713] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-25T17:48:07.729] Cog0  INIT $0000_0FA8 $0001_6D60 jump
+[2026-11-25T17:48:07.823] Cog0  * init VAR
+[2026-11-25T17:48:07.824] Cog0  * Random seed (cog 0): $1C3E_CBD7
+[2026-11-25T17:48:07.824] Cog0   
+[2026-11-25T17:48:07.824] Cog0  * Test #1: driver instance matches the harness instance
+[2026-11-25T17:48:07.824] Cog0    MAX_FILES_OPEN: 2
+[2026-11-25T17:48:07.824] Cog0     -> pass
+[2026-11-25T17:48:07.824] Cog0   
+[2026-11-25T17:48:07.824] Cog0  * Environment: Chip S/N and Driver Version
+[2026-11-25T17:48:07.825] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:48:07.825] Cog0     Driver: flash_fs v2.1.0
+[2026-11-25T17:48:07.825] Cog0   
+[2026-11-25T17:48:07.825] Cog0   
+[2026-11-25T17:48:07.825] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:07.826] Cog0  * Test Group: a duplicate ID: a copy of a body block with the next lifecycle
+[2026-11-25T17:48:07.826] Cog0   
+[2026-11-25T17:48:07.842] Cog0  * Test #2: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:07.937] Cog0  * wr_block() block_address = $0865, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:07.953] Cog0  - program_block() block_address = $0865
+[2026-11-25T17:48:07.990] Cog0  * wr_block() block_address = $0067, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:08.006] Cog0  - program_block() block_address = $0067
+[2026-11-25T17:48:08.038] Cog0  - activate_block() block_address = $0067
+[2026-11-25T17:48:08.054] Cog0  - activate_block() block_address = $0865
+[2026-11-25T17:48:08.055] Cog0  * wr_block() block_address = $015A, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:08.070] Cog0  - program_block() block_address = $015A
+[2026-11-25T17:48:08.107] Cog0  * wr_block() block_address = $0116, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:08.123] Cog0  - program_block() block_address = $0116
+[2026-11-25T17:48:08.156] Cog0  - activate_block() block_address = $0116
+[2026-11-25T17:48:08.165] Cog0  - activate_block() block_address = $015A
+[2026-11-25T17:48:08.165] Cog0  * wr_block() block_address = $0DF9, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:08.180] Cog0  - program_block() block_address = $0DF9
+[2026-11-25T17:48:08.222] Cog0  - activate_block() block_address = $0DF9
+[2026-11-25T17:48:08.222] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:08.222] Cog0     -> pass
+[2026-11-25T17:48:08.222] Cog0   
+[2026-11-25T17:48:08.225] Cog0  * Test #3: copy the body block of the target file, activate the copy with the next lifecycle and read it back
+[2026-11-25T17:48:08.241] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:08.278] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:08.286] Cog0    body block $0116 copied to block $0000
+[2026-11-25T17:48:08.286] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:48:08.286] Cog0     -> pass
+[2026-11-25T17:48:08.286] Cog0   
+[2026-11-25T17:48:08.302] Cog0  * Test #4: can_mount() is FALSE for a duplicate ID and changes no block
+[2026-11-25T17:48:08.361] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:08.362] Cog0     -> pass
+[2026-11-25T17:48:08.362] Cog0   
+[2026-11-25T17:48:08.370] Cog0  * Test #5: mount() cancels the older copy, keeps the newer one and returns SUCCESS
+[2026-11-25T17:48:08.385] Cog0  - cancel_block() block_address = $0116
+[2026-11-25T17:48:08.432] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:08.432] Cog0     -> pass
+[2026-11-25T17:48:08.432] Cog0   
+[2026-11-25T17:48:08.448] Cog0  * Test #6: the files that must survive read back whole
+[2026-11-25T17:48:08.476] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:08.476] Cog0     -> pass
+[2026-11-25T17:48:08.476] Cog0   
+[2026-11-25T17:48:08.492] Cog0  * Test #7: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:08.610] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:08.610] Cog0     -> pass
+[2026-11-25T17:48:08.610] Cog0   
+[2026-11-25T17:48:08.610] Cog0   
+[2026-11-25T17:48:08.610] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:08.611] Cog0  * Test Group: an orphan body block: an active body block no file reaches
+[2026-11-25T17:48:08.611] Cog0   
+[2026-11-25T17:48:08.611] Cog0  * Test #8: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:08.615] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:08.615] Cog0  - cancel_block() block_address = $0067
+[2026-11-25T17:48:08.631] Cog0  - cancel_block() block_address = $015A
+[2026-11-25T17:48:08.647] Cog0  - cancel_block() block_address = $0865
+[2026-11-25T17:48:08.663] Cog0  - cancel_block() block_address = $0DF9
+[2026-11-25T17:48:08.724] Cog0  * wr_block() block_address = $01CB, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:08.740] Cog0  - program_block() block_address = $01CB
+[2026-11-25T17:48:08.777] Cog0  * wr_block() block_address = $0F73, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:08.793] Cog0  - program_block() block_address = $0F73
+[2026-11-25T17:48:08.826] Cog0  - activate_block() block_address = $0F73
+[2026-11-25T17:48:08.840] Cog0  - activate_block() block_address = $01CB
+[2026-11-25T17:48:08.840] Cog0  * wr_block() block_address = $0DFC, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:08.855] Cog0  - program_block() block_address = $0DFC
+[2026-11-25T17:48:08.894] Cog0  * wr_block() block_address = $0254, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:08.909] Cog0  - program_block() block_address = $0254
+[2026-11-25T17:48:08.945] Cog0  - activate_block() block_address = $0254
+[2026-11-25T17:48:08.960] Cog0  - activate_block() block_address = $0DFC
+[2026-11-25T17:48:08.960] Cog0  * wr_block() block_address = $07CD, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:08.975] Cog0  - program_block() block_address = $07CD
+[2026-11-25T17:48:09.015] Cog0  - activate_block() block_address = $07CD
+[2026-11-25T17:48:09.015] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:09.015] Cog0     -> pass
+[2026-11-25T17:48:09.015] Cog0   
+[2026-11-25T17:48:09.018] Cog0  * Test #9: copy the body block of the target file under an unused ID, activate it and read it back
+[2026-11-25T17:48:09.033] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:09.068] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:09.070] Cog0    orphan body block at block $0000
+[2026-11-25T17:48:09.070] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:09.070] Cog0     -> pass
+[2026-11-25T17:48:09.070] Cog0   
+[2026-11-25T17:48:09.086] Cog0  * Test #10: can_mount() is FALSE for an orphan body block and changes no block
+[2026-11-25T17:48:09.145] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:09.145] Cog0     -> pass
+[2026-11-25T17:48:09.145] Cog0   
+[2026-11-25T17:48:09.161] Cog0  * Test #11: mount() cancels the orphan body block and returns E_BAD_BLOCKS_REMOVED
+[2026-11-25T17:48:09.210] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:09.215] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:09.215] Cog0     -> pass
+[2026-11-25T17:48:09.215] Cog0   
+[2026-11-25T17:48:09.231] Cog0  * Test #12: the files that must survive read back whole
+[2026-11-25T17:48:09.259] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:09.259] Cog0     -> pass
+[2026-11-25T17:48:09.259] Cog0   
+[2026-11-25T17:48:09.274] Cog0  * Test #13: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:09.393] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:09.393] Cog0     -> pass
+[2026-11-25T17:48:09.393] Cog0   
+[2026-11-25T17:48:09.393] Cog0   
+[2026-11-25T17:48:09.393] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:09.394] Cog0  * Test Group: a head block programmed and never activated, with the body block it leads to
+[2026-11-25T17:48:09.394] Cog0   
+[2026-11-25T17:48:09.399] Cog0  * Test #14: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:09.401] Cog0  - cancel_block() block_address = $01CB
+[2026-11-25T17:48:09.416] Cog0  - cancel_block() block_address = $0254
+[2026-11-25T17:48:09.416] Cog0  - cancel_block() block_address = $07CD
+[2026-11-25T17:48:09.433] Cog0  - cancel_block() block_address = $0DFC
+[2026-11-25T17:48:09.449] Cog0  - cancel_block() block_address = $0F73
+[2026-11-25T17:48:09.507] Cog0  * wr_block() block_address = $0143, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:09.523] Cog0  - program_block() block_address = $0143
+[2026-11-25T17:48:09.557] Cog0  * wr_block() block_address = $0524, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:09.573] Cog0  - program_block() block_address = $0524
+[2026-11-25T17:48:09.608] Cog0  - activate_block() block_address = $0524
+[2026-11-25T17:48:09.622] Cog0  - activate_block() block_address = $0143
+[2026-11-25T17:48:09.622] Cog0  * wr_block() block_address = $0DD3, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:09.638] Cog0  - program_block() block_address = $0DD3
+[2026-11-25T17:48:09.677] Cog0  * wr_block() block_address = $03CB, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:09.693] Cog0  - program_block() block_address = $03CB
+[2026-11-25T17:48:09.725] Cog0  - activate_block() block_address = $03CB
+[2026-11-25T17:48:09.739] Cog0  - activate_block() block_address = $0DD3
+[2026-11-25T17:48:09.739] Cog0  * wr_block() block_address = $00BE, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:09.755] Cog0  - program_block() block_address = $00BE
+[2026-11-25T17:48:09.789] Cog0  - activate_block() block_address = $00BE
+[2026-11-25T17:48:09.790] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:09.790] Cog0     -> pass
+[2026-11-25T17:48:09.790] Cog0   
+[2026-11-25T17:48:09.792] Cog0  * Test #15: copy the head block of the target file with the next lifecycle, never activate it, and read it back
+[2026-11-25T17:48:09.808] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:09.850] Cog0    inactive head block at block $0000
+[2026-11-25T17:48:09.850] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:48:09.850] Cog0     -> pass
+[2026-11-25T17:48:09.850] Cog0   
+[2026-11-25T17:48:09.866] Cog0  * Test #16: can_mount() is TRUE while the one change is a head block that was never activated, and changes no block
+[2026-11-25T17:48:09.924] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:09.925] Cog0     -> pass
+[2026-11-25T17:48:09.925] Cog0   
+[2026-11-25T17:48:09.927] Cog0  * Test #17: copy the body block under the ID the inactive head leads to, with one data byte changed, activate it and read it back
+[2026-11-25T17:48:09.943] Cog0  - program_block() block_address = $0001
+[2026-11-25T17:48:09.975] Cog0  - activate_block() block_address = $0001
+[2026-11-25T17:48:09.977] Cog0    body block the inactive head leads to at block $0001
+[2026-11-25T17:48:09.978] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:09.978] Cog0     -> pass
+[2026-11-25T17:48:09.978] Cog0   
+[2026-11-25T17:48:09.993] Cog0  * Test #18: can_mount() is FALSE once the body block the inactive head leads to is active, and changes no block
+[2026-11-25T17:48:10.058] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:48:10.059] Cog0     -> pass
+[2026-11-25T17:48:10.059] Cog0   
+[2026-11-25T17:48:10.075] Cog0  * Test #19: mount() cancels the body copy, returns E_BAD_BLOCKS_REMOVED and leaves the inactive head copy as it was
+[2026-11-25T17:48:10.123] Cog0  - cancel_block() block_address = $0001
+[2026-11-25T17:48:10.130] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:10.130] Cog0     -> pass
+[2026-11-25T17:48:10.130] Cog0   
+[2026-11-25T17:48:10.146] Cog0  * Test #20: the files that must survive read back whole
+[2026-11-25T17:48:10.168] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:10.168] Cog0     -> pass
+[2026-11-25T17:48:10.168] Cog0   
+[2026-11-25T17:48:10.184] Cog0  * Test #21: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:10.302] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:10.302] Cog0     -> pass
+[2026-11-25T17:48:10.302] Cog0   
+[2026-11-25T17:48:10.302] Cog0   
+[2026-11-25T17:48:10.302] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:10.302] Cog0  * Test Group: an active block whose CRC no longer matches
+[2026-11-25T17:48:10.302] Cog0   
+[2026-11-25T17:48:10.306] Cog0  * Test #22: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:10.307] Cog0  - cancel_block() block_address = $00BE
+[2026-11-25T17:48:10.314] Cog0  - cancel_block() block_address = $0143
+[2026-11-25T17:48:10.317] Cog0  - cancel_block() block_address = $03CB
+[2026-11-25T17:48:10.333] Cog0  - cancel_block() block_address = $0524
+[2026-11-25T17:48:10.349] Cog0  - cancel_block() block_address = $0DD3
+[2026-11-25T17:48:10.416] Cog0  * wr_block() block_address = $0087, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:10.431] Cog0  - program_block() block_address = $0087
+[2026-11-25T17:48:10.467] Cog0  * wr_block() block_address = $04DA, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:10.482] Cog0  - program_block() block_address = $04DA
+[2026-11-25T17:48:10.519] Cog0  - activate_block() block_address = $04DA
+[2026-11-25T17:48:10.533] Cog0  - activate_block() block_address = $0087
+[2026-11-25T17:48:10.533] Cog0  * wr_block() block_address = $0ACA, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:10.549] Cog0  - program_block() block_address = $0ACA
+[2026-11-25T17:48:10.583] Cog0  * wr_block() block_address = $0AEB, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:10.599] Cog0  - program_block() block_address = $0AEB
+[2026-11-25T17:48:10.630] Cog0  - activate_block() block_address = $0AEB
+[2026-11-25T17:48:10.643] Cog0  - activate_block() block_address = $0ACA
+[2026-11-25T17:48:10.643] Cog0  * wr_block() block_address = $0020, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:10.658] Cog0  - program_block() block_address = $0020
+[2026-11-25T17:48:10.690] Cog0  - activate_block() block_address = $0020
+[2026-11-25T17:48:10.692] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:10.692] Cog0     -> pass
+[2026-11-25T17:48:10.692] Cog0   
+[2026-11-25T17:48:10.694] Cog0  * Test #23: clear a reserved bit of the one-block file's block and read it back
+[2026-11-25T17:48:10.695] Cog0    block $0020 corrupted
+[2026-11-25T17:48:10.695] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:10.695] Cog0     -> pass
+[2026-11-25T17:48:10.695] Cog0   
+[2026-11-25T17:48:10.711] Cog0  * Test #24: can_mount() is FALSE for a block whose CRC does not match and changes no block
+[2026-11-25T17:48:10.767] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:10.767] Cog0     -> pass
+[2026-11-25T17:48:10.767] Cog0   
+[2026-11-25T17:48:10.769] Cog0  * Test #25: mount() cancels the block whose CRC does not match and returns E_BAD_BLOCKS_REMOVED
+[2026-11-25T17:48:10.785] Cog0  - cancel_block() block_address = $0020
+[2026-11-25T17:48:10.835] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:10.835] Cog0     -> pass
+[2026-11-25T17:48:10.835] Cog0   
+[2026-11-25T17:48:10.852] Cog0  * Test #26: the files that must survive read back whole
+[2026-11-25T17:48:10.874] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:10.874] Cog0     -> pass
+[2026-11-25T17:48:10.874] Cog0   
+[2026-11-25T17:48:10.890] Cog0  * Test #27: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:11.005] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:11.006] Cog0     -> pass
+[2026-11-25T17:48:11.006] Cog0   
+[2026-11-25T17:48:11.006] Cog0   
+[2026-11-25T17:48:11.006] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:11.006] Cog0  * Test Group: a block whose ID is past the last block ID
+[2026-11-25T17:48:11.006] Cog0   
+[2026-11-25T17:48:11.020] Cog0  * Test #28: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:11.020] Cog0  - cancel_block() block_address = $0087
+[2026-11-25T17:48:11.035] Cog0  - cancel_block() block_address = $04DA
+[2026-11-25T17:48:11.036] Cog0  - cancel_block() block_address = $0ACA
+[2026-11-25T17:48:11.053] Cog0  - cancel_block() block_address = $0AEB
+[2026-11-25T17:48:11.119] Cog0  * wr_block() block_address = $028F, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:11.135] Cog0  - program_block() block_address = $028F
+[2026-11-25T17:48:11.170] Cog0  * wr_block() block_address = $0C1D, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:11.186] Cog0  - program_block() block_address = $0C1D
+[2026-11-25T17:48:11.221] Cog0  - activate_block() block_address = $0C1D
+[2026-11-25T17:48:11.236] Cog0  - activate_block() block_address = $028F
+[2026-11-25T17:48:11.236] Cog0  * wr_block() block_address = $0144, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:11.252] Cog0  - program_block() block_address = $0144
+[2026-11-25T17:48:11.289] Cog0  * wr_block() block_address = $0BD3, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:11.304] Cog0  - program_block() block_address = $0BD3
+[2026-11-25T17:48:11.339] Cog0  - activate_block() block_address = $0BD3
+[2026-11-25T17:48:11.349] Cog0  - activate_block() block_address = $0144
+[2026-11-25T17:48:11.349] Cog0  * wr_block() block_address = $0B26, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:11.364] Cog0  - program_block() block_address = $0B26
+[2026-11-25T17:48:11.403] Cog0  - activate_block() block_address = $0B26
+[2026-11-25T17:48:11.404] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:11.404] Cog0     -> pass
+[2026-11-25T17:48:11.404] Cog0   
+[2026-11-25T17:48:11.407] Cog0  * Test #29: copy the body block of the target file with an ID past the last one, activate it and read it back
+[2026-11-25T17:48:11.422] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:11.459] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:11.462] Cog0    block $0BD3 copied to block $0000 with a field set to $0F80
+[2026-11-25T17:48:11.462] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:11.462] Cog0     -> pass
+[2026-11-25T17:48:11.462] Cog0   
+[2026-11-25T17:48:11.479] Cog0  * Test #30: can_mount() is FALSE for a block whose ID is past the last one and changes no block
+[2026-11-25T17:48:11.539] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:11.539] Cog0     -> pass
+[2026-11-25T17:48:11.539] Cog0   
+[2026-11-25T17:48:11.555] Cog0  * Test #31: mount() cancels the block whose ID is past the last one and returns E_BAD_BLOCKS_REMOVED
+[2026-11-25T17:48:11.555] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:11.608] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:11.608] Cog0     -> pass
+[2026-11-25T17:48:11.608] Cog0   
+[2026-11-25T17:48:11.624] Cog0  * Test #32: the files that must survive read back whole
+[2026-11-25T17:48:11.645] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:11.646] Cog0     -> pass
+[2026-11-25T17:48:11.646] Cog0   
+[2026-11-25T17:48:11.661] Cog0  * Test #33: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:11.780] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:11.780] Cog0     -> pass
+[2026-11-25T17:48:11.780] Cog0   
+[2026-11-25T17:48:11.780] Cog0   
+[2026-11-25T17:48:11.780] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:11.780] Cog0  * Test Group: a newer head block whose NextID is past the last block ID
+[2026-11-25T17:48:11.780] Cog0   
+[2026-11-25T17:48:11.784] Cog0  * Test #34: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:11.800] Cog0  - cancel_block() block_address = $0144
+[2026-11-25T17:48:11.800] Cog0  - cancel_block() block_address = $028F
+[2026-11-25T17:48:11.813] Cog0  - cancel_block() block_address = $0B26
+[2026-11-25T17:48:11.814] Cog0  - cancel_block() block_address = $0BD3
+[2026-11-25T17:48:11.830] Cog0  - cancel_block() block_address = $0C1D
+[2026-11-25T17:48:11.893] Cog0  * wr_block() block_address = $0200, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:11.909] Cog0  - program_block() block_address = $0200
+[2026-11-25T17:48:11.946] Cog0  * wr_block() block_address = $0110, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:11.961] Cog0  - program_block() block_address = $0110
+[2026-11-25T17:48:11.994] Cog0  - activate_block() block_address = $0110
+[2026-11-25T17:48:12.008] Cog0  - activate_block() block_address = $0200
+[2026-11-25T17:48:12.008] Cog0  * wr_block() block_address = $00AA, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:12.024] Cog0  - program_block() block_address = $00AA
+[2026-11-25T17:48:12.059] Cog0  * wr_block() block_address = $022C, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:12.075] Cog0  - program_block() block_address = $022C
+[2026-11-25T17:48:12.110] Cog0  - activate_block() block_address = $022C
+[2026-11-25T17:48:12.120] Cog0  - activate_block() block_address = $00AA
+[2026-11-25T17:48:12.120] Cog0  * wr_block() block_address = $0CB0, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:12.135] Cog0  - program_block() block_address = $0CB0
+[2026-11-25T17:48:12.175] Cog0  - activate_block() block_address = $0CB0
+[2026-11-25T17:48:12.175] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:12.175] Cog0     -> pass
+[2026-11-25T17:48:12.175] Cog0   
+[2026-11-25T17:48:12.178] Cog0  * Test #35: copy the head block of the target file with the next lifecycle and a NextID past the last block ID, activate it and read it back
+[2026-11-25T17:48:12.194] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:12.234] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:12.237] Cog0    block $00AA copied to block $0000 with a field set to $0F80
+[2026-11-25T17:48:12.237] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:12.237] Cog0     -> pass
+[2026-11-25T17:48:12.237] Cog0   
+[2026-11-25T17:48:12.253] Cog0  * Test #36: can_mount() is FALSE for a block whose NextID is past the last block ID and changes no block
+[2026-11-25T17:48:12.313] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:12.313] Cog0     -> pass
+[2026-11-25T17:48:12.313] Cog0   
+[2026-11-25T17:48:12.315] Cog0  * Test #37: mount() cancels the head block whose NextID is past the last block ID, keeps the older head and returns E_BAD_BLOCKS_REMOVED
+[2026-11-25T17:48:12.331] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:12.383] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:12.383] Cog0     -> pass
+[2026-11-25T17:48:12.383] Cog0   
+[2026-11-25T17:48:12.399] Cog0  * Test #38: the files that must survive read back whole
+[2026-11-25T17:48:12.421] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:12.421] Cog0     -> pass
+[2026-11-25T17:48:12.421] Cog0   
+[2026-11-25T17:48:12.436] Cog0  * Test #39: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:12.555] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:12.555] Cog0     -> pass
+[2026-11-25T17:48:12.555] Cog0   
+[2026-11-25T17:48:12.555] Cog0   
+[2026-11-25T17:48:12.555] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:12.555] Cog0  * Test Group: a newer last block whose EndPtr lies before its data area
+[2026-11-25T17:48:12.555] Cog0   
+[2026-11-25T17:48:12.558] Cog0  * Test #40: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:12.562] Cog0  - cancel_block() block_address = $00AA
+[2026-11-25T17:48:12.562] Cog0  - cancel_block() block_address = $0110
+[2026-11-25T17:48:12.563] Cog0  - cancel_block() block_address = $0200
+[2026-11-25T17:48:12.578] Cog0  - cancel_block() block_address = $022C
+[2026-11-25T17:48:12.594] Cog0  - cancel_block() block_address = $0CB0
+[2026-11-25T17:48:12.669] Cog0  * wr_block() block_address = $058C, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:12.685] Cog0  - program_block() block_address = $058C
+[2026-11-25T17:48:12.724] Cog0  * wr_block() block_address = $0E47, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:12.740] Cog0  - program_block() block_address = $0E47
+[2026-11-25T17:48:12.773] Cog0  - activate_block() block_address = $0E47
+[2026-11-25T17:48:12.789] Cog0  - activate_block() block_address = $058C
+[2026-11-25T17:48:12.789] Cog0  * wr_block() block_address = $044F, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:12.805] Cog0  - program_block() block_address = $044F
+[2026-11-25T17:48:12.842] Cog0  * wr_block() block_address = $0ED5, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:12.858] Cog0  - program_block() block_address = $0ED5
+[2026-11-25T17:48:12.896] Cog0  - activate_block() block_address = $0ED5
+[2026-11-25T17:48:12.907] Cog0  - activate_block() block_address = $044F
+[2026-11-25T17:48:12.907] Cog0  * wr_block() block_address = $09A0, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:12.923] Cog0  - program_block() block_address = $09A0
+[2026-11-25T17:48:12.961] Cog0  - activate_block() block_address = $09A0
+[2026-11-25T17:48:12.961] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:12.961] Cog0     -> pass
+[2026-11-25T17:48:12.961] Cog0   
+[2026-11-25T17:48:12.964] Cog0  * Test #41: copy the one-block file's block with the next lifecycle and an EndPtr before its data area, activate it and read it back
+[2026-11-25T17:48:12.980] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:13.014] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:13.017] Cog0    block $09A0 copied to block $0000 with a field set to $0087
+[2026-11-25T17:48:13.017] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:13.017] Cog0     -> pass
+[2026-11-25T17:48:13.017] Cog0   
+[2026-11-25T17:48:13.033] Cog0  * Test #42: can_mount() is FALSE for a block whose EndPtr lies before its data area and changes no block
+[2026-11-25T17:48:13.093] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:13.093] Cog0     -> pass
+[2026-11-25T17:48:13.093] Cog0   
+[2026-11-25T17:48:13.095] Cog0  * Test #43: mount() cancels the block whose EndPtr lies before its data area, keeps the older block and returns E_BAD_BLOCKS_REMOVED
+[2026-11-25T17:48:13.111] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:13.163] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:13.163] Cog0     -> pass
+[2026-11-25T17:48:13.163] Cog0   
+[2026-11-25T17:48:13.179] Cog0  * Test #44: the files that must survive read back whole
+[2026-11-25T17:48:13.204] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:13.204] Cog0     -> pass
+[2026-11-25T17:48:13.204] Cog0   
+[2026-11-25T17:48:13.220] Cog0  * Test #45: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:13.338] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:13.338] Cog0     -> pass
+[2026-11-25T17:48:13.338] Cog0   
+[2026-11-25T17:48:13.338] Cog0   
+[2026-11-25T17:48:13.338] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:13.338] Cog0  * Test Group: a newer head block whose data offset skips past its EndPtr
+[2026-11-25T17:48:13.338] Cog0   
+[2026-11-25T17:48:13.350] Cog0  * Test #46: set up: format, write three files, find their blocks and unmount
+[2026-11-25T17:48:13.365] Cog0  - cancel_block() block_address = $044F
+[2026-11-25T17:48:13.365] Cog0  - cancel_block() block_address = $058C
+[2026-11-25T17:48:13.378] Cog0  - cancel_block() block_address = $09A0
+[2026-11-25T17:48:13.379] Cog0  - cancel_block() block_address = $0E47
+[2026-11-25T17:48:13.395] Cog0  - cancel_block() block_address = $0ED5
+[2026-11-25T17:48:13.452] Cog0  * wr_block() block_address = $0913, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:13.467] Cog0  - program_block() block_address = $0913
+[2026-11-25T17:48:13.503] Cog0  * wr_block() block_address = $09AD, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:13.519] Cog0  - program_block() block_address = $09AD
+[2026-11-25T17:48:13.551] Cog0  - activate_block() block_address = $09AD
+[2026-11-25T17:48:13.567] Cog0  - activate_block() block_address = $0913
+[2026-11-25T17:48:13.568] Cog0  * wr_block() block_address = $07C0, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:13.584] Cog0  - program_block() block_address = $07C0
+[2026-11-25T17:48:13.621] Cog0  * wr_block() block_address = $0315, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:13.637] Cog0  - program_block() block_address = $0315
+[2026-11-25T17:48:13.668] Cog0  - activate_block() block_address = $0315
+[2026-11-25T17:48:13.680] Cog0  - activate_block() block_address = $07C0
+[2026-11-25T17:48:13.680] Cog0  * wr_block() block_address = $0B0E, block_id = 4, NextID_EndPtr = $00EC
+[2026-11-25T17:48:13.695] Cog0  - program_block() block_address = $0B0E
+[2026-11-25T17:48:13.736] Cog0  - activate_block() block_address = $0B0E
+[2026-11-25T17:48:13.737] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:13.737] Cog0     -> pass
+[2026-11-25T17:48:13.737] Cog0   
+[2026-11-25T17:48:13.740] Cog0  * Test #47: copy the one-block file's block with the next lifecycle and a data offset past the bytes it holds, activate it and read it back
+[2026-11-25T17:48:13.756] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:13.792] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:13.794] Cog0    block $0B0E copied to block $0000 with a field set to $0065
+[2026-11-25T17:48:13.795] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:13.795] Cog0     -> pass
+[2026-11-25T17:48:13.795] Cog0   
+[2026-11-25T17:48:13.811] Cog0  * Test #48: can_mount() is FALSE for a head block whose data offset skips past its EndPtr and changes no block
+[2026-11-25T17:48:13.870] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:13.870] Cog0     -> pass
+[2026-11-25T17:48:13.870] Cog0   
+[2026-11-25T17:48:13.872] Cog0  * Test #49: mount() cancels the head block whose data offset skips past its EndPtr, keeps the older block and returns E_BAD_BLOCKS_REMOVED
+[2026-11-25T17:48:13.888] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:13.940] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:13.941] Cog0     -> pass
+[2026-11-25T17:48:13.941] Cog0   
+[2026-11-25T17:48:13.956] Cog0  * Test #50: the files that must survive read back whole
+[2026-11-25T17:48:13.988] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:13.988] Cog0     -> pass
+[2026-11-25T17:48:13.988] Cog0   
+[2026-11-25T17:48:14.003] Cog0  * Test #51: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:14.121] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:14.121] Cog0     -> pass
+[2026-11-25T17:48:14.121] Cog0   
+[2026-11-25T17:48:14.121] Cog0   
+[2026-11-25T17:48:14.122] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:14.122] Cog0  * Test Group: a block move during create_file() and the new file's inactive head block
+[2026-11-25T17:48:14.122] Cog0   
+[2026-11-25T17:48:14.138] Cog0  * Test #52: create_file() of a three-block file while the block allocations are named to take one free block
+[2026-11-25T17:48:14.138] Cog0  - cancel_block() block_address = $0315
+[2026-11-25T17:48:14.148] Cog0  - cancel_block() block_address = $07C0
+[2026-11-25T17:48:14.149] Cog0  - cancel_block() block_address = $0913
+[2026-11-25T17:48:14.165] Cog0  - cancel_block() block_address = $09AD
+[2026-11-25T17:48:14.165] Cog0  - cancel_block() block_address = $0B0E
+[2026-11-25T17:48:14.245] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:14.293] Cog0  - program_block() block_address = $0E67
+[2026-11-25T17:48:14.357] Cog0  - activate_block() block_address = $0E67
+[2026-11-25T17:48:14.357] Cog0  - program_block() block_address = $0C85
+[2026-11-25T17:48:14.393] Cog0  - activate_block() block_address = $0C85
+[2026-11-25T17:48:14.395] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:14.396] Cog0    named block $0000, the new file's head block is at block $0000
+[2026-11-25T17:48:14.396] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:14.396] Cog0     -> pass
+[2026-11-25T17:48:14.396] Cog0   
+[2026-11-25T17:48:14.412] Cog0  * Test #53: the file made while a block was named survives an unmount and a mount, and reads back whole
+[2026-11-25T17:48:14.536] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:48:14.536] Cog0     -> pass
+[2026-11-25T17:48:14.536] Cog0   
+[2026-11-25T17:48:14.536] Cog0   
+[2026-11-25T17:48:14.537] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:14.537] Cog0  * Test Group: w new file: the erase of the last block fails in close()
+[2026-11-25T17:48:14.537] Cog0   
+[2026-11-25T17:48:14.538] Cog0  * Test #54: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:14.554] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:14.577] Cog0  - cancel_block() block_address = $0C85
+[2026-11-25T17:48:14.593] Cog0  - cancel_block() block_address = $0E67
+[2026-11-25T17:48:14.650] Cog0  * wr_block() block_address = $042D, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:14.666] Cog0  - program_block() block_address = $042D
+[2026-11-25T17:48:14.703] Cog0  * wr_block() block_address = $079D, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:14.719] Cog0  - program_block() block_address = $079D
+[2026-11-25T17:48:14.755] Cog0  - activate_block() block_address = $079D
+[2026-11-25T17:48:14.769] Cog0  - activate_block() block_address = $042D
+[2026-11-25T17:48:14.769] Cog0  * wr_block() block_address = $01D0, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:14.785] Cog0  - program_block() block_address = $01D0
+[2026-11-25T17:48:14.823] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:14.823] Cog0     -> pass
+[2026-11-25T17:48:14.823] Cog0   
+[2026-11-25T17:48:14.823] Cog0  * Test #55: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:14.824] Cog0  * wr_block() block_address = $0000, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:14.824] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:14.824] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:14.825] Cog0    block $0000 named, flash wait 1 fails
+[2026-11-25T17:48:14.825] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:14.825] Cog0     -> pass
+[2026-11-25T17:48:14.825] Cog0   
+[2026-11-25T17:48:14.841] Cog0  * Test #56: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:15.003] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:15.003] Cog0     -> pass
+[2026-11-25T17:48:15.003] Cog0   
+[2026-11-25T17:48:15.019] Cog0  * Test #57: the committed data verifies
+[2026-11-25T17:48:15.028] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:15.028] Cog0     -> pass
+[2026-11-25T17:48:15.028] Cog0   
+[2026-11-25T17:48:15.043] Cog0  * Test #58: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:15.154] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:15.154] Cog0     -> pass
+[2026-11-25T17:48:15.154] Cog0   
+[2026-11-25T17:48:15.155] Cog0   
+[2026-11-25T17:48:15.155] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:15.155] Cog0  * Test Group: w new file: a page program of the last block fails in close()
+[2026-11-25T17:48:15.156] Cog0   
+[2026-11-25T17:48:15.171] Cog0  * Test #59: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:15.171] Cog0  - cancel_block() block_address = $042D
+[2026-11-25T17:48:15.187] Cog0  - cancel_block() block_address = $079D
+[2026-11-25T17:48:15.268] Cog0  * wr_block() block_address = $0E27, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:15.283] Cog0  - program_block() block_address = $0E27
+[2026-11-25T17:48:15.320] Cog0  * wr_block() block_address = $0CF6, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:15.336] Cog0  - program_block() block_address = $0CF6
+[2026-11-25T17:48:15.371] Cog0  - activate_block() block_address = $0CF6
+[2026-11-25T17:48:15.387] Cog0  - activate_block() block_address = $0E27
+[2026-11-25T17:48:15.389] Cog0  * wr_block() block_address = $0C79, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:15.404] Cog0  - program_block() block_address = $0C79
+[2026-11-25T17:48:15.444] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:15.444] Cog0     -> pass
+[2026-11-25T17:48:15.444] Cog0   
+[2026-11-25T17:48:15.445] Cog0  * Test #60: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:15.445] Cog0  * wr_block() block_address = $0000, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:15.460] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:15.496] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:15.496] Cog0    block $0000 named, flash wait 9 fails
+[2026-11-25T17:48:15.496] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:15.496] Cog0     -> pass
+[2026-11-25T17:48:15.496] Cog0   
+[2026-11-25T17:48:15.512] Cog0  * Test #61: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:15.627] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:15.627] Cog0     -> pass
+[2026-11-25T17:48:15.627] Cog0   
+[2026-11-25T17:48:15.643] Cog0  * Test #62: the committed data verifies
+[2026-11-25T17:48:15.659] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:15.659] Cog0     -> pass
+[2026-11-25T17:48:15.659] Cog0   
+[2026-11-25T17:48:15.675] Cog0  * Test #63: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:15.786] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:15.786] Cog0     -> pass
+[2026-11-25T17:48:15.786] Cog0   
+[2026-11-25T17:48:15.786] Cog0   
+[2026-11-25T17:48:15.786] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:15.787] Cog0  * Test Group: w new file: the activate of the last block fails in close()
+[2026-11-25T17:48:15.787] Cog0   
+[2026-11-25T17:48:15.803] Cog0  * Test #64: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:15.825] Cog0  - cancel_block() block_address = $0CF6
+[2026-11-25T17:48:15.841] Cog0  - cancel_block() block_address = $0E27
+[2026-11-25T17:48:15.899] Cog0  * wr_block() block_address = $02C7, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:15.915] Cog0  - program_block() block_address = $02C7
+[2026-11-25T17:48:15.953] Cog0  * wr_block() block_address = $09A2, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:15.968] Cog0  - program_block() block_address = $09A2
+[2026-11-25T17:48:16.001] Cog0  - activate_block() block_address = $09A2
+[2026-11-25T17:48:16.014] Cog0  - activate_block() block_address = $02C7
+[2026-11-25T17:48:16.015] Cog0  * wr_block() block_address = $0297, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:16.031] Cog0  - program_block() block_address = $0297
+[2026-11-25T17:48:16.067] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:16.067] Cog0     -> pass
+[2026-11-25T17:48:16.068] Cog0   
+[2026-11-25T17:48:16.068] Cog0  * Test #65: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:16.068] Cog0  * wr_block() block_address = $0000, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:16.083] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:16.120] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:16.121] Cog0    block $0000 named, flash wait 18 fails
+[2026-11-25T17:48:16.121] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:16.121] Cog0     -> pass
+[2026-11-25T17:48:16.121] Cog0   
+[2026-11-25T17:48:16.137] Cog0  * Test #66: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:16.250] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:16.251] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:16.251] Cog0     -> pass
+[2026-11-25T17:48:16.251] Cog0   
+[2026-11-25T17:48:16.267] Cog0  * Test #67: the committed data verifies
+[2026-11-25T17:48:16.275] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:16.275] Cog0     -> pass
+[2026-11-25T17:48:16.275] Cog0   
+[2026-11-25T17:48:16.291] Cog0  * Test #68: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:16.402] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:16.402] Cog0     -> pass
+[2026-11-25T17:48:16.402] Cog0   
+[2026-11-25T17:48:16.402] Cog0   
+[2026-11-25T17:48:16.402] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:16.403] Cog0  * Test Group: w new file: the activate of the head block fails in close()
+[2026-11-25T17:48:16.403] Cog0   
+[2026-11-25T17:48:16.419] Cog0  * Test #69: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:16.419] Cog0  - cancel_block() block_address = $02C7
+[2026-11-25T17:48:16.434] Cog0  - cancel_block() block_address = $09A2
+[2026-11-25T17:48:16.515] Cog0  * wr_block() block_address = $02DE, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:16.531] Cog0  - program_block() block_address = $02DE
+[2026-11-25T17:48:16.570] Cog0  * wr_block() block_address = $0C4F, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:16.586] Cog0  - program_block() block_address = $0C4F
+[2026-11-25T17:48:16.619] Cog0  - activate_block() block_address = $0C4F
+[2026-11-25T17:48:16.633] Cog0  - activate_block() block_address = $02DE
+[2026-11-25T17:48:16.633] Cog0  * wr_block() block_address = $03B5, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:16.649] Cog0  - program_block() block_address = $03B5
+[2026-11-25T17:48:16.688] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:16.688] Cog0     -> pass
+[2026-11-25T17:48:16.688] Cog0   
+[2026-11-25T17:48:16.689] Cog0  * Test #70: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:16.689] Cog0  * wr_block() block_address = $0000, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:16.705] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:16.739] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:16.740] Cog0  - activate_block() block_address = $03B5
+[2026-11-25T17:48:16.741] Cog0    block $0000 named, flash wait 19 fails
+[2026-11-25T17:48:16.741] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:16.741] Cog0     -> pass
+[2026-11-25T17:48:16.741] Cog0   
+[2026-11-25T17:48:16.757] Cog0  * Test #71: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:16.873] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:16.873] Cog0     -> pass
+[2026-11-25T17:48:16.873] Cog0   
+[2026-11-25T17:48:16.889] Cog0  * Test #72: the committed data verifies
+[2026-11-25T17:48:16.902] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:16.902] Cog0     -> pass
+[2026-11-25T17:48:16.902] Cog0   
+[2026-11-25T17:48:16.918] Cog0  * Test #73: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:17.034] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:17.034] Cog0     -> pass
+[2026-11-25T17:48:17.034] Cog0   
+[2026-11-25T17:48:17.034] Cog0   
+[2026-11-25T17:48:17.035] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:17.035] Cog0  * Test Group: w new file: the cancel of a block move fails in close()
+[2026-11-25T17:48:17.035] Cog0   
+[2026-11-25T17:48:17.036] Cog0  * Test #74: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:17.044] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:17.046] Cog0  - cancel_block() block_address = $02DE
+[2026-11-25T17:48:17.063] Cog0  - cancel_block() block_address = $03B5
+[2026-11-25T17:48:17.078] Cog0  - cancel_block() block_address = $0C4F
+[2026-11-25T17:48:17.148] Cog0  * wr_block() block_address = $07BC, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:17.164] Cog0  - program_block() block_address = $07BC
+[2026-11-25T17:48:17.204] Cog0  * wr_block() block_address = $0CFA, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:17.219] Cog0  - program_block() block_address = $0CFA
+[2026-11-25T17:48:17.252] Cog0  - activate_block() block_address = $0CFA
+[2026-11-25T17:48:17.267] Cog0  - activate_block() block_address = $07BC
+[2026-11-25T17:48:17.267] Cog0  * wr_block() block_address = $0048, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:17.283] Cog0  - program_block() block_address = $0048
+[2026-11-25T17:48:17.319] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:17.319] Cog0     -> pass
+[2026-11-25T17:48:17.319] Cog0   
+[2026-11-25T17:48:17.335] Cog0  * Test #75: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:17.335] Cog0  - program_block() block_address = $043B
+[2026-11-25T17:48:17.387] Cog0  - activate_block() block_address = $043B
+[2026-11-25T17:48:17.387] Cog0  - cancel_block() block_address = $07BC
+[2026-11-25T17:48:17.387] Cog0    block $07BC named, flash wait 19 fails
+[2026-11-25T17:48:17.387] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:17.387] Cog0     -> pass
+[2026-11-25T17:48:17.387] Cog0   
+[2026-11-25T17:48:17.403] Cog0  * Test #76: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:17.514] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:17.514] Cog0     -> pass
+[2026-11-25T17:48:17.514] Cog0   
+[2026-11-25T17:48:17.530] Cog0  * Test #77: the committed data verifies
+[2026-11-25T17:48:17.539] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:17.539] Cog0     -> pass
+[2026-11-25T17:48:17.539] Cog0   
+[2026-11-25T17:48:17.555] Cog0  * Test #78: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:17.666] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:17.666] Cog0     -> pass
+[2026-11-25T17:48:17.666] Cog0   
+[2026-11-25T17:48:17.666] Cog0   
+[2026-11-25T17:48:17.667] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:17.667] Cog0  * Test Group: a: the erase of the new copy of the last block fails in close()
+[2026-11-25T17:48:17.667] Cog0   
+[2026-11-25T17:48:17.683] Cog0  * Test #79: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:17.683] Cog0  - cancel_block() block_address = $043B
+[2026-11-25T17:48:17.715] Cog0  - cancel_block() block_address = $0CFA
+[2026-11-25T17:48:17.779] Cog0  * wr_block() block_address = $0C07, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:17.796] Cog0  - program_block() block_address = $0C07
+[2026-11-25T17:48:17.833] Cog0  * wr_block() block_address = $08F3, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:17.849] Cog0  - program_block() block_address = $08F3
+[2026-11-25T17:48:17.885] Cog0  - activate_block() block_address = $08F3
+[2026-11-25T17:48:17.892] Cog0  - activate_block() block_address = $0C07
+[2026-11-25T17:48:17.892] Cog0  * wr_block() block_address = $0CD1, block_id = 2, NextID_EndPtr = $0470
+[2026-11-25T17:48:17.908] Cog0  - program_block() block_address = $0CD1
+[2026-11-25T17:48:17.955] Cog0  - activate_block() block_address = $0CD1
+[2026-11-25T17:48:17.971] Cog0  * wr_block() block_address = $0D27, block_id = 2, NextID_EndPtr = $0664
+[2026-11-25T17:48:17.971] Cog0  - program_block() block_address = $0D27
+[2026-11-25T17:48:18.006] Cog0  - activate_block() block_address = $0D27
+[2026-11-25T17:48:18.006] Cog0  * delChnFmID() [$0CD1] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:48:18.008] Cog0  - cancel_block() block_address = $0CD1
+[2026-11-25T17:48:18.008] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:18.008] Cog0     -> pass
+[2026-11-25T17:48:18.008] Cog0   
+[2026-11-25T17:48:18.009] Cog0  * Test #80: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:18.009] Cog0  * wr_block() block_address = $0000, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:18.010] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:18.010] Cog0    block $0000 named, flash wait 1 fails
+[2026-11-25T17:48:18.010] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:18.010] Cog0     -> pass
+[2026-11-25T17:48:18.010] Cog0   
+[2026-11-25T17:48:18.026] Cog0  * Test #81: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:18.193] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:18.193] Cog0     -> pass
+[2026-11-25T17:48:18.193] Cog0   
+[2026-11-25T17:48:18.209] Cog0  * Test #82: the committed data verifies
+[2026-11-25T17:48:18.231] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:18.231] Cog0     -> pass
+[2026-11-25T17:48:18.231] Cog0   
+[2026-11-25T17:48:18.247] Cog0  * Test #83: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:18.360] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:18.360] Cog0     -> pass
+[2026-11-25T17:48:18.360] Cog0   
+[2026-11-25T17:48:18.360] Cog0   
+[2026-11-25T17:48:18.360] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:18.361] Cog0  * Test Group: a: a page program of the new copy of the last block fails in close()
+[2026-11-25T17:48:18.361] Cog0   
+[2026-11-25T17:48:18.377] Cog0  * Test #84: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:18.393] Cog0  - cancel_block() block_address = $08F3
+[2026-11-25T17:48:18.397] Cog0  - cancel_block() block_address = $0C07
+[2026-11-25T17:48:18.413] Cog0  - cancel_block() block_address = $0D27
+[2026-11-25T17:48:18.474] Cog0  * wr_block() block_address = $0C9F, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:18.490] Cog0  - program_block() block_address = $0C9F
+[2026-11-25T17:48:18.524] Cog0  * wr_block() block_address = $0139, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:18.540] Cog0  - program_block() block_address = $0139
+[2026-11-25T17:48:18.576] Cog0  - activate_block() block_address = $0139
+[2026-11-25T17:48:18.583] Cog0  - activate_block() block_address = $0C9F
+[2026-11-25T17:48:18.584] Cog0  * wr_block() block_address = $0237, block_id = 2, NextID_EndPtr = $0470
+[2026-11-25T17:48:18.599] Cog0  - program_block() block_address = $0237
+[2026-11-25T17:48:18.644] Cog0  - activate_block() block_address = $0237
+[2026-11-25T17:48:18.659] Cog0  * wr_block() block_address = $072F, block_id = 2, NextID_EndPtr = $0664
+[2026-11-25T17:48:18.659] Cog0  - program_block() block_address = $072F
+[2026-11-25T17:48:18.694] Cog0  - activate_block() block_address = $072F
+[2026-11-25T17:48:18.695] Cog0  * delChnFmID() [$0237] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:48:18.696] Cog0  - cancel_block() block_address = $0237
+[2026-11-25T17:48:18.696] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:18.697] Cog0     -> pass
+[2026-11-25T17:48:18.697] Cog0   
+[2026-11-25T17:48:18.697] Cog0  * Test #85: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:18.697] Cog0  * wr_block() block_address = $0000, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:18.713] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:18.750] Cog0    block $0000 named, flash wait 9 fails
+[2026-11-25T17:48:18.751] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:18.751] Cog0     -> pass
+[2026-11-25T17:48:18.751] Cog0   
+[2026-11-25T17:48:18.767] Cog0  * Test #86: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:18.885] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:18.885] Cog0     -> pass
+[2026-11-25T17:48:18.885] Cog0   
+[2026-11-25T17:48:18.900] Cog0  * Test #87: the committed data verifies
+[2026-11-25T17:48:18.919] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:18.919] Cog0     -> pass
+[2026-11-25T17:48:18.919] Cog0   
+[2026-11-25T17:48:18.934] Cog0  * Test #88: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:19.048] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:19.049] Cog0     -> pass
+[2026-11-25T17:48:19.049] Cog0   
+[2026-11-25T17:48:19.049] Cog0   
+[2026-11-25T17:48:19.049] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:19.049] Cog0  * Test Group: a: the activate of the new copy fails in close()
+[2026-11-25T17:48:19.049] Cog0   
+[2026-11-25T17:48:19.053] Cog0  * Test #89: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:19.069] Cog0  - cancel_block() block_address = $0139
+[2026-11-25T17:48:19.084] Cog0  - cancel_block() block_address = $072F
+[2026-11-25T17:48:19.099] Cog0  - cancel_block() block_address = $0C9F
+[2026-11-25T17:48:19.162] Cog0  * wr_block() block_address = $0DD3, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:19.177] Cog0  - program_block() block_address = $0DD3
+[2026-11-25T17:48:19.214] Cog0  * wr_block() block_address = $0905, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:19.230] Cog0  - program_block() block_address = $0905
+[2026-11-25T17:48:19.269] Cog0  - activate_block() block_address = $0905
+[2026-11-25T17:48:19.276] Cog0  - activate_block() block_address = $0DD3
+[2026-11-25T17:48:19.276] Cog0  * wr_block() block_address = $04B9, block_id = 2, NextID_EndPtr = $0470
+[2026-11-25T17:48:19.292] Cog0  - program_block() block_address = $04B9
+[2026-11-25T17:48:19.324] Cog0  - activate_block() block_address = $04B9
+[2026-11-25T17:48:19.336] Cog0  * wr_block() block_address = $0BE6, block_id = 2, NextID_EndPtr = $0664
+[2026-11-25T17:48:19.351] Cog0  - program_block() block_address = $0BE6
+[2026-11-25T17:48:19.386] Cog0  - activate_block() block_address = $0BE6
+[2026-11-25T17:48:19.386] Cog0  * delChnFmID() [$04B9] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:48:19.388] Cog0  - cancel_block() block_address = $04B9
+[2026-11-25T17:48:19.388] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:19.388] Cog0     -> pass
+[2026-11-25T17:48:19.388] Cog0   
+[2026-11-25T17:48:19.389] Cog0  * Test #90: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:19.389] Cog0  * wr_block() block_address = $0000, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:19.404] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:19.442] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:19.442] Cog0    block $0000 named, flash wait 18 fails
+[2026-11-25T17:48:19.442] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:19.442] Cog0     -> pass
+[2026-11-25T17:48:19.442] Cog0   
+[2026-11-25T17:48:19.459] Cog0  * Test #91: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:19.555] Cog0  - cancel_block() block_address = $0BE6
+[2026-11-25T17:48:19.575] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:19.575] Cog0     -> pass
+[2026-11-25T17:48:19.575] Cog0   
+[2026-11-25T17:48:19.592] Cog0  * Test #92: the committed data verifies
+[2026-11-25T17:48:19.605] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:19.606] Cog0     -> pass
+[2026-11-25T17:48:19.606] Cog0   
+[2026-11-25T17:48:19.622] Cog0  * Test #93: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:19.735] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:19.735] Cog0     -> pass
+[2026-11-25T17:48:19.735] Cog0   
+[2026-11-25T17:48:19.735] Cog0   
+[2026-11-25T17:48:19.735] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:19.736] Cog0  * Test Group: a: the cancel of the old copy fails in close()
+[2026-11-25T17:48:19.736] Cog0   
+[2026-11-25T17:48:19.736] Cog0  * Test #94: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:19.752] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:19.768] Cog0  - cancel_block() block_address = $0905
+[2026-11-25T17:48:19.784] Cog0  - cancel_block() block_address = $0DD3
+[2026-11-25T17:48:19.849] Cog0  * wr_block() block_address = $0241, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:19.864] Cog0  - program_block() block_address = $0241
+[2026-11-25T17:48:19.902] Cog0  * wr_block() block_address = $0016, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:19.918] Cog0  - program_block() block_address = $0016
+[2026-11-25T17:48:19.950] Cog0  - activate_block() block_address = $0016
+[2026-11-25T17:48:19.957] Cog0  - activate_block() block_address = $0241
+[2026-11-25T17:48:19.958] Cog0  * wr_block() block_address = $05E2, block_id = 2, NextID_EndPtr = $0470
+[2026-11-25T17:48:19.974] Cog0  - program_block() block_address = $05E2
+[2026-11-25T17:48:20.014] Cog0  - activate_block() block_address = $05E2
+[2026-11-25T17:48:20.014] Cog0  * wr_block() block_address = $0AA8, block_id = 2, NextID_EndPtr = $0664
+[2026-11-25T17:48:20.030] Cog0  - program_block() block_address = $0AA8
+[2026-11-25T17:48:20.062] Cog0  - activate_block() block_address = $0AA8
+[2026-11-25T17:48:20.062] Cog0  * delChnFmID() [$05E2] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:48:20.064] Cog0  - cancel_block() block_address = $05E2
+[2026-11-25T17:48:20.064] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:20.064] Cog0     -> pass
+[2026-11-25T17:48:20.064] Cog0   
+[2026-11-25T17:48:20.065] Cog0  * Test #95: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:20.081] Cog0  * wr_block() block_address = $0000, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:20.081] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:20.119] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:20.120] Cog0  * delChnFmID() [$0AA8] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:48:20.120] Cog0  - cancel_block() block_address = $0AA8
+[2026-11-25T17:48:20.120] Cog0    block $0000 named, flash wait 19 fails
+[2026-11-25T17:48:20.121] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:20.121] Cog0     -> pass
+[2026-11-25T17:48:20.121] Cog0   
+[2026-11-25T17:48:20.137] Cog0  * Test #96: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:20.250] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:20.250] Cog0     -> pass
+[2026-11-25T17:48:20.250] Cog0   
+[2026-11-25T17:48:20.266] Cog0  * Test #97: the committed data verifies
+[2026-11-25T17:48:20.271] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:20.272] Cog0     -> pass
+[2026-11-25T17:48:20.272] Cog0   
+[2026-11-25T17:48:20.288] Cog0  * Test #98: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:20.401] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:20.402] Cog0     -> pass
+[2026-11-25T17:48:20.402] Cog0   
+[2026-11-25T17:48:20.402] Cog0   
+[2026-11-25T17:48:20.402] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:20.403] Cog0  * Test Group: r+: the erase of the new copy of the block fails in flush()
+[2026-11-25T17:48:20.403] Cog0   
+[2026-11-25T17:48:20.403] Cog0  * Test #99: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:20.403] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:20.409] Cog0  - cancel_block() block_address = $0016
+[2026-11-25T17:48:20.425] Cog0  - cancel_block() block_address = $0241
+[2026-11-25T17:48:20.515] Cog0  * wr_block() block_address = $0708, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:20.530] Cog0  - program_block() block_address = $0708
+[2026-11-25T17:48:20.567] Cog0  * wr_block() block_address = $03B7, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:20.582] Cog0  - program_block() block_address = $03B7
+[2026-11-25T17:48:20.614] Cog0  - activate_block() block_address = $03B7
+[2026-11-25T17:48:20.623] Cog0  - activate_block() block_address = $0708
+[2026-11-25T17:48:20.623] Cog0  * wr_block() block_address = $0556, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:20.638] Cog0  - program_block() block_address = $0556
+[2026-11-25T17:48:20.686] Cog0  - activate_block() block_address = $0556
+[2026-11-25T17:48:20.689] Cog0  * program_updated_block() block_address = $08F0
+[2026-11-25T17:48:20.704] Cog0  - program_block() block_address = $08F0
+[2026-11-25T17:48:20.738] Cog0  - activate_block() block_address = $08F0
+[2026-11-25T17:48:20.741] Cog0  - cancel_block() block_address = $0556
+[2026-11-25T17:48:20.741] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:20.741] Cog0     -> pass
+[2026-11-25T17:48:20.741] Cog0   
+[2026-11-25T17:48:20.742] Cog0  * Test #100: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:20.742] Cog0  * program_updated_block() block_address = $0000
+[2026-11-25T17:48:20.742] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:20.743] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:20.743] Cog0  - cancel_block() block_address = $08F0
+[2026-11-25T17:48:20.743] Cog0    block $0000 named, flash wait 1 fails
+[2026-11-25T17:48:20.744] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:20.744] Cog0     -> pass
+[2026-11-25T17:48:20.744] Cog0   
+[2026-11-25T17:48:20.759] Cog0  * Test #101: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:20.925] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:20.925] Cog0     -> pass
+[2026-11-25T17:48:20.925] Cog0   
+[2026-11-25T17:48:20.940] Cog0  * Test #102: the committed data verifies
+[2026-11-25T17:48:20.957] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:20.957] Cog0     -> pass
+[2026-11-25T17:48:20.957] Cog0   
+[2026-11-25T17:48:20.972] Cog0  * Test #103: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:21.086] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:21.087] Cog0     -> pass
+[2026-11-25T17:48:21.087] Cog0   
+[2026-11-25T17:48:21.087] Cog0   
+[2026-11-25T17:48:21.087] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:21.087] Cog0  * Test Group: r+: a page program of the new copy of the block fails in flush()
+[2026-11-25T17:48:21.087] Cog0   
+[2026-11-25T17:48:21.104] Cog0  * Test #104: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:21.104] Cog0  - cancel_block() block_address = $03B7
+[2026-11-25T17:48:21.112] Cog0  - cancel_block() block_address = $0708
+[2026-11-25T17:48:21.127] Cog0  - cancel_block() block_address = $08F0
+[2026-11-25T17:48:21.200] Cog0  * wr_block() block_address = $0F6F, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:21.216] Cog0  - program_block() block_address = $0F6F
+[2026-11-25T17:48:21.255] Cog0  * wr_block() block_address = $00D7, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:21.271] Cog0  - program_block() block_address = $00D7
+[2026-11-25T17:48:21.303] Cog0  - activate_block() block_address = $00D7
+[2026-11-25T17:48:21.312] Cog0  - activate_block() block_address = $0F6F
+[2026-11-25T17:48:21.312] Cog0  * wr_block() block_address = $01C7, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:21.328] Cog0  - program_block() block_address = $01C7
+[2026-11-25T17:48:21.374] Cog0  - activate_block() block_address = $01C7
+[2026-11-25T17:48:21.375] Cog0  * program_updated_block() block_address = $0E70
+[2026-11-25T17:48:21.390] Cog0  - program_block() block_address = $0E70
+[2026-11-25T17:48:21.425] Cog0  - activate_block() block_address = $0E70
+[2026-11-25T17:48:21.428] Cog0  - cancel_block() block_address = $01C7
+[2026-11-25T17:48:21.428] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:21.428] Cog0     -> pass
+[2026-11-25T17:48:21.428] Cog0   
+[2026-11-25T17:48:21.428] Cog0  * Test #105: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:21.429] Cog0  * program_updated_block() block_address = $0000
+[2026-11-25T17:48:21.445] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:21.479] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:21.479] Cog0  - cancel_block() block_address = $0E70
+[2026-11-25T17:48:21.479] Cog0    block $0000 named, flash wait 9 fails
+[2026-11-25T17:48:21.479] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:21.479] Cog0     -> pass
+[2026-11-25T17:48:21.479] Cog0   
+[2026-11-25T17:48:21.496] Cog0  * Test #106: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:21.613] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:21.613] Cog0     -> pass
+[2026-11-25T17:48:21.613] Cog0   
+[2026-11-25T17:48:21.629] Cog0  * Test #107: the committed data verifies
+[2026-11-25T17:48:21.655] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:21.656] Cog0     -> pass
+[2026-11-25T17:48:21.656] Cog0   
+[2026-11-25T17:48:21.672] Cog0  * Test #108: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:21.785] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:21.786] Cog0     -> pass
+[2026-11-25T17:48:21.786] Cog0   
+[2026-11-25T17:48:21.786] Cog0   
+[2026-11-25T17:48:21.786] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:21.786] Cog0  * Test Group: r+: the activate of the new copy fails in flush()
+[2026-11-25T17:48:21.786] Cog0   
+[2026-11-25T17:48:21.789] Cog0  * Test #109: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:21.805] Cog0  - cancel_block() block_address = $00D7
+[2026-11-25T17:48:21.828] Cog0  - cancel_block() block_address = $0E70
+[2026-11-25T17:48:21.844] Cog0  - cancel_block() block_address = $0F6F
+[2026-11-25T17:48:21.899] Cog0  * wr_block() block_address = $08F9, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:21.914] Cog0  - program_block() block_address = $08F9
+[2026-11-25T17:48:21.952] Cog0  * wr_block() block_address = $05AB, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:21.967] Cog0  - program_block() block_address = $05AB
+[2026-11-25T17:48:22.000] Cog0  - activate_block() block_address = $05AB
+[2026-11-25T17:48:22.008] Cog0  - activate_block() block_address = $08F9
+[2026-11-25T17:48:22.008] Cog0  * wr_block() block_address = $06E5, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:22.024] Cog0  - program_block() block_address = $06E5
+[2026-11-25T17:48:22.070] Cog0  - activate_block() block_address = $06E5
+[2026-11-25T17:48:22.070] Cog0  * program_updated_block() block_address = $033C
+[2026-11-25T17:48:22.086] Cog0  - program_block() block_address = $033C
+[2026-11-25T17:48:22.121] Cog0  - activate_block() block_address = $033C
+[2026-11-25T17:48:22.123] Cog0  - cancel_block() block_address = $06E5
+[2026-11-25T17:48:22.123] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:22.123] Cog0     -> pass
+[2026-11-25T17:48:22.123] Cog0   
+[2026-11-25T17:48:22.124] Cog0  * Test #110: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:22.124] Cog0  * program_updated_block() block_address = $0000
+[2026-11-25T17:48:22.140] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:22.177] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:22.177] Cog0  - cancel_block() block_address = $033C
+[2026-11-25T17:48:22.177] Cog0    block $0000 named, flash wait 18 fails
+[2026-11-25T17:48:22.177] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:22.178] Cog0     -> pass
+[2026-11-25T17:48:22.178] Cog0   
+[2026-11-25T17:48:22.193] Cog0  * Test #111: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:22.273] Cog0  - cancel_block() block_address = $033C
+[2026-11-25T17:48:22.310] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:22.310] Cog0     -> pass
+[2026-11-25T17:48:22.311] Cog0   
+[2026-11-25T17:48:22.326] Cog0  * Test #112: the committed data verifies
+[2026-11-25T17:48:22.337] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:22.337] Cog0     -> pass
+[2026-11-25T17:48:22.337] Cog0   
+[2026-11-25T17:48:22.352] Cog0  * Test #113: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:22.466] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:22.466] Cog0     -> pass
+[2026-11-25T17:48:22.466] Cog0   
+[2026-11-25T17:48:22.466] Cog0   
+[2026-11-25T17:48:22.467] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:22.467] Cog0  * Test Group: r+: the cancel of the old copy fails in flush()
+[2026-11-25T17:48:22.467] Cog0   
+[2026-11-25T17:48:22.468] Cog0  * Test #114: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:22.483] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:22.492] Cog0  - cancel_block() block_address = $05AB
+[2026-11-25T17:48:22.508] Cog0  - cancel_block() block_address = $08F9
+[2026-11-25T17:48:22.580] Cog0  * wr_block() block_address = $0AED, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:22.595] Cog0  - program_block() block_address = $0AED
+[2026-11-25T17:48:22.636] Cog0  * wr_block() block_address = $036A, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:22.651] Cog0  - program_block() block_address = $036A
+[2026-11-25T17:48:22.684] Cog0  - activate_block() block_address = $036A
+[2026-11-25T17:48:22.692] Cog0  - activate_block() block_address = $0AED
+[2026-11-25T17:48:22.692] Cog0  * wr_block() block_address = $07FB, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:22.709] Cog0  - program_block() block_address = $07FB
+[2026-11-25T17:48:22.756] Cog0  - activate_block() block_address = $07FB
+[2026-11-25T17:48:22.756] Cog0  * program_updated_block() block_address = $0EDE
+[2026-11-25T17:48:22.772] Cog0  - program_block() block_address = $0EDE
+[2026-11-25T17:48:22.807] Cog0  - activate_block() block_address = $0EDE
+[2026-11-25T17:48:22.809] Cog0  - cancel_block() block_address = $07FB
+[2026-11-25T17:48:22.809] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:22.809] Cog0     -> pass
+[2026-11-25T17:48:22.809] Cog0   
+[2026-11-25T17:48:22.810] Cog0  * Test #115: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:22.810] Cog0  * program_updated_block() block_address = $0000
+[2026-11-25T17:48:22.827] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:22.865] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:22.866] Cog0  - cancel_block() block_address = $0EDE
+[2026-11-25T17:48:22.866] Cog0    block $0000 named, flash wait 19 fails
+[2026-11-25T17:48:22.866] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:22.866] Cog0     -> pass
+[2026-11-25T17:48:22.866] Cog0   
+[2026-11-25T17:48:22.882] Cog0  * Test #116: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:22.996] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:22.996] Cog0     -> pass
+[2026-11-25T17:48:22.996] Cog0   
+[2026-11-25T17:48:23.012] Cog0  * Test #117: the committed data verifies
+[2026-11-25T17:48:23.024] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:23.024] Cog0     -> pass
+[2026-11-25T17:48:23.024] Cog0   
+[2026-11-25T17:48:23.039] Cog0  * Test #118: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:23.153] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:23.153] Cog0     -> pass
+[2026-11-25T17:48:23.153] Cog0   
+[2026-11-25T17:48:23.153] Cog0   
+[2026-11-25T17:48:23.154] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:23.154] Cog0  * Test Group: w+ over a file: the erase of the new head block fails in close()
+[2026-11-25T17:48:23.154] Cog0   
+[2026-11-25T17:48:23.164] Cog0  * Test #119: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:23.164] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:23.180] Cog0  - cancel_block() block_address = $036A
+[2026-11-25T17:48:23.196] Cog0  - cancel_block() block_address = $0AED
+[2026-11-25T17:48:23.267] Cog0  * wr_block() block_address = $053D, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:23.283] Cog0  - program_block() block_address = $053D
+[2026-11-25T17:48:23.321] Cog0  * wr_block() block_address = $00BD, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:23.336] Cog0  - program_block() block_address = $00BD
+[2026-11-25T17:48:23.369] Cog0  - activate_block() block_address = $00BD
+[2026-11-25T17:48:23.377] Cog0  - activate_block() block_address = $053D
+[2026-11-25T17:48:23.377] Cog0  * wr_block() block_address = $01E8, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:23.393] Cog0  - program_block() block_address = $01E8
+[2026-11-25T17:48:23.431] Cog0  - activate_block() block_address = $01E8
+[2026-11-25T17:48:23.432] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:23.432] Cog0     -> pass
+[2026-11-25T17:48:23.432] Cog0   
+[2026-11-25T17:48:23.432] Cog0  * Test #120: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:23.433] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:23.433] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:23.433] Cog0    block $0000 named, flash wait 1 fails
+[2026-11-25T17:48:23.434] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:23.434] Cog0     -> pass
+[2026-11-25T17:48:23.434] Cog0   
+[2026-11-25T17:48:23.450] Cog0  * Test #121: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:23.615] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:23.615] Cog0     -> pass
+[2026-11-25T17:48:23.615] Cog0   
+[2026-11-25T17:48:23.631] Cog0  * Test #122: the committed data verifies
+[2026-11-25T17:48:23.640] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:23.641] Cog0     -> pass
+[2026-11-25T17:48:23.641] Cog0   
+[2026-11-25T17:48:23.656] Cog0  * Test #123: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:23.770] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:23.770] Cog0     -> pass
+[2026-11-25T17:48:23.770] Cog0   
+[2026-11-25T17:48:23.770] Cog0   
+[2026-11-25T17:48:23.770] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:23.771] Cog0  * Test Group: w+ over a file: a page program of the new head block fails in close()
+[2026-11-25T17:48:23.771] Cog0   
+[2026-11-25T17:48:23.777] Cog0  * Test #124: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:23.777] Cog0  - cancel_block() block_address = $00BD
+[2026-11-25T17:48:23.786] Cog0  - cancel_block() block_address = $01E8
+[2026-11-25T17:48:23.801] Cog0  - cancel_block() block_address = $053D
+[2026-11-25T17:48:23.883] Cog0  * wr_block() block_address = $08D0, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:23.899] Cog0  - program_block() block_address = $08D0
+[2026-11-25T17:48:23.934] Cog0  * wr_block() block_address = $0797, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:23.950] Cog0  - program_block() block_address = $0797
+[2026-11-25T17:48:23.985] Cog0  - activate_block() block_address = $0797
+[2026-11-25T17:48:23.993] Cog0  - activate_block() block_address = $08D0
+[2026-11-25T17:48:23.993] Cog0  * wr_block() block_address = $0726, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:24.009] Cog0  - program_block() block_address = $0726
+[2026-11-25T17:48:24.055] Cog0  - activate_block() block_address = $0726
+[2026-11-25T17:48:24.055] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:24.055] Cog0     -> pass
+[2026-11-25T17:48:24.055] Cog0   
+[2026-11-25T17:48:24.055] Cog0  * Test #125: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:24.071] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:24.109] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:24.109] Cog0    block $0000 named, flash wait 9 fails
+[2026-11-25T17:48:24.109] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:24.110] Cog0     -> pass
+[2026-11-25T17:48:24.110] Cog0   
+[2026-11-25T17:48:24.125] Cog0  * Test #126: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:24.243] Cog0    Sub-Test Results: count=11, Pass: 11, Fail: 0
+[2026-11-25T17:48:24.243] Cog0     -> pass
+[2026-11-25T17:48:24.243] Cog0   
+[2026-11-25T17:48:24.258] Cog0  * Test #127: the committed data verifies
+[2026-11-25T17:48:24.274] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:24.275] Cog0     -> pass
+[2026-11-25T17:48:24.275] Cog0   
+[2026-11-25T17:48:24.290] Cog0  * Test #128: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:24.404] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:24.404] Cog0     -> pass
+[2026-11-25T17:48:24.404] Cog0   
+[2026-11-25T17:48:24.404] Cog0   
+[2026-11-25T17:48:24.404] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:24.405] Cog0  * Test Group: w+ over a file: the activate of the new head block fails in close()
+[2026-11-25T17:48:24.405] Cog0   
+[2026-11-25T17:48:24.421] Cog0  * Test #129: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:24.426] Cog0  - cancel_block() block_address = $0726
+[2026-11-25T17:48:24.429] Cog0  - cancel_block() block_address = $0797
+[2026-11-25T17:48:24.446] Cog0  - cancel_block() block_address = $08D0
+[2026-11-25T17:48:24.518] Cog0  * wr_block() block_address = $0C68, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:24.533] Cog0  - program_block() block_address = $0C68
+[2026-11-25T17:48:24.569] Cog0  * wr_block() block_address = $0E00, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:24.584] Cog0  - program_block() block_address = $0E00
+[2026-11-25T17:48:24.620] Cog0  - activate_block() block_address = $0E00
+[2026-11-25T17:48:24.628] Cog0  - activate_block() block_address = $0C68
+[2026-11-25T17:48:24.628] Cog0  * wr_block() block_address = $076A, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:24.644] Cog0  - program_block() block_address = $076A
+[2026-11-25T17:48:24.690] Cog0  - activate_block() block_address = $076A
+[2026-11-25T17:48:24.690] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:24.690] Cog0     -> pass
+[2026-11-25T17:48:24.691] Cog0   
+[2026-11-25T17:48:24.691] Cog0  * Test #130: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:24.707] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:24.744] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:24.744] Cog0    block $0000 named, flash wait 18 fails
+[2026-11-25T17:48:24.745] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:24.745] Cog0     -> pass
+[2026-11-25T17:48:24.745] Cog0   
+[2026-11-25T17:48:24.760] Cog0  * Test #131: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:24.841] Cog0  - cancel_block() block_address = $076A
+[2026-11-25T17:48:24.877] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:24.877] Cog0     -> pass
+[2026-11-25T17:48:24.877] Cog0   
+[2026-11-25T17:48:24.893] Cog0  * Test #132: the committed data verifies
+[2026-11-25T17:48:24.906] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:24.906] Cog0     -> pass
+[2026-11-25T17:48:24.906] Cog0   
+[2026-11-25T17:48:24.922] Cog0  * Test #133: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:25.035] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:25.035] Cog0     -> pass
+[2026-11-25T17:48:25.035] Cog0   
+[2026-11-25T17:48:25.035] Cog0   
+[2026-11-25T17:48:25.036] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:25.036] Cog0  * Test Group: w+ over a file: the cancel of the old head block fails in close()
+[2026-11-25T17:48:25.036] Cog0   
+[2026-11-25T17:48:25.053] Cog0  * Test #134: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:25.053] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:25.075] Cog0  - cancel_block() block_address = $0C68
+[2026-11-25T17:48:25.090] Cog0  - cancel_block() block_address = $0E00
+[2026-11-25T17:48:25.149] Cog0  * wr_block() block_address = $0568, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:25.165] Cog0  - program_block() block_address = $0568
+[2026-11-25T17:48:25.204] Cog0  * wr_block() block_address = $04A4, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:25.220] Cog0  - program_block() block_address = $04A4
+[2026-11-25T17:48:25.252] Cog0  - activate_block() block_address = $04A4
+[2026-11-25T17:48:25.261] Cog0  - activate_block() block_address = $0568
+[2026-11-25T17:48:25.261] Cog0  * wr_block() block_address = $0F3A, block_id = 2, NextID_EndPtr = $0858
+[2026-11-25T17:48:25.276] Cog0  - program_block() block_address = $0F3A
+[2026-11-25T17:48:25.321] Cog0  - activate_block() block_address = $0F3A
+[2026-11-25T17:48:25.321] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:25.321] Cog0     -> pass
+[2026-11-25T17:48:25.322] Cog0   
+[2026-11-25T17:48:25.322] Cog0  * Test #135: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:25.338] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:25.375] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:25.376] Cog0  * delChnFmID() [$0F3A] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:48:25.376] Cog0  - cancel_block() block_address = $0F3A
+[2026-11-25T17:48:25.376] Cog0    block $0000 named, flash wait 19 fails
+[2026-11-25T17:48:25.376] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:25.376] Cog0     -> pass
+[2026-11-25T17:48:25.377] Cog0   
+[2026-11-25T17:48:25.392] Cog0  * Test #136: can_mount() and the recovering mount() give the pair a power loss at that step gives
+[2026-11-25T17:48:25.506] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:25.506] Cog0     -> pass
+[2026-11-25T17:48:25.507] Cog0   
+[2026-11-25T17:48:25.522] Cog0  * Test #137: the committed data verifies
+[2026-11-25T17:48:25.529] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:25.530] Cog0     -> pass
+[2026-11-25T17:48:25.530] Cog0   
+[2026-11-25T17:48:25.545] Cog0  * Test #138: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:25.659] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:25.659] Cog0     -> pass
+[2026-11-25T17:48:25.659] Cog0   
+[2026-11-25T17:48:25.659] Cog0   
+[2026-11-25T17:48:25.659] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:25.660] Cog0  * Test Group: a fault in the ready check of the recovering mount()
+[2026-11-25T17:48:25.660] Cog0   
+[2026-11-25T17:48:25.660] Cog0  * Test #139: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:25.673] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:25.676] Cog0  - cancel_block() block_address = $04A4
+[2026-11-25T17:48:25.691] Cog0  - cancel_block() block_address = $0568
+[2026-11-25T17:48:25.772] Cog0  * wr_block() block_address = $0C8C, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:25.787] Cog0  - program_block() block_address = $0C8C
+[2026-11-25T17:48:25.828] Cog0  * wr_block() block_address = $0D5A, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:25.844] Cog0  - program_block() block_address = $0D5A
+[2026-11-25T17:48:25.875] Cog0  - activate_block() block_address = $0D5A
+[2026-11-25T17:48:25.890] Cog0  - activate_block() block_address = $0C8C
+[2026-11-25T17:48:25.891] Cog0  * wr_block() block_address = $0B82, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:25.907] Cog0  - program_block() block_address = $0B82
+[2026-11-25T17:48:25.942] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:25.942] Cog0     -> pass
+[2026-11-25T17:48:25.942] Cog0   
+[2026-11-25T17:48:25.943] Cog0  * Test #140: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:25.943] Cog0  * wr_block() block_address = $0000, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:25.959] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:25.996] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:25.997] Cog0    block $0000 named, flash wait 18 fails
+[2026-11-25T17:48:25.997] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:25.997] Cog0     -> pass
+[2026-11-25T17:48:25.997] Cog0   
+[2026-11-25T17:48:26.013] Cog0  * Test #141: a mount() whose own flash wait fails returns E_FLASH_TIMEOUT and stays unmounted, and the next mount() recovers
+[2026-11-25T17:48:26.125] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:26.127] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:26.128] Cog0     -> pass
+[2026-11-25T17:48:26.128] Cog0   
+[2026-11-25T17:48:26.143] Cog0  * Test #142: the committed data verifies
+[2026-11-25T17:48:26.159] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:26.159] Cog0     -> pass
+[2026-11-25T17:48:26.159] Cog0   
+[2026-11-25T17:48:26.175] Cog0  * Test #143: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:26.286] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:26.286] Cog0     -> pass
+[2026-11-25T17:48:26.286] Cog0   
+[2026-11-25T17:48:26.286] Cog0   
+[2026-11-25T17:48:26.286] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:26.287] Cog0  * Test Group: a fault in the cancel of the orphan body block by the recovering mount()
+[2026-11-25T17:48:26.287] Cog0   
+[2026-11-25T17:48:26.303] Cog0  * Test #144: set up: write the second file and the writer's file, open the second file for reading and open the writer
+[2026-11-25T17:48:26.323] Cog0  - cancel_block() block_address = $0C8C
+[2026-11-25T17:48:26.339] Cog0  - cancel_block() block_address = $0D5A
+[2026-11-25T17:48:26.399] Cog0  * wr_block() block_address = $034B, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:26.415] Cog0  - program_block() block_address = $034B
+[2026-11-25T17:48:26.452] Cog0  * wr_block() block_address = $01B4, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:26.468] Cog0  - program_block() block_address = $01B4
+[2026-11-25T17:48:26.498] Cog0  - activate_block() block_address = $01B4
+[2026-11-25T17:48:26.512] Cog0  - activate_block() block_address = $034B
+[2026-11-25T17:48:26.512] Cog0  * wr_block() block_address = $05D3, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:48:26.528] Cog0  - program_block() block_address = $05D3
+[2026-11-25T17:48:26.565] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:26.565] Cog0     -> pass
+[2026-11-25T17:48:26.566] Cog0   
+[2026-11-25T17:48:26.566] Cog0  * Test #145: the faulted call returns E_FLASH_TIMEOUT, and the next call finds the filesystem not mounted
+[2026-11-25T17:48:26.566] Cog0  * wr_block() block_address = $0000, block_id = 3, NextID_EndPtr = $03EC
+[2026-11-25T17:48:26.582] Cog0  - program_block() block_address = $0000
+[2026-11-25T17:48:26.619] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:26.619] Cog0    block $0000 named, flash wait 18 fails
+[2026-11-25T17:48:26.619] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:48:26.619] Cog0     -> pass
+[2026-11-25T17:48:26.619] Cog0   
+[2026-11-25T17:48:26.635] Cog0  * Test #146: a mount() whose own flash wait fails returns E_FLASH_TIMEOUT and stays unmounted, and the next mount() recovers
+[2026-11-25T17:48:26.747] Cog0  - cancel_block() block_address = $0000
+[2026-11-25T17:48:26.806] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:26.806] Cog0     -> pass
+[2026-11-25T17:48:26.806] Cog0   
+[2026-11-25T17:48:26.822] Cog0  * Test #147: the committed data verifies
+[2026-11-25T17:48:26.830] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:26.830] Cog0     -> pass
+[2026-11-25T17:48:26.830] Cog0   
+[2026-11-25T17:48:26.846] Cog0  * Test #148: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:26.957] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:26.957] Cog0     -> pass
+[2026-11-25T17:48:26.957] Cog0   
+[2026-11-25T17:48:26.957] Cog0   
+[2026-11-25T17:48:26.958] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:26.958] Cog0  * Test Group: a flash wait that fails in can_mount() while the filesystem is not mounted
+[2026-11-25T17:48:26.958] Cog0   
+[2026-11-25T17:48:26.963] Cog0  * Test #149: set up: write the second file, then open it for reading or unmount
+[2026-11-25T17:48:26.968] Cog0  - cancel_block() block_address = $01B4
+[2026-11-25T17:48:26.983] Cog0  - cancel_block() block_address = $034B
+[2026-11-25T17:48:27.070] Cog0  * wr_block() block_address = $0D49, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:27.085] Cog0  - program_block() block_address = $0D49
+[2026-11-25T17:48:27.126] Cog0  * wr_block() block_address = $0249, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:27.142] Cog0  - program_block() block_address = $0249
+[2026-11-25T17:48:27.176] Cog0  - activate_block() block_address = $0249
+[2026-11-25T17:48:27.176] Cog0  - activate_block() block_address = $0D49
+[2026-11-25T17:48:27.176] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:48:27.176] Cog0     -> pass
+[2026-11-25T17:48:27.176] Cog0   
+[2026-11-25T17:48:27.192] Cog0  * Test #150: can_mount() whose flash wait fails returns FALSE with E_FLASH_TIMEOUT; block programs stay refused until mount()
+[2026-11-25T17:48:27.243] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:48:27.243] Cog0     -> pass
+[2026-11-25T17:48:27.243] Cog0   
+[2026-11-25T17:48:27.259] Cog0  * Test #151: the committed data verifies
+[2026-11-25T17:48:27.275] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:27.275] Cog0     -> pass
+[2026-11-25T17:48:27.275] Cog0   
+[2026-11-25T17:48:27.290] Cog0  * Test #152: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:27.401] Cog0  * The next calls give the block hooks addresses outside the filesystem
+[2026-11-25T17:48:27.401] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:27.401] Cog0     -> pass
+[2026-11-25T17:48:27.401] Cog0   
+[2026-11-25T17:48:27.401] Cog0   
+[2026-11-25T17:48:27.402] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:27.402] Cog0  * Test Group: the block hooks refuse an address outside the filesystem
+[2026-11-25T17:48:27.403] Cog0   
+[2026-11-25T17:48:27.403] Cog0  * Test #153: TEST_changeBlock() refuses block addresses -1 and BLOCKS and an operation it does not have
+[2026-11-25T17:48:27.403] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:48:27.403] Cog0     -> pass
+[2026-11-25T17:48:27.403] Cog0   
+[2026-11-25T17:48:27.403] Cog0  * Test #154: TEST_readBlock() refuses block addresses -1 and BLOCKS
+[2026-11-25T17:48:27.404] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:27.404] Cog0     -> pass
+[2026-11-25T17:48:27.404] Cog0   
+[2026-11-25T17:48:27.411] Cog0  * Test #155: the block hooks accept block addresses 0 and BLOCKS - 1
+[2026-11-25T17:48:27.411] Cog0  - activate_block() block_address = $0000
+[2026-11-25T17:48:27.411] Cog0    Sub-Test Results: count=7, Pass: 7, Fail: 0
+[2026-11-25T17:48:27.411] Cog0     -> pass
+[2026-11-25T17:48:27.411] Cog0   
+[2026-11-25T17:48:27.411] Cog0   
+[2026-11-25T17:48:27.412] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:27.412] Cog0  * Test Group: a block program refused below the filesystem while it is mounted
+[2026-11-25T17:48:27.412] Cog0   
+[2026-11-25T17:48:27.419] Cog0  * Test #156: set up: write the second file, then open it for reading or unmount
+[2026-11-25T17:48:27.434] Cog0  - cancel_block() block_address = $0249
+[2026-11-25T17:48:27.450] Cog0  - cancel_block() block_address = $0D49
+[2026-11-25T17:48:27.524] Cog0  * wr_block() block_address = $069F, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:27.540] Cog0  - program_block() block_address = $069F
+[2026-11-25T17:48:27.577] Cog0  * wr_block() block_address = $02DC, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:27.593] Cog0  - program_block() block_address = $02DC
+[2026-11-25T17:48:27.623] Cog0  - activate_block() block_address = $02DC
+[2026-11-25T17:48:27.627] Cog0  - activate_block() block_address = $069F
+[2026-11-25T17:48:27.628] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:48:27.628] Cog0     -> pass
+[2026-11-25T17:48:27.628] Cog0   
+[2026-11-25T17:48:27.644] Cog0  * Test #157: the block program refused below the filesystem returns E_FLASH_TIMEOUT and unmounts
+[2026-11-25T17:48:27.693] Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
+[2026-11-25T17:48:27.693] Cog0     -> pass
+[2026-11-25T17:48:27.693] Cog0   
+[2026-11-25T17:48:27.708] Cog0  * Test #158: the committed data verifies
+[2026-11-25T17:48:27.720] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:27.720] Cog0     -> pass
+[2026-11-25T17:48:27.720] Cog0   
+[2026-11-25T17:48:27.736] Cog0  * Test #159: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:27.847] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:27.847] Cog0     -> pass
+[2026-11-25T17:48:27.847] Cog0   
+[2026-11-25T17:48:27.847] Cog0   
+[2026-11-25T17:48:27.848] Cog0   ------------------------------------------------------------
+[2026-11-25T17:48:27.848] Cog0  * Test Group: a block program refused below the filesystem while it is mounted
+[2026-11-25T17:48:27.848] Cog0   
+[2026-11-25T17:48:27.856] Cog0  * Test #160: set up: write the second file, then open it for reading or unmount
+[2026-11-25T17:48:27.872] Cog0  - cancel_block() block_address = $02DC
+[2026-11-25T17:48:27.872] Cog0  - cancel_block() block_address = $069F
+[2026-11-25T17:48:27.960] Cog0  * wr_block() block_address = $0B61, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:48:27.976] Cog0  - program_block() block_address = $0B61
+[2026-11-25T17:48:28.012] Cog0  * wr_block() block_address = $0EB8, block_id = 1, NextID_EndPtr = $03EC
+[2026-11-25T17:48:28.028] Cog0  - program_block() block_address = $0EB8
+[2026-11-25T17:48:28.062] Cog0  - activate_block() block_address = $0EB8
+[2026-11-25T17:48:28.068] Cog0  - activate_block() block_address = $0B61
+[2026-11-25T17:48:28.068] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-25T17:48:28.068] Cog0     -> pass
+[2026-11-25T17:48:28.068] Cog0   
+[2026-11-25T17:48:28.084] Cog0  * Test #161: the lifecycle program refused below the filesystem returns E_FLASH_TIMEOUT and unmounts
+[2026-11-25T17:48:28.133] Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
+[2026-11-25T17:48:28.133] Cog0     -> pass
+[2026-11-25T17:48:28.133] Cog0   
+[2026-11-25T17:48:28.148] Cog0  * Test #162: the committed data verifies
+[2026-11-25T17:48:28.163] Cog0    Sub-Test Results: count=4, Pass: 4, Fail: 0
+[2026-11-25T17:48:28.164] Cog0     -> pass
+[2026-11-25T17:48:28.164] Cog0   
+[2026-11-25T17:48:28.179] Cog0  * Test #163: a second mount is clean: can_mount() TRUE, then mount() SUCCESS
+[2026-11-25T17:48:28.291] Cog0  * Test Complete
+[2026-11-25T17:48:28.291] Cog0    Sub-Test Results: count=5, Pass: 5, Fail: 0
+[2026-11-25T17:48:28.291] Cog0     -> pass
+[2026-11-25T17:48:28.291] Cog0   
+[2026-11-25T17:48:28.291] Cog0  * 163 Tests - Pass: 163, Fail: 0
+[2026-11-25T17:48:28.307] Cog0  RESULT: PASS RT_power_loss_tests 163/163
+[2026-11-25T17:48:28.307] Cog0  <END_SESSION>
+[2026-11-25T17:48:28.307] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-25T17:48:28.308] [SYSTEM] Shutdown initiated: End marker detected
+
+=== Headless Mode Session Ended at 2026-11-25T17:48:28.337 ===

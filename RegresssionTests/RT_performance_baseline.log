@@ -1,0 +1,132 @@
+=== Headless Mode Session Started at 2026-11-25T17:48:53.216 ===
+PNut-Term-TS: v1.1.2
+Mode: Headless (no GUI)
+End Markers: "END_SESSION", "DEBUG_END_SESSION"
+Timeout: 180 seconds
+=====================================
+
+[2026-11-25T17:48:53.215] [SYSTEM] Headless mode started
+[2026-11-25T17:48:53.215] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-25T17:48:53.215] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-25T17:48:53.258] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-25T17:48:53.258] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_performance_baseline.bin to RAM
+[2026-11-25T17:48:53.624] 
+[2026-11-25T17:48:53.624] Prop_Ver G
+[2026-11-25T17:48:54.855] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-25T17:48:54.855] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_performance_baseline.bin
+[2026-11-25T17:48:54.871] Cog0  INIT $0000_0FA8 $0001_2CDC jump
+[2026-11-25T17:49:15.204] Cog0   
+[2026-11-25T17:49:15.204] Cog0  * Environment: Chip S/N and Driver Version
+[2026-11-25T17:49:15.205] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:49:15.205] Cog0     Driver: flash_fs v2.1.0
+[2026-11-25T17:49:15.205] Cog0  * init VAR
+[2026-11-25T17:49:15.205] Cog0  * Random seed (cog 0): $BB21_BFF7
+[2026-11-25T17:49:15.205] Cog0   
+[2026-11-25T17:49:15.205] Cog0  * Test #1: driver instance matches the harness instance
+[2026-11-25T17:49:15.205] Cog0    MAX_FILES_OPEN: 2
+[2026-11-25T17:49:15.206] Cog0     -> pass
+[2026-11-25T17:49:15.206] Cog0   
+[2026-11-25T17:49:15.206] Cog0  * Timing table: clkfreq 320_000_000 Hz, 1 us = 320 ticks, ticks are system clock ticks counted by getct()
+[2026-11-25T17:49:15.207] Cog0  PERF| row | measurement | bytes moved | timed calls | ticks | microseconds | status
+[2026-11-25T17:49:15.207] Cog0  PERF| 1 | open(,r) with 1 file present | 0 B | 1 calls | 2177592 ticks | 6_804 us | ok
+[2026-11-25T17:49:15.208] Cog0  PERF| 2 | open(,r) with 50 files present | 0 B | 1 calls | 620888 ticks | 1_940 us | ok
+[2026-11-25T17:49:15.208] Cog0  PERF| 3 | open(,r) with 100 files present | 0 B | 1 calls | 2254992 ticks | 7_046 us | ok
+[2026-11-25T17:49:15.209] Cog0  PERF| 4 | write() of the one byte after a full head block | 1 B | 1 calls | 16493384 ticks | 51_541 us | ok
+[2026-11-25T17:49:15.209] Cog0  PERF| 5 | write 4 KB: write() calls and close() | 4_096 B | 3 calls | 32667808 ticks | 102_086 us | ok
+[2026-11-25T17:49:15.210] Cog0  PERF| 6 | read 4 KB: read() calls | 4_096 B | 2 calls | 389736 ticks | 1_217 us | ok
+[2026-11-25T17:49:15.211] Cog0  PERF| 7 | write 64 KB: write() calls and close() | 65_536 B | 18 calls | 322351904 ticks | 1_007_349 us | ok
+[2026-11-25T17:49:15.211] Cog0  PERF| 8 | read 64 KB: read() calls | 65_536 B | 17 calls | 6115912 ticks | 19_112 us | ok
+[2026-11-25T17:49:15.212] Cog0  PERF| 9 | write 690 KB: write() calls and close() | 706_560 B | 174 calls | 3158869288 ticks | 9_871_466 us | ok
+[2026-11-25T17:49:15.213] Cog0  PERF| 10 | read 690 KB: read() calls | 706_560 B | 173 calls | 65670976 ticks | 205_221 us | ok
+[2026-11-25T17:49:15.213] Cog0  PERF| 11 | write block: mean of the write() calls of a whole body block in the 690 KB file | 4_088 B | 171 calls | 18278093 ticks | 57_119 us | ok
+[2026-11-25T17:49:15.214] Cog0  PERF| 12 | write block: slowest write() call of a whole body block in the 690 KB file | 4_088 B | 1 calls | 39244872 ticks | 122_640 us | ok
+[2026-11-25T17:49:15.215] Cog0  PERF| 13 | seek() from the start to the last byte of the 690 KB file | 0 B | 1 calls | 1261880 ticks | 3_943 us | ok
+[2026-11-25T17:49:15.216] Cog0  PERF| 14 | can_mount() of the unmounted populated flash | 0 B | 1 calls | 147371752 ticks | 460_536 us | ok
+[2026-11-25T17:49:15.216] Cog0  PERF| 15 | mount() of the populated flash | 0 B | 1 calls | 146078576 ticks | 456_495 us | ok
+[2026-11-25T17:49:15.217] Cog0  PERF| 16 | format() of the populated flash, including its mount | 0 B | 1 calls | 36046384 ticks | 112_644 us | ok
+[2026-11-25T17:49:15.217] Cog0   
+[2026-11-25T17:49:15.217] Cog0   
+[2026-11-25T17:49:15.217] Cog0   
+[2026-11-25T17:49:15.217] Cog0   ------------------------------------------------------------
+[2026-11-25T17:49:15.217] Cog0  * Test Group: timed measurements
+[2026-11-25T17:49:15.218] Cog0   
+[2026-11-25T17:49:15.218] Cog0  * Test #2: the clock the table states is the clock the program was built for
+[2026-11-25T17:49:15.218] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:49:15.218] Cog0     -> pass
+[2026-11-25T17:49:15.218] Cog0   
+[2026-11-25T17:49:15.219] Cog0  * Test #3: the formatted flash has room for every file of the run
+[2026-11-25T17:49:15.219] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:49:15.219] Cog0     -> pass
+[2026-11-25T17:49:15.219] Cog0   
+[2026-11-25T17:49:15.219] Cog0  * Test #4: open(,r) with 1 file present
+[2026-11-25T17:49:15.220] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.220] Cog0     -> pass
+[2026-11-25T17:49:15.220] Cog0   
+[2026-11-25T17:49:15.220] Cog0  * Test #5: open(,r) with 50 files present
+[2026-11-25T17:49:15.221] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.221] Cog0     -> pass
+[2026-11-25T17:49:15.221] Cog0   
+[2026-11-25T17:49:15.221] Cog0  * Test #6: open(,r) with 100 files present
+[2026-11-25T17:49:15.221] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.221] Cog0     -> pass
+[2026-11-25T17:49:15.221] Cog0   
+[2026-11-25T17:49:15.222] Cog0  * Test #7: write() of the one byte after a full head block
+[2026-11-25T17:49:15.222] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.222] Cog0     -> pass
+[2026-11-25T17:49:15.222] Cog0   
+[2026-11-25T17:49:15.222] Cog0  * Test #8: write 4 KB: write() calls and close()
+[2026-11-25T17:49:15.223] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.223] Cog0     -> pass
+[2026-11-25T17:49:15.223] Cog0   
+[2026-11-25T17:49:15.223] Cog0  * Test #9: read 4 KB: read() calls
+[2026-11-25T17:49:15.223] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.223] Cog0     -> pass
+[2026-11-25T17:49:15.223] Cog0   
+[2026-11-25T17:49:15.224] Cog0  * Test #10: write 64 KB: write() calls and close()
+[2026-11-25T17:49:15.224] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.224] Cog0     -> pass
+[2026-11-25T17:49:15.224] Cog0   
+[2026-11-25T17:49:15.224] Cog0  * Test #11: read 64 KB: read() calls
+[2026-11-25T17:49:15.225] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.225] Cog0     -> pass
+[2026-11-25T17:49:15.225] Cog0   
+[2026-11-25T17:49:15.225] Cog0  * Test #12: write 690 KB: write() calls and close()
+[2026-11-25T17:49:15.225] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.226] Cog0     -> pass
+[2026-11-25T17:49:15.226] Cog0   
+[2026-11-25T17:49:15.226] Cog0  * Test #13: read 690 KB: read() calls
+[2026-11-25T17:49:15.226] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.226] Cog0     -> pass
+[2026-11-25T17:49:15.227] Cog0   
+[2026-11-25T17:49:15.227] Cog0  * Test #14: write block: mean of the write() calls of a whole body block in the 690 KB file
+[2026-11-25T17:49:15.227] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.227] Cog0     -> pass
+[2026-11-25T17:49:15.227] Cog0   
+[2026-11-25T17:49:15.228] Cog0  * Test #15: write block: slowest write() call of a whole body block in the 690 KB file
+[2026-11-25T17:49:15.228] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.228] Cog0     -> pass
+[2026-11-25T17:49:15.228] Cog0   
+[2026-11-25T17:49:15.229] Cog0  * Test #16: seek() from the start to the last byte of the 690 KB file
+[2026-11-25T17:49:15.229] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.229] Cog0     -> pass
+[2026-11-25T17:49:15.229] Cog0   
+[2026-11-25T17:49:15.229] Cog0  * Test #17: can_mount() of the unmounted populated flash
+[2026-11-25T17:49:15.230] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.230] Cog0     -> pass
+[2026-11-25T17:49:15.230] Cog0   
+[2026-11-25T17:49:15.230] Cog0  * Test #18: mount() of the populated flash
+[2026-11-25T17:49:15.230] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.230] Cog0     -> pass
+[2026-11-25T17:49:15.230] Cog0   
+[2026-11-25T17:49:15.231] Cog0  * Test #19: format() of the populated flash, including its mount
+[2026-11-25T17:49:15.231] Cog0  * Test Complete
+[2026-11-25T17:49:15.231] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-25T17:49:15.231] Cog0     -> pass
+[2026-11-25T17:49:15.231] Cog0   
+[2026-11-25T17:49:15.232] Cog0  * 19 Tests - Pass: 19, Fail: 0
+[2026-11-25T17:49:15.248] Cog0  RESULT: PASS RT_performance_baseline 19/19
+[2026-11-25T17:49:15.248] Cog0  <END_SESSION>
+[2026-11-25T17:49:15.248] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-25T17:49:15.249] [SYSTEM] Shutdown initiated: End marker detected
+
+=== Headless Mode Session Ended at 2026-11-25T17:49:15.276 ===
