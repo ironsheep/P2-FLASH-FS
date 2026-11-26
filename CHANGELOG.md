@@ -68,7 +68,7 @@ Every call reports its error, the file modes follow ANSI C except where the flas
 - The hub lock is kept from the first `mount()` until power-down, and `unmount()` no longer returns it. Each call holds the lock from start to finish.
 - E_FILE_WRITING (-5), E_FILE_READING (-6) and E_SHORT_TRANSER (-16) are reserved: the driver never returns them.
 
-Compilers tested: **[measured at bench visit 10: TESTED_COMPILERS]**
+Compilers tested: pnut-ts v1.55.12 builds the driver, the demos and every regression program, all run on a P2 Edge. FlexSpin 7.6.1 compiles the driver with no warning or error. The Propeller Tool was not tested.
 
 ### Known Issues
 
