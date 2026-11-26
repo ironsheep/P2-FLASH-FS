@@ -1,781 +1,781 @@
-=== Headless Mode Session Started at 2026-11-25T16:03:35.866 ===
+=== Headless Mode Session Started at 2026-11-25T17:05:32.459 ===
 PNut-Term-TS: v1.1.2
 Mode: Headless (no GUI)
 End Markers: "END_SESSION", "DEBUG_END_SESSION"
 Timeout: 180 seconds
 =====================================
 
-[2026-11-25T16:03:35.865] [SYSTEM] Headless mode started
-[2026-11-25T16:03:35.865] [SYSTEM] Timeout configured: 180 seconds
-[2026-11-25T16:03:35.865] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
-[2026-11-25T16:03:35.908] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
-[2026-11-25T16:03:35.908] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_read_modify_write_tests.bin to RAM
-[2026-11-25T16:03:36.271] 
-[2026-11-25T16:03:36.271] Prop_Ver G
-[2026-11-25T16:03:37.407] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_read_modify_write_tests.bin
-[2026-11-25T16:03:37.418] .Cog0  INIT $0000_0000 $0000_0000 load
-[2026-11-25T16:03:37.434] Cog0  INIT $0000_0FA8 $0001_061C jump
-[2026-11-25T16:03:37.528] Cog0  * init VAR
-[2026-11-25T16:03:37.528] Cog0  * Random seed (cog 0): $6E39_C9FF
-[2026-11-25T16:03:37.528] Cog0   
-[2026-11-25T16:03:37.536] Cog0  * Test #1: driver instance matches the harness instance
-[2026-11-25T16:03:37.536] Cog0    MAX_FILES_OPEN: 2
-[2026-11-25T16:03:37.536] Cog0     -> pass
-[2026-11-25T16:03:37.536] Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
-[2026-11-25T16:03:37.536] Cog0   
-[2026-11-25T16:03:37.544] Cog0    All Files:
-[2026-11-25T16:03:37.544] Cog0   
-[2026-11-25T16:03:37.544] Cog0  * Environment: Chip S/N and Driver Version
-[2026-11-25T16:03:37.545] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
-[2026-11-25T16:03:37.545] Cog0     Driver: flash_fs v2.1.0
-[2026-11-25T16:03:37.545] Cog0   
-[2026-11-25T16:03:37.545] Cog0   
-[2026-11-25T16:03:37.545] Cog0   ------------------------------------------------------------
-[2026-11-25T16:03:37.546] Cog0  * Test Group: TEST #1  R+ (file exists) - replace three
-[2026-11-25T16:03:37.546] Cog0    
-[2026-11-25T16:03:37.546] Cog0   ---------- Write Records ------------ 
-[2026-11-25T16:03:37.552] Cog0   
-[2026-11-25T16:03:37.552] Cog0  * Test #2: Open File for write
-[2026-11-25T16:03:37.553] Cog0    open(,'w'): 0
-[2026-11-25T16:03:37.553] Cog0     -> pass
-[2026-11-25T16:03:37.553] Cog0   
-[2026-11-25T16:03:37.553] Cog0  * Test #3: Write Records
-[2026-11-25T16:03:37.553] Cog0  * wr_block() block_address = $09EE, block_id = 0, NextID_EndPtr = $0001
-[2026-11-25T16:03:37.569] Cog0  - program_block() block_address = $09EE
-[2026-11-25T16:03:37.606] Cog0  * wr_block() block_address = $01E8, block_id = 1, NextID_EndPtr = $0002
-[2026-11-25T16:03:37.621] Cog0  - program_block() block_address = $01E8
-[2026-11-25T16:03:37.657] Cog0  - activate_block() block_address = $01E8
-[2026-11-25T16:03:37.674] Cog0  * wr_block() block_address = $02FB, block_id = 2, NextID_EndPtr = $0003
-[2026-11-25T16:03:37.674] Cog0  - program_block() block_address = $02FB
-[2026-11-25T16:03:37.710] Cog0  - activate_block() block_address = $02FB
-[2026-11-25T16:03:37.711] Cog0    Sub-Test Results: count=40, Pass: 40, Fail: 0
-[2026-11-25T16:03:37.711] Cog0     -> pass
-[2026-11-25T16:03:37.711] Cog0   
-[2026-11-25T16:03:37.711] Cog0  * Test #4: ensure no errors on Record writes
-[2026-11-25T16:03:37.712] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.712] Cog0     -> pass
-[2026-11-25T16:03:37.712] Cog0   
-[2026-11-25T16:03:37.712] Cog0    File: [rw4blocks.bin] pending commit
-[2026-11-25T16:03:37.712] Cog0    # 4 Blocks in chain:
-[2026-11-25T16:03:37.712] Cog0      1: [$09EE] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [erased], sig=[$0010_00FD]  
-[2026-11-25T16:03:37.713] Cog0      2: [$01E8] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017F]  
-[2026-11-25T16:03:37.714] Cog0      3: [$02FB] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
-[2026-11-25T16:03:37.714] Cog0      4: [$0000] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [erased], sig=[$CA00_03F6]  MODIFIED
-[2026-11-25T16:03:37.714] Cog0   
-[2026-11-25T16:03:37.714] Cog0  * Test #5: Close written file
-[2026-11-25T16:03:37.715] Cog0  * wr_block() block_address = $044E, block_id = 3, NextID_EndPtr = $0CA0
-[2026-11-25T16:03:37.730] Cog0  - program_block() block_address = $044E
-[2026-11-25T16:03:37.768] Cog0  - activate_block() block_address = $044E
-[2026-11-25T16:03:37.768] Cog0  - activate_block() block_address = $09EE
-[2026-11-25T16:03:37.769] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.769] Cog0     -> pass
-[2026-11-25T16:03:37.769] Cog0   
-[2026-11-25T16:03:37.776] Cog0  * Test #6: Ensure expected file system changes
-[2026-11-25T16:03:37.776] Cog0  * post file write
-[2026-11-25T16:03:37.776] Cog0    # FileSystem: 4, 3_964, 1
-[2026-11-25T16:03:37.776] Cog0    # files: 1
-[2026-11-25T16:03:37.777] Cog0    # blocks used: 4
-[2026-11-25T16:03:37.777] Cog0     -> pass
-[2026-11-25T16:03:37.777] Cog0   
-[2026-11-25T16:03:37.781] Cog0  * Test #7: Ensure expected file stats
-[2026-11-25T16:03:37.781] Cog0    File: [rw4blocks.bin]
-[2026-11-25T16:03:37.781] Cog0    # 4 Blocks in file:
-[2026-11-25T16:03:37.781] Cog0      1: [$09EE] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-3], sig=[$0010_007D]  
-[2026-11-25T16:03:37.782] Cog0      2: [$01E8] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017F]  
-[2026-11-25T16:03:37.783] Cog0      3: [$02FB] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
-[2026-11-25T16:03:37.787] Cog0      4: [$044E] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_037E]  
-[2026-11-25T16:03:37.787] Cog0    # blocks: 4
-[2026-11-25T16:03:37.787] Cog0    # bytes used: 15_360
-[2026-11-25T16:03:37.787] Cog0     -> pass
-[2026-11-25T16:03:37.787] Cog0   
-[2026-11-25T16:03:37.792] Cog0  * Test #8: Ensure expected unused bytes stats
-[2026-11-25T16:03:37.792] Cog0    file_size_unused(): 860
-[2026-11-25T16:03:37.792] Cog0     -> pass
-[2026-11-25T16:03:37.792] Cog0   
-[2026-11-25T16:03:37.792] Cog0  * Test #9: Ensure no error on size unused call
-[2026-11-25T16:03:37.793] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.793] Cog0     -> pass
-[2026-11-25T16:03:37.793] Cog0    
-[2026-11-25T16:03:37.793] Cog0   ------------ Verify Original Records ---------------- 
-[2026-11-25T16:03:37.793] Cog0   
-[2026-11-25T16:03:37.799] Cog0  * Test #10: Open File for read
-[2026-11-25T16:03:37.799] Cog0    open(,'r'): 0
-[2026-11-25T16:03:37.799] Cog0     -> pass
-[2026-11-25T16:03:37.805] Cog0   
-[2026-11-25T16:03:37.805] Cog0  * Test #11: read expected RECORDs
-[2026-11-25T16:03:37.805] Cog0    Sub-Test Results: count=40, Pass: 40, Fail: 0
-[2026-11-25T16:03:37.805] Cog0     -> pass
-[2026-11-25T16:03:37.805] Cog0   
-[2026-11-25T16:03:37.805] Cog0  * Test #12: ensure no errors on reads
-[2026-11-25T16:03:37.806] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.806] Cog0     -> pass
-[2026-11-25T16:03:37.806] Cog0   
-[2026-11-25T16:03:37.806] Cog0  * Test #13: BAD: read one more Record than written
-[2026-11-25T16:03:37.806] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:37.806] Cog0     -> pass
-[2026-11-25T16:03:37.807] Cog0   
-[2026-11-25T16:03:37.807] Cog0  * Test #14: Close read file
-[2026-11-25T16:03:37.807] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.807] Cog0     -> pass
-[2026-11-25T16:03:37.807] Cog0    
-[2026-11-25T16:03:37.807] Cog0   ----------- Overwrite 1st/mid/last Records ----------- 
-[2026-11-25T16:03:37.807] Cog0   
-[2026-11-25T16:03:37.813] Cog0  * Test #15: Open File for modify write
-[2026-11-25T16:03:37.813] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.814] Cog0     -> pass
-[2026-11-25T16:03:37.814] Cog0   
-[2026-11-25T16:03:37.814] Cog0  * Test #16: Write 1st Record
-[2026-11-25T16:03:37.814] Cog0   
-[2026-11-25T16:03:37.814] Cog0    File: [rw4blocks.bin] pending commit
-[2026-11-25T16:03:37.814] Cog0    # 4 Blocks in chain:
-[2026-11-25T16:03:37.815] Cog0      1: [$0000] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-3], sig=[$0010_0075]  MODIFIED
-[2026-11-25T16:03:37.815] Cog0      2: [$01E8] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017F]  
-[2026-11-25T16:03:37.816] Cog0      3: [$02FB] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
-[2026-11-25T16:03:37.816] Cog0      4: [$044E] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_037E]  
-[2026-11-25T16:03:37.816] Cog0    
-[2026-11-25T16:03:37.816] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:37.817] Cog0     -> pass
-[2026-11-25T16:03:37.817] Cog0   
-[2026-11-25T16:03:37.817] Cog0  * Test #17: Write Mid Record
-[2026-11-25T16:03:37.817] Cog0  * program_updated_block() block_address = $01A6
-[2026-11-25T16:03:37.833] Cog0  - program_block() block_address = $01A6
-[2026-11-25T16:03:37.869] Cog0  - activate_block() block_address = $01A6
-[2026-11-25T16:03:37.871] Cog0  - cancel_block() block_address = $09EE
-[2026-11-25T16:03:37.871] Cog0   
-[2026-11-25T16:03:37.871] Cog0    File: [rw4blocks.bin] pending commit
-[2026-11-25T16:03:37.871] Cog0    # 3 Blocks in chain:
-[2026-11-25T16:03:37.872] Cog0      1: [$01E8] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_0177]  MODIFIED
-[2026-11-25T16:03:37.872] Cog0      2: [$02FB] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
-[2026-11-25T16:03:37.872] Cog0      3: [$044E] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_037E]  
-[2026-11-25T16:03:37.872] Cog0    
-[2026-11-25T16:03:37.873] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:37.873] Cog0     -> pass
-[2026-11-25T16:03:37.873] Cog0   
-[2026-11-25T16:03:37.873] Cog0  * Test #18: Write LAST Record
-[2026-11-25T16:03:37.873] Cog0  * program_updated_block() block_address = $00A8
-[2026-11-25T16:03:37.889] Cog0  - program_block() block_address = $00A8
-[2026-11-25T16:03:37.925] Cog0  - activate_block() block_address = $00A8
-[2026-11-25T16:03:37.926] Cog0  - cancel_block() block_address = $01E8
-[2026-11-25T16:03:37.926] Cog0   
-[2026-11-25T16:03:37.926] Cog0    File: [rw4blocks.bin] pending commit
-[2026-11-25T16:03:37.927] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:03:37.927] Cog0      1: [$044E] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_0376]  MODIFIED
-[2026-11-25T16:03:37.927] Cog0    
-[2026-11-25T16:03:37.927] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:37.927] Cog0     -> pass
-[2026-11-25T16:03:37.928] Cog0   
-[2026-11-25T16:03:37.928] Cog0  * Test #19: ensure no errors on Record writes
-[2026-11-25T16:03:37.928] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.928] Cog0     -> pass
-[2026-11-25T16:03:37.928] Cog0   
-[2026-11-25T16:03:37.928] Cog0    File: [rw4blocks.bin] pending commit
-[2026-11-25T16:03:37.929] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:03:37.929] Cog0      1: [$044E] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_0376]  MODIFIED
-[2026-11-25T16:03:37.929] Cog0   
-[2026-11-25T16:03:37.930] Cog0  * Test #20: seek away from write location (should update block)
-[2026-11-25T16:03:37.930] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:37.930] Cog0     -> pass
-[2026-11-25T16:03:37.930] Cog0   
-[2026-11-25T16:03:37.930] Cog0  * Test #21: Close written file (no further block updates)
-[2026-11-25T16:03:37.931] Cog0  * program_updated_block() block_address = $0486
-[2026-11-25T16:03:37.946] Cog0  - program_block() block_address = $0486
-[2026-11-25T16:03:37.982] Cog0  - activate_block() block_address = $0486
-[2026-11-25T16:03:37.982] Cog0  - cancel_block() block_address = $044E
-[2026-11-25T16:03:37.982] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.982] Cog0     -> pass
-[2026-11-25T16:03:37.982] Cog0   
-[2026-11-25T16:03:37.983] Cog0  * Test #22: Ensure expected file stats
-[2026-11-25T16:03:37.983] Cog0    File: [rw4blocks.bin]
-[2026-11-25T16:03:37.984] Cog0    # 4 Blocks in file:
-[2026-11-25T16:03:37.984] Cog0      1: [$01A6] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-5], sig=[$0010_00BD]  
-[2026-11-25T16:03:37.985] Cog0      2: [$00A8] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-5], sig=[$0020_01BF]  
-[2026-11-25T16:03:37.985] Cog0      3: [$02FB] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
-[2026-11-25T16:03:37.986] Cog0      4: [$0486] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-5], sig=[$CA00_03BE]  
-[2026-11-25T16:03:37.986] Cog0    # blocks: 4
-[2026-11-25T16:03:37.987] Cog0    # bytes used: 15_360
-[2026-11-25T16:03:37.987] Cog0     -> pass
-[2026-11-25T16:03:37.987] Cog0    
-[2026-11-25T16:03:37.987] Cog0   ------------ Verify Replaced Records ------------- 
-[2026-11-25T16:03:37.987] Cog0   
-[2026-11-25T16:03:37.989] Cog0  * Test #23: Open File for read
-[2026-11-25T16:03:37.989] Cog0    open(,'r'): 0
-[2026-11-25T16:03:37.990] Cog0     -> pass
-[2026-11-25T16:03:37.990] Cog0   
-[2026-11-25T16:03:37.990] Cog0  * Test #24: read expected RECORDs
-[2026-11-25T16:03:37.996] Cog0    Sub-Test Results: count=40, Pass: 40, Fail: 0
-[2026-11-25T16:03:37.996] Cog0     -> pass
-[2026-11-25T16:03:37.996] Cog0   
-[2026-11-25T16:03:37.997] Cog0  * Test #25: ensure no errors on reads
-[2026-11-25T16:03:37.997] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.997] Cog0     -> pass
-[2026-11-25T16:03:37.997] Cog0   
-[2026-11-25T16:03:37.997] Cog0  * Test #26: Close read file
-[2026-11-25T16:03:37.997] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:37.997] Cog0     -> pass
-[2026-11-25T16:03:37.997] Cog0   
-[2026-11-25T16:03:38.005] Cog0  * Test #27: Ensure expected file system changes
-[2026-11-25T16:03:38.005] Cog0  * post file write
-[2026-11-25T16:03:38.005] Cog0    # FileSystem: 4, 3_964, 1
-[2026-11-25T16:03:38.005] Cog0    # files: 1
-[2026-11-25T16:03:38.006] Cog0    # blocks used: 4
-[2026-11-25T16:03:38.006] Cog0     -> pass
-[2026-11-25T16:03:38.006] Cog0   
-[2026-11-25T16:03:38.006] Cog0  * Test #28: Ensure expected file stats
-[2026-11-25T16:03:38.007] Cog0    File: [rw4blocks.bin]
-[2026-11-25T16:03:38.007] Cog0    # 4 Blocks in file:
-[2026-11-25T16:03:38.007] Cog0      1: [$01A6] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-5], sig=[$0010_00BD]  
-[2026-11-25T16:03:38.008] Cog0      2: [$00A8] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-5], sig=[$0020_01BF]  
-[2026-11-25T16:03:38.008] Cog0      3: [$02FB] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
-[2026-11-25T16:03:38.009] Cog0      4: [$0486] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-5], sig=[$CA00_03BE]  
-[2026-11-25T16:03:38.009] Cog0    # blocks: 4
-[2026-11-25T16:03:38.010] Cog0    # bytes used: 15_360
-[2026-11-25T16:03:38.010] Cog0     -> pass
-[2026-11-25T16:03:38.010] Cog0   
-[2026-11-25T16:03:38.010] Cog0   
-[2026-11-25T16:03:38.010] Cog0   ------------------------------------------------------------
-[2026-11-25T16:03:38.011] Cog0  * Test Group: TEST #2  R+ (file exists) - replace span
-[2026-11-25T16:03:38.011] Cog0    
-[2026-11-25T16:03:38.017] Cog0   ---------- Write Records ------------ 
-[2026-11-25T16:03:38.017] Cog0   
-[2026-11-25T16:03:38.017] Cog0  * Test #29: Open File for write
-[2026-11-25T16:03:38.017] Cog0    open(,'w'): 0
-[2026-11-25T16:03:38.017] Cog0     -> pass
-[2026-11-25T16:03:38.017] Cog0   
-[2026-11-25T16:03:38.018] Cog0  * Test #30: Write Records
-[2026-11-25T16:03:38.018] Cog0  * wr_block() block_address = $013C, block_id = 4, NextID_EndPtr = $0005
-[2026-11-25T16:03:38.034] Cog0  - program_block() block_address = $013C
-[2026-11-25T16:03:38.068] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
-[2026-11-25T16:03:38.069] Cog0     -> pass
-[2026-11-25T16:03:38.069] Cog0   
-[2026-11-25T16:03:38.069] Cog0  * Test #31: ensure no errors on Record writes
-[2026-11-25T16:03:38.069] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.069] Cog0     -> pass
-[2026-11-25T16:03:38.069] Cog0   
-[2026-11-25T16:03:38.069] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:38.070] Cog0    # 2 Blocks in chain:
-[2026-11-25T16:03:38.070] Cog0      1: [$013C] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [erased], sig=[$0050_04FD]  
-[2026-11-25T16:03:38.071] Cog0      2: [$0000] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [erased], sig=[$E900_05F6]  MODIFIED
-[2026-11-25T16:03:38.071] Cog0   
-[2026-11-25T16:03:38.071] Cog0  * Test #32: Close written file
-[2026-11-25T16:03:38.071] Cog0  * wr_block() block_address = $0635, block_id = 5, NextID_EndPtr = $0E90
-[2026-11-25T16:03:38.086] Cog0  - program_block() block_address = $0635
-[2026-11-25T16:03:38.127] Cog0  - activate_block() block_address = $0635
-[2026-11-25T16:03:38.127] Cog0  - activate_block() block_address = $013C
-[2026-11-25T16:03:38.128] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.128] Cog0     -> pass
-[2026-11-25T16:03:38.128] Cog0   
-[2026-11-25T16:03:38.135] Cog0  * Test #33: Ensure expected file system changes
-[2026-11-25T16:03:38.135] Cog0  * post file write
-[2026-11-25T16:03:38.136] Cog0    # FileSystem: 6, 3_962, 2
-[2026-11-25T16:03:38.136] Cog0    # files: 2
-[2026-11-25T16:03:38.136] Cog0    # blocks used: 6
-[2026-11-25T16:03:38.136] Cog0     -> pass
-[2026-11-25T16:03:38.136] Cog0   
-[2026-11-25T16:03:38.137] Cog0  * Test #34: Ensure expected file stats
-[2026-11-25T16:03:38.137] Cog0    File: [rw2blocks.bin]
-[2026-11-25T16:03:38.137] Cog0    # 2 Blocks in file:
-[2026-11-25T16:03:38.137] Cog0      1: [$013C] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]  
-[2026-11-25T16:03:38.139] Cog0      2: [$0635] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
-[2026-11-25T16:03:38.139] Cog0    # blocks: 2
-[2026-11-25T16:03:38.139] Cog0    # bytes used: 7_680
-[2026-11-25T16:03:38.139] Cog0     -> pass
-[2026-11-25T16:03:38.139] Cog0   
-[2026-11-25T16:03:38.140] Cog0  * Test #35: Ensure expected unused bytes stats
-[2026-11-25T16:03:38.140] Cog0    file_size_unused(): 364
-[2026-11-25T16:03:38.140] Cog0     -> pass
-[2026-11-25T16:03:38.140] Cog0   
-[2026-11-25T16:03:38.140] Cog0  * Test #36: Ensure no error on size unused call
-[2026-11-25T16:03:38.141] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.141] Cog0     -> pass
-[2026-11-25T16:03:38.141] Cog0    
-[2026-11-25T16:03:38.141] Cog0   ------------ Verify Original Records ---------------- 
-[2026-11-25T16:03:38.141] Cog0   
-[2026-11-25T16:03:38.143] Cog0  * Test #37: Open File for read
-[2026-11-25T16:03:38.143] Cog0    open(,'r'): 0
-[2026-11-25T16:03:38.143] Cog0     -> pass
-[2026-11-25T16:03:38.146] Cog0   
-[2026-11-25T16:03:38.146] Cog0  * Test #38: read expected RECORDs
-[2026-11-25T16:03:38.146] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
-[2026-11-25T16:03:38.146] Cog0     -> pass
-[2026-11-25T16:03:38.147] Cog0   
-[2026-11-25T16:03:38.147] Cog0  * Test #39: ensure no errors on reads
-[2026-11-25T16:03:38.147] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.147] Cog0     -> pass
-[2026-11-25T16:03:38.147] Cog0   
-[2026-11-25T16:03:38.147] Cog0  * Test #40: BAD: read one more Record than written
-[2026-11-25T16:03:38.148] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.148] Cog0     -> pass
-[2026-11-25T16:03:38.148] Cog0   
-[2026-11-25T16:03:38.148] Cog0  * Test #41: Close read file
-[2026-11-25T16:03:38.148] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.148] Cog0     -> pass
-[2026-11-25T16:03:38.148] Cog0    
-[2026-11-25T16:03:38.149] Cog0   ----------- Overwrite single Record ----------- 
-[2026-11-25T16:03:38.149] Cog0   
-[2026-11-25T16:03:38.151] Cog0  * Test #42: Open File for modify write
-[2026-11-25T16:03:38.151] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.151] Cog0     -> pass
-[2026-11-25T16:03:38.151] Cog0   
-[2026-11-25T16:03:38.151] Cog0  * Test #43: Write Record
-[2026-11-25T16:03:38.152] Cog0   
-[2026-11-25T16:03:38.152] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:38.152] Cog0    # 2 Blocks in chain:
-[2026-11-25T16:03:38.153] Cog0      1: [$0000] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_0475]  MODIFIED
-[2026-11-25T16:03:38.153] Cog0      2: [$0635] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
-[2026-11-25T16:03:38.153] Cog0    
-[2026-11-25T16:03:38.153] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.154] Cog0     -> pass
-[2026-11-25T16:03:38.154] Cog0   
-[2026-11-25T16:03:38.154] Cog0  * Test #44: ensure no errors on Record writes
-[2026-11-25T16:03:38.154] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.154] Cog0     -> pass
-[2026-11-25T16:03:38.154] Cog0   
-[2026-11-25T16:03:38.154] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:38.155] Cog0    # 2 Blocks in chain:
-[2026-11-25T16:03:38.155] Cog0      1: [$0000] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_0475]  MODIFIED
-[2026-11-25T16:03:38.156] Cog0      2: [$0635] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
-[2026-11-25T16:03:38.156] Cog0   
-[2026-11-25T16:03:38.156] Cog0  * Test #45: Close written file (should write last updated block!)
-[2026-11-25T16:03:38.156] Cog0  * program_updated_block() block_address = $0F27
-[2026-11-25T16:03:38.173] Cog0  - program_block() block_address = $0F27
-[2026-11-25T16:03:38.213] Cog0  - activate_block() block_address = $0F27
-[2026-11-25T16:03:38.213] Cog0  - cancel_block() block_address = $013C
-[2026-11-25T16:03:38.213] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.213] Cog0     -> pass
-[2026-11-25T16:03:38.213] Cog0   
-[2026-11-25T16:03:38.219] Cog0  * Test #46: Ensure expected file stats
-[2026-11-25T16:03:38.219] Cog0    File: [rw2blocks.bin]
-[2026-11-25T16:03:38.219] Cog0    # 2 Blocks in file:
-[2026-11-25T16:03:38.220] Cog0      1: [$0F27] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-5], sig=[$0050_04BD]  
-[2026-11-25T16:03:38.226] Cog0      2: [$0635] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
-[2026-11-25T16:03:38.226] Cog0    # blocks: 2
-[2026-11-25T16:03:38.227] Cog0    # bytes used: 7_680
-[2026-11-25T16:03:38.227] Cog0     -> pass
-[2026-11-25T16:03:38.227] Cog0    
-[2026-11-25T16:03:38.227] Cog0   ------------ Verify Replaced Records ------------- 
-[2026-11-25T16:03:38.227] Cog0   
-[2026-11-25T16:03:38.234] Cog0  * Test #47: Open File for read
-[2026-11-25T16:03:38.234] Cog0    open(,'r'): 0
-[2026-11-25T16:03:38.237] Cog0     -> pass
-[2026-11-25T16:03:38.237] Cog0   
-[2026-11-25T16:03:38.237] Cog0  * Test #48: read expected RECORDs
-[2026-11-25T16:03:38.237] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
-[2026-11-25T16:03:38.238] Cog0     -> pass
-[2026-11-25T16:03:38.238] Cog0   
-[2026-11-25T16:03:38.238] Cog0  * Test #49: ensure no errors on reads
-[2026-11-25T16:03:38.238] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.238] Cog0     -> pass
-[2026-11-25T16:03:38.238] Cog0   
-[2026-11-25T16:03:38.238] Cog0  * Test #50: Close read file
-[2026-11-25T16:03:38.238] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.238] Cog0     -> pass
-[2026-11-25T16:03:38.238] Cog0   
-[2026-11-25T16:03:38.246] Cog0  * Test #51: Ensure expected file system changes
-[2026-11-25T16:03:38.246] Cog0  * post file write
-[2026-11-25T16:03:38.246] Cog0    # FileSystem: 6, 3_962, 2
-[2026-11-25T16:03:38.246] Cog0    # files: 2
-[2026-11-25T16:03:38.247] Cog0    # blocks used: 6
-[2026-11-25T16:03:38.247] Cog0     -> pass
-[2026-11-25T16:03:38.247] Cog0   
-[2026-11-25T16:03:38.253] Cog0  * Test #52: Ensure expected file stats
-[2026-11-25T16:03:38.253] Cog0    File: [rw2blocks.bin]
-[2026-11-25T16:03:38.253] Cog0    # 2 Blocks in file:
-[2026-11-25T16:03:38.253] Cog0      1: [$0F27] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-5], sig=[$0050_04BD]  
-[2026-11-25T16:03:38.260] Cog0      2: [$0635] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
-[2026-11-25T16:03:38.260] Cog0    # blocks: 2
-[2026-11-25T16:03:38.260] Cog0    # bytes used: 7_680
-[2026-11-25T16:03:38.260] Cog0     -> pass
-[2026-11-25T16:03:38.260] Cog0   
-[2026-11-25T16:03:38.260] Cog0   
-[2026-11-25T16:03:38.261] Cog0   ------------------------------------------------------------
-[2026-11-25T16:03:38.261] Cog0  * Test Group: TEST #3  R+ (file exists) - replace span, last block
-[2026-11-25T16:03:38.261] Cog0    
-[2026-11-25T16:03:38.267] Cog0   ---------- Write Records ------------ 
-[2026-11-25T16:03:38.267] Cog0   
-[2026-11-25T16:03:38.267] Cog0  * Test #53: Open File for write
-[2026-11-25T16:03:38.267] Cog0    open(,'w'): 0
-[2026-11-25T16:03:38.267] Cog0     -> pass
-[2026-11-25T16:03:38.267] Cog0   
-[2026-11-25T16:03:38.268] Cog0  * Test #54: Write Records
-[2026-11-25T16:03:38.269] Cog0  * wr_block() block_address = $0AEF, block_id = 6, NextID_EndPtr = $0007
-[2026-11-25T16:03:38.285] Cog0  - program_block() block_address = $0AEF
-[2026-11-25T16:03:38.320] Cog0  * wr_block() block_address = $06E7, block_id = 7, NextID_EndPtr = $0008
-[2026-11-25T16:03:38.336] Cog0  - program_block() block_address = $06E7
-[2026-11-25T16:03:38.373] Cog0  - activate_block() block_address = $06E7
-[2026-11-25T16:03:38.373] Cog0    Sub-Test Results: count=21, Pass: 21, Fail: 0
-[2026-11-25T16:03:38.373] Cog0     -> pass
-[2026-11-25T16:03:38.373] Cog0   
-[2026-11-25T16:03:38.373] Cog0  * Test #55: ensure no errors on Record writes
-[2026-11-25T16:03:38.373] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.373] Cog0     -> pass
-[2026-11-25T16:03:38.373] Cog0   
-[2026-11-25T16:03:38.374] Cog0    File: [rw3blocks.bin] pending commit
-[2026-11-25T16:03:38.374] Cog0    # 3 Blocks in chain:
-[2026-11-25T16:03:38.374] Cog0      1: [$0AEF] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [erased], sig=[$0070_06FD]  
-[2026-11-25T16:03:38.375] Cog0      2: [$06E7] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:03:38.376] Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$0018, lifeCycle [erased], sig=[$0180_08F6]  MODIFIED
-[2026-11-25T16:03:38.376] Cog0   
-[2026-11-25T16:03:38.376] Cog0  * Test #56: Close written file
-[2026-11-25T16:03:38.392] Cog0  * wr_block() block_address = $0429, block_id = 8, NextID_EndPtr = $0018
-[2026-11-25T16:03:38.392] Cog0  - program_block() block_address = $0429
-[2026-11-25T16:03:38.424] Cog0  - activate_block() block_address = $0429
-[2026-11-25T16:03:38.424] Cog0  - activate_block() block_address = $0AEF
-[2026-11-25T16:03:38.424] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.424] Cog0     -> pass
-[2026-11-25T16:03:38.424] Cog0   
-[2026-11-25T16:03:38.432] Cog0  * Test #57: Ensure expected file system changes
-[2026-11-25T16:03:38.432] Cog0  * post file write
-[2026-11-25T16:03:38.432] Cog0    # FileSystem: 9, 3_959, 3
-[2026-11-25T16:03:38.432] Cog0    # files: 3
-[2026-11-25T16:03:38.432] Cog0    # blocks used: 9
-[2026-11-25T16:03:38.432] Cog0     -> pass
-[2026-11-25T16:03:38.432] Cog0   
-[2026-11-25T16:03:38.437] Cog0  * Test #58: Ensure expected file stats
-[2026-11-25T16:03:38.437] Cog0    File: [rw3blocks.bin]
-[2026-11-25T16:03:38.437] Cog0    # 3 Blocks in file:
-[2026-11-25T16:03:38.438] Cog0      1: [$0AEF] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]  
-[2026-11-25T16:03:38.438] Cog0      2: [$06E7] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:03:38.443] Cog0      3: [$0429] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
-[2026-11-25T16:03:38.443] Cog0    # blocks: 3
-[2026-11-25T16:03:38.443] Cog0    # bytes used: 8_064
-[2026-11-25T16:03:38.443] Cog0     -> pass
-[2026-11-25T16:03:38.443] Cog0   
-[2026-11-25T16:03:38.448] Cog0  * Test #59: Ensure expected unused bytes stats
-[2026-11-25T16:03:38.448] Cog0    file_size_unused(): 4_068
-[2026-11-25T16:03:38.449] Cog0     -> pass
-[2026-11-25T16:03:38.449] Cog0   
-[2026-11-25T16:03:38.449] Cog0  * Test #60: Ensure no error on size unused call
-[2026-11-25T16:03:38.449] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.449] Cog0     -> pass
-[2026-11-25T16:03:38.449] Cog0    
-[2026-11-25T16:03:38.455] Cog0   ------------ Verify Original Records ---------------- 
-[2026-11-25T16:03:38.455] Cog0   
-[2026-11-25T16:03:38.455] Cog0  * Test #61: Open File for read
-[2026-11-25T16:03:38.455] Cog0    open(,'r'): 0
-[2026-11-25T16:03:38.455] Cog0     -> pass
-[2026-11-25T16:03:38.455] Cog0   
-[2026-11-25T16:03:38.459] Cog0  * Test #62: read expected RECORDs
-[2026-11-25T16:03:38.459] Cog0    Sub-Test Results: count=21, Pass: 21, Fail: 0
-[2026-11-25T16:03:38.459] Cog0     -> pass
-[2026-11-25T16:03:38.459] Cog0   
-[2026-11-25T16:03:38.460] Cog0  * Test #63: ensure no errors on reads
-[2026-11-25T16:03:38.460] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.460] Cog0     -> pass
-[2026-11-25T16:03:38.460] Cog0   
-[2026-11-25T16:03:38.460] Cog0  * Test #64: BAD: read one more Record than written
-[2026-11-25T16:03:38.461] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.461] Cog0     -> pass
-[2026-11-25T16:03:38.461] Cog0   
-[2026-11-25T16:03:38.461] Cog0  * Test #65: Close read file
-[2026-11-25T16:03:38.461] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.461] Cog0     -> pass
-[2026-11-25T16:03:38.461] Cog0    
-[2026-11-25T16:03:38.462] Cog0   ----------- Overwrite single Record ----------- 
-[2026-11-25T16:03:38.462] Cog0   
-[2026-11-25T16:03:38.467] Cog0  * Test #66: Open File for modify write
-[2026-11-25T16:03:38.467] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.467] Cog0     -> pass
-[2026-11-25T16:03:38.468] Cog0   
-[2026-11-25T16:03:38.468] Cog0  * Test #67: Write Record
-[2026-11-25T16:03:38.468] Cog0   
-[2026-11-25T16:03:38.468] Cog0    File: [rw3blocks.bin] pending commit
-[2026-11-25T16:03:38.468] Cog0    # 3 Blocks in chain:
-[2026-11-25T16:03:38.469] Cog0      1: [$0000] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_0675]  MODIFIED
-[2026-11-25T16:03:38.470] Cog0      2: [$06E7] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:03:38.470] Cog0      3: [$0429] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
-[2026-11-25T16:03:38.470] Cog0    
-[2026-11-25T16:03:38.470] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.471] Cog0     -> pass
-[2026-11-25T16:03:38.471] Cog0   
-[2026-11-25T16:03:38.471] Cog0  * Test #68: ensure no errors on Record writes
-[2026-11-25T16:03:38.471] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.471] Cog0     -> pass
-[2026-11-25T16:03:38.471] Cog0   
-[2026-11-25T16:03:38.471] Cog0    File: [rw3blocks.bin] pending commit
-[2026-11-25T16:03:38.472] Cog0    # 3 Blocks in chain:
-[2026-11-25T16:03:38.472] Cog0      1: [$0000] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_0675]  MODIFIED
-[2026-11-25T16:03:38.473] Cog0      2: [$06E7] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:03:38.473] Cog0      3: [$0429] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
-[2026-11-25T16:03:38.473] Cog0   
-[2026-11-25T16:03:38.474] Cog0  * Test #69: seek away from write location (should update block)
-[2026-11-25T16:03:38.474] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.474] Cog0     -> pass
-[2026-11-25T16:03:38.474] Cog0   
-[2026-11-25T16:03:38.475] Cog0  * Test #70: Close written file (no further block updates)
-[2026-11-25T16:03:38.475] Cog0  * program_updated_block() block_address = $0C2F
-[2026-11-25T16:03:38.491] Cog0  - program_block() block_address = $0C2F
-[2026-11-25T16:03:38.526] Cog0  - activate_block() block_address = $0C2F
-[2026-11-25T16:03:38.526] Cog0  - cancel_block() block_address = $0AEF
-[2026-11-25T16:03:38.526] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.526] Cog0     -> pass
-[2026-11-25T16:03:38.526] Cog0   
-[2026-11-25T16:03:38.531] Cog0  * Test #71: Ensure expected file stats
-[2026-11-25T16:03:38.531] Cog0    File: [rw3blocks.bin]
-[2026-11-25T16:03:38.532] Cog0    # 3 Blocks in file:
-[2026-11-25T16:03:38.532] Cog0      1: [$0C2F] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-5], sig=[$0070_06BD]  
-[2026-11-25T16:03:38.533] Cog0      2: [$06E7] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:03:38.539] Cog0      3: [$0429] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
-[2026-11-25T16:03:38.539] Cog0    # blocks: 3
-[2026-11-25T16:03:38.539] Cog0    # bytes used: 8_064
-[2026-11-25T16:03:38.539] Cog0     -> pass
-[2026-11-25T16:03:38.539] Cog0    
-[2026-11-25T16:03:38.539] Cog0   ------------ Verify Replaced Records ------------- 
-[2026-11-25T16:03:38.539] Cog0   
-[2026-11-25T16:03:38.539] Cog0  * Test #72: Open File for read
-[2026-11-25T16:03:38.545] Cog0    open(,'r'): 0
-[2026-11-25T16:03:38.545] Cog0     -> pass
-[2026-11-25T16:03:38.545] Cog0   
-[2026-11-25T16:03:38.549] Cog0  * Test #73: read expected RECORDs
-[2026-11-25T16:03:38.549] Cog0    Sub-Test Results: count=21, Pass: 21, Fail: 0
-[2026-11-25T16:03:38.549] Cog0     -> pass
-[2026-11-25T16:03:38.549] Cog0   
-[2026-11-25T16:03:38.549] Cog0  * Test #74: ensure no errors on reads
-[2026-11-25T16:03:38.550] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.550] Cog0     -> pass
-[2026-11-25T16:03:38.550] Cog0   
-[2026-11-25T16:03:38.550] Cog0  * Test #75: Close read file
-[2026-11-25T16:03:38.550] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.550] Cog0     -> pass
-[2026-11-25T16:03:38.551] Cog0   
-[2026-11-25T16:03:38.551] Cog0  * Test #76: Ensure expected file system changes
-[2026-11-25T16:03:38.558] Cog0  * post file write
-[2026-11-25T16:03:38.558] Cog0    # FileSystem: 9, 3_959, 3
-[2026-11-25T16:03:38.558] Cog0    # files: 3
-[2026-11-25T16:03:38.558] Cog0    # blocks used: 9
-[2026-11-25T16:03:38.558] Cog0     -> pass
-[2026-11-25T16:03:38.558] Cog0   
-[2026-11-25T16:03:38.559] Cog0  * Test #77: Ensure expected file stats
-[2026-11-25T16:03:38.563] Cog0    File: [rw3blocks.bin]
-[2026-11-25T16:03:38.563] Cog0    # 3 Blocks in file:
-[2026-11-25T16:03:38.564] Cog0      1: [$0C2F] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-5], sig=[$0070_06BD]  
-[2026-11-25T16:03:38.565] Cog0      2: [$06E7] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:03:38.570] Cog0      3: [$0429] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
-[2026-11-25T16:03:38.570] Cog0    # blocks: 3
-[2026-11-25T16:03:38.577] Cog0    # bytes used: 8_064
-[2026-11-25T16:03:38.577] Cog0     -> pass
-[2026-11-25T16:03:38.577] Cog0  blocksUsed = 9, blocksFree = 3_959, fileCount = 3
-[2026-11-25T16:03:38.577] Cog0   
-[2026-11-25T16:03:38.577] Cog0    All Files:
-[2026-11-25T16:03:38.578] Cog0  rw4blocks.bin, byteCount = 15_360, blockID = 1, BlocksUsed = 4, @Buff={binary data}
-[2026-11-25T16:03:38.579] Cog0  rw2blocks.bin, byteCount = 7_680, blockID = 5, BlocksUsed = 2, @Buff={binary data}
-[2026-11-25T16:03:38.588] Cog0  rw3blocks.bin, byteCount = 8_064, blockID = 7, BlocksUsed = 3, @Buff={binary data}
-[2026-11-25T16:03:38.588] Cog0   
-[2026-11-25T16:03:38.588] Cog0   
-[2026-11-25T16:03:38.588] Cog0   ------------------------------------------------------------
-[2026-11-25T16:03:38.588] Cog0  * Test Group: TEST #4  W (file exists) - rewrite the file, replace first, middle and last
-[2026-11-25T16:03:38.588] Cog0    
-[2026-11-25T16:03:38.589] Cog0   ---------- Write Records ------------ 
-[2026-11-25T16:03:38.589] Cog0   
-[2026-11-25T16:03:38.595] Cog0  * Test #78: Open File for write
-[2026-11-25T16:03:38.595] Cog0    open(,'w'): 0
-[2026-11-25T16:03:38.595] Cog0     -> pass
-[2026-11-25T16:03:38.595] Cog0   
-[2026-11-25T16:03:38.596] Cog0  * Test #79: Write Records
-[2026-11-25T16:03:38.596] Cog0  * wr_block() block_address = $0049, block_id = 4, NextID_EndPtr = $0009
-[2026-11-25T16:03:38.612] Cog0  - program_block() block_address = $0049
-[2026-11-25T16:03:38.648] Cog0  * wr_block() block_address = $07F7, block_id = 9, NextID_EndPtr = $000A
-[2026-11-25T16:03:38.664] Cog0  - program_block() block_address = $07F7
-[2026-11-25T16:03:38.703] Cog0  - activate_block() block_address = $07F7
-[2026-11-25T16:03:38.718] Cog0  * wr_block() block_address = $0F74, block_id = 10, NextID_EndPtr = $000B
-[2026-11-25T16:03:38.718] Cog0  - program_block() block_address = $0F74
-[2026-11-25T16:03:38.755] Cog0  - activate_block() block_address = $0F74
-[2026-11-25T16:03:38.755] Cog0    Sub-Test Results: count=32, Pass: 32, Fail: 0
-[2026-11-25T16:03:38.755] Cog0     -> pass
-[2026-11-25T16:03:38.755] Cog0   
-[2026-11-25T16:03:38.755] Cog0  * Test #80: ensure no errors on Record writes
-[2026-11-25T16:03:38.756] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.756] Cog0     -> pass
-[2026-11-25T16:03:38.756] Cog0   
-[2026-11-25T16:03:38.756] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:38.757] Cog0    # 4 Blocks in chain:
-[2026-11-25T16:03:38.757] Cog0      1: [$0049] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [erased], sig=[$0090_04FD]  
-[2026-11-25T16:03:38.757] Cog0      2: [$07F7] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]  
-[2026-11-25T16:03:38.757] Cog0      3: [$0F74] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:03:38.758] Cog0      4: [$0000] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [erased], sig=[$0A00_0BF6]  MODIFIED
-[2026-11-25T16:03:38.758] Cog0   
-[2026-11-25T16:03:38.758] Cog0  * Test #81: Close written file
-[2026-11-25T16:03:38.759] Cog0  * wr_block() block_address = $05B1, block_id = 11, NextID_EndPtr = $00A0
-[2026-11-25T16:03:38.774] Cog0  - program_block() block_address = $05B1
-[2026-11-25T16:03:38.807] Cog0  - activate_block() block_address = $05B1
-[2026-11-25T16:03:38.808] Cog0  - activate_block() block_address = $0049
-[2026-11-25T16:03:38.808] Cog0  * delChnFmID() [$0F27] block_id = 4, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:03:38.808] Cog0  - cancel_block() block_address = $0F27
-[2026-11-25T16:03:38.809] Cog0  - cancel_block() block_address = $0635
-[2026-11-25T16:03:38.809] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.809] Cog0     -> pass
-[2026-11-25T16:03:38.809] Cog0   
-[2026-11-25T16:03:38.816] Cog0  * Test #82: Ensure expected file system changes
-[2026-11-25T16:03:38.816] Cog0  * post file write
-[2026-11-25T16:03:38.817] Cog0    # FileSystem: 11, 3_957, 3
-[2026-11-25T16:03:38.817] Cog0    # files: 3
-[2026-11-25T16:03:38.817] Cog0    # blocks used: 11
-[2026-11-25T16:03:38.817] Cog0     -> pass
-[2026-11-25T16:03:38.817] Cog0   
-[2026-11-25T16:03:38.817] Cog0  * Test #83: Ensure expected file stats
-[2026-11-25T16:03:38.817] Cog0    File: [rw2blocks.bin]
-[2026-11-25T16:03:38.818] Cog0    # 4 Blocks in file:
-[2026-11-25T16:03:38.818] Cog0      1: [$0049] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-6], sig=[$0090_04DD]  
-[2026-11-25T16:03:38.819] Cog0      2: [$07F7] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]  
-[2026-11-25T16:03:38.819] Cog0      3: [$0F74] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:03:38.820] Cog0      4: [$05B1] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B7E]  
-[2026-11-25T16:03:38.820] Cog0    # blocks: 4
-[2026-11-25T16:03:38.820] Cog0    # bytes used: 12_288
-[2026-11-25T16:03:38.820] Cog0     -> pass
-[2026-11-25T16:03:38.820] Cog0   
-[2026-11-25T16:03:38.821] Cog0  * Test #84: Ensure expected unused bytes stats
-[2026-11-25T16:03:38.821] Cog0    file_size_unused(): 3_932
-[2026-11-25T16:03:38.821] Cog0     -> pass
-[2026-11-25T16:03:38.821] Cog0   
-[2026-11-25T16:03:38.822] Cog0  * Test #85: Ensure no error on size unused call
-[2026-11-25T16:03:38.822] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.822] Cog0     -> pass
-[2026-11-25T16:03:38.822] Cog0    
-[2026-11-25T16:03:38.822] Cog0   ------------ Verify Original Records ---------------- 
-[2026-11-25T16:03:38.822] Cog0   
-[2026-11-25T16:03:38.824] Cog0  * Test #86: Open File for read
-[2026-11-25T16:03:38.824] Cog0    open(,'r'): 0
-[2026-11-25T16:03:38.830] Cog0     -> pass
-[2026-11-25T16:03:38.830] Cog0   
-[2026-11-25T16:03:38.830] Cog0  * Test #87: read expected RECORDs
-[2026-11-25T16:03:38.830] Cog0    Sub-Test Results: count=32, Pass: 32, Fail: 0
-[2026-11-25T16:03:38.830] Cog0     -> pass
-[2026-11-25T16:03:38.830] Cog0   
-[2026-11-25T16:03:38.831] Cog0  * Test #88: ensure no errors on reads
-[2026-11-25T16:03:38.831] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.831] Cog0     -> pass
-[2026-11-25T16:03:38.831] Cog0   
-[2026-11-25T16:03:38.831] Cog0  * Test #89: BAD: read one more Record than written
-[2026-11-25T16:03:38.832] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.832] Cog0     -> pass
-[2026-11-25T16:03:38.832] Cog0   
-[2026-11-25T16:03:38.832] Cog0  * Test #90: Close read file
-[2026-11-25T16:03:38.832] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.832] Cog0     -> pass
-[2026-11-25T16:03:38.832] Cog0    
-[2026-11-25T16:03:38.833] Cog0   ----------- Overwrite 1st/mid/last Records ----------- 
-[2026-11-25T16:03:38.833] Cog0   
-[2026-11-25T16:03:38.834] Cog0  * Test #91: Open File for modify write
-[2026-11-25T16:03:38.835] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:38.835] Cog0     -> pass
-[2026-11-25T16:03:38.835] Cog0   
-[2026-11-25T16:03:38.835] Cog0  * Test #92: Write 1st Record
-[2026-11-25T16:03:38.835] Cog0   
-[2026-11-25T16:03:38.837] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:38.837] Cog0    # 4 Blocks in chain:
-[2026-11-25T16:03:38.837] Cog0      1: [$0000] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-6], sig=[$0090_04D5]  MODIFIED
-[2026-11-25T16:03:38.837] Cog0      2: [$07F7] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]  
-[2026-11-25T16:03:38.837] Cog0      3: [$0F74] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:03:38.838] Cog0      4: [$05B1] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B7E]  
-[2026-11-25T16:03:38.838] Cog0    
-[2026-11-25T16:03:38.838] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.838] Cog0     -> pass
-[2026-11-25T16:03:38.838] Cog0   
-[2026-11-25T16:03:38.839] Cog0  * Test #93: Write Mid Record
-[2026-11-25T16:03:38.854] Cog0  * program_updated_block() block_address = $0729
-[2026-11-25T16:03:38.854] Cog0  - program_block() block_address = $0729
-[2026-11-25T16:03:38.892] Cog0  - activate_block() block_address = $0729
-[2026-11-25T16:03:38.893] Cog0  - cancel_block() block_address = $0049
-[2026-11-25T16:03:38.893] Cog0   
-[2026-11-25T16:03:38.894] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:38.894] Cog0    # 3 Blocks in chain:
-[2026-11-25T16:03:38.894] Cog0      1: [$07F7] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_0977]  MODIFIED
-[2026-11-25T16:03:38.895] Cog0      2: [$0F74] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:03:38.895] Cog0      3: [$05B1] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B7E]  
-[2026-11-25T16:03:38.895] Cog0    
-[2026-11-25T16:03:38.895] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:38.895] Cog0     -> pass
-[2026-11-25T16:03:38.896] Cog0   
-[2026-11-25T16:03:38.896] Cog0  * Test #94: Write LAST Record
-[2026-11-25T16:03:38.896] Cog0  * program_updated_block() block_address = $0B94
-[2026-11-25T16:03:38.912] Cog0  - program_block() block_address = $0B94
-[2026-11-25T16:03:38.949] Cog0  - activate_block() block_address = $0B94
-[2026-11-25T16:03:38.950] Cog0  - cancel_block() block_address = $07F7
-[2026-11-25T16:03:38.951] Cog0  * program_updated_block() block_address = $0B31
-[2026-11-25T16:03:38.966] Cog0  - program_block() block_address = $0B31
-[2026-11-25T16:03:38.999] Cog0  - activate_block() block_address = $0B31
-[2026-11-25T16:03:39.000] Cog0  - cancel_block() block_address = $0F74
-[2026-11-25T16:03:39.000] Cog0   
-[2026-11-25T16:03:39.000] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:39.000] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:03:39.001] Cog0      1: [$05B1] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B76]  MODIFIED
-[2026-11-25T16:03:39.001] Cog0    
-[2026-11-25T16:03:39.002] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:03:39.002] Cog0     -> pass
-[2026-11-25T16:03:39.002] Cog0   
-[2026-11-25T16:03:39.002] Cog0  * Test #95: ensure no errors on Record writes
-[2026-11-25T16:03:39.002] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:39.002] Cog0     -> pass
-[2026-11-25T16:03:39.002] Cog0   
-[2026-11-25T16:03:39.002] Cog0    File: [rw2blocks.bin] pending commit
-[2026-11-25T16:03:39.003] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:03:39.003] Cog0      1: [$05B1] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B76]  MODIFIED
-[2026-11-25T16:03:39.003] Cog0   
-[2026-11-25T16:03:39.004] Cog0  * Test #96: Close written file (should write last updated block!)
-[2026-11-25T16:03:39.019] Cog0  * program_updated_block() block_address = $083A
-[2026-11-25T16:03:39.019] Cog0  - program_block() block_address = $083A
-[2026-11-25T16:03:39.054] Cog0  - activate_block() block_address = $083A
-[2026-11-25T16:03:39.054] Cog0  - cancel_block() block_address = $05B1
-[2026-11-25T16:03:39.054] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:39.054] Cog0     -> pass
-[2026-11-25T16:03:39.054] Cog0   
-[2026-11-25T16:03:39.057] Cog0  * Test #97: Ensure expected file stats
-[2026-11-25T16:03:39.057] Cog0    File: [rw2blocks.bin]
-[2026-11-25T16:03:39.058] Cog0    # 4 Blocks in file:
-[2026-11-25T16:03:39.058] Cog0      1: [$0729] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_047D]  
-[2026-11-25T16:03:39.059] Cog0      2: [$0B94] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-5], sig=[$00A0_09BF]  
-[2026-11-25T16:03:39.059] Cog0      3: [$0B31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-5], sig=[$00B0_0ABF]  
-[2026-11-25T16:03:39.063] Cog0      4: [$083A] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-5], sig=[$0A00_0BBE]  
-[2026-11-25T16:03:39.063] Cog0    # blocks: 4
-[2026-11-25T16:03:39.063] Cog0    # bytes used: 12_288
-[2026-11-25T16:03:39.063] Cog0     -> pass
-[2026-11-25T16:03:39.063] Cog0    
-[2026-11-25T16:03:39.063] Cog0   ------------ Verify Replaced Records ------------- 
-[2026-11-25T16:03:39.063] Cog0   
-[2026-11-25T16:03:39.067] Cog0  * Test #98: Open File for read
-[2026-11-25T16:03:39.067] Cog0    open(,'r'): 0
-[2026-11-25T16:03:39.068] Cog0     -> pass
-[2026-11-25T16:03:39.068] Cog0   
-[2026-11-25T16:03:39.074] Cog0  * Test #99: read expected RECORDs
-[2026-11-25T16:03:39.074] Cog0    Sub-Test Results: count=32, Pass: 32, Fail: 0
-[2026-11-25T16:03:39.074] Cog0     -> pass
-[2026-11-25T16:03:39.074] Cog0   
-[2026-11-25T16:03:39.074] Cog0  * Test #100: ensure no errors on reads
-[2026-11-25T16:03:39.074] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:39.074] Cog0     -> pass
-[2026-11-25T16:03:39.075] Cog0   
-[2026-11-25T16:03:39.075] Cog0  * Test #101: Close read file
-[2026-11-25T16:03:39.075] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:03:39.075] Cog0     -> pass
-[2026-11-25T16:03:39.075] Cog0   
-[2026-11-25T16:03:39.075] Cog0  * Test #102: Ensure expected file system changes
-[2026-11-25T16:03:39.083] Cog0  * post file write
-[2026-11-25T16:03:39.083] Cog0    # FileSystem: 11, 3_957, 3
-[2026-11-25T16:03:39.083] Cog0    # files: 3
-[2026-11-25T16:03:39.083] Cog0    # blocks used: 11
-[2026-11-25T16:03:39.083] Cog0     -> pass
-[2026-11-25T16:03:39.083] Cog0   
-[2026-11-25T16:03:39.083] Cog0  * Test #103: Ensure expected file stats
-[2026-11-25T16:03:39.086] Cog0    File: [rw2blocks.bin]
-[2026-11-25T16:03:39.086] Cog0    # 4 Blocks in file:
-[2026-11-25T16:03:39.087] Cog0      1: [$0729] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_047D]  
-[2026-11-25T16:03:39.087] Cog0      2: [$0B94] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-5], sig=[$00A0_09BF]  
-[2026-11-25T16:03:39.088] Cog0      3: [$0B31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-5], sig=[$00B0_0ABF]  
-[2026-11-25T16:03:39.091] Cog0      4: [$083A] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-5], sig=[$0A00_0BBE]  
-[2026-11-25T16:03:39.092] Cog0    # blocks: 4
-[2026-11-25T16:03:39.092] Cog0    # bytes used: 12_288
-[2026-11-25T16:03:39.092] Cog0     -> pass
-[2026-11-25T16:03:39.099] Cog0  blocksUsed = 11, blocksFree = 3_957, fileCount = 3
-[2026-11-25T16:03:39.099] Cog0   
-[2026-11-25T16:03:39.099] Cog0    All Files:
-[2026-11-25T16:03:39.100] Cog0  rw4blocks.bin, byteCount = 15_360, blockID = 1, BlocksUsed = 4, @Buff={binary data}
-[2026-11-25T16:03:39.100] Cog0  rw2blocks.bin, byteCount = 12_288, blockID = 5, BlocksUsed = 4, @Buff={binary data}
-[2026-11-25T16:03:39.109] Cog0  rw3blocks.bin, byteCount = 8_064, blockID = 7, BlocksUsed = 3, @Buff={binary data}
-[2026-11-25T16:03:39.109] Cog0  * Test Complete
-[2026-11-25T16:03:39.109] Cog0   
-[2026-11-25T16:03:39.109] Cog0  * 103 Tests - Pass: 103, Fail: 0
-[2026-11-25T16:03:39.125] Cog0  RESULT: PASS RT_read_modify_write_tests 103/103
-[2026-11-25T16:03:39.125] Cog0  <END_SESSION>
-[2026-11-25T16:03:39.125] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
-[2026-11-25T16:03:39.126] [SYSTEM] Shutdown initiated: End marker detected
+[2026-11-25T17:05:32.458] [SYSTEM] Headless mode started
+[2026-11-25T17:05:32.458] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-25T17:05:32.458] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-25T17:05:32.499] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-25T17:05:32.499] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_read_modify_write_tests.bin to RAM
+[2026-11-25T17:05:32.870] 
+[2026-11-25T17:05:32.870] Prop_Ver G
+[2026-11-25T17:05:33.941] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_read_modify_write_tests.bin
+[2026-11-25T17:05:33.957] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-25T17:05:33.972] Cog0  INIT $0000_0FA8 $0001_061C jump
+[2026-11-25T17:05:34.066] Cog0  * init VAR
+[2026-11-25T17:05:34.066] Cog0  * Random seed (cog 0): $DCFC_CD7E
+[2026-11-25T17:05:34.066] Cog0   
+[2026-11-25T17:05:34.073] Cog0  * Test #1: driver instance matches the harness instance
+[2026-11-25T17:05:34.073] Cog0    MAX_FILES_OPEN: 2
+[2026-11-25T17:05:34.073] Cog0     -> pass
+[2026-11-25T17:05:34.074] Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
+[2026-11-25T17:05:34.074] Cog0   
+[2026-11-25T17:05:34.082] Cog0    All Files:
+[2026-11-25T17:05:34.082] Cog0   
+[2026-11-25T17:05:34.082] Cog0  * Environment: Chip S/N and Driver Version
+[2026-11-25T17:05:34.083] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:05:34.083] Cog0     Driver: flash_fs v2.1.0
+[2026-11-25T17:05:34.083] Cog0   
+[2026-11-25T17:05:34.083] Cog0   
+[2026-11-25T17:05:34.083] Cog0   ------------------------------------------------------------
+[2026-11-25T17:05:34.083] Cog0  * Test Group: TEST #1  R+ (file exists) - replace three
+[2026-11-25T17:05:34.083] Cog0    
+[2026-11-25T17:05:34.083] Cog0   ---------- Write Records ------------ 
+[2026-11-25T17:05:34.090] Cog0   
+[2026-11-25T17:05:34.090] Cog0  * Test #2: Open File for write
+[2026-11-25T17:05:34.091] Cog0    open(,'w'): 0
+[2026-11-25T17:05:34.091] Cog0     -> pass
+[2026-11-25T17:05:34.091] Cog0   
+[2026-11-25T17:05:34.091] Cog0  * Test #3: Write Records
+[2026-11-25T17:05:34.091] Cog0  * wr_block() block_address = $0127, block_id = 0, NextID_EndPtr = $0001
+[2026-11-25T17:05:34.107] Cog0  - program_block() block_address = $0127
+[2026-11-25T17:05:34.142] Cog0  * wr_block() block_address = $06A7, block_id = 1, NextID_EndPtr = $0002
+[2026-11-25T17:05:34.158] Cog0  - program_block() block_address = $06A7
+[2026-11-25T17:05:34.195] Cog0  - activate_block() block_address = $06A7
+[2026-11-25T17:05:34.211] Cog0  * wr_block() block_address = $006B, block_id = 2, NextID_EndPtr = $0003
+[2026-11-25T17:05:34.211] Cog0  - program_block() block_address = $006B
+[2026-11-25T17:05:34.248] Cog0  - activate_block() block_address = $006B
+[2026-11-25T17:05:34.248] Cog0    Sub-Test Results: count=40, Pass: 40, Fail: 0
+[2026-11-25T17:05:34.248] Cog0     -> pass
+[2026-11-25T17:05:34.249] Cog0   
+[2026-11-25T17:05:34.249] Cog0  * Test #4: ensure no errors on Record writes
+[2026-11-25T17:05:34.249] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.249] Cog0     -> pass
+[2026-11-25T17:05:34.249] Cog0   
+[2026-11-25T17:05:34.249] Cog0    File: [rw4blocks.bin] pending commit
+[2026-11-25T17:05:34.250] Cog0    # 4 Blocks in chain:
+[2026-11-25T17:05:34.250] Cog0      1: [$0127] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [erased], sig=[$0010_00FD]  
+[2026-11-25T17:05:34.251] Cog0      2: [$06A7] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017F]  
+[2026-11-25T17:05:34.251] Cog0      3: [$006B] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
+[2026-11-25T17:05:34.252] Cog0      4: [$0000] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [erased], sig=[$CA00_03F6]  MODIFIED
+[2026-11-25T17:05:34.252] Cog0   
+[2026-11-25T17:05:34.252] Cog0  * Test #5: Close written file
+[2026-11-25T17:05:34.252] Cog0  * wr_block() block_address = $0ACB, block_id = 3, NextID_EndPtr = $0CA0
+[2026-11-25T17:05:34.268] Cog0  - program_block() block_address = $0ACB
+[2026-11-25T17:05:34.302] Cog0  - activate_block() block_address = $0ACB
+[2026-11-25T17:05:34.302] Cog0  - activate_block() block_address = $0127
+[2026-11-25T17:05:34.303] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.303] Cog0     -> pass
+[2026-11-25T17:05:34.303] Cog0   
+[2026-11-25T17:05:34.310] Cog0  * Test #6: Ensure expected file system changes
+[2026-11-25T17:05:34.310] Cog0  * post file write
+[2026-11-25T17:05:34.310] Cog0    # FileSystem: 4, 3_964, 1
+[2026-11-25T17:05:34.310] Cog0    # files: 1
+[2026-11-25T17:05:34.311] Cog0    # blocks used: 4
+[2026-11-25T17:05:34.311] Cog0     -> pass
+[2026-11-25T17:05:34.311] Cog0   
+[2026-11-25T17:05:34.312] Cog0  * Test #7: Ensure expected file stats
+[2026-11-25T17:05:34.312] Cog0    File: [rw4blocks.bin]
+[2026-11-25T17:05:34.312] Cog0    # 4 Blocks in file:
+[2026-11-25T17:05:34.312] Cog0      1: [$0127] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-3], sig=[$0010_007D]  
+[2026-11-25T17:05:34.313] Cog0      2: [$06A7] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017F]  
+[2026-11-25T17:05:34.313] Cog0      3: [$006B] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
+[2026-11-25T17:05:34.315] Cog0      4: [$0ACB] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_037E]  
+[2026-11-25T17:05:34.315] Cog0    # blocks: 4
+[2026-11-25T17:05:34.315] Cog0    # bytes used: 15_360
+[2026-11-25T17:05:34.315] Cog0     -> pass
+[2026-11-25T17:05:34.315] Cog0   
+[2026-11-25T17:05:34.316] Cog0  * Test #8: Ensure expected unused bytes stats
+[2026-11-25T17:05:34.316] Cog0    file_size_unused(): 860
+[2026-11-25T17:05:34.316] Cog0     -> pass
+[2026-11-25T17:05:34.316] Cog0   
+[2026-11-25T17:05:34.316] Cog0  * Test #9: Ensure no error on size unused call
+[2026-11-25T17:05:34.317] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.317] Cog0     -> pass
+[2026-11-25T17:05:34.317] Cog0    
+[2026-11-25T17:05:34.317] Cog0   ------------ Verify Original Records ---------------- 
+[2026-11-25T17:05:34.317] Cog0   
+[2026-11-25T17:05:34.319] Cog0  * Test #10: Open File for read
+[2026-11-25T17:05:34.319] Cog0    open(,'r'): 0
+[2026-11-25T17:05:34.319] Cog0     -> pass
+[2026-11-25T17:05:34.326] Cog0   
+[2026-11-25T17:05:34.326] Cog0  * Test #11: read expected RECORDs
+[2026-11-25T17:05:34.326] Cog0    Sub-Test Results: count=40, Pass: 40, Fail: 0
+[2026-11-25T17:05:34.326] Cog0     -> pass
+[2026-11-25T17:05:34.326] Cog0   
+[2026-11-25T17:05:34.326] Cog0  * Test #12: ensure no errors on reads
+[2026-11-25T17:05:34.327] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.327] Cog0     -> pass
+[2026-11-25T17:05:34.327] Cog0   
+[2026-11-25T17:05:34.327] Cog0  * Test #13: BAD: read one more Record than written
+[2026-11-25T17:05:34.327] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.327] Cog0     -> pass
+[2026-11-25T17:05:34.328] Cog0   
+[2026-11-25T17:05:34.328] Cog0  * Test #14: Close read file
+[2026-11-25T17:05:34.328] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.328] Cog0     -> pass
+[2026-11-25T17:05:34.328] Cog0    
+[2026-11-25T17:05:34.328] Cog0   ----------- Overwrite 1st/mid/last Records ----------- 
+[2026-11-25T17:05:34.328] Cog0   
+[2026-11-25T17:05:34.330] Cog0  * Test #15: Open File for modify write
+[2026-11-25T17:05:34.331] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.331] Cog0     -> pass
+[2026-11-25T17:05:34.331] Cog0   
+[2026-11-25T17:05:34.331] Cog0  * Test #16: Write 1st Record
+[2026-11-25T17:05:34.331] Cog0   
+[2026-11-25T17:05:34.332] Cog0    File: [rw4blocks.bin] pending commit
+[2026-11-25T17:05:34.332] Cog0    # 4 Blocks in chain:
+[2026-11-25T17:05:34.332] Cog0      1: [$0000] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-3], sig=[$0010_0075]  MODIFIED
+[2026-11-25T17:05:34.333] Cog0      2: [$06A7] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_017F]  
+[2026-11-25T17:05:34.333] Cog0      3: [$006B] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
+[2026-11-25T17:05:34.334] Cog0      4: [$0ACB] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_037E]  
+[2026-11-25T17:05:34.334] Cog0    
+[2026-11-25T17:05:34.334] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.334] Cog0     -> pass
+[2026-11-25T17:05:34.334] Cog0   
+[2026-11-25T17:05:34.334] Cog0  * Test #17: Write Mid Record
+[2026-11-25T17:05:34.335] Cog0  * program_updated_block() block_address = $07DE
+[2026-11-25T17:05:34.350] Cog0  - program_block() block_address = $07DE
+[2026-11-25T17:05:34.387] Cog0  - activate_block() block_address = $07DE
+[2026-11-25T17:05:34.388] Cog0  - cancel_block() block_address = $0127
+[2026-11-25T17:05:34.388] Cog0   
+[2026-11-25T17:05:34.388] Cog0    File: [rw4blocks.bin] pending commit
+[2026-11-25T17:05:34.388] Cog0    # 3 Blocks in chain:
+[2026-11-25T17:05:34.389] Cog0      1: [$06A7] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-3], sig=[$0020_0177]  MODIFIED
+[2026-11-25T17:05:34.390] Cog0      2: [$006B] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
+[2026-11-25T17:05:34.390] Cog0      3: [$0ACB] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_037E]  
+[2026-11-25T17:05:34.390] Cog0    
+[2026-11-25T17:05:34.390] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.390] Cog0     -> pass
+[2026-11-25T17:05:34.391] Cog0   
+[2026-11-25T17:05:34.391] Cog0  * Test #18: Write LAST Record
+[2026-11-25T17:05:34.391] Cog0  * program_updated_block() block_address = $0CCE
+[2026-11-25T17:05:34.407] Cog0  - program_block() block_address = $0CCE
+[2026-11-25T17:05:34.444] Cog0  - activate_block() block_address = $0CCE
+[2026-11-25T17:05:34.445] Cog0  - cancel_block() block_address = $06A7
+[2026-11-25T17:05:34.445] Cog0   
+[2026-11-25T17:05:34.445] Cog0    File: [rw4blocks.bin] pending commit
+[2026-11-25T17:05:34.445] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:05:34.446] Cog0      1: [$0ACB] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_0376]  MODIFIED
+[2026-11-25T17:05:34.446] Cog0    
+[2026-11-25T17:05:34.446] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.446] Cog0     -> pass
+[2026-11-25T17:05:34.446] Cog0   
+[2026-11-25T17:05:34.446] Cog0  * Test #19: ensure no errors on Record writes
+[2026-11-25T17:05:34.447] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.447] Cog0     -> pass
+[2026-11-25T17:05:34.447] Cog0   
+[2026-11-25T17:05:34.447] Cog0    File: [rw4blocks.bin] pending commit
+[2026-11-25T17:05:34.448] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:05:34.448] Cog0      1: [$0ACB] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-3], sig=[$CA00_0376]  MODIFIED
+[2026-11-25T17:05:34.448] Cog0   
+[2026-11-25T17:05:34.449] Cog0  * Test #20: seek away from write location (should update block)
+[2026-11-25T17:05:34.449] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.449] Cog0     -> pass
+[2026-11-25T17:05:34.449] Cog0   
+[2026-11-25T17:05:34.449] Cog0  * Test #21: Close written file (no further block updates)
+[2026-11-25T17:05:34.450] Cog0  * program_updated_block() block_address = $0C59
+[2026-11-25T17:05:34.465] Cog0  - program_block() block_address = $0C59
+[2026-11-25T17:05:34.499] Cog0  - activate_block() block_address = $0C59
+[2026-11-25T17:05:34.499] Cog0  - cancel_block() block_address = $0ACB
+[2026-11-25T17:05:34.499] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.499] Cog0     -> pass
+[2026-11-25T17:05:34.499] Cog0   
+[2026-11-25T17:05:34.502] Cog0  * Test #22: Ensure expected file stats
+[2026-11-25T17:05:34.502] Cog0    File: [rw4blocks.bin]
+[2026-11-25T17:05:34.503] Cog0    # 4 Blocks in file:
+[2026-11-25T17:05:34.503] Cog0      1: [$07DE] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-5], sig=[$0010_00BD]  
+[2026-11-25T17:05:34.504] Cog0      2: [$0CCE] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-5], sig=[$0020_01BF]  
+[2026-11-25T17:05:34.504] Cog0      3: [$006B] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
+[2026-11-25T17:05:34.508] Cog0      4: [$0C59] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-5], sig=[$CA00_03BE]  
+[2026-11-25T17:05:34.508] Cog0    # blocks: 4
+[2026-11-25T17:05:34.508] Cog0    # bytes used: 15_360
+[2026-11-25T17:05:34.508] Cog0     -> pass
+[2026-11-25T17:05:34.508] Cog0    
+[2026-11-25T17:05:34.509] Cog0   ------------ Verify Replaced Records ------------- 
+[2026-11-25T17:05:34.509] Cog0   
+[2026-11-25T17:05:34.513] Cog0  * Test #23: Open File for read
+[2026-11-25T17:05:34.513] Cog0    open(,'r'): 0
+[2026-11-25T17:05:34.514] Cog0     -> pass
+[2026-11-25T17:05:34.514] Cog0   
+[2026-11-25T17:05:34.514] Cog0  * Test #24: read expected RECORDs
+[2026-11-25T17:05:34.520] Cog0    Sub-Test Results: count=40, Pass: 40, Fail: 0
+[2026-11-25T17:05:34.520] Cog0     -> pass
+[2026-11-25T17:05:34.520] Cog0   
+[2026-11-25T17:05:34.521] Cog0  * Test #25: ensure no errors on reads
+[2026-11-25T17:05:34.521] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.521] Cog0     -> pass
+[2026-11-25T17:05:34.521] Cog0   
+[2026-11-25T17:05:34.521] Cog0  * Test #26: Close read file
+[2026-11-25T17:05:34.521] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.521] Cog0     -> pass
+[2026-11-25T17:05:34.521] Cog0   
+[2026-11-25T17:05:34.529] Cog0  * Test #27: Ensure expected file system changes
+[2026-11-25T17:05:34.529] Cog0  * post file write
+[2026-11-25T17:05:34.529] Cog0    # FileSystem: 4, 3_964, 1
+[2026-11-25T17:05:34.529] Cog0    # files: 1
+[2026-11-25T17:05:34.529] Cog0    # blocks used: 4
+[2026-11-25T17:05:34.529] Cog0     -> pass
+[2026-11-25T17:05:34.529] Cog0   
+[2026-11-25T17:05:34.532] Cog0  * Test #28: Ensure expected file stats
+[2026-11-25T17:05:34.533] Cog0    File: [rw4blocks.bin]
+[2026-11-25T17:05:34.533] Cog0    # 4 Blocks in file:
+[2026-11-25T17:05:34.533] Cog0      1: [$07DE] HEAD/more, thisID=0, dataOfs=0, nextId=1, lifeCycle [ACTIVE-5], sig=[$0010_00BD]  
+[2026-11-25T17:05:34.534] Cog0      2: [$0CCE] BODY/more, thisID=1, nextId=2, lifeCycle [ACTIVE-5], sig=[$0020_01BF]  
+[2026-11-25T17:05:34.534] Cog0      3: [$006B] BODY/more, thisID=2, nextId=3, lifeCycle [ACTIVE-3], sig=[$0030_027F]  
+[2026-11-25T17:05:34.538] Cog0      4: [$0C59] BODY/last, thisID=3, endPtr=$0CA0, lifeCycle [ACTIVE-5], sig=[$CA00_03BE]  
+[2026-11-25T17:05:34.538] Cog0    # blocks: 4
+[2026-11-25T17:05:34.538] Cog0    # bytes used: 15_360
+[2026-11-25T17:05:34.538] Cog0     -> pass
+[2026-11-25T17:05:34.538] Cog0   
+[2026-11-25T17:05:34.538] Cog0   
+[2026-11-25T17:05:34.539] Cog0   ------------------------------------------------------------
+[2026-11-25T17:05:34.539] Cog0  * Test Group: TEST #2  R+ (file exists) - replace span
+[2026-11-25T17:05:34.539] Cog0    
+[2026-11-25T17:05:34.545] Cog0   ---------- Write Records ------------ 
+[2026-11-25T17:05:34.545] Cog0   
+[2026-11-25T17:05:34.545] Cog0  * Test #29: Open File for write
+[2026-11-25T17:05:34.545] Cog0    open(,'w'): 0
+[2026-11-25T17:05:34.545] Cog0     -> pass
+[2026-11-25T17:05:34.545] Cog0   
+[2026-11-25T17:05:34.546] Cog0  * Test #30: Write Records
+[2026-11-25T17:05:34.547] Cog0  * wr_block() block_address = $0CA0, block_id = 4, NextID_EndPtr = $0005
+[2026-11-25T17:05:34.562] Cog0  - program_block() block_address = $0CA0
+[2026-11-25T17:05:34.598] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
+[2026-11-25T17:05:34.598] Cog0     -> pass
+[2026-11-25T17:05:34.598] Cog0   
+[2026-11-25T17:05:34.598] Cog0  * Test #31: ensure no errors on Record writes
+[2026-11-25T17:05:34.599] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.599] Cog0     -> pass
+[2026-11-25T17:05:34.599] Cog0   
+[2026-11-25T17:05:34.599] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:34.599] Cog0    # 2 Blocks in chain:
+[2026-11-25T17:05:34.600] Cog0      1: [$0CA0] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [erased], sig=[$0050_04FD]  
+[2026-11-25T17:05:34.600] Cog0      2: [$0000] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [erased], sig=[$E900_05F6]  MODIFIED
+[2026-11-25T17:05:34.600] Cog0   
+[2026-11-25T17:05:34.600] Cog0  * Test #32: Close written file
+[2026-11-25T17:05:34.601] Cog0  * wr_block() block_address = $05A1, block_id = 5, NextID_EndPtr = $0E90
+[2026-11-25T17:05:34.617] Cog0  - program_block() block_address = $05A1
+[2026-11-25T17:05:34.655] Cog0  - activate_block() block_address = $05A1
+[2026-11-25T17:05:34.655] Cog0  - activate_block() block_address = $0CA0
+[2026-11-25T17:05:34.656] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.656] Cog0     -> pass
+[2026-11-25T17:05:34.656] Cog0   
+[2026-11-25T17:05:34.663] Cog0  * Test #33: Ensure expected file system changes
+[2026-11-25T17:05:34.663] Cog0  * post file write
+[2026-11-25T17:05:34.663] Cog0    # FileSystem: 6, 3_962, 2
+[2026-11-25T17:05:34.663] Cog0    # files: 2
+[2026-11-25T17:05:34.663] Cog0    # blocks used: 6
+[2026-11-25T17:05:34.663] Cog0     -> pass
+[2026-11-25T17:05:34.663] Cog0   
+[2026-11-25T17:05:34.668] Cog0  * Test #34: Ensure expected file stats
+[2026-11-25T17:05:34.668] Cog0    File: [rw2blocks.bin]
+[2026-11-25T17:05:34.669] Cog0    # 2 Blocks in file:
+[2026-11-25T17:05:34.669] Cog0      1: [$0CA0] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]  
+[2026-11-25T17:05:34.675] Cog0      2: [$05A1] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
+[2026-11-25T17:05:34.675] Cog0    # blocks: 2
+[2026-11-25T17:05:34.675] Cog0    # bytes used: 7_680
+[2026-11-25T17:05:34.675] Cog0     -> pass
+[2026-11-25T17:05:34.675] Cog0   
+[2026-11-25T17:05:34.680] Cog0  * Test #35: Ensure expected unused bytes stats
+[2026-11-25T17:05:34.680] Cog0    file_size_unused(): 364
+[2026-11-25T17:05:34.680] Cog0     -> pass
+[2026-11-25T17:05:34.680] Cog0   
+[2026-11-25T17:05:34.681] Cog0  * Test #36: Ensure no error on size unused call
+[2026-11-25T17:05:34.681] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.681] Cog0     -> pass
+[2026-11-25T17:05:34.681] Cog0    
+[2026-11-25T17:05:34.681] Cog0   ------------ Verify Original Records ---------------- 
+[2026-11-25T17:05:34.681] Cog0   
+[2026-11-25T17:05:34.688] Cog0  * Test #37: Open File for read
+[2026-11-25T17:05:34.688] Cog0    open(,'r'): 0
+[2026-11-25T17:05:34.688] Cog0     -> pass
+[2026-11-25T17:05:34.691] Cog0   
+[2026-11-25T17:05:34.691] Cog0  * Test #38: read expected RECORDs
+[2026-11-25T17:05:34.691] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
+[2026-11-25T17:05:34.691] Cog0     -> pass
+[2026-11-25T17:05:34.691] Cog0   
+[2026-11-25T17:05:34.691] Cog0  * Test #39: ensure no errors on reads
+[2026-11-25T17:05:34.692] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.692] Cog0     -> pass
+[2026-11-25T17:05:34.692] Cog0   
+[2026-11-25T17:05:34.692] Cog0  * Test #40: BAD: read one more Record than written
+[2026-11-25T17:05:34.692] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.692] Cog0     -> pass
+[2026-11-25T17:05:34.693] Cog0   
+[2026-11-25T17:05:34.693] Cog0  * Test #41: Close read file
+[2026-11-25T17:05:34.693] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.693] Cog0     -> pass
+[2026-11-25T17:05:34.693] Cog0    
+[2026-11-25T17:05:34.693] Cog0   ----------- Overwrite single Record ----------- 
+[2026-11-25T17:05:34.693] Cog0   
+[2026-11-25T17:05:34.700] Cog0  * Test #42: Open File for modify write
+[2026-11-25T17:05:34.700] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.700] Cog0     -> pass
+[2026-11-25T17:05:34.700] Cog0   
+[2026-11-25T17:05:34.700] Cog0  * Test #43: Write Record
+[2026-11-25T17:05:34.701] Cog0   
+[2026-11-25T17:05:34.701] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:34.701] Cog0    # 2 Blocks in chain:
+[2026-11-25T17:05:34.702] Cog0      1: [$0000] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_0475]  MODIFIED
+[2026-11-25T17:05:34.702] Cog0      2: [$05A1] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
+[2026-11-25T17:05:34.702] Cog0    
+[2026-11-25T17:05:34.702] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.703] Cog0     -> pass
+[2026-11-25T17:05:34.703] Cog0   
+[2026-11-25T17:05:34.703] Cog0  * Test #44: ensure no errors on Record writes
+[2026-11-25T17:05:34.703] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.703] Cog0     -> pass
+[2026-11-25T17:05:34.703] Cog0   
+[2026-11-25T17:05:34.704] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:34.704] Cog0    # 2 Blocks in chain:
+[2026-11-25T17:05:34.704] Cog0      1: [$0000] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_0475]  MODIFIED
+[2026-11-25T17:05:34.705] Cog0      2: [$05A1] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
+[2026-11-25T17:05:34.705] Cog0   
+[2026-11-25T17:05:34.705] Cog0  * Test #45: Close written file (should write last updated block!)
+[2026-11-25T17:05:34.705] Cog0  * program_updated_block() block_address = $0B68
+[2026-11-25T17:05:34.720] Cog0  - program_block() block_address = $0B68
+[2026-11-25T17:05:34.756] Cog0  - activate_block() block_address = $0B68
+[2026-11-25T17:05:34.757] Cog0  - cancel_block() block_address = $0CA0
+[2026-11-25T17:05:34.757] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.757] Cog0     -> pass
+[2026-11-25T17:05:34.757] Cog0   
+[2026-11-25T17:05:34.761] Cog0  * Test #46: Ensure expected file stats
+[2026-11-25T17:05:34.761] Cog0    File: [rw2blocks.bin]
+[2026-11-25T17:05:34.761] Cog0    # 2 Blocks in file:
+[2026-11-25T17:05:34.762] Cog0      1: [$0B68] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-5], sig=[$0050_04BD]  
+[2026-11-25T17:05:34.767] Cog0      2: [$05A1] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
+[2026-11-25T17:05:34.767] Cog0    # blocks: 2
+[2026-11-25T17:05:34.767] Cog0    # bytes used: 7_680
+[2026-11-25T17:05:34.767] Cog0     -> pass
+[2026-11-25T17:05:34.767] Cog0    
+[2026-11-25T17:05:34.768] Cog0   ------------ Verify Replaced Records ------------- 
+[2026-11-25T17:05:34.768] Cog0   
+[2026-11-25T17:05:34.774] Cog0  * Test #47: Open File for read
+[2026-11-25T17:05:34.774] Cog0    open(,'r'): 0
+[2026-11-25T17:05:34.776] Cog0     -> pass
+[2026-11-25T17:05:34.776] Cog0   
+[2026-11-25T17:05:34.776] Cog0  * Test #48: read expected RECORDs
+[2026-11-25T17:05:34.777] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
+[2026-11-25T17:05:34.777] Cog0     -> pass
+[2026-11-25T17:05:34.777] Cog0   
+[2026-11-25T17:05:34.777] Cog0  * Test #49: ensure no errors on reads
+[2026-11-25T17:05:34.777] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.777] Cog0     -> pass
+[2026-11-25T17:05:34.777] Cog0   
+[2026-11-25T17:05:34.778] Cog0  * Test #50: Close read file
+[2026-11-25T17:05:34.778] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.778] Cog0     -> pass
+[2026-11-25T17:05:34.778] Cog0   
+[2026-11-25T17:05:34.785] Cog0  * Test #51: Ensure expected file system changes
+[2026-11-25T17:05:34.785] Cog0  * post file write
+[2026-11-25T17:05:34.786] Cog0    # FileSystem: 6, 3_962, 2
+[2026-11-25T17:05:34.786] Cog0    # files: 2
+[2026-11-25T17:05:34.786] Cog0    # blocks used: 6
+[2026-11-25T17:05:34.786] Cog0     -> pass
+[2026-11-25T17:05:34.786] Cog0   
+[2026-11-25T17:05:34.791] Cog0  * Test #52: Ensure expected file stats
+[2026-11-25T17:05:34.791] Cog0    File: [rw2blocks.bin]
+[2026-11-25T17:05:34.791] Cog0    # 2 Blocks in file:
+[2026-11-25T17:05:34.791] Cog0      1: [$0B68] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-5], sig=[$0050_04BD]  
+[2026-11-25T17:05:34.796] Cog0      2: [$05A1] BODY/last, thisID=5, endPtr=$0E90, lifeCycle [ACTIVE-3], sig=[$E900_057E]  
+[2026-11-25T17:05:34.796] Cog0    # blocks: 2
+[2026-11-25T17:05:34.796] Cog0    # bytes used: 7_680
+[2026-11-25T17:05:34.796] Cog0     -> pass
+[2026-11-25T17:05:34.796] Cog0   
+[2026-11-25T17:05:34.797] Cog0   
+[2026-11-25T17:05:34.797] Cog0   ------------------------------------------------------------
+[2026-11-25T17:05:34.797] Cog0  * Test Group: TEST #3  R+ (file exists) - replace span, last block
+[2026-11-25T17:05:34.797] Cog0    
+[2026-11-25T17:05:34.804] Cog0   ---------- Write Records ------------ 
+[2026-11-25T17:05:34.804] Cog0   
+[2026-11-25T17:05:34.804] Cog0  * Test #53: Open File for write
+[2026-11-25T17:05:34.804] Cog0    open(,'w'): 0
+[2026-11-25T17:05:34.804] Cog0     -> pass
+[2026-11-25T17:05:34.804] Cog0   
+[2026-11-25T17:05:34.805] Cog0  * Test #54: Write Records
+[2026-11-25T17:05:34.805] Cog0  * wr_block() block_address = $05EA, block_id = 6, NextID_EndPtr = $0007
+[2026-11-25T17:05:34.820] Cog0  - program_block() block_address = $05EA
+[2026-11-25T17:05:34.859] Cog0  * wr_block() block_address = $0A38, block_id = 7, NextID_EndPtr = $0008
+[2026-11-25T17:05:34.874] Cog0  - program_block() block_address = $0A38
+[2026-11-25T17:05:34.916] Cog0  - activate_block() block_address = $0A38
+[2026-11-25T17:05:34.916] Cog0    Sub-Test Results: count=21, Pass: 21, Fail: 0
+[2026-11-25T17:05:34.916] Cog0     -> pass
+[2026-11-25T17:05:34.916] Cog0   
+[2026-11-25T17:05:34.916] Cog0  * Test #55: ensure no errors on Record writes
+[2026-11-25T17:05:34.917] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.917] Cog0     -> pass
+[2026-11-25T17:05:34.917] Cog0   
+[2026-11-25T17:05:34.917] Cog0    File: [rw3blocks.bin] pending commit
+[2026-11-25T17:05:34.918] Cog0    # 3 Blocks in chain:
+[2026-11-25T17:05:34.918] Cog0      1: [$05EA] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [erased], sig=[$0070_06FD]  
+[2026-11-25T17:05:34.918] Cog0      2: [$0A38] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:05:34.919] Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$0018, lifeCycle [erased], sig=[$0180_08F6]  MODIFIED
+[2026-11-25T17:05:34.919] Cog0   
+[2026-11-25T17:05:34.919] Cog0  * Test #56: Close written file
+[2026-11-25T17:05:34.936] Cog0  * wr_block() block_address = $030D, block_id = 8, NextID_EndPtr = $0018
+[2026-11-25T17:05:34.936] Cog0  - program_block() block_address = $030D
+[2026-11-25T17:05:34.966] Cog0  - activate_block() block_address = $030D
+[2026-11-25T17:05:34.966] Cog0  - activate_block() block_address = $05EA
+[2026-11-25T17:05:34.967] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.967] Cog0     -> pass
+[2026-11-25T17:05:34.967] Cog0   
+[2026-11-25T17:05:34.974] Cog0  * Test #57: Ensure expected file system changes
+[2026-11-25T17:05:34.974] Cog0  * post file write
+[2026-11-25T17:05:34.974] Cog0    # FileSystem: 9, 3_959, 3
+[2026-11-25T17:05:34.974] Cog0    # files: 3
+[2026-11-25T17:05:34.974] Cog0    # blocks used: 9
+[2026-11-25T17:05:34.974] Cog0     -> pass
+[2026-11-25T17:05:34.974] Cog0   
+[2026-11-25T17:05:34.977] Cog0  * Test #58: Ensure expected file stats
+[2026-11-25T17:05:34.977] Cog0    File: [rw3blocks.bin]
+[2026-11-25T17:05:34.978] Cog0    # 3 Blocks in file:
+[2026-11-25T17:05:34.978] Cog0      1: [$05EA] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]  
+[2026-11-25T17:05:34.978] Cog0      2: [$0A38] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:05:34.982] Cog0      3: [$030D] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
+[2026-11-25T17:05:34.982] Cog0    # blocks: 3
+[2026-11-25T17:05:34.982] Cog0    # bytes used: 8_064
+[2026-11-25T17:05:34.982] Cog0     -> pass
+[2026-11-25T17:05:34.982] Cog0   
+[2026-11-25T17:05:34.985] Cog0  * Test #59: Ensure expected unused bytes stats
+[2026-11-25T17:05:34.985] Cog0    file_size_unused(): 4_068
+[2026-11-25T17:05:34.985] Cog0     -> pass
+[2026-11-25T17:05:34.985] Cog0   
+[2026-11-25T17:05:34.985] Cog0  * Test #60: Ensure no error on size unused call
+[2026-11-25T17:05:34.985] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.985] Cog0     -> pass
+[2026-11-25T17:05:34.985] Cog0    
+[2026-11-25T17:05:34.990] Cog0   ------------ Verify Original Records ---------------- 
+[2026-11-25T17:05:34.990] Cog0   
+[2026-11-25T17:05:34.990] Cog0  * Test #61: Open File for read
+[2026-11-25T17:05:34.990] Cog0    open(,'r'): 0
+[2026-11-25T17:05:34.990] Cog0     -> pass
+[2026-11-25T17:05:34.990] Cog0   
+[2026-11-25T17:05:34.994] Cog0  * Test #62: read expected RECORDs
+[2026-11-25T17:05:34.994] Cog0    Sub-Test Results: count=21, Pass: 21, Fail: 0
+[2026-11-25T17:05:34.994] Cog0     -> pass
+[2026-11-25T17:05:34.994] Cog0   
+[2026-11-25T17:05:34.994] Cog0  * Test #63: ensure no errors on reads
+[2026-11-25T17:05:34.994] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.995] Cog0     -> pass
+[2026-11-25T17:05:34.995] Cog0   
+[2026-11-25T17:05:34.995] Cog0  * Test #64: BAD: read one more Record than written
+[2026-11-25T17:05:34.995] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:34.995] Cog0     -> pass
+[2026-11-25T17:05:34.995] Cog0   
+[2026-11-25T17:05:34.996] Cog0  * Test #65: Close read file
+[2026-11-25T17:05:34.996] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:34.996] Cog0     -> pass
+[2026-11-25T17:05:34.996] Cog0    
+[2026-11-25T17:05:34.996] Cog0   ----------- Overwrite single Record ----------- 
+[2026-11-25T17:05:34.996] Cog0   
+[2026-11-25T17:05:34.996] Cog0  * Test #66: Open File for modify write
+[2026-11-25T17:05:35.000] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.000] Cog0     -> pass
+[2026-11-25T17:05:35.000] Cog0   
+[2026-11-25T17:05:35.001] Cog0  * Test #67: Write Record
+[2026-11-25T17:05:35.001] Cog0   
+[2026-11-25T17:05:35.001] Cog0    File: [rw3blocks.bin] pending commit
+[2026-11-25T17:05:35.001] Cog0    # 3 Blocks in chain:
+[2026-11-25T17:05:35.002] Cog0      1: [$0000] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_0675]  MODIFIED
+[2026-11-25T17:05:35.002] Cog0      2: [$0A38] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:05:35.003] Cog0      3: [$030D] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
+[2026-11-25T17:05:35.003] Cog0    
+[2026-11-25T17:05:35.003] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:35.003] Cog0     -> pass
+[2026-11-25T17:05:35.003] Cog0   
+[2026-11-25T17:05:35.004] Cog0  * Test #68: ensure no errors on Record writes
+[2026-11-25T17:05:35.004] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.004] Cog0     -> pass
+[2026-11-25T17:05:35.004] Cog0   
+[2026-11-25T17:05:35.004] Cog0    File: [rw3blocks.bin] pending commit
+[2026-11-25T17:05:35.005] Cog0    # 3 Blocks in chain:
+[2026-11-25T17:05:35.005] Cog0      1: [$0000] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_0675]  MODIFIED
+[2026-11-25T17:05:35.005] Cog0      2: [$0A38] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:05:35.006] Cog0      3: [$030D] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
+[2026-11-25T17:05:35.006] Cog0   
+[2026-11-25T17:05:35.006] Cog0  * Test #69: seek away from write location (should update block)
+[2026-11-25T17:05:35.007] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:35.007] Cog0     -> pass
+[2026-11-25T17:05:35.007] Cog0   
+[2026-11-25T17:05:35.007] Cog0  * Test #70: Close written file (no further block updates)
+[2026-11-25T17:05:35.008] Cog0  * program_updated_block() block_address = $075E
+[2026-11-25T17:05:35.023] Cog0  - program_block() block_address = $075E
+[2026-11-25T17:05:35.058] Cog0  - activate_block() block_address = $075E
+[2026-11-25T17:05:35.058] Cog0  - cancel_block() block_address = $05EA
+[2026-11-25T17:05:35.059] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.059] Cog0     -> pass
+[2026-11-25T17:05:35.059] Cog0   
+[2026-11-25T17:05:35.062] Cog0  * Test #71: Ensure expected file stats
+[2026-11-25T17:05:35.062] Cog0    File: [rw3blocks.bin]
+[2026-11-25T17:05:35.062] Cog0    # 3 Blocks in file:
+[2026-11-25T17:05:35.062] Cog0      1: [$075E] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-5], sig=[$0070_06BD]  
+[2026-11-25T17:05:35.063] Cog0      2: [$0A38] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:05:35.067] Cog0      3: [$030D] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
+[2026-11-25T17:05:35.067] Cog0    # blocks: 3
+[2026-11-25T17:05:35.067] Cog0    # bytes used: 8_064
+[2026-11-25T17:05:35.067] Cog0     -> pass
+[2026-11-25T17:05:35.067] Cog0    
+[2026-11-25T17:05:35.067] Cog0   ------------ Verify Replaced Records ------------- 
+[2026-11-25T17:05:35.067] Cog0   
+[2026-11-25T17:05:35.067] Cog0  * Test #72: Open File for read
+[2026-11-25T17:05:35.072] Cog0    open(,'r'): 0
+[2026-11-25T17:05:35.072] Cog0     -> pass
+[2026-11-25T17:05:35.072] Cog0   
+[2026-11-25T17:05:35.076] Cog0  * Test #73: read expected RECORDs
+[2026-11-25T17:05:35.076] Cog0    Sub-Test Results: count=21, Pass: 21, Fail: 0
+[2026-11-25T17:05:35.076] Cog0     -> pass
+[2026-11-25T17:05:35.076] Cog0   
+[2026-11-25T17:05:35.076] Cog0  * Test #74: ensure no errors on reads
+[2026-11-25T17:05:35.077] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.077] Cog0     -> pass
+[2026-11-25T17:05:35.077] Cog0   
+[2026-11-25T17:05:35.077] Cog0  * Test #75: Close read file
+[2026-11-25T17:05:35.077] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.077] Cog0     -> pass
+[2026-11-25T17:05:35.077] Cog0   
+[2026-11-25T17:05:35.077] Cog0  * Test #76: Ensure expected file system changes
+[2026-11-25T17:05:35.085] Cog0  * post file write
+[2026-11-25T17:05:35.085] Cog0    # FileSystem: 9, 3_959, 3
+[2026-11-25T17:05:35.085] Cog0    # files: 3
+[2026-11-25T17:05:35.085] Cog0    # blocks used: 9
+[2026-11-25T17:05:35.085] Cog0     -> pass
+[2026-11-25T17:05:35.085] Cog0   
+[2026-11-25T17:05:35.085] Cog0  * Test #77: Ensure expected file stats
+[2026-11-25T17:05:35.089] Cog0    File: [rw3blocks.bin]
+[2026-11-25T17:05:35.089] Cog0    # 3 Blocks in file:
+[2026-11-25T17:05:35.089] Cog0      1: [$075E] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-5], sig=[$0070_06BD]  
+[2026-11-25T17:05:35.090] Cog0      2: [$0A38] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:05:35.093] Cog0      3: [$030D] BODY/last, thisID=8, endPtr=$0018, lifeCycle [ACTIVE-3], sig=[$0180_087E]  
+[2026-11-25T17:05:35.093] Cog0    # blocks: 3
+[2026-11-25T17:05:35.100] Cog0    # bytes used: 8_064
+[2026-11-25T17:05:35.100] Cog0     -> pass
+[2026-11-25T17:05:35.101] Cog0  blocksUsed = 9, blocksFree = 3_959, fileCount = 3
+[2026-11-25T17:05:35.101] Cog0   
+[2026-11-25T17:05:35.101] Cog0    All Files:
+[2026-11-25T17:05:35.101] Cog0  rw4blocks.bin, byteCount = 15_360, blockID = 1, BlocksUsed = 4, @Buff={binary data}
+[2026-11-25T17:05:35.102] Cog0  rw2blocks.bin, byteCount = 7_680, blockID = 5, BlocksUsed = 2, @Buff={binary data}
+[2026-11-25T17:05:35.111] Cog0  rw3blocks.bin, byteCount = 8_064, blockID = 7, BlocksUsed = 3, @Buff={binary data}
+[2026-11-25T17:05:35.111] Cog0   
+[2026-11-25T17:05:35.111] Cog0   
+[2026-11-25T17:05:35.111] Cog0   ------------------------------------------------------------
+[2026-11-25T17:05:35.112] Cog0  * Test Group: TEST #4  W (file exists) - rewrite the file, replace first, middle and last
+[2026-11-25T17:05:35.112] Cog0    
+[2026-11-25T17:05:35.112] Cog0   ---------- Write Records ------------ 
+[2026-11-25T17:05:35.112] Cog0   
+[2026-11-25T17:05:35.117] Cog0  * Test #78: Open File for write
+[2026-11-25T17:05:35.117] Cog0    open(,'w'): 0
+[2026-11-25T17:05:35.117] Cog0     -> pass
+[2026-11-25T17:05:35.117] Cog0   
+[2026-11-25T17:05:35.118] Cog0  * Test #79: Write Records
+[2026-11-25T17:05:35.118] Cog0  * wr_block() block_address = $0AA1, block_id = 4, NextID_EndPtr = $0009
+[2026-11-25T17:05:35.134] Cog0  - program_block() block_address = $0AA1
+[2026-11-25T17:05:35.171] Cog0  * wr_block() block_address = $07B1, block_id = 9, NextID_EndPtr = $000A
+[2026-11-25T17:05:35.187] Cog0  - program_block() block_address = $07B1
+[2026-11-25T17:05:35.224] Cog0  - activate_block() block_address = $07B1
+[2026-11-25T17:05:35.240] Cog0  * wr_block() block_address = $0F20, block_id = 10, NextID_EndPtr = $000B
+[2026-11-25T17:05:35.240] Cog0  - program_block() block_address = $0F20
+[2026-11-25T17:05:35.277] Cog0  - activate_block() block_address = $0F20
+[2026-11-25T17:05:35.277] Cog0    Sub-Test Results: count=32, Pass: 32, Fail: 0
+[2026-11-25T17:05:35.277] Cog0     -> pass
+[2026-11-25T17:05:35.277] Cog0   
+[2026-11-25T17:05:35.277] Cog0  * Test #80: ensure no errors on Record writes
+[2026-11-25T17:05:35.278] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.278] Cog0     -> pass
+[2026-11-25T17:05:35.278] Cog0   
+[2026-11-25T17:05:35.278] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:35.278] Cog0    # 4 Blocks in chain:
+[2026-11-25T17:05:35.278] Cog0      1: [$0AA1] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [erased], sig=[$0090_04FD]  
+[2026-11-25T17:05:35.279] Cog0      2: [$07B1] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]  
+[2026-11-25T17:05:35.279] Cog0      3: [$0F20] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:05:35.280] Cog0      4: [$0000] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [erased], sig=[$0A00_0BF6]  MODIFIED
+[2026-11-25T17:05:35.280] Cog0   
+[2026-11-25T17:05:35.280] Cog0  * Test #81: Close written file
+[2026-11-25T17:05:35.281] Cog0  * wr_block() block_address = $0A60, block_id = 11, NextID_EndPtr = $00A0
+[2026-11-25T17:05:35.297] Cog0  - program_block() block_address = $0A60
+[2026-11-25T17:05:35.327] Cog0  - activate_block() block_address = $0A60
+[2026-11-25T17:05:35.327] Cog0  - activate_block() block_address = $0AA1
+[2026-11-25T17:05:35.328] Cog0  * delChnFmID() [$0B68] block_id = 4, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:05:35.328] Cog0  - cancel_block() block_address = $0B68
+[2026-11-25T17:05:35.328] Cog0  - cancel_block() block_address = $05A1
+[2026-11-25T17:05:35.328] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.328] Cog0     -> pass
+[2026-11-25T17:05:35.328] Cog0   
+[2026-11-25T17:05:35.336] Cog0  * Test #82: Ensure expected file system changes
+[2026-11-25T17:05:35.336] Cog0  * post file write
+[2026-11-25T17:05:35.336] Cog0    # FileSystem: 11, 3_957, 3
+[2026-11-25T17:05:35.336] Cog0    # files: 3
+[2026-11-25T17:05:35.336] Cog0    # blocks used: 11
+[2026-11-25T17:05:35.336] Cog0     -> pass
+[2026-11-25T17:05:35.336] Cog0   
+[2026-11-25T17:05:35.341] Cog0  * Test #83: Ensure expected file stats
+[2026-11-25T17:05:35.341] Cog0    File: [rw2blocks.bin]
+[2026-11-25T17:05:35.341] Cog0    # 4 Blocks in file:
+[2026-11-25T17:05:35.342] Cog0      1: [$0AA1] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-6], sig=[$0090_04DD]  
+[2026-11-25T17:05:35.342] Cog0      2: [$07B1] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]  
+[2026-11-25T17:05:35.343] Cog0      3: [$0F20] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:05:35.347] Cog0      4: [$0A60] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B7E]  
+[2026-11-25T17:05:35.347] Cog0    # blocks: 4
+[2026-11-25T17:05:35.347] Cog0    # bytes used: 12_288
+[2026-11-25T17:05:35.347] Cog0     -> pass
+[2026-11-25T17:05:35.347] Cog0   
+[2026-11-25T17:05:35.352] Cog0  * Test #84: Ensure expected unused bytes stats
+[2026-11-25T17:05:35.352] Cog0    file_size_unused(): 3_932
+[2026-11-25T17:05:35.352] Cog0     -> pass
+[2026-11-25T17:05:35.352] Cog0   
+[2026-11-25T17:05:35.353] Cog0  * Test #85: Ensure no error on size unused call
+[2026-11-25T17:05:35.353] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.353] Cog0     -> pass
+[2026-11-25T17:05:35.353] Cog0    
+[2026-11-25T17:05:35.353] Cog0   ------------ Verify Original Records ---------------- 
+[2026-11-25T17:05:35.353] Cog0   
+[2026-11-25T17:05:35.359] Cog0  * Test #86: Open File for read
+[2026-11-25T17:05:35.359] Cog0    open(,'r'): 0
+[2026-11-25T17:05:35.365] Cog0     -> pass
+[2026-11-25T17:05:35.365] Cog0   
+[2026-11-25T17:05:35.365] Cog0  * Test #87: read expected RECORDs
+[2026-11-25T17:05:35.365] Cog0    Sub-Test Results: count=32, Pass: 32, Fail: 0
+[2026-11-25T17:05:35.366] Cog0     -> pass
+[2026-11-25T17:05:35.366] Cog0   
+[2026-11-25T17:05:35.366] Cog0  * Test #88: ensure no errors on reads
+[2026-11-25T17:05:35.366] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.366] Cog0     -> pass
+[2026-11-25T17:05:35.366] Cog0   
+[2026-11-25T17:05:35.366] Cog0  * Test #89: BAD: read one more Record than written
+[2026-11-25T17:05:35.367] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:35.367] Cog0     -> pass
+[2026-11-25T17:05:35.367] Cog0   
+[2026-11-25T17:05:35.367] Cog0  * Test #90: Close read file
+[2026-11-25T17:05:35.367] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.367] Cog0     -> pass
+[2026-11-25T17:05:35.368] Cog0    
+[2026-11-25T17:05:35.368] Cog0   ----------- Overwrite 1st/mid/last Records ----------- 
+[2026-11-25T17:05:35.368] Cog0   
+[2026-11-25T17:05:35.374] Cog0  * Test #91: Open File for modify write
+[2026-11-25T17:05:35.374] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.374] Cog0     -> pass
+[2026-11-25T17:05:35.374] Cog0   
+[2026-11-25T17:05:35.374] Cog0  * Test #92: Write 1st Record
+[2026-11-25T17:05:35.374] Cog0   
+[2026-11-25T17:05:35.375] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:35.375] Cog0    # 4 Blocks in chain:
+[2026-11-25T17:05:35.375] Cog0      1: [$0000] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-6], sig=[$0090_04D5]  MODIFIED
+[2026-11-25T17:05:35.376] Cog0      2: [$07B1] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097F]  
+[2026-11-25T17:05:35.376] Cog0      3: [$0F20] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:05:35.377] Cog0      4: [$0A60] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B7E]  
+[2026-11-25T17:05:35.377] Cog0    
+[2026-11-25T17:05:35.377] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:35.377] Cog0     -> pass
+[2026-11-25T17:05:35.377] Cog0   
+[2026-11-25T17:05:35.378] Cog0  * Test #93: Write Mid Record
+[2026-11-25T17:05:35.393] Cog0  * program_updated_block() block_address = $06A4
+[2026-11-25T17:05:35.393] Cog0  - program_block() block_address = $06A4
+[2026-11-25T17:05:35.430] Cog0  - activate_block() block_address = $06A4
+[2026-11-25T17:05:35.432] Cog0  - cancel_block() block_address = $0AA1
+[2026-11-25T17:05:35.432] Cog0   
+[2026-11-25T17:05:35.432] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:35.432] Cog0    # 3 Blocks in chain:
+[2026-11-25T17:05:35.433] Cog0      1: [$07B1] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_0977]  MODIFIED
+[2026-11-25T17:05:35.433] Cog0      2: [$0F20] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:05:35.434] Cog0      3: [$0A60] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B7E]  
+[2026-11-25T17:05:35.434] Cog0    
+[2026-11-25T17:05:35.434] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:35.434] Cog0     -> pass
+[2026-11-25T17:05:35.435] Cog0   
+[2026-11-25T17:05:35.435] Cog0  * Test #94: Write LAST Record
+[2026-11-25T17:05:35.435] Cog0  * program_updated_block() block_address = $04D0
+[2026-11-25T17:05:35.451] Cog0  - program_block() block_address = $04D0
+[2026-11-25T17:05:35.488] Cog0  - activate_block() block_address = $04D0
+[2026-11-25T17:05:35.490] Cog0  - cancel_block() block_address = $07B1
+[2026-11-25T17:05:35.490] Cog0  * program_updated_block() block_address = $0CAC
+[2026-11-25T17:05:35.506] Cog0  - program_block() block_address = $0CAC
+[2026-11-25T17:05:35.542] Cog0  - activate_block() block_address = $0CAC
+[2026-11-25T17:05:35.543] Cog0  - cancel_block() block_address = $0F20
+[2026-11-25T17:05:35.543] Cog0   
+[2026-11-25T17:05:35.544] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:35.544] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:05:35.544] Cog0      1: [$0A60] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B76]  MODIFIED
+[2026-11-25T17:05:35.544] Cog0    
+[2026-11-25T17:05:35.545] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:05:35.545] Cog0     -> pass
+[2026-11-25T17:05:35.545] Cog0   
+[2026-11-25T17:05:35.545] Cog0  * Test #95: ensure no errors on Record writes
+[2026-11-25T17:05:35.545] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.545] Cog0     -> pass
+[2026-11-25T17:05:35.545] Cog0   
+[2026-11-25T17:05:35.546] Cog0    File: [rw2blocks.bin] pending commit
+[2026-11-25T17:05:35.546] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:05:35.546] Cog0      1: [$0A60] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-3], sig=[$0A00_0B76]  MODIFIED
+[2026-11-25T17:05:35.547] Cog0   
+[2026-11-25T17:05:35.547] Cog0  * Test #96: Close written file (should write last updated block!)
+[2026-11-25T17:05:35.563] Cog0  * program_updated_block() block_address = $0CF5
+[2026-11-25T17:05:35.563] Cog0  - program_block() block_address = $0CF5
+[2026-11-25T17:05:35.595] Cog0  - activate_block() block_address = $0CF5
+[2026-11-25T17:05:35.595] Cog0  - cancel_block() block_address = $0A60
+[2026-11-25T17:05:35.596] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.596] Cog0     -> pass
+[2026-11-25T17:05:35.596] Cog0   
+[2026-11-25T17:05:35.599] Cog0  * Test #97: Ensure expected file stats
+[2026-11-25T17:05:35.599] Cog0    File: [rw2blocks.bin]
+[2026-11-25T17:05:35.599] Cog0    # 4 Blocks in file:
+[2026-11-25T17:05:35.599] Cog0      1: [$06A4] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_047D]  
+[2026-11-25T17:05:35.600] Cog0      2: [$04D0] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-5], sig=[$00A0_09BF]  
+[2026-11-25T17:05:35.600] Cog0      3: [$0CAC] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-5], sig=[$00B0_0ABF]  
+[2026-11-25T17:05:35.604] Cog0      4: [$0CF5] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-5], sig=[$0A00_0BBE]  
+[2026-11-25T17:05:35.604] Cog0    # blocks: 4
+[2026-11-25T17:05:35.604] Cog0    # bytes used: 12_288
+[2026-11-25T17:05:35.604] Cog0     -> pass
+[2026-11-25T17:05:35.604] Cog0    
+[2026-11-25T17:05:35.608] Cog0   ------------ Verify Replaced Records ------------- 
+[2026-11-25T17:05:35.608] Cog0   
+[2026-11-25T17:05:35.608] Cog0  * Test #98: Open File for read
+[2026-11-25T17:05:35.608] Cog0    open(,'r'): 0
+[2026-11-25T17:05:35.608] Cog0     -> pass
+[2026-11-25T17:05:35.608] Cog0   
+[2026-11-25T17:05:35.615] Cog0  * Test #99: read expected RECORDs
+[2026-11-25T17:05:35.615] Cog0    Sub-Test Results: count=32, Pass: 32, Fail: 0
+[2026-11-25T17:05:35.615] Cog0     -> pass
+[2026-11-25T17:05:35.615] Cog0   
+[2026-11-25T17:05:35.615] Cog0  * Test #100: ensure no errors on reads
+[2026-11-25T17:05:35.615] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.615] Cog0     -> pass
+[2026-11-25T17:05:35.615] Cog0   
+[2026-11-25T17:05:35.615] Cog0  * Test #101: Close read file
+[2026-11-25T17:05:35.616] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:05:35.616] Cog0     -> pass
+[2026-11-25T17:05:35.616] Cog0   
+[2026-11-25T17:05:35.616] Cog0  * Test #102: Ensure expected file system changes
+[2026-11-25T17:05:35.624] Cog0  * post file write
+[2026-11-25T17:05:35.624] Cog0    # FileSystem: 11, 3_957, 3
+[2026-11-25T17:05:35.624] Cog0    # files: 3
+[2026-11-25T17:05:35.624] Cog0    # blocks used: 11
+[2026-11-25T17:05:35.624] Cog0     -> pass
+[2026-11-25T17:05:35.624] Cog0   
+[2026-11-25T17:05:35.624] Cog0  * Test #103: Ensure expected file stats
+[2026-11-25T17:05:35.627] Cog0    File: [rw2blocks.bin]
+[2026-11-25T17:05:35.627] Cog0    # 4 Blocks in file:
+[2026-11-25T17:05:35.628] Cog0      1: [$06A4] HEAD/more, thisID=4, dataOfs=0, nextId=9, lifeCycle [ACTIVE-3], sig=[$0090_047D]  
+[2026-11-25T17:05:35.628] Cog0      2: [$04D0] BODY/more, thisID=9, nextId=10, lifeCycle [ACTIVE-5], sig=[$00A0_09BF]  
+[2026-11-25T17:05:35.629] Cog0      3: [$0CAC] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-5], sig=[$00B0_0ABF]  
+[2026-11-25T17:05:35.632] Cog0      4: [$0CF5] BODY/last, thisID=11, endPtr=$00A0, lifeCycle [ACTIVE-5], sig=[$0A00_0BBE]  
+[2026-11-25T17:05:35.632] Cog0    # blocks: 4
+[2026-11-25T17:05:35.632] Cog0    # bytes used: 12_288
+[2026-11-25T17:05:35.639] Cog0     -> pass
+[2026-11-25T17:05:35.640] Cog0  blocksUsed = 11, blocksFree = 3_957, fileCount = 3
+[2026-11-25T17:05:35.640] Cog0   
+[2026-11-25T17:05:35.640] Cog0    All Files:
+[2026-11-25T17:05:35.641] Cog0  rw4blocks.bin, byteCount = 15_360, blockID = 1, BlocksUsed = 4, @Buff={binary data}
+[2026-11-25T17:05:35.641] Cog0  rw2blocks.bin, byteCount = 12_288, blockID = 5, BlocksUsed = 4, @Buff={binary data}
+[2026-11-25T17:05:35.650] Cog0  rw3blocks.bin, byteCount = 8_064, blockID = 7, BlocksUsed = 3, @Buff={binary data}
+[2026-11-25T17:05:35.650] Cog0  * Test Complete
+[2026-11-25T17:05:35.650] Cog0   
+[2026-11-25T17:05:35.650] Cog0  * 103 Tests - Pass: 103, Fail: 0
+[2026-11-25T17:05:35.666] Cog0  RESULT: PASS RT_read_modify_write_tests 103/103
+[2026-11-25T17:05:35.666] Cog0  <END_SESSION>
+[2026-11-25T17:05:35.666] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-25T17:05:35.667] [SYSTEM] Shutdown initiated: End marker detected
 
-=== Headless Mode Session Ended at 2026-11-25T16:03:39.153 ===
+=== Headless Mode Session Ended at 2026-11-25T17:05:35.693 ===

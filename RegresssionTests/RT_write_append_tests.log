@@ -1,960 +1,960 @@
-=== Headless Mode Session Started at 2026-11-25T16:04:09.208 ===
+=== Headless Mode Session Started at 2026-11-25T17:06:02.579 ===
 PNut-Term-TS: v1.1.2
 Mode: Headless (no GUI)
 End Markers: "END_SESSION", "DEBUG_END_SESSION"
 Timeout: 180 seconds
 =====================================
 
-[2026-11-25T16:04:09.206] [SYSTEM] Headless mode started
-[2026-11-25T16:04:09.206] [SYSTEM] Timeout configured: 180 seconds
-[2026-11-25T16:04:09.206] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
-[2026-11-25T16:04:09.251] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
-[2026-11-25T16:04:09.251] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_write_append_tests.bin to RAM
-[2026-11-25T16:04:09.620] 
-[2026-11-25T16:04:09.621] Prop_Ver G
-[2026-11-25T16:04:10.740] .Cog0  INIT $0000_0000 $0000_0000 load
-[2026-11-25T16:04:10.742] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_write_append_tests.bin
-[2026-11-25T16:04:10.757] Cog0  INIT $0000_0FA8 $0001_0A4C jump
-[2026-11-25T16:04:10.857] Cog0  * init VAR
-[2026-11-25T16:04:10.857] Cog0  * Random seed (cog 0): $28D2_EF82
-[2026-11-25T16:04:10.857] Cog0   
-[2026-11-25T16:04:10.864] Cog0  * Test #1: driver instance matches the harness instance
-[2026-11-25T16:04:10.864] Cog0    MAX_FILES_OPEN: 2
-[2026-11-25T16:04:10.864] Cog0     -> pass
-[2026-11-25T16:04:10.865] Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
-[2026-11-25T16:04:10.865] Cog0   
-[2026-11-25T16:04:10.873] Cog0    All Files:
-[2026-11-25T16:04:10.873] Cog0   
-[2026-11-25T16:04:10.874] Cog0  * Environment: Chip S/N and Driver Version
-[2026-11-25T16:04:10.874] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
-[2026-11-25T16:04:10.874] Cog0     Driver: flash_fs v2.1.0
-[2026-11-25T16:04:10.874] Cog0   
-[2026-11-25T16:04:10.882] Cog0  * Test #2: Ensure we have no files at start
-[2026-11-25T16:04:10.883] Cog0     -> pass
-[2026-11-25T16:04:10.883] Cog0   
-[2026-11-25T16:04:10.888] Cog0  * Test #3: BAD: Read when file doesn't exist
-[2026-11-25T16:04:10.889] Cog0     ECode: E_FILE_NOT_FOUND: File not present
-[2026-11-25T16:04:10.889] Cog0     -> pass
-[2026-11-25T16:04:10.889] Cog0   
-[2026-11-25T16:04:10.889] Cog0   - report on chip S/N and Driver version
-[2026-11-25T16:04:10.889] Cog0  CHIP Serial Number: $E461_2D03-$D31E_1527
-[2026-11-25T16:04:10.889] Cog0   
-[2026-11-25T16:04:10.889] Cog0   
-[2026-11-25T16:04:10.890] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:10.891] Cog0  * Test Group: Head block only - partially filled with 10 BYTEs then apppend 10 more
-[2026-11-25T16:04:10.891] Cog0  - testWriteBytes(ap1010bytes.bin, 10)
-[2026-11-25T16:04:10.891] Cog0   
-[2026-11-25T16:04:10.891] Cog0  * Test #4: Open File for write
-[2026-11-25T16:04:10.897] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:10.897] Cog0     -> pass
-[2026-11-25T16:04:10.897] Cog0   
-[2026-11-25T16:04:10.897] Cog0  * Test #5: validate handle
-[2026-11-25T16:04:10.897] Cog0    open(,'w'): 0
-[2026-11-25T16:04:10.898] Cog0     -> pass
-[2026-11-25T16:04:10.898] Cog0   
-[2026-11-25T16:04:10.898] Cog0  * Test #6: Write N BYTEs
-[2026-11-25T16:04:10.898] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
-[2026-11-25T16:04:10.898] Cog0     -> pass
-[2026-11-25T16:04:10.898] Cog0   
-[2026-11-25T16:04:10.898] Cog0  * Test #7: ensure all bytes written
-[2026-11-25T16:04:10.899] Cog0    wr_byte(): 10
-[2026-11-25T16:04:10.899] Cog0     -> pass
-[2026-11-25T16:04:10.899] Cog0   
-[2026-11-25T16:04:10.899] Cog0  * Test #8: ensure no errors on writes
-[2026-11-25T16:04:10.899] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:10.899] Cog0     -> pass
-[2026-11-25T16:04:10.899] Cog0   
-[2026-11-25T16:04:10.900] Cog0    File: [ap1010bytes.bin] pending commit
-[2026-11-25T16:04:10.900] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:10.900] Cog0      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_00F4]  MODIFIED
-[2026-11-25T16:04:10.900] Cog0   
-[2026-11-25T16:04:10.901] Cog0  * Test #9: Close written file
-[2026-11-25T16:04:10.901] Cog0  * wr_block() block_address = $0182, block_id = 0, NextID_EndPtr = $0092
-[2026-11-25T16:04:10.917] Cog0  - program_block() block_address = $0182
-[2026-11-25T16:04:10.950] Cog0  - activate_block() block_address = $0182
-[2026-11-25T16:04:10.951] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:10.951] Cog0     -> pass
-[2026-11-25T16:04:10.951] Cog0   
-[2026-11-25T16:04:10.951] Cog0    File: [ap1010bytes.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
-[2026-11-25T16:04:10.951] Cog0   
-[2026-11-25T16:04:10.959] Cog0  * Test #10: Ensure expected file system changes
-[2026-11-25T16:04:10.959] Cog0  * post file write
-[2026-11-25T16:04:10.959] Cog0    # FileSystem: 1, 3_967, 1
-[2026-11-25T16:04:10.959] Cog0    # files: 1
-[2026-11-25T16:04:10.959] Cog0    # blocks used: 1
-[2026-11-25T16:04:10.959] Cog0     -> pass
-[2026-11-25T16:04:10.959] Cog0   
-[2026-11-25T16:04:10.960] Cog0  * Test #11: Ensure expected file stats
-[2026-11-25T16:04:10.960] Cog0    File: [ap1010bytes.bin]
-[2026-11-25T16:04:10.960] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:10.961] Cog0      1: [$0182] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]  
-[2026-11-25T16:04:10.962] Cog0    # blocks: 1
-[2026-11-25T16:04:10.962] Cog0    # bytes used: 10
-[2026-11-25T16:04:10.962] Cog0     -> pass
-[2026-11-25T16:04:10.962] Cog0   
-[2026-11-25T16:04:10.963] Cog0  * Test #12: Get starting length before append of BYTEs
-[2026-11-25T16:04:10.963] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:10.963] Cog0     -> pass
-[2026-11-25T16:04:10.963] Cog0   
-[2026-11-25T16:04:10.965] Cog0  * Test #13: Open File for append
-[2026-11-25T16:04:10.965] Cog0    open(,'a'): 0
-[2026-11-25T16:04:10.965] Cog0     -> pass
-[2026-11-25T16:04:10.965] Cog0   
-[2026-11-25T16:04:10.966] Cog0  * Test #14: Append count BYTEs
-[2026-11-25T16:04:10.966] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
-[2026-11-25T16:04:10.966] Cog0     -> pass
-[2026-11-25T16:04:10.966] Cog0   
-[2026-11-25T16:04:10.967] Cog0  * Test #15: ensure no errors on writes
-[2026-11-25T16:04:10.967] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:10.967] Cog0     -> pass
-[2026-11-25T16:04:10.967] Cog0   
-[2026-11-25T16:04:10.967] Cog0    File: [ap1010bytes.bin] pending commit
-[2026-11-25T16:04:10.967] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:10.968] Cog0      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_0074]  MODIFIED
-[2026-11-25T16:04:10.968] Cog0   
-[2026-11-25T16:04:10.969] Cog0  * Test #16: Close append file
-[2026-11-25T16:04:10.969] Cog0  * wr_block() block_address = $0CBB, block_id = 0, NextID_EndPtr = $009C
-[2026-11-25T16:04:10.985] Cog0  - program_block() block_address = $0CBB
-[2026-11-25T16:04:11.013] Cog0  - activate_block() block_address = $0CBB
-[2026-11-25T16:04:11.013] Cog0  * delChnFmID() [$0182] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:11.013] Cog0  - cancel_block() block_address = $0182
-[2026-11-25T16:04:11.014] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.014] Cog0     -> pass
-[2026-11-25T16:04:11.019] Cog0   
-[2026-11-25T16:04:11.019] Cog0    File: [ap1010bytes.bin], bytesUsed = 20, bytes_free = 3_936, block_count = 1
-[2026-11-25T16:04:11.019] Cog0   
-[2026-11-25T16:04:11.019] Cog0  * Test #17: Ensure expected file stats post BYTEs append
-[2026-11-25T16:04:11.024] Cog0    File: [ap1010bytes.bin]
-[2026-11-25T16:04:11.024] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:11.030] Cog0      1: [$0CBB] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-5], sig=[$09C0_00BC]  
-[2026-11-25T16:04:11.030] Cog0    # blocks: 1
-[2026-11-25T16:04:11.030] Cog0    # bytes used: 20
-[2026-11-25T16:04:11.030] Cog0     -> pass
-[2026-11-25T16:04:11.030] Cog0   
-[2026-11-25T16:04:11.030] Cog0  * Test #18: Ensure expected file system changes post BYTEs append write
-[2026-11-25T16:04:11.038] Cog0  * post file append
-[2026-11-25T16:04:11.038] Cog0    # FileSystem: 1, 3_967, 1
-[2026-11-25T16:04:11.038] Cog0    # files: 1
-[2026-11-25T16:04:11.038] Cog0    # blocks used: 1
-[2026-11-25T16:04:11.038] Cog0     -> pass
-[2026-11-25T16:04:11.038] Cog0   
-[2026-11-25T16:04:11.038] Cog0    All Files:
-[2026-11-25T16:04:11.047] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.047] Cog0   
-[2026-11-25T16:04:11.047] Cog0   
-[2026-11-25T16:04:11.048] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:11.048] Cog0  * Test Group: Head block only - partially filled with 9 WORDs then apppend 9 more
-[2026-11-25T16:04:11.048] Cog0  - testWriteWords(ap99words.bin, 9)
-[2026-11-25T16:04:11.048] Cog0   
-[2026-11-25T16:04:11.055] Cog0  * Test #19: Open File for write
-[2026-11-25T16:04:11.055] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.055] Cog0     -> pass
-[2026-11-25T16:04:11.055] Cog0   
-[2026-11-25T16:04:11.055] Cog0  * Test #20: validate handle
-[2026-11-25T16:04:11.055] Cog0    open(,'w'): 0
-[2026-11-25T16:04:11.055] Cog0     -> pass
-[2026-11-25T16:04:11.055] Cog0   
-[2026-11-25T16:04:11.055] Cog0  * Test #21: Write N WORDs
-[2026-11-25T16:04:11.056] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
-[2026-11-25T16:04:11.056] Cog0     -> pass
-[2026-11-25T16:04:11.056] Cog0   
-[2026-11-25T16:04:11.056] Cog0  * Test #22: ensure all words written
-[2026-11-25T16:04:11.056] Cog0    wr_word(): 9
-[2026-11-25T16:04:11.056] Cog0     -> pass
-[2026-11-25T16:04:11.056] Cog0   
-[2026-11-25T16:04:11.057] Cog0  * Test #23: ensure no errors on writes
-[2026-11-25T16:04:11.057] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.057] Cog0     -> pass
-[2026-11-25T16:04:11.057] Cog0   
-[2026-11-25T16:04:11.057] Cog0    File: [ap99words.bin] pending commit
-[2026-11-25T16:04:11.057] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:11.058] Cog0      1: [$0000] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009A, lifeCycle [erased], sig=[$09A0_01F4]  MODIFIED
-[2026-11-25T16:04:11.058] Cog0   
-[2026-11-25T16:04:11.058] Cog0  * Test #24: Close written file
-[2026-11-25T16:04:11.059] Cog0  * wr_block() block_address = $0B13, block_id = 1, NextID_EndPtr = $009A
-[2026-11-25T16:04:11.074] Cog0  - program_block() block_address = $0B13
-[2026-11-25T16:04:11.109] Cog0  - activate_block() block_address = $0B13
-[2026-11-25T16:04:11.113] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.113] Cog0     -> pass
-[2026-11-25T16:04:11.113] Cog0   
-[2026-11-25T16:04:11.114] Cog0    File: [ap99words.bin], bytesUsed = 18, bytes_free = 3_938, block_count = 1
-[2026-11-25T16:04:11.114] Cog0   
-[2026-11-25T16:04:11.121] Cog0  * Test #25: Ensure expected file system changes
-[2026-11-25T16:04:11.121] Cog0  * post file write
-[2026-11-25T16:04:11.121] Cog0    # FileSystem: 2, 3_966, 2
-[2026-11-25T16:04:11.121] Cog0    # files: 2
-[2026-11-25T16:04:11.121] Cog0    # blocks used: 2
-[2026-11-25T16:04:11.121] Cog0     -> pass
-[2026-11-25T16:04:11.121] Cog0   
-[2026-11-25T16:04:11.126] Cog0  * Test #26: Ensure expected file stats
-[2026-11-25T16:04:11.126] Cog0    File: [ap99words.bin]
-[2026-11-25T16:04:11.126] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:11.131] Cog0      1: [$0B13] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]  
-[2026-11-25T16:04:11.131] Cog0    # blocks: 1
-[2026-11-25T16:04:11.131] Cog0    # bytes used: 18
-[2026-11-25T16:04:11.131] Cog0     -> pass
-[2026-11-25T16:04:11.132] Cog0   
-[2026-11-25T16:04:11.136] Cog0  * Test #27: Get starting length before append of WORDs
-[2026-11-25T16:04:11.136] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:11.142] Cog0     -> pass
-[2026-11-25T16:04:11.142] Cog0   
-[2026-11-25T16:04:11.142] Cog0  * Test #28: Open File for append
-[2026-11-25T16:04:11.142] Cog0    open(,'a'): 0
-[2026-11-25T16:04:11.142] Cog0     -> pass
-[2026-11-25T16:04:11.142] Cog0   
-[2026-11-25T16:04:11.143] Cog0  * Test #29: Append count WORDs
-[2026-11-25T16:04:11.143] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
-[2026-11-25T16:04:11.143] Cog0     -> pass
-[2026-11-25T16:04:11.143] Cog0   
-[2026-11-25T16:04:11.143] Cog0  * Test #30: ensure no errors on writes
-[2026-11-25T16:04:11.143] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.144] Cog0     -> pass
-[2026-11-25T16:04:11.144] Cog0   
-[2026-11-25T16:04:11.144] Cog0    File: [ap99words.bin] pending commit
-[2026-11-25T16:04:11.144] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:11.145] Cog0      1: [$0000] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$00AC, lifeCycle [ACTIVE-3], sig=[$0AC0_0174]  MODIFIED
-[2026-11-25T16:04:11.145] Cog0   
-[2026-11-25T16:04:11.145] Cog0  * Test #31: Close append file
-[2026-11-25T16:04:11.145] Cog0  * wr_block() block_address = $0A3A, block_id = 1, NextID_EndPtr = $00AC
-[2026-11-25T16:04:11.161] Cog0  - program_block() block_address = $0A3A
-[2026-11-25T16:04:11.190] Cog0  - activate_block() block_address = $0A3A
-[2026-11-25T16:04:11.191] Cog0  * delChnFmID() [$0B13] block_id = 1, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:11.191] Cog0  - cancel_block() block_address = $0B13
-[2026-11-25T16:04:11.191] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.191] Cog0     -> pass
-[2026-11-25T16:04:11.196] Cog0   
-[2026-11-25T16:04:11.196] Cog0    File: [ap99words.bin], bytesUsed = 36, bytes_free = 3_920, block_count = 1
-[2026-11-25T16:04:11.196] Cog0   
-[2026-11-25T16:04:11.196] Cog0  * Test #32: Ensure expected file stats post WORDs append
-[2026-11-25T16:04:11.201] Cog0    File: [ap99words.bin]
-[2026-11-25T16:04:11.201] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:11.205] Cog0      1: [$0A3A] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$00AC, lifeCycle [ACTIVE-5], sig=[$0AC0_01BC]  
-[2026-11-25T16:04:11.205] Cog0    # blocks: 1
-[2026-11-25T16:04:11.205] Cog0    # bytes used: 36
-[2026-11-25T16:04:11.205] Cog0     -> pass
-[2026-11-25T16:04:11.205] Cog0   
-[2026-11-25T16:04:11.205] Cog0  * Test #33: Ensure expected file system changes post WORDs append write
-[2026-11-25T16:04:11.213] Cog0  * post file append
-[2026-11-25T16:04:11.213] Cog0    # FileSystem: 2, 3_966, 2
-[2026-11-25T16:04:11.213] Cog0    # files: 2
-[2026-11-25T16:04:11.213] Cog0    # blocks used: 2
-[2026-11-25T16:04:11.213] Cog0     -> pass
-[2026-11-25T16:04:11.213] Cog0   
-[2026-11-25T16:04:11.214] Cog0    All Files:
-[2026-11-25T16:04:11.214] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.223] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.223] Cog0   
-[2026-11-25T16:04:11.223] Cog0   
-[2026-11-25T16:04:11.223] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:11.224] Cog0  * Test Group: Head block only - partially filled with 12 LONGs then apppend 12 more
-[2026-11-25T16:04:11.224] Cog0  - testWriteLongs(ap1212longs.bin, 12)
-[2026-11-25T16:04:11.224] Cog0   
-[2026-11-25T16:04:11.230] Cog0  * Test #34: Open File for write
-[2026-11-25T16:04:11.230] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.230] Cog0     -> pass
-[2026-11-25T16:04:11.230] Cog0   
-[2026-11-25T16:04:11.231] Cog0  * Test #35: validate handle
-[2026-11-25T16:04:11.231] Cog0    open(,'w'): 0
-[2026-11-25T16:04:11.231] Cog0     -> pass
-[2026-11-25T16:04:11.231] Cog0   
-[2026-11-25T16:04:11.232] Cog0  * Test #36: Write N LONGs
-[2026-11-25T16:04:11.232] Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
-[2026-11-25T16:04:11.232] Cog0     -> pass
-[2026-11-25T16:04:11.232] Cog0   
-[2026-11-25T16:04:11.232] Cog0  * Test #37: ensure all longs written
-[2026-11-25T16:04:11.232] Cog0    wr_long(): 12
-[2026-11-25T16:04:11.232] Cog0     -> pass
-[2026-11-25T16:04:11.232] Cog0   
-[2026-11-25T16:04:11.232] Cog0  * Test #38: ensure no errors on writes
-[2026-11-25T16:04:11.233] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.233] Cog0     -> pass
-[2026-11-25T16:04:11.233] Cog0   
-[2026-11-25T16:04:11.233] Cog0    File: [ap1212longs.bin] pending commit
-[2026-11-25T16:04:11.233] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:11.234] Cog0      1: [$0000] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00B8, lifeCycle [erased], sig=[$0B80_02F4]  MODIFIED
-[2026-11-25T16:04:11.234] Cog0   
-[2026-11-25T16:04:11.234] Cog0  * Test #39: Close written file
-[2026-11-25T16:04:11.250] Cog0  * wr_block() block_address = $0781, block_id = 2, NextID_EndPtr = $00B8
-[2026-11-25T16:04:11.250] Cog0  - program_block() block_address = $0781
-[2026-11-25T16:04:11.280] Cog0  - activate_block() block_address = $0781
-[2026-11-25T16:04:11.284] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.284] Cog0     -> pass
-[2026-11-25T16:04:11.284] Cog0   
-[2026-11-25T16:04:11.284] Cog0    File: [ap1212longs.bin], bytesUsed = 48, bytes_free = 3_908, block_count = 1
-[2026-11-25T16:04:11.284] Cog0   
-[2026-11-25T16:04:11.291] Cog0  * Test #40: Ensure expected file system changes
-[2026-11-25T16:04:11.291] Cog0  * post file write
-[2026-11-25T16:04:11.292] Cog0    # FileSystem: 3, 3_965, 3
-[2026-11-25T16:04:11.292] Cog0    # files: 3
-[2026-11-25T16:04:11.292] Cog0    # blocks used: 3
-[2026-11-25T16:04:11.292] Cog0     -> pass
-[2026-11-25T16:04:11.292] Cog0   
-[2026-11-25T16:04:11.295] Cog0  * Test #41: Ensure expected file stats
-[2026-11-25T16:04:11.295] Cog0    File: [ap1212longs.bin]
-[2026-11-25T16:04:11.296] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:11.299] Cog0      1: [$0781] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]  
-[2026-11-25T16:04:11.299] Cog0    # blocks: 1
-[2026-11-25T16:04:11.299] Cog0    # bytes used: 48
-[2026-11-25T16:04:11.299] Cog0     -> pass
-[2026-11-25T16:04:11.299] Cog0   
-[2026-11-25T16:04:11.303] Cog0  * Test #42: Get starting length before append of LONGs
-[2026-11-25T16:04:11.303] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:11.303] Cog0     -> pass
-[2026-11-25T16:04:11.303] Cog0   
-[2026-11-25T16:04:11.308] Cog0  * Test #43: Open File for append
-[2026-11-25T16:04:11.308] Cog0    open(,'a'): 0
-[2026-11-25T16:04:11.308] Cog0     -> pass
-[2026-11-25T16:04:11.308] Cog0   
-[2026-11-25T16:04:11.308] Cog0  * Test #44: Append count LONGs
-[2026-11-25T16:04:11.309] Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
-[2026-11-25T16:04:11.309] Cog0     -> pass
-[2026-11-25T16:04:11.309] Cog0   
-[2026-11-25T16:04:11.309] Cog0  * Test #45: ensure no errors on writes
-[2026-11-25T16:04:11.309] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.309] Cog0     -> pass
-[2026-11-25T16:04:11.309] Cog0   
-[2026-11-25T16:04:11.310] Cog0    File: [ap1212longs.bin] pending commit
-[2026-11-25T16:04:11.310] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:11.310] Cog0      1: [$0000] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00E8, lifeCycle [ACTIVE-3], sig=[$0E80_0274]  MODIFIED
-[2026-11-25T16:04:11.310] Cog0   
-[2026-11-25T16:04:11.311] Cog0  * Test #46: Close append file
-[2026-11-25T16:04:11.311] Cog0  * wr_block() block_address = $0431, block_id = 2, NextID_EndPtr = $00E8
-[2026-11-25T16:04:11.326] Cog0  - program_block() block_address = $0431
-[2026-11-25T16:04:11.357] Cog0  - activate_block() block_address = $0431
-[2026-11-25T16:04:11.357] Cog0  * delChnFmID() [$0781] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:11.358] Cog0  - cancel_block() block_address = $0781
-[2026-11-25T16:04:11.358] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.358] Cog0     -> pass
-[2026-11-25T16:04:11.359] Cog0   
-[2026-11-25T16:04:11.360] Cog0    File: [ap1212longs.bin], bytesUsed = 96, bytes_free = 3_860, block_count = 1
-[2026-11-25T16:04:11.360] Cog0   
-[2026-11-25T16:04:11.360] Cog0  * Test #47: Ensure expected file stats post LONGs append
-[2026-11-25T16:04:11.362] Cog0    File: [ap1212longs.bin]
-[2026-11-25T16:04:11.362] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:11.365] Cog0      1: [$0431] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00E8, lifeCycle [ACTIVE-5], sig=[$0E80_02BC]  
-[2026-11-25T16:04:11.365] Cog0    # blocks: 1
-[2026-11-25T16:04:11.365] Cog0    # bytes used: 96
-[2026-11-25T16:04:11.365] Cog0     -> pass
-[2026-11-25T16:04:11.365] Cog0  - test blocksUsed = 1, blocksAdded = 0, startingBlockCount = 3
-[2026-11-25T16:04:11.365] Cog0   
-[2026-11-25T16:04:11.373] Cog0  * Test #48: Ensure expected file system changes post LONGs append write
-[2026-11-25T16:04:11.373] Cog0  * post file append
-[2026-11-25T16:04:11.373] Cog0    # FileSystem: 3, 3_965, 3
-[2026-11-25T16:04:11.373] Cog0    # files: 3
-[2026-11-25T16:04:11.373] Cog0    # blocks used: 3
-[2026-11-25T16:04:11.373] Cog0     -> pass
-[2026-11-25T16:04:11.374] Cog0   
-[2026-11-25T16:04:11.374] Cog0    All Files:
-[2026-11-25T16:04:11.374] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.375] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.383] Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.383] Cog0   
-[2026-11-25T16:04:11.384] Cog0   
-[2026-11-25T16:04:11.384] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:11.384] Cog0  * Test Group: Head block only - partially filled with 10 STRINGs then apppend 10 more
-[2026-11-25T16:04:11.385] Cog0  - testWriteStrings(ap1010strings.zstr, 10)
-[2026-11-25T16:04:11.385] Cog0   
-[2026-11-25T16:04:11.391] Cog0  * Test #49: Open File for write
-[2026-11-25T16:04:11.391] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.391] Cog0     -> pass
-[2026-11-25T16:04:11.391] Cog0   
-[2026-11-25T16:04:11.391] Cog0  * Test #50: validate handle
-[2026-11-25T16:04:11.392] Cog0    open(,'w'): 0
-[2026-11-25T16:04:11.392] Cog0     -> pass
-[2026-11-25T16:04:11.392] Cog0   
-[2026-11-25T16:04:11.392] Cog0  * Test #51: Write N STRINGs
-[2026-11-25T16:04:11.393] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
-[2026-11-25T16:04:11.393] Cog0     -> pass
-[2026-11-25T16:04:11.393] Cog0   
-[2026-11-25T16:04:11.393] Cog0  * Test #52: ensure no errors on writes
-[2026-11-25T16:04:11.393] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.393] Cog0     -> pass
-[2026-11-25T16:04:11.393] Cog0   
-[2026-11-25T16:04:11.394] Cog0    File: [ap1010strings.zstr] pending commit
-[2026-11-25T16:04:11.394] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:11.394] Cog0      1: [$0000] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0147, lifeCycle [erased], sig=[$1470_03F4]  MODIFIED
-[2026-11-25T16:04:11.394] Cog0   
-[2026-11-25T16:04:11.395] Cog0  * Test #53: Close written file
-[2026-11-25T16:04:11.395] Cog0  * wr_block() block_address = $0229, block_id = 3, NextID_EndPtr = $0147
-[2026-11-25T16:04:11.411] Cog0  - program_block() block_address = $0229
-[2026-11-25T16:04:11.442] Cog0  - activate_block() block_address = $0229
-[2026-11-25T16:04:11.443] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.443] Cog0     -> pass
-[2026-11-25T16:04:11.443] Cog0   
-[2026-11-25T16:04:11.444] Cog0    File: [ap1010strings.zstr], bytesUsed = 191, bytes_free = 3_765, block_count = 1
-[2026-11-25T16:04:11.444] Cog0   
-[2026-11-25T16:04:11.451] Cog0  * Test #54: Ensure expected file system changes
-[2026-11-25T16:04:11.451] Cog0  * post file write
-[2026-11-25T16:04:11.452] Cog0    # FileSystem: 4, 3_964, 4
-[2026-11-25T16:04:11.452] Cog0    # files: 4
-[2026-11-25T16:04:11.452] Cog0    # blocks used: 4
-[2026-11-25T16:04:11.452] Cog0     -> pass
-[2026-11-25T16:04:11.452] Cog0   
-[2026-11-25T16:04:11.453] Cog0  * Test #55: Ensure expected file stats
-[2026-11-25T16:04:11.453] Cog0    File: [ap1010strings.zstr]
-[2026-11-25T16:04:11.453] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:11.455] Cog0      1: [$0229] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0147, lifeCycle [ACTIVE-3], sig=[$1470_037C]  
-[2026-11-25T16:04:11.455] Cog0    # blocks: 1
-[2026-11-25T16:04:11.455] Cog0    # bytes used: 191
-[2026-11-25T16:04:11.455] Cog0     -> pass
-[2026-11-25T16:04:11.455] Cog0   
-[2026-11-25T16:04:11.456] Cog0  * Test #56: Get starting length before append of STRINGs
-[2026-11-25T16:04:11.457] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:11.457] Cog0     -> pass
-[2026-11-25T16:04:11.457] Cog0   
-[2026-11-25T16:04:11.459] Cog0  * Test #57: Open File for append
-[2026-11-25T16:04:11.459] Cog0    open(,'a'): 0
-[2026-11-25T16:04:11.459] Cog0     -> pass
-[2026-11-25T16:04:11.459] Cog0   
-[2026-11-25T16:04:11.460] Cog0  * Test #58: Append N STRINGs
-[2026-11-25T16:04:11.461] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
-[2026-11-25T16:04:11.461] Cog0     -> pass
-[2026-11-25T16:04:11.461] Cog0   
-[2026-11-25T16:04:11.461] Cog0  * Test #59: ensure no errors on append writes
-[2026-11-25T16:04:11.461] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.461] Cog0     -> pass
-[2026-11-25T16:04:11.461] Cog0   
-[2026-11-25T16:04:11.462] Cog0    File: [ap1010strings.zstr] pending commit
-[2026-11-25T16:04:11.462] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:11.462] Cog0      1: [$0000] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0274, lifeCycle [ACTIVE-3], sig=[$2740_0374]  MODIFIED
-[2026-11-25T16:04:11.462] Cog0   
-[2026-11-25T16:04:11.463] Cog0  * Test #60: Close append file
-[2026-11-25T16:04:11.478] Cog0  * wr_block() block_address = $0285, block_id = 3, NextID_EndPtr = $0274
-[2026-11-25T16:04:11.478] Cog0  - program_block() block_address = $0285
-[2026-11-25T16:04:11.514] Cog0  - activate_block() block_address = $0285
-[2026-11-25T16:04:11.515] Cog0  * delChnFmID() [$0229] block_id = 3, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:11.515] Cog0  - cancel_block() block_address = $0229
-[2026-11-25T16:04:11.515] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.515] Cog0     -> pass
-[2026-11-25T16:04:11.516] Cog0   
-[2026-11-25T16:04:11.517] Cog0    File: [ap1010strings.zstr], bytesUsed = 492, bytes_free = 3_464, block_count = 1
-[2026-11-25T16:04:11.517] Cog0   
-[2026-11-25T16:04:11.518] Cog0  * Test #61: Ensure expected file stats post STRINGs append
-[2026-11-25T16:04:11.519] Cog0    File: [ap1010strings.zstr]
-[2026-11-25T16:04:11.519] Cog0    # 1 Blocks in file:
-[2026-11-25T16:04:11.520] Cog0      1: [$0285] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0274, lifeCycle [ACTIVE-5], sig=[$2740_03BC]  
-[2026-11-25T16:04:11.520] Cog0    # blocks: 1
-[2026-11-25T16:04:11.520] Cog0    # bytes used: 492
-[2026-11-25T16:04:11.520] Cog0     -> pass
-[2026-11-25T16:04:11.520] Cog0   
-[2026-11-25T16:04:11.528] Cog0  * Test #62: Ensure expected file system changes post STRINGs append write
-[2026-11-25T16:04:11.528] Cog0  * post file append
-[2026-11-25T16:04:11.529] Cog0    # FileSystem: 4, 3_964, 4
-[2026-11-25T16:04:11.529] Cog0    # files: 4
-[2026-11-25T16:04:11.529] Cog0    # blocks used: 4
-[2026-11-25T16:04:11.529] Cog0     -> pass
-[2026-11-25T16:04:11.529] Cog0   
-[2026-11-25T16:04:11.529] Cog0   
-[2026-11-25T16:04:11.529] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:11.529] Cog0  * Test Group: Read and verify the content of all 20 string
-[2026-11-25T16:04:11.529] Cog0   
-[2026-11-25T16:04:11.532] Cog0  * Test #63: Open File for read
-[2026-11-25T16:04:11.532] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.532] Cog0     -> pass
-[2026-11-25T16:04:11.532] Cog0   
-[2026-11-25T16:04:11.533] Cog0  * Test #64: validate handle
-[2026-11-25T16:04:11.533] Cog0    open(,'r'): 0
-[2026-11-25T16:04:11.533] Cog0     -> pass
-[2026-11-25T16:04:11.533] Cog0   
-[2026-11-25T16:04:11.534] Cog0  * Test #65: read expected N STRINGs
-[2026-11-25T16:04:11.535] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
-[2026-11-25T16:04:11.535] Cog0     -> pass
-[2026-11-25T16:04:11.535] Cog0   
-[2026-11-25T16:04:11.535] Cog0  * Test #66: ensure no errors on read STRINGs
-[2026-11-25T16:04:11.535] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.536] Cog0     -> pass
-[2026-11-25T16:04:11.536] Cog0   
-[2026-11-25T16:04:11.536] Cog0  * Test #67: BAD: read one more STRING than written
-[2026-11-25T16:04:11.536] Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
-[2026-11-25T16:04:11.536] Cog0     -> pass
-[2026-11-25T16:04:11.536] Cog0   
-[2026-11-25T16:04:11.537] Cog0  * Test #68: Close read file
-[2026-11-25T16:04:11.537] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.537] Cog0     -> pass
-[2026-11-25T16:04:11.537] Cog0   
-[2026-11-25T16:04:11.537] Cog0    All Files:
-[2026-11-25T16:04:11.537] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.538] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.539] Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.548] Cog0  ap1010strings.zstr, byteCount = 492, blockID = 4, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:11.548] Cog0   
-[2026-11-25T16:04:11.548] Cog0   
-[2026-11-25T16:04:11.548] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:11.548] Cog0  * Test Group: Head block + body block - filled with LONGs full HEAD, 2 in BODY, append 8 more
-[2026-11-25T16:04:11.549] Cog0  - testWriteLongs(apLongsHeadBody.bin, 991)
-[2026-11-25T16:04:11.549] Cog0   
-[2026-11-25T16:04:11.555] Cog0  * Test #69: Open File for write
-[2026-11-25T16:04:11.555] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.555] Cog0     -> pass
-[2026-11-25T16:04:11.555] Cog0   
-[2026-11-25T16:04:11.556] Cog0  * Test #70: validate handle
-[2026-11-25T16:04:11.556] Cog0    open(,'w'): 0
-[2026-11-25T16:04:11.556] Cog0     -> pass
-[2026-11-25T16:04:11.556] Cog0   
-[2026-11-25T16:04:11.571] Cog0  * Test #71: Write N LONGs
-[2026-11-25T16:04:11.593] Cog0  * wr_block() block_address = $0592, block_id = 4, NextID_EndPtr = $0005
-[2026-11-25T16:04:11.608] Cog0  - program_block() block_address = $0592
-[2026-11-25T16:04:11.644] Cog0    Sub-Test Results: count=991, Pass: 991, Fail: 0
-[2026-11-25T16:04:11.644] Cog0     -> pass
-[2026-11-25T16:04:11.645] Cog0   
-[2026-11-25T16:04:11.645] Cog0  * Test #72: ensure all longs written
-[2026-11-25T16:04:11.645] Cog0    wr_long(): 991
-[2026-11-25T16:04:11.645] Cog0     -> pass
-[2026-11-25T16:04:11.645] Cog0   
-[2026-11-25T16:04:11.645] Cog0  * Test #73: ensure no errors on writes
-[2026-11-25T16:04:11.645] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.645] Cog0     -> pass
-[2026-11-25T16:04:11.645] Cog0   
-[2026-11-25T16:04:11.646] Cog0    File: [apLongsHeadBody.bin] pending commit
-[2026-11-25T16:04:11.646] Cog0    # 2 Blocks in chain:
-[2026-11-25T16:04:11.646] Cog0      1: [$0592] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [erased], sig=[$0050_04FD]  
-[2026-11-25T16:04:11.647] Cog0      2: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05F6]  MODIFIED
-[2026-11-25T16:04:11.647] Cog0   
-[2026-11-25T16:04:11.647] Cog0  * Test #74: Close written file
-[2026-11-25T16:04:11.647] Cog0  * wr_block() block_address = $0BDC, block_id = 5, NextID_EndPtr = $000C
-[2026-11-25T16:04:11.663] Cog0  - program_block() block_address = $0BDC
-[2026-11-25T16:04:11.695] Cog0  - activate_block() block_address = $0BDC
-[2026-11-25T16:04:11.695] Cog0  - activate_block() block_address = $0592
-[2026-11-25T16:04:11.698] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.698] Cog0     -> pass
-[2026-11-25T16:04:11.698] Cog0   
-[2026-11-25T16:04:11.698] Cog0    File: [apLongsHeadBody.bin], bytesUsed = 3_964, bytes_free = 4_080, block_count = 2
-[2026-11-25T16:04:11.698] Cog0   
-[2026-11-25T16:04:11.706] Cog0  * Test #75: Ensure expected file system changes
-[2026-11-25T16:04:11.706] Cog0  * post file write
-[2026-11-25T16:04:11.706] Cog0    # FileSystem: 6, 3_962, 5
-[2026-11-25T16:04:11.706] Cog0    # files: 5
-[2026-11-25T16:04:11.706] Cog0    # blocks used: 6
-[2026-11-25T16:04:11.706] Cog0     -> pass
-[2026-11-25T16:04:11.706] Cog0   
-[2026-11-25T16:04:11.706] Cog0  * Test #76: Ensure expected file stats
-[2026-11-25T16:04:11.709] Cog0    File: [apLongsHeadBody.bin]
-[2026-11-25T16:04:11.709] Cog0    # 2 Blocks in file:
-[2026-11-25T16:04:11.710] Cog0      1: [$0592] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]  
-[2026-11-25T16:04:11.712] Cog0      2: [$0BDC] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]  
-[2026-11-25T16:04:11.712] Cog0    # blocks: 2
-[2026-11-25T16:04:11.713] Cog0    # bytes used: 3_964
-[2026-11-25T16:04:11.713] Cog0     -> pass
-[2026-11-25T16:04:11.713] Cog0   
-[2026-11-25T16:04:11.715] Cog0  * Test #77: Get starting length before append of LONGs
-[2026-11-25T16:04:11.716] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:11.716] Cog0     -> pass
-[2026-11-25T16:04:11.716] Cog0   
-[2026-11-25T16:04:11.719] Cog0  * Test #78: Open File for append
-[2026-11-25T16:04:11.719] Cog0    open(,'a'): 0
-[2026-11-25T16:04:11.720] Cog0     -> pass
-[2026-11-25T16:04:11.720] Cog0   
-[2026-11-25T16:04:11.720] Cog0  * Test #79: Append count LONGs
-[2026-11-25T16:04:11.720] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
-[2026-11-25T16:04:11.721] Cog0     -> pass
-[2026-11-25T16:04:11.721] Cog0   
-[2026-11-25T16:04:11.721] Cog0  * Test #80: ensure no errors on writes
-[2026-11-25T16:04:11.721] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.721] Cog0     -> pass
-[2026-11-25T16:04:11.721] Cog0   
-[2026-11-25T16:04:11.721] Cog0    File: [apLongsHeadBody.bin] pending commit
-[2026-11-25T16:04:11.722] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:11.722] Cog0      1: [$0000] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-3], sig=[$02C0_0576]  MODIFIED
-[2026-11-25T16:04:11.722] Cog0   
-[2026-11-25T16:04:11.722] Cog0  * Test #81: Close append file
-[2026-11-25T16:04:11.723] Cog0  * wr_block() block_address = $0B4D, block_id = 5, NextID_EndPtr = $002C
-[2026-11-25T16:04:11.738] Cog0  - program_block() block_address = $0B4D
-[2026-11-25T16:04:11.772] Cog0  - activate_block() block_address = $0B4D
-[2026-11-25T16:04:11.772] Cog0  * delChnFmID() [$0BDC] block_id = 5, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:11.773] Cog0  - cancel_block() block_address = $0BDC
-[2026-11-25T16:04:11.773] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.773] Cog0     -> pass
-[2026-11-25T16:04:11.775] Cog0   
-[2026-11-25T16:04:11.776] Cog0    File: [apLongsHeadBody.bin], bytesUsed = 3_996, bytes_free = 4_048, block_count = 2
-[2026-11-25T16:04:11.776] Cog0   
-[2026-11-25T16:04:11.776] Cog0  * Test #82: Ensure expected file stats post LONGs append
-[2026-11-25T16:04:11.779] Cog0    File: [apLongsHeadBody.bin]
-[2026-11-25T16:04:11.779] Cog0    # 2 Blocks in file:
-[2026-11-25T16:04:11.779] Cog0      1: [$0592] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]  
-[2026-11-25T16:04:11.782] Cog0      2: [$0B4D] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_05BE]  
-[2026-11-25T16:04:11.782] Cog0    # blocks: 2
-[2026-11-25T16:04:11.782] Cog0    # bytes used: 3_996
-[2026-11-25T16:04:11.782] Cog0     -> pass
-[2026-11-25T16:04:11.783] Cog0  - test blocksUsed = 2, blocksAdded = 0, startingBlockCount = 6
-[2026-11-25T16:04:11.783] Cog0   
-[2026-11-25T16:04:11.783] Cog0  * Test #83: Ensure expected file system changes post LONGs append write
-[2026-11-25T16:04:11.790] Cog0  * post file append
-[2026-11-25T16:04:11.790] Cog0    # FileSystem: 6, 3_962, 5
-[2026-11-25T16:04:11.790] Cog0    # files: 5
-[2026-11-25T16:04:11.791] Cog0    # blocks used: 6
-[2026-11-25T16:04:11.791] Cog0     -> pass
-[2026-11-25T16:04:11.791] Cog0   
-[2026-11-25T16:04:11.791] Cog0   
-[2026-11-25T16:04:11.791] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:11.792] Cog0  * Test Group: Head block + 2 x body block - filled with LONGs full HEAD & BODY, 2 in 2nd BODY, append 8 more
-[2026-11-25T16:04:11.792] Cog0  - testWriteLongs(apLongsHead2xBody.bin, 2_013)
-[2026-11-25T16:04:11.792] Cog0   
-[2026-11-25T16:04:11.798] Cog0  * Test #84: Open File for write
-[2026-11-25T16:04:11.799] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.799] Cog0     -> pass
-[2026-11-25T16:04:11.799] Cog0   
-[2026-11-25T16:04:11.799] Cog0  * Test #85: validate handle
-[2026-11-25T16:04:11.799] Cog0    open(,'w'): 0
-[2026-11-25T16:04:11.799] Cog0     -> pass
-[2026-11-25T16:04:11.799] Cog0   
-[2026-11-25T16:04:11.814] Cog0  * Test #86: Write N LONGs
-[2026-11-25T16:04:11.836] Cog0  * wr_block() block_address = $0EB8, block_id = 6, NextID_EndPtr = $0007
-[2026-11-25T16:04:11.851] Cog0  - program_block() block_address = $0EB8
-[2026-11-25T16:04:11.925] Cog0  * wr_block() block_address = $08D2, block_id = 7, NextID_EndPtr = $0008
-[2026-11-25T16:04:11.941] Cog0  - program_block() block_address = $08D2
-[2026-11-25T16:04:11.978] Cog0  - activate_block() block_address = $08D2
-[2026-11-25T16:04:11.978] Cog0    Sub-Test Results: count=2_013, Pass: 2_013, Fail: 0
-[2026-11-25T16:04:11.978] Cog0     -> pass
-[2026-11-25T16:04:11.978] Cog0   
-[2026-11-25T16:04:11.978] Cog0  * Test #87: ensure all longs written
-[2026-11-25T16:04:11.978] Cog0    wr_long(): 2_013
-[2026-11-25T16:04:11.978] Cog0     -> pass
-[2026-11-25T16:04:11.978] Cog0   
-[2026-11-25T16:04:11.979] Cog0  * Test #88: ensure no errors on writes
-[2026-11-25T16:04:11.979] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:11.979] Cog0     -> pass
-[2026-11-25T16:04:11.979] Cog0   
-[2026-11-25T16:04:11.979] Cog0    File: [apLongsHead2xBody.bin] pending commit
-[2026-11-25T16:04:11.979] Cog0    # 3 Blocks in chain:
-[2026-11-25T16:04:11.980] Cog0      1: [$0EB8] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [erased], sig=[$0070_06FD]  
-[2026-11-25T16:04:11.981] Cog0      2: [$08D2] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:04:11.981] Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$000C, lifeCycle [erased], sig=[$00C0_08F6]  MODIFIED
-[2026-11-25T16:04:11.981] Cog0   
-[2026-11-25T16:04:11.981] Cog0  * Test #89: Close written file
-[2026-11-25T16:04:11.982] Cog0  * wr_block() block_address = $0866, block_id = 8, NextID_EndPtr = $000C
-[2026-11-25T16:04:11.998] Cog0  - program_block() block_address = $0866
-[2026-11-25T16:04:12.029] Cog0  - activate_block() block_address = $0866
-[2026-11-25T16:04:12.029] Cog0  - activate_block() block_address = $0EB8
-[2026-11-25T16:04:12.035] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.035] Cog0     -> pass
-[2026-11-25T16:04:12.035] Cog0   
-[2026-11-25T16:04:12.035] Cog0    File: [apLongsHead2xBody.bin], bytesUsed = 8_052, bytes_free = 4_080, block_count = 3
-[2026-11-25T16:04:12.035] Cog0   
-[2026-11-25T16:04:12.043] Cog0  * Test #90: Ensure expected file system changes
-[2026-11-25T16:04:12.043] Cog0  * post file write
-[2026-11-25T16:04:12.043] Cog0    # FileSystem: 9, 3_959, 6
-[2026-11-25T16:04:12.043] Cog0    # files: 6
-[2026-11-25T16:04:12.043] Cog0    # blocks used: 9
-[2026-11-25T16:04:12.043] Cog0     -> pass
-[2026-11-25T16:04:12.043] Cog0   
-[2026-11-25T16:04:12.043] Cog0  * Test #91: Ensure expected file stats
-[2026-11-25T16:04:12.049] Cog0    File: [apLongsHead2xBody.bin]
-[2026-11-25T16:04:12.049] Cog0    # 3 Blocks in file:
-[2026-11-25T16:04:12.050] Cog0      1: [$0EB8] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]  
-[2026-11-25T16:04:12.050] Cog0      2: [$08D2] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:04:12.056] Cog0      3: [$0866] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]  
-[2026-11-25T16:04:12.057] Cog0    # blocks: 3
-[2026-11-25T16:04:12.057] Cog0    # bytes used: 8_052
-[2026-11-25T16:04:12.057] Cog0     -> pass
-[2026-11-25T16:04:12.057] Cog0   
-[2026-11-25T16:04:12.063] Cog0  * Test #92: Get starting length before append of LONGs
-[2026-11-25T16:04:12.063] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:12.063] Cog0     -> pass
-[2026-11-25T16:04:12.063] Cog0   
-[2026-11-25T16:04:12.071] Cog0  * Test #93: Open File for append
-[2026-11-25T16:04:12.071] Cog0    open(,'a'): 0
-[2026-11-25T16:04:12.071] Cog0     -> pass
-[2026-11-25T16:04:12.071] Cog0   
-[2026-11-25T16:04:12.071] Cog0  * Test #94: Append count LONGs
-[2026-11-25T16:04:12.071] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
-[2026-11-25T16:04:12.071] Cog0     -> pass
-[2026-11-25T16:04:12.071] Cog0   
-[2026-11-25T16:04:12.072] Cog0  * Test #95: ensure no errors on writes
-[2026-11-25T16:04:12.072] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.072] Cog0     -> pass
-[2026-11-25T16:04:12.072] Cog0   
-[2026-11-25T16:04:12.072] Cog0    File: [apLongsHead2xBody.bin] pending commit
-[2026-11-25T16:04:12.072] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:12.073] Cog0      1: [$0000] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-3], sig=[$02C0_0876]  MODIFIED
-[2026-11-25T16:04:12.073] Cog0   
-[2026-11-25T16:04:12.074] Cog0  * Test #96: Close append file
-[2026-11-25T16:04:12.074] Cog0  * wr_block() block_address = $0A9B, block_id = 8, NextID_EndPtr = $002C
-[2026-11-25T16:04:12.090] Cog0  - program_block() block_address = $0A9B
-[2026-11-25T16:04:12.121] Cog0  - activate_block() block_address = $0A9B
-[2026-11-25T16:04:12.121] Cog0  * delChnFmID() [$0866] block_id = 8, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:12.121] Cog0  - cancel_block() block_address = $0866
-[2026-11-25T16:04:12.121] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.121] Cog0     -> pass
-[2026-11-25T16:04:12.128] Cog0   
-[2026-11-25T16:04:12.128] Cog0    File: [apLongsHead2xBody.bin], bytesUsed = 8_084, bytes_free = 4_048, block_count = 3
-[2026-11-25T16:04:12.128] Cog0   
-[2026-11-25T16:04:12.128] Cog0  * Test #97: Ensure expected file stats post LONGs append
-[2026-11-25T16:04:12.135] Cog0    File: [apLongsHead2xBody.bin]
-[2026-11-25T16:04:12.135] Cog0    # 3 Blocks in file:
-[2026-11-25T16:04:12.135] Cog0      1: [$0EB8] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]  
-[2026-11-25T16:04:12.135] Cog0      2: [$08D2] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
-[2026-11-25T16:04:12.141] Cog0      3: [$0A9B] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_08BE]  
-[2026-11-25T16:04:12.141] Cog0    # blocks: 3
-[2026-11-25T16:04:12.142] Cog0    # bytes used: 8_084
-[2026-11-25T16:04:12.142] Cog0     -> pass
-[2026-11-25T16:04:12.142] Cog0  - test blocksUsed = 3, blocksAdded = 0, startingBlockCount = 9
-[2026-11-25T16:04:12.142] Cog0   
-[2026-11-25T16:04:12.150] Cog0  * Test #98: Ensure expected file system changes post LONGs append write
-[2026-11-25T16:04:12.150] Cog0  * post file append
-[2026-11-25T16:04:12.150] Cog0    # FileSystem: 9, 3_959, 6
-[2026-11-25T16:04:12.150] Cog0    # files: 6
-[2026-11-25T16:04:12.150] Cog0    # blocks used: 9
-[2026-11-25T16:04:12.150] Cog0     -> pass
-[2026-11-25T16:04:12.150] Cog0   
-[2026-11-25T16:04:12.150] Cog0   
-[2026-11-25T16:04:12.151] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:12.151] Cog0  * Test Group: Head block + 2 x body block - filled with LONGsfull HEAD & 2 BODY (-3), append 9 more append causes add of new body
-[2026-11-25T16:04:12.152] Cog0  - testWriteLongs(apLongsHead3xBody.bin, 3_030)
-[2026-11-25T16:04:12.152] Cog0   
-[2026-11-25T16:04:12.158] Cog0  * Test #99: Open File for write
-[2026-11-25T16:04:12.158] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.158] Cog0     -> pass
-[2026-11-25T16:04:12.158] Cog0   
-[2026-11-25T16:04:12.158] Cog0  * Test #100: validate handle
-[2026-11-25T16:04:12.158] Cog0    open(,'w'): 0
-[2026-11-25T16:04:12.158] Cog0     -> pass
-[2026-11-25T16:04:12.158] Cog0   
-[2026-11-25T16:04:12.174] Cog0  * Test #101: Write N LONGs
-[2026-11-25T16:04:12.195] Cog0  * wr_block() block_address = $03DD, block_id = 9, NextID_EndPtr = $000A
-[2026-11-25T16:04:12.211] Cog0  - program_block() block_address = $03DD
-[2026-11-25T16:04:12.284] Cog0  * wr_block() block_address = $0A31, block_id = 10, NextID_EndPtr = $000B
-[2026-11-25T16:04:12.300] Cog0  - program_block() block_address = $0A31
-[2026-11-25T16:04:12.348] Cog0  - activate_block() block_address = $0A31
-[2026-11-25T16:04:12.374] Cog0    Sub-Test Results: count=3_030, Pass: 3_030, Fail: 0
-[2026-11-25T16:04:12.374] Cog0     -> pass
-[2026-11-25T16:04:12.374] Cog0   
-[2026-11-25T16:04:12.374] Cog0  * Test #102: ensure all longs written
-[2026-11-25T16:04:12.374] Cog0    wr_long(): 3_030
-[2026-11-25T16:04:12.374] Cog0     -> pass
-[2026-11-25T16:04:12.374] Cog0   
-[2026-11-25T16:04:12.375] Cog0  * Test #103: ensure no errors on writes
-[2026-11-25T16:04:12.375] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.375] Cog0     -> pass
-[2026-11-25T16:04:12.375] Cog0   
-[2026-11-25T16:04:12.375] Cog0    File: [apLongsHead3xBody.bin] pending commit
-[2026-11-25T16:04:12.375] Cog0    # 3 Blocks in chain:
-[2026-11-25T16:04:12.376] Cog0      1: [$03DD] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [erased], sig=[$00A0_09FD]  
-[2026-11-25T16:04:12.376] Cog0      2: [$0A31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:04:12.377] Cog0      3: [$0000] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [erased], sig=[$FF00_0BF6]  MODIFIED
-[2026-11-25T16:04:12.377] Cog0   
-[2026-11-25T16:04:12.377] Cog0  * Test #104: Close written file
-[2026-11-25T16:04:12.394] Cog0  * wr_block() block_address = $0A59, block_id = 11, NextID_EndPtr = $0FF0
-[2026-11-25T16:04:12.394] Cog0  - program_block() block_address = $0A59
-[2026-11-25T16:04:12.433] Cog0  - activate_block() block_address = $0A59
-[2026-11-25T16:04:12.434] Cog0  - activate_block() block_address = $03DD
-[2026-11-25T16:04:12.436] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.436] Cog0     -> pass
-[2026-11-25T16:04:12.436] Cog0   
-[2026-11-25T16:04:12.436] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_120, bytes_free = 12, block_count = 3
-[2026-11-25T16:04:12.436] Cog0   
-[2026-11-25T16:04:12.444] Cog0  * Test #105: Ensure expected file system changes
-[2026-11-25T16:04:12.444] Cog0  * post file write
-[2026-11-25T16:04:12.444] Cog0    # FileSystem: 12, 3_956, 7
-[2026-11-25T16:04:12.444] Cog0    # files: 7
-[2026-11-25T16:04:12.444] Cog0    # blocks used: 12
-[2026-11-25T16:04:12.444] Cog0     -> pass
-[2026-11-25T16:04:12.444] Cog0   
-[2026-11-25T16:04:12.446] Cog0  * Test #106: Ensure expected file stats
-[2026-11-25T16:04:12.446] Cog0    File: [apLongsHead3xBody.bin]
-[2026-11-25T16:04:12.446] Cog0    # 3 Blocks in file:
-[2026-11-25T16:04:12.447] Cog0      1: [$03DD] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
-[2026-11-25T16:04:12.447] Cog0      2: [$0A31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:04:12.449] Cog0      3: [$0A59] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [ACTIVE-3], sig=[$FF00_0B7E]  
-[2026-11-25T16:04:12.450] Cog0    # blocks: 3
-[2026-11-25T16:04:12.450] Cog0    # bytes used: 12_120
-[2026-11-25T16:04:12.450] Cog0     -> pass
-[2026-11-25T16:04:12.450] Cog0   
-[2026-11-25T16:04:12.452] Cog0  * Test #107: Get starting length before append of LONGs
-[2026-11-25T16:04:12.452] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:12.452] Cog0     -> pass
-[2026-11-25T16:04:12.452] Cog0   
-[2026-11-25T16:04:12.456] Cog0  * Test #108: Open File for append
-[2026-11-25T16:04:12.456] Cog0    open(,'a'): 0
-[2026-11-25T16:04:12.456] Cog0     -> pass
-[2026-11-25T16:04:12.456] Cog0   
-[2026-11-25T16:04:12.456] Cog0  * Test #109: Append count LONGs
-[2026-11-25T16:04:12.456] Cog0  * wr_block() block_address = $095E, block_id = 11, NextID_EndPtr = $000C
-[2026-11-25T16:04:12.472] Cog0  - program_block() block_address = $095E
-[2026-11-25T16:04:12.508] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
-[2026-11-25T16:04:12.508] Cog0     -> pass
-[2026-11-25T16:04:12.508] Cog0   
-[2026-11-25T16:04:12.508] Cog0  * Test #110: ensure no errors on writes
-[2026-11-25T16:04:12.508] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.508] Cog0     -> pass
-[2026-11-25T16:04:12.509] Cog0   
-[2026-11-25T16:04:12.509] Cog0    File: [apLongsHead3xBody.bin] pending commit
-[2026-11-25T16:04:12.509] Cog0    # 2 Blocks in chain:
-[2026-11-25T16:04:12.509] Cog0      1: [$095E] BODY/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFF]  
-[2026-11-25T16:04:12.510] Cog0      2: [$0000] BODY/last, thisID=12, endPtr=$001C, lifeCycle [erased], sig=[$01C0_0CF6]  MODIFIED
-[2026-11-25T16:04:12.510] Cog0   
-[2026-11-25T16:04:12.510] Cog0  * Test #111: Close append file
-[2026-11-25T16:04:12.511] Cog0  * wr_block() block_address = $0D8D, block_id = 12, NextID_EndPtr = $001C
-[2026-11-25T16:04:12.526] Cog0  - program_block() block_address = $0D8D
-[2026-11-25T16:04:12.559] Cog0  - activate_block() block_address = $0D8D
-[2026-11-25T16:04:12.559] Cog0  - activate_block() block_address = $095E
-[2026-11-25T16:04:12.559] Cog0  * delChnFmID() [$0A59] block_id = 11, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:12.559] Cog0  - cancel_block() block_address = $0A59
-[2026-11-25T16:04:12.561] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.561] Cog0     -> pass
-[2026-11-25T16:04:12.561] Cog0   
-[2026-11-25T16:04:12.562] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_156, bytes_free = 4_064, block_count = 4
-[2026-11-25T16:04:12.562] Cog0   
-[2026-11-25T16:04:12.563] Cog0  * Test #112: Ensure expected file stats post LONGs append
-[2026-11-25T16:04:12.565] Cog0    File: [apLongsHead3xBody.bin]
-[2026-11-25T16:04:12.565] Cog0    # 4 Blocks in file:
-[2026-11-25T16:04:12.565] Cog0      1: [$03DD] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
-[2026-11-25T16:04:12.565] Cog0      2: [$0A31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:04:12.566] Cog0      3: [$095E] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
-[2026-11-25T16:04:12.568] Cog0      4: [$0D8D] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]  
-[2026-11-25T16:04:12.568] Cog0    # blocks: 4
-[2026-11-25T16:04:12.568] Cog0    # bytes used: 12_156
-[2026-11-25T16:04:12.568] Cog0     -> pass
-[2026-11-25T16:04:12.569] Cog0  - test blocksUsed = 4, blocksAdded = 1, startingBlockCount = 12
-[2026-11-25T16:04:12.569] Cog0   
-[2026-11-25T16:04:12.569] Cog0  * Test #113: Ensure expected file system changes post LONGs append write
-[2026-11-25T16:04:12.577] Cog0  * post file append
-[2026-11-25T16:04:12.577] Cog0    # FileSystem: 13, 3_955, 7
-[2026-11-25T16:04:12.577] Cog0    # files: 7
-[2026-11-25T16:04:12.577] Cog0    # blocks used: 13
-[2026-11-25T16:04:12.577] Cog0     -> pass
-[2026-11-25T16:04:12.577] Cog0   
-[2026-11-25T16:04:12.577] Cog0   
-[2026-11-25T16:04:12.577] Cog0   ------------------------------------------------------------
-[2026-11-25T16:04:12.578] Cog0  * Test Group: Certifying Flush - appends to existing file with flush() for each
-[2026-11-25T16:04:12.578] Cog0   
-[2026-11-25T16:04:12.578] Cog0  * Test #114: Check F/S status before append of BYTEs
-[2026-11-25T16:04:12.580] Cog0    File: [apLongsHead3xBody.bin]
-[2026-11-25T16:04:12.580] Cog0    # 4 Blocks in file:
-[2026-11-25T16:04:12.581] Cog0      1: [$03DD] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
-[2026-11-25T16:04:12.581] Cog0      2: [$0A31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:04:12.582] Cog0      3: [$095E] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
-[2026-11-25T16:04:12.584] Cog0      4: [$0D8D] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]  
-[2026-11-25T16:04:12.584] Cog0    # blocks: 4
-[2026-11-25T16:04:12.584] Cog0    # bytes used: 12_156
-[2026-11-25T16:04:12.584] Cog0     -> pass
-[2026-11-25T16:04:12.584] Cog0   
-[2026-11-25T16:04:12.586] Cog0  * Test #115: Get starting length before append of BYTEs
-[2026-11-25T16:04:12.586] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:12.586] Cog0     -> pass
-[2026-11-25T16:04:12.586] Cog0   
-[2026-11-25T16:04:12.590] Cog0  * Test #116: Open File for append
-[2026-11-25T16:04:12.590] Cog0    open(,'a'): 0
-[2026-11-25T16:04:12.591] Cog0     -> pass
-[2026-11-25T16:04:12.591] Cog0   
-[2026-11-25T16:04:12.592] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_156, bytes_free = 4_064, block_count = 4
-[2026-11-25T16:04:12.592] Cog0   
-[2026-11-25T16:04:12.594] Cog0  * Test #117: Get starting length before append of LONGs
-[2026-11-25T16:04:12.594] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:12.595] Cog0     -> pass
-[2026-11-25T16:04:12.595] Cog0   
-[2026-11-25T16:04:12.595] Cog0  * Test #118: Append count LONGs
-[2026-11-25T16:04:12.595] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
-[2026-11-25T16:04:12.595] Cog0     -> pass
-[2026-11-25T16:04:12.595] Cog0   
-[2026-11-25T16:04:12.595] Cog0  * Test #119: ensure no errors on writes
-[2026-11-25T16:04:12.596] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.596] Cog0     -> pass
-[2026-11-25T16:04:12.596] Cog0   
-[2026-11-25T16:04:12.596] Cog0    File: [apLongsHead3xBody.bin] pending commit
-[2026-11-25T16:04:12.597] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:12.597] Cog0      1: [$0000] BODY/last, thisID=12, endPtr=$0034, lifeCycle [ACTIVE-3], sig=[$0340_0C76]  MODIFIED
-[2026-11-25T16:04:12.597] Cog0   
-[2026-11-25T16:04:12.597] Cog0  * Test #120: Flush append file
-[2026-11-25T16:04:12.613] Cog0  * wr_block() block_address = $0EB1, block_id = 12, NextID_EndPtr = $0034
-[2026-11-25T16:04:12.613] Cog0  - program_block() block_address = $0EB1
-[2026-11-25T16:04:12.646] Cog0  - activate_block() block_address = $0EB1
-[2026-11-25T16:04:12.646] Cog0  * delChnFmID() [$0D8D] block_id = 12, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:12.648] Cog0  - cancel_block() block_address = $0D8D
-[2026-11-25T16:04:12.648] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.648] Cog0     -> pass
-[2026-11-25T16:04:12.650] Cog0   
-[2026-11-25T16:04:12.650] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_180, bytes_free = 4_040, block_count = 4
-[2026-11-25T16:04:12.650] Cog0   
-[2026-11-25T16:04:12.650] Cog0  * Test #121: Ensure expected file stats post append flush
-[2026-11-25T16:04:12.653] Cog0    File: [apLongsHead3xBody.bin]
-[2026-11-25T16:04:12.653] Cog0    # 4 Blocks in file:
-[2026-11-25T16:04:12.653] Cog0      1: [$03DD] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
-[2026-11-25T16:04:12.654] Cog0      2: [$0A31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:04:12.654] Cog0      3: [$095E] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
-[2026-11-25T16:04:12.656] Cog0      4: [$0EB1] BODY/last, thisID=12, endPtr=$0034, lifeCycle [ACTIVE-5], sig=[$0340_0CBE]  
-[2026-11-25T16:04:12.657] Cog0    # blocks: 4
-[2026-11-25T16:04:12.658] Cog0    # bytes used: 12_180
-[2026-11-25T16:04:12.658] Cog0     -> pass
-[2026-11-25T16:04:12.658] Cog0   
-[2026-11-25T16:04:12.659] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_180, bytes_free = 4_040, block_count = 4
-[2026-11-25T16:04:12.659] Cog0   
-[2026-11-25T16:04:12.661] Cog0  * Test #122: Get starting length before append of LONGs
-[2026-11-25T16:04:12.661] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
-[2026-11-25T16:04:12.661] Cog0     -> pass
-[2026-11-25T16:04:12.661] Cog0   
-[2026-11-25T16:04:12.662] Cog0  * Test #123: Append count LONGs
-[2026-11-25T16:04:12.663] Cog0    Sub-Test Results: count=22, Pass: 22, Fail: 0
-[2026-11-25T16:04:12.663] Cog0     -> pass
-[2026-11-25T16:04:12.663] Cog0   
-[2026-11-25T16:04:12.663] Cog0  * Test #124: ensure no errors on writes
-[2026-11-25T16:04:12.663] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.663] Cog0     -> pass
-[2026-11-25T16:04:12.663] Cog0   
-[2026-11-25T16:04:12.664] Cog0    File: [apLongsHead3xBody.bin] pending commit
-[2026-11-25T16:04:12.664] Cog0    # 1 Blocks in chain:
-[2026-11-25T16:04:12.664] Cog0      1: [$0000] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-5], sig=[$08C0_0CB6]  MODIFIED
-[2026-11-25T16:04:12.664] Cog0   
-[2026-11-25T16:04:12.665] Cog0  * Test #125: Flush append file
-[2026-11-25T16:04:12.665] Cog0  * wr_block() block_address = $0B2C, block_id = 12, NextID_EndPtr = $008C
-[2026-11-25T16:04:12.680] Cog0  - program_block() block_address = $0B2C
-[2026-11-25T16:04:12.717] Cog0  - activate_block() block_address = $0B2C
-[2026-11-25T16:04:12.717] Cog0  * delChnFmID() [$0EB1] block_id = 12, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
-[2026-11-25T16:04:12.719] Cog0  - cancel_block() block_address = $0EB1
-[2026-11-25T16:04:12.719] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.719] Cog0     -> pass
-[2026-11-25T16:04:12.721] Cog0   
-[2026-11-25T16:04:12.721] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_268, bytes_free = 3_952, block_count = 4
-[2026-11-25T16:04:12.721] Cog0   
-[2026-11-25T16:04:12.721] Cog0  * Test #126: Ensure expected file stats post append flush
-[2026-11-25T16:04:12.723] Cog0    File: [apLongsHead3xBody.bin]
-[2026-11-25T16:04:12.723] Cog0    # 4 Blocks in file:
-[2026-11-25T16:04:12.724] Cog0      1: [$03DD] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
-[2026-11-25T16:04:12.724] Cog0      2: [$0A31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:04:12.725] Cog0      3: [$095E] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
-[2026-11-25T16:04:12.727] Cog0      4: [$0B2C] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-6], sig=[$08C0_0CDE]  
-[2026-11-25T16:04:12.727] Cog0    # blocks: 4
-[2026-11-25T16:04:12.727] Cog0    # bytes used: 12_268
-[2026-11-25T16:04:12.727] Cog0     -> pass
-[2026-11-25T16:04:12.727] Cog0   
-[2026-11-25T16:04:12.728] Cog0  * Test #127: Close append file
-[2026-11-25T16:04:12.728] Cog0     ECode: SUCCESS: No error
-[2026-11-25T16:04:12.730] Cog0     -> pass
-[2026-11-25T16:04:12.730] Cog0   
-[2026-11-25T16:04:12.730] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_268, bytes_free = 3_952, block_count = 4
-[2026-11-25T16:04:12.730] Cog0   
-[2026-11-25T16:04:12.730] Cog0  * Test #128: Ensure expected file stats
-[2026-11-25T16:04:12.732] Cog0    File: [apLongsHead3xBody.bin]
-[2026-11-25T16:04:12.732] Cog0    # 4 Blocks in file:
-[2026-11-25T16:04:12.733] Cog0      1: [$03DD] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
-[2026-11-25T16:04:12.733] Cog0      2: [$0A31] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
-[2026-11-25T16:04:12.734] Cog0      3: [$095E] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
-[2026-11-25T16:04:12.736] Cog0      4: [$0B2C] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-6], sig=[$08C0_0CDE]  
-[2026-11-25T16:04:12.736] Cog0    # blocks: 4
-[2026-11-25T16:04:12.736] Cog0    # bytes used: 12_268
-[2026-11-25T16:04:12.737] Cog0     -> pass
-[2026-11-25T16:04:12.737] Cog0  - test blocksUsed = 4, blocksAdded = 0, startingBlockCount = 13
-[2026-11-25T16:04:12.737] Cog0   
-[2026-11-25T16:04:12.737] Cog0  * Test #129: Ensure expected file system changes post dual append write
-[2026-11-25T16:04:12.745] Cog0  * post file write
-[2026-11-25T16:04:12.745] Cog0    # FileSystem: 13, 3_955, 7
-[2026-11-25T16:04:12.745] Cog0    # files: 7
-[2026-11-25T16:04:12.745] Cog0    # blocks used: 13
-[2026-11-25T16:04:12.745] Cog0     -> pass
-[2026-11-25T16:04:12.745] Cog0   
-[2026-11-25T16:04:12.745] Cog0    All Files:
-[2026-11-25T16:04:12.746] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:12.746] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:12.747] Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:12.748] Cog0  ap1010strings.zstr, byteCount = 492, blockID = 4, BlocksUsed = 1, @Buff={binary data}
-[2026-11-25T16:04:12.748] Cog0  apLongsHeadBody.bin, byteCount = 3_996, blockID = 5, BlocksUsed = 2, @Buff={binary data}
-[2026-11-25T16:04:12.749] Cog0  apLongsHead2xBody.bin, byteCount = 8_084, blockID = 7, BlocksUsed = 3, @Buff={binary data}
-[2026-11-25T16:04:12.758] Cog0  apLongsHead3xBody.bin, byteCount = 12_268, blockID = 10, BlocksUsed = 4, @Buff={binary data}
-[2026-11-25T16:04:12.758] Cog0  * Test Complete
-[2026-11-25T16:04:12.758] Cog0   
-[2026-11-25T16:04:12.758] Cog0  * 129 Tests - Pass: 129, Fail: 0
-[2026-11-25T16:04:12.774] Cog0  RESULT: PASS RT_write_append_tests 129/129
-[2026-11-25T16:04:12.775] Cog0  <END_SESSION>
-[2026-11-25T16:04:12.775] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
-[2026-11-25T16:04:12.775] [SYSTEM] Shutdown initiated: End marker detected
+[2026-11-25T17:06:02.578] [SYSTEM] Headless mode started
+[2026-11-25T17:06:02.578] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-25T17:06:02.578] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-25T17:06:02.622] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-25T17:06:02.622] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_write_append_tests.bin to RAM
+[2026-11-25T17:06:02.997] 
+[2026-11-25T17:06:02.998] Prop_Ver G
+[2026-11-25T17:06:04.102] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_write_append_tests.bin
+[2026-11-25T17:06:04.115] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-25T17:06:04.131] Cog0  INIT $0000_0FA8 $0001_0A4C jump
+[2026-11-25T17:06:04.225] Cog0  * init VAR
+[2026-11-25T17:06:04.225] Cog0  * Random seed (cog 0): $4C81_FA76
+[2026-11-25T17:06:04.225] Cog0   
+[2026-11-25T17:06:04.232] Cog0  * Test #1: driver instance matches the harness instance
+[2026-11-25T17:06:04.232] Cog0    MAX_FILES_OPEN: 2
+[2026-11-25T17:06:04.232] Cog0     -> pass
+[2026-11-25T17:06:04.232] Cog0  blocksUsed = 0, blocksFree = 3_968, fileCount = 0
+[2026-11-25T17:06:04.232] Cog0   
+[2026-11-25T17:06:04.241] Cog0    All Files:
+[2026-11-25T17:06:04.241] Cog0   
+[2026-11-25T17:06:04.241] Cog0  * Environment: Chip S/N and Driver Version
+[2026-11-25T17:06:04.242] Cog0     CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:06:04.242] Cog0     Driver: flash_fs v2.1.0
+[2026-11-25T17:06:04.242] Cog0   
+[2026-11-25T17:06:04.251] Cog0  * Test #2: Ensure we have no files at start
+[2026-11-25T17:06:04.251] Cog0     -> pass
+[2026-11-25T17:06:04.251] Cog0   
+[2026-11-25T17:06:04.257] Cog0  * Test #3: BAD: Read when file doesn't exist
+[2026-11-25T17:06:04.257] Cog0     ECode: E_FILE_NOT_FOUND: File not present
+[2026-11-25T17:06:04.257] Cog0     -> pass
+[2026-11-25T17:06:04.257] Cog0   
+[2026-11-25T17:06:04.257] Cog0   - report on chip S/N and Driver version
+[2026-11-25T17:06:04.257] Cog0  CHIP Serial Number: $E461_2D03-$D31E_1527
+[2026-11-25T17:06:04.257] Cog0   
+[2026-11-25T17:06:04.257] Cog0   
+[2026-11-25T17:06:04.258] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:04.258] Cog0  * Test Group: Head block only - partially filled with 10 BYTEs then apppend 10 more
+[2026-11-25T17:06:04.258] Cog0  - testWriteBytes(ap1010bytes.bin, 10)
+[2026-11-25T17:06:04.258] Cog0   
+[2026-11-25T17:06:04.258] Cog0  * Test #4: Open File for write
+[2026-11-25T17:06:04.265] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.265] Cog0     -> pass
+[2026-11-25T17:06:04.265] Cog0   
+[2026-11-25T17:06:04.265] Cog0  * Test #5: validate handle
+[2026-11-25T17:06:04.265] Cog0    open(,'w'): 0
+[2026-11-25T17:06:04.265] Cog0     -> pass
+[2026-11-25T17:06:04.265] Cog0   
+[2026-11-25T17:06:04.265] Cog0  * Test #6: Write N BYTEs
+[2026-11-25T17:06:04.266] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:06:04.266] Cog0     -> pass
+[2026-11-25T17:06:04.266] Cog0   
+[2026-11-25T17:06:04.266] Cog0  * Test #7: ensure all bytes written
+[2026-11-25T17:06:04.266] Cog0    wr_byte(): 10
+[2026-11-25T17:06:04.266] Cog0     -> pass
+[2026-11-25T17:06:04.266] Cog0   
+[2026-11-25T17:06:04.267] Cog0  * Test #8: ensure no errors on writes
+[2026-11-25T17:06:04.267] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.267] Cog0     -> pass
+[2026-11-25T17:06:04.267] Cog0   
+[2026-11-25T17:06:04.267] Cog0    File: [ap1010bytes.bin] pending commit
+[2026-11-25T17:06:04.267] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.268] Cog0      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$0092, lifeCycle [erased], sig=[$0920_00F4]  MODIFIED
+[2026-11-25T17:06:04.268] Cog0   
+[2026-11-25T17:06:04.268] Cog0  * Test #9: Close written file
+[2026-11-25T17:06:04.269] Cog0  * wr_block() block_address = $039F, block_id = 0, NextID_EndPtr = $0092
+[2026-11-25T17:06:04.284] Cog0  - program_block() block_address = $039F
+[2026-11-25T17:06:04.317] Cog0  - activate_block() block_address = $039F
+[2026-11-25T17:06:04.318] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.318] Cog0     -> pass
+[2026-11-25T17:06:04.318] Cog0   
+[2026-11-25T17:06:04.319] Cog0    File: [ap1010bytes.bin], bytesUsed = 10, bytes_free = 3_946, block_count = 1
+[2026-11-25T17:06:04.319] Cog0   
+[2026-11-25T17:06:04.326] Cog0  * Test #10: Ensure expected file system changes
+[2026-11-25T17:06:04.326] Cog0  * post file write
+[2026-11-25T17:06:04.326] Cog0    # FileSystem: 1, 3_967, 1
+[2026-11-25T17:06:04.326] Cog0    # files: 1
+[2026-11-25T17:06:04.326] Cog0    # blocks used: 1
+[2026-11-25T17:06:04.327] Cog0     -> pass
+[2026-11-25T17:06:04.327] Cog0   
+[2026-11-25T17:06:04.328] Cog0  * Test #11: Ensure expected file stats
+[2026-11-25T17:06:04.328] Cog0    File: [ap1010bytes.bin]
+[2026-11-25T17:06:04.329] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.330] Cog0      1: [$039F] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$0092, lifeCycle [ACTIVE-3], sig=[$0920_007C]  
+[2026-11-25T17:06:04.331] Cog0    # blocks: 1
+[2026-11-25T17:06:04.331] Cog0    # bytes used: 10
+[2026-11-25T17:06:04.331] Cog0     -> pass
+[2026-11-25T17:06:04.331] Cog0   
+[2026-11-25T17:06:04.333] Cog0  * Test #12: Get starting length before append of BYTEs
+[2026-11-25T17:06:04.333] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:04.333] Cog0     -> pass
+[2026-11-25T17:06:04.333] Cog0   
+[2026-11-25T17:06:04.336] Cog0  * Test #13: Open File for append
+[2026-11-25T17:06:04.336] Cog0    open(,'a'): 0
+[2026-11-25T17:06:04.336] Cog0     -> pass
+[2026-11-25T17:06:04.336] Cog0   
+[2026-11-25T17:06:04.337] Cog0  * Test #14: Append count BYTEs
+[2026-11-25T17:06:04.337] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:06:04.337] Cog0     -> pass
+[2026-11-25T17:06:04.337] Cog0   
+[2026-11-25T17:06:04.338] Cog0  * Test #15: ensure no errors on writes
+[2026-11-25T17:06:04.338] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.338] Cog0     -> pass
+[2026-11-25T17:06:04.338] Cog0   
+[2026-11-25T17:06:04.338] Cog0    File: [ap1010bytes.bin] pending commit
+[2026-11-25T17:06:04.338] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.339] Cog0      1: [$0000] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-3], sig=[$09C0_0074]  MODIFIED
+[2026-11-25T17:06:04.339] Cog0   
+[2026-11-25T17:06:04.339] Cog0  * Test #16: Close append file
+[2026-11-25T17:06:04.339] Cog0  * wr_block() block_address = $0780, block_id = 0, NextID_EndPtr = $009C
+[2026-11-25T17:06:04.355] Cog0  - program_block() block_address = $0780
+[2026-11-25T17:06:04.394] Cog0  - activate_block() block_address = $0780
+[2026-11-25T17:06:04.395] Cog0  * delChnFmID() [$039F] block_id = 0, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:04.395] Cog0  - cancel_block() block_address = $039F
+[2026-11-25T17:06:04.395] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.395] Cog0     -> pass
+[2026-11-25T17:06:04.399] Cog0   
+[2026-11-25T17:06:04.399] Cog0    File: [ap1010bytes.bin], bytesUsed = 20, bytes_free = 3_936, block_count = 1
+[2026-11-25T17:06:04.399] Cog0   
+[2026-11-25T17:06:04.399] Cog0  * Test #17: Ensure expected file stats post BYTEs append
+[2026-11-25T17:06:04.402] Cog0    File: [ap1010bytes.bin]
+[2026-11-25T17:06:04.402] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.406] Cog0      1: [$0780] HEAD/last, thisID=0, dataOfs=$0000, endPtr=$009C, lifeCycle [ACTIVE-5], sig=[$09C0_00BC]  
+[2026-11-25T17:06:04.406] Cog0    # blocks: 1
+[2026-11-25T17:06:04.406] Cog0    # bytes used: 20
+[2026-11-25T17:06:04.406] Cog0     -> pass
+[2026-11-25T17:06:04.406] Cog0   
+[2026-11-25T17:06:04.406] Cog0  * Test #18: Ensure expected file system changes post BYTEs append write
+[2026-11-25T17:06:04.414] Cog0  * post file append
+[2026-11-25T17:06:04.414] Cog0    # FileSystem: 1, 3_967, 1
+[2026-11-25T17:06:04.414] Cog0    # files: 1
+[2026-11-25T17:06:04.414] Cog0    # blocks used: 1
+[2026-11-25T17:06:04.414] Cog0     -> pass
+[2026-11-25T17:06:04.415] Cog0   
+[2026-11-25T17:06:04.415] Cog0    All Files:
+[2026-11-25T17:06:04.423] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.423] Cog0   
+[2026-11-25T17:06:04.424] Cog0   
+[2026-11-25T17:06:04.424] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:04.424] Cog0  * Test Group: Head block only - partially filled with 9 WORDs then apppend 9 more
+[2026-11-25T17:06:04.425] Cog0  - testWriteWords(ap99words.bin, 9)
+[2026-11-25T17:06:04.425] Cog0   
+[2026-11-25T17:06:04.431] Cog0  * Test #19: Open File for write
+[2026-11-25T17:06:04.431] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.431] Cog0     -> pass
+[2026-11-25T17:06:04.431] Cog0   
+[2026-11-25T17:06:04.431] Cog0  * Test #20: validate handle
+[2026-11-25T17:06:04.431] Cog0    open(,'w'): 0
+[2026-11-25T17:06:04.431] Cog0     -> pass
+[2026-11-25T17:06:04.431] Cog0   
+[2026-11-25T17:06:04.431] Cog0  * Test #21: Write N WORDs
+[2026-11-25T17:06:04.432] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:06:04.432] Cog0     -> pass
+[2026-11-25T17:06:04.432] Cog0   
+[2026-11-25T17:06:04.432] Cog0  * Test #22: ensure all words written
+[2026-11-25T17:06:04.433] Cog0    wr_word(): 9
+[2026-11-25T17:06:04.433] Cog0     -> pass
+[2026-11-25T17:06:04.433] Cog0   
+[2026-11-25T17:06:04.433] Cog0  * Test #23: ensure no errors on writes
+[2026-11-25T17:06:04.433] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.433] Cog0     -> pass
+[2026-11-25T17:06:04.433] Cog0   
+[2026-11-25T17:06:04.434] Cog0    File: [ap99words.bin] pending commit
+[2026-11-25T17:06:04.434] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.434] Cog0      1: [$0000] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009A, lifeCycle [erased], sig=[$09A0_01F4]  MODIFIED
+[2026-11-25T17:06:04.434] Cog0   
+[2026-11-25T17:06:04.435] Cog0  * Test #24: Close written file
+[2026-11-25T17:06:04.435] Cog0  * wr_block() block_address = $0169, block_id = 1, NextID_EndPtr = $009A
+[2026-11-25T17:06:04.450] Cog0  - program_block() block_address = $0169
+[2026-11-25T17:06:04.482] Cog0  - activate_block() block_address = $0169
+[2026-11-25T17:06:04.483] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.483] Cog0     -> pass
+[2026-11-25T17:06:04.483] Cog0   
+[2026-11-25T17:06:04.484] Cog0    File: [ap99words.bin], bytesUsed = 18, bytes_free = 3_938, block_count = 1
+[2026-11-25T17:06:04.484] Cog0   
+[2026-11-25T17:06:04.491] Cog0  * Test #25: Ensure expected file system changes
+[2026-11-25T17:06:04.491] Cog0  * post file write
+[2026-11-25T17:06:04.491] Cog0    # FileSystem: 2, 3_966, 2
+[2026-11-25T17:06:04.491] Cog0    # files: 2
+[2026-11-25T17:06:04.491] Cog0    # blocks used: 2
+[2026-11-25T17:06:04.491] Cog0     -> pass
+[2026-11-25T17:06:04.491] Cog0   
+[2026-11-25T17:06:04.492] Cog0  * Test #26: Ensure expected file stats
+[2026-11-25T17:06:04.492] Cog0    File: [ap99words.bin]
+[2026-11-25T17:06:04.493] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.494] Cog0      1: [$0169] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$009A, lifeCycle [ACTIVE-3], sig=[$09A0_017C]  
+[2026-11-25T17:06:04.494] Cog0    # blocks: 1
+[2026-11-25T17:06:04.494] Cog0    # bytes used: 18
+[2026-11-25T17:06:04.494] Cog0     -> pass
+[2026-11-25T17:06:04.495] Cog0   
+[2026-11-25T17:06:04.495] Cog0  * Test #27: Get starting length before append of WORDs
+[2026-11-25T17:06:04.495] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:04.498] Cog0     -> pass
+[2026-11-25T17:06:04.498] Cog0   
+[2026-11-25T17:06:04.498] Cog0  * Test #28: Open File for append
+[2026-11-25T17:06:04.498] Cog0    open(,'a'): 0
+[2026-11-25T17:06:04.498] Cog0     -> pass
+[2026-11-25T17:06:04.498] Cog0   
+[2026-11-25T17:06:04.498] Cog0  * Test #29: Append count WORDs
+[2026-11-25T17:06:04.499] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:06:04.499] Cog0     -> pass
+[2026-11-25T17:06:04.499] Cog0   
+[2026-11-25T17:06:04.499] Cog0  * Test #30: ensure no errors on writes
+[2026-11-25T17:06:04.499] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.499] Cog0     -> pass
+[2026-11-25T17:06:04.499] Cog0   
+[2026-11-25T17:06:04.500] Cog0    File: [ap99words.bin] pending commit
+[2026-11-25T17:06:04.500] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.500] Cog0      1: [$0000] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$00AC, lifeCycle [ACTIVE-3], sig=[$0AC0_0174]  MODIFIED
+[2026-11-25T17:06:04.500] Cog0   
+[2026-11-25T17:06:04.501] Cog0  * Test #31: Close append file
+[2026-11-25T17:06:04.501] Cog0  * wr_block() block_address = $0E92, block_id = 1, NextID_EndPtr = $00AC
+[2026-11-25T17:06:04.517] Cog0  - program_block() block_address = $0E92
+[2026-11-25T17:06:04.550] Cog0  - activate_block() block_address = $0E92
+[2026-11-25T17:06:04.551] Cog0  * delChnFmID() [$0169] block_id = 1, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:04.551] Cog0  - cancel_block() block_address = $0169
+[2026-11-25T17:06:04.551] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.551] Cog0     -> pass
+[2026-11-25T17:06:04.557] Cog0   
+[2026-11-25T17:06:04.557] Cog0    File: [ap99words.bin], bytesUsed = 36, bytes_free = 3_920, block_count = 1
+[2026-11-25T17:06:04.557] Cog0   
+[2026-11-25T17:06:04.557] Cog0  * Test #32: Ensure expected file stats post WORDs append
+[2026-11-25T17:06:04.563] Cog0    File: [ap99words.bin]
+[2026-11-25T17:06:04.563] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.570] Cog0      1: [$0E92] HEAD/last, thisID=1, dataOfs=$0000, endPtr=$00AC, lifeCycle [ACTIVE-5], sig=[$0AC0_01BC]  
+[2026-11-25T17:06:04.570] Cog0    # blocks: 1
+[2026-11-25T17:06:04.570] Cog0    # bytes used: 36
+[2026-11-25T17:06:04.570] Cog0     -> pass
+[2026-11-25T17:06:04.570] Cog0   
+[2026-11-25T17:06:04.570] Cog0  * Test #33: Ensure expected file system changes post WORDs append write
+[2026-11-25T17:06:04.577] Cog0  * post file append
+[2026-11-25T17:06:04.577] Cog0    # FileSystem: 2, 3_966, 2
+[2026-11-25T17:06:04.577] Cog0    # files: 2
+[2026-11-25T17:06:04.577] Cog0    # blocks used: 2
+[2026-11-25T17:06:04.577] Cog0     -> pass
+[2026-11-25T17:06:04.577] Cog0   
+[2026-11-25T17:06:04.578] Cog0    All Files:
+[2026-11-25T17:06:04.578] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.588] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.588] Cog0   
+[2026-11-25T17:06:04.588] Cog0   
+[2026-11-25T17:06:04.588] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:04.588] Cog0  * Test Group: Head block only - partially filled with 12 LONGs then apppend 12 more
+[2026-11-25T17:06:04.588] Cog0  - testWriteLongs(ap1212longs.bin, 12)
+[2026-11-25T17:06:04.588] Cog0   
+[2026-11-25T17:06:04.595] Cog0  * Test #34: Open File for write
+[2026-11-25T17:06:04.595] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.595] Cog0     -> pass
+[2026-11-25T17:06:04.595] Cog0   
+[2026-11-25T17:06:04.595] Cog0  * Test #35: validate handle
+[2026-11-25T17:06:04.595] Cog0    open(,'w'): 0
+[2026-11-25T17:06:04.595] Cog0     -> pass
+[2026-11-25T17:06:04.595] Cog0   
+[2026-11-25T17:06:04.596] Cog0  * Test #36: Write N LONGs
+[2026-11-25T17:06:04.596] Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
+[2026-11-25T17:06:04.596] Cog0     -> pass
+[2026-11-25T17:06:04.596] Cog0   
+[2026-11-25T17:06:04.597] Cog0  * Test #37: ensure all longs written
+[2026-11-25T17:06:04.597] Cog0    wr_long(): 12
+[2026-11-25T17:06:04.597] Cog0     -> pass
+[2026-11-25T17:06:04.597] Cog0   
+[2026-11-25T17:06:04.597] Cog0  * Test #38: ensure no errors on writes
+[2026-11-25T17:06:04.597] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.597] Cog0     -> pass
+[2026-11-25T17:06:04.597] Cog0   
+[2026-11-25T17:06:04.598] Cog0    File: [ap1212longs.bin] pending commit
+[2026-11-25T17:06:04.598] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.599] Cog0      1: [$0000] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00B8, lifeCycle [erased], sig=[$0B80_02F4]  MODIFIED
+[2026-11-25T17:06:04.599] Cog0   
+[2026-11-25T17:06:04.599] Cog0  * Test #39: Close written file
+[2026-11-25T17:06:04.615] Cog0  * wr_block() block_address = $0A14, block_id = 2, NextID_EndPtr = $00B8
+[2026-11-25T17:06:04.615] Cog0  - program_block() block_address = $0A14
+[2026-11-25T17:06:04.657] Cog0  - activate_block() block_address = $0A14
+[2026-11-25T17:06:04.662] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.662] Cog0     -> pass
+[2026-11-25T17:06:04.662] Cog0   
+[2026-11-25T17:06:04.662] Cog0    File: [ap1212longs.bin], bytesUsed = 48, bytes_free = 3_908, block_count = 1
+[2026-11-25T17:06:04.662] Cog0   
+[2026-11-25T17:06:04.669] Cog0  * Test #40: Ensure expected file system changes
+[2026-11-25T17:06:04.669] Cog0  * post file write
+[2026-11-25T17:06:04.670] Cog0    # FileSystem: 3, 3_965, 3
+[2026-11-25T17:06:04.670] Cog0    # files: 3
+[2026-11-25T17:06:04.670] Cog0    # blocks used: 3
+[2026-11-25T17:06:04.670] Cog0     -> pass
+[2026-11-25T17:06:04.670] Cog0   
+[2026-11-25T17:06:04.674] Cog0  * Test #41: Ensure expected file stats
+[2026-11-25T17:06:04.674] Cog0    File: [ap1212longs.bin]
+[2026-11-25T17:06:04.675] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.679] Cog0      1: [$0A14] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00B8, lifeCycle [ACTIVE-3], sig=[$0B80_027C]  
+[2026-11-25T17:06:04.679] Cog0    # blocks: 1
+[2026-11-25T17:06:04.679] Cog0    # bytes used: 48
+[2026-11-25T17:06:04.679] Cog0     -> pass
+[2026-11-25T17:06:04.679] Cog0   
+[2026-11-25T17:06:04.684] Cog0  * Test #42: Get starting length before append of LONGs
+[2026-11-25T17:06:04.684] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:04.684] Cog0     -> pass
+[2026-11-25T17:06:04.684] Cog0   
+[2026-11-25T17:06:04.689] Cog0  * Test #43: Open File for append
+[2026-11-25T17:06:04.689] Cog0    open(,'a'): 0
+[2026-11-25T17:06:04.689] Cog0     -> pass
+[2026-11-25T17:06:04.689] Cog0   
+[2026-11-25T17:06:04.690] Cog0  * Test #44: Append count LONGs
+[2026-11-25T17:06:04.690] Cog0    Sub-Test Results: count=12, Pass: 12, Fail: 0
+[2026-11-25T17:06:04.690] Cog0     -> pass
+[2026-11-25T17:06:04.690] Cog0   
+[2026-11-25T17:06:04.691] Cog0  * Test #45: ensure no errors on writes
+[2026-11-25T17:06:04.691] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.691] Cog0     -> pass
+[2026-11-25T17:06:04.691] Cog0   
+[2026-11-25T17:06:04.691] Cog0    File: [ap1212longs.bin] pending commit
+[2026-11-25T17:06:04.691] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.692] Cog0      1: [$0000] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00E8, lifeCycle [ACTIVE-3], sig=[$0E80_0274]  MODIFIED
+[2026-11-25T17:06:04.692] Cog0   
+[2026-11-25T17:06:04.692] Cog0  * Test #46: Close append file
+[2026-11-25T17:06:04.693] Cog0  * wr_block() block_address = $0BF0, block_id = 2, NextID_EndPtr = $00E8
+[2026-11-25T17:06:04.708] Cog0  - program_block() block_address = $0BF0
+[2026-11-25T17:06:04.742] Cog0  - activate_block() block_address = $0BF0
+[2026-11-25T17:06:04.742] Cog0  * delChnFmID() [$0A14] block_id = 2, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:04.742] Cog0  - cancel_block() block_address = $0A14
+[2026-11-25T17:06:04.742] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.743] Cog0     -> pass
+[2026-11-25T17:06:04.747] Cog0   
+[2026-11-25T17:06:04.748] Cog0    File: [ap1212longs.bin], bytesUsed = 96, bytes_free = 3_860, block_count = 1
+[2026-11-25T17:06:04.748] Cog0   
+[2026-11-25T17:06:04.748] Cog0  * Test #47: Ensure expected file stats post LONGs append
+[2026-11-25T17:06:04.753] Cog0    File: [ap1212longs.bin]
+[2026-11-25T17:06:04.753] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.758] Cog0      1: [$0BF0] HEAD/last, thisID=2, dataOfs=$0000, endPtr=$00E8, lifeCycle [ACTIVE-5], sig=[$0E80_02BC]  
+[2026-11-25T17:06:04.758] Cog0    # blocks: 1
+[2026-11-25T17:06:04.758] Cog0    # bytes used: 96
+[2026-11-25T17:06:04.758] Cog0     -> pass
+[2026-11-25T17:06:04.759] Cog0  - test blocksUsed = 1, blocksAdded = 0, startingBlockCount = 3
+[2026-11-25T17:06:04.759] Cog0   
+[2026-11-25T17:06:04.766] Cog0  * Test #48: Ensure expected file system changes post LONGs append write
+[2026-11-25T17:06:04.766] Cog0  * post file append
+[2026-11-25T17:06:04.766] Cog0    # FileSystem: 3, 3_965, 3
+[2026-11-25T17:06:04.766] Cog0    # files: 3
+[2026-11-25T17:06:04.767] Cog0    # blocks used: 3
+[2026-11-25T17:06:04.767] Cog0     -> pass
+[2026-11-25T17:06:04.767] Cog0   
+[2026-11-25T17:06:04.767] Cog0    All Files:
+[2026-11-25T17:06:04.767] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.768] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.777] Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.777] Cog0   
+[2026-11-25T17:06:04.777] Cog0   
+[2026-11-25T17:06:04.778] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:04.778] Cog0  * Test Group: Head block only - partially filled with 10 STRINGs then apppend 10 more
+[2026-11-25T17:06:04.778] Cog0  - testWriteStrings(ap1010strings.zstr, 10)
+[2026-11-25T17:06:04.778] Cog0   
+[2026-11-25T17:06:04.784] Cog0  * Test #49: Open File for write
+[2026-11-25T17:06:04.784] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.785] Cog0     -> pass
+[2026-11-25T17:06:04.785] Cog0   
+[2026-11-25T17:06:04.785] Cog0  * Test #50: validate handle
+[2026-11-25T17:06:04.785] Cog0    open(,'w'): 0
+[2026-11-25T17:06:04.785] Cog0     -> pass
+[2026-11-25T17:06:04.785] Cog0   
+[2026-11-25T17:06:04.786] Cog0  * Test #51: Write N STRINGs
+[2026-11-25T17:06:04.786] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:06:04.786] Cog0     -> pass
+[2026-11-25T17:06:04.786] Cog0   
+[2026-11-25T17:06:04.787] Cog0  * Test #52: ensure no errors on writes
+[2026-11-25T17:06:04.787] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.787] Cog0     -> pass
+[2026-11-25T17:06:04.787] Cog0   
+[2026-11-25T17:06:04.787] Cog0    File: [ap1010strings.zstr] pending commit
+[2026-11-25T17:06:04.787] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.788] Cog0      1: [$0000] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0161, lifeCycle [erased], sig=[$1610_03F4]  MODIFIED
+[2026-11-25T17:06:04.788] Cog0   
+[2026-11-25T17:06:04.788] Cog0  * Test #53: Close written file
+[2026-11-25T17:06:04.789] Cog0  * wr_block() block_address = $0C19, block_id = 3, NextID_EndPtr = $0161
+[2026-11-25T17:06:04.805] Cog0  - program_block() block_address = $0C19
+[2026-11-25T17:06:04.837] Cog0  - activate_block() block_address = $0C19
+[2026-11-25T17:06:04.841] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.842] Cog0     -> pass
+[2026-11-25T17:06:04.842] Cog0   
+[2026-11-25T17:06:04.842] Cog0    File: [ap1010strings.zstr], bytesUsed = 217, bytes_free = 3_739, block_count = 1
+[2026-11-25T17:06:04.842] Cog0   
+[2026-11-25T17:06:04.849] Cog0  * Test #54: Ensure expected file system changes
+[2026-11-25T17:06:04.849] Cog0  * post file write
+[2026-11-25T17:06:04.849] Cog0    # FileSystem: 4, 3_964, 4
+[2026-11-25T17:06:04.850] Cog0    # files: 4
+[2026-11-25T17:06:04.850] Cog0    # blocks used: 4
+[2026-11-25T17:06:04.850] Cog0     -> pass
+[2026-11-25T17:06:04.850] Cog0   
+[2026-11-25T17:06:04.855] Cog0  * Test #55: Ensure expected file stats
+[2026-11-25T17:06:04.855] Cog0    File: [ap1010strings.zstr]
+[2026-11-25T17:06:04.855] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.860] Cog0      1: [$0C19] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0161, lifeCycle [ACTIVE-3], sig=[$1610_037C]  
+[2026-11-25T17:06:04.860] Cog0    # blocks: 1
+[2026-11-25T17:06:04.860] Cog0    # bytes used: 217
+[2026-11-25T17:06:04.860] Cog0     -> pass
+[2026-11-25T17:06:04.861] Cog0   
+[2026-11-25T17:06:04.866] Cog0  * Test #56: Get starting length before append of STRINGs
+[2026-11-25T17:06:04.866] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:04.866] Cog0     -> pass
+[2026-11-25T17:06:04.866] Cog0   
+[2026-11-25T17:06:04.872] Cog0  * Test #57: Open File for append
+[2026-11-25T17:06:04.872] Cog0    open(,'a'): 0
+[2026-11-25T17:06:04.872] Cog0     -> pass
+[2026-11-25T17:06:04.872] Cog0   
+[2026-11-25T17:06:04.873] Cog0  * Test #58: Append N STRINGs
+[2026-11-25T17:06:04.873] Cog0    Sub-Test Results: count=10, Pass: 10, Fail: 0
+[2026-11-25T17:06:04.873] Cog0     -> pass
+[2026-11-25T17:06:04.873] Cog0   
+[2026-11-25T17:06:04.873] Cog0  * Test #59: ensure no errors on append writes
+[2026-11-25T17:06:04.874] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.874] Cog0     -> pass
+[2026-11-25T17:06:04.874] Cog0   
+[2026-11-25T17:06:04.874] Cog0    File: [ap1010strings.zstr] pending commit
+[2026-11-25T17:06:04.874] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:04.875] Cog0      1: [$0000] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0230, lifeCycle [ACTIVE-3], sig=[$2300_0374]  MODIFIED
+[2026-11-25T17:06:04.875] Cog0   
+[2026-11-25T17:06:04.875] Cog0  * Test #60: Close append file
+[2026-11-25T17:06:04.892] Cog0  * wr_block() block_address = $002F, block_id = 3, NextID_EndPtr = $0230
+[2026-11-25T17:06:04.892] Cog0  - program_block() block_address = $002F
+[2026-11-25T17:06:04.922] Cog0  - activate_block() block_address = $002F
+[2026-11-25T17:06:04.922] Cog0  * delChnFmID() [$0C19] block_id = 3, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:04.923] Cog0  - cancel_block() block_address = $0C19
+[2026-11-25T17:06:04.923] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.923] Cog0     -> pass
+[2026-11-25T17:06:04.923] Cog0   
+[2026-11-25T17:06:04.924] Cog0    File: [ap1010strings.zstr], bytesUsed = 424, bytes_free = 3_532, block_count = 1
+[2026-11-25T17:06:04.924] Cog0   
+[2026-11-25T17:06:04.924] Cog0  * Test #61: Ensure expected file stats post STRINGs append
+[2026-11-25T17:06:04.924] Cog0    File: [ap1010strings.zstr]
+[2026-11-25T17:06:04.924] Cog0    # 1 Blocks in file:
+[2026-11-25T17:06:04.925] Cog0      1: [$002F] HEAD/last, thisID=3, dataOfs=$0000, endPtr=$0230, lifeCycle [ACTIVE-5], sig=[$2300_03BC]  
+[2026-11-25T17:06:04.925] Cog0    # blocks: 1
+[2026-11-25T17:06:04.926] Cog0    # bytes used: 424
+[2026-11-25T17:06:04.926] Cog0     -> pass
+[2026-11-25T17:06:04.926] Cog0   
+[2026-11-25T17:06:04.933] Cog0  * Test #62: Ensure expected file system changes post STRINGs append write
+[2026-11-25T17:06:04.933] Cog0  * post file append
+[2026-11-25T17:06:04.934] Cog0    # FileSystem: 4, 3_964, 4
+[2026-11-25T17:06:04.934] Cog0    # files: 4
+[2026-11-25T17:06:04.934] Cog0    # blocks used: 4
+[2026-11-25T17:06:04.934] Cog0     -> pass
+[2026-11-25T17:06:04.934] Cog0   
+[2026-11-25T17:06:04.934] Cog0   
+[2026-11-25T17:06:04.934] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:04.935] Cog0  * Test Group: Read and verify the content of all 20 string
+[2026-11-25T17:06:04.935] Cog0   
+[2026-11-25T17:06:04.937] Cog0  * Test #63: Open File for read
+[2026-11-25T17:06:04.937] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.937] Cog0     -> pass
+[2026-11-25T17:06:04.938] Cog0   
+[2026-11-25T17:06:04.938] Cog0  * Test #64: validate handle
+[2026-11-25T17:06:04.938] Cog0    open(,'r'): 0
+[2026-11-25T17:06:04.938] Cog0     -> pass
+[2026-11-25T17:06:04.938] Cog0   
+[2026-11-25T17:06:04.939] Cog0  * Test #65: read expected N STRINGs
+[2026-11-25T17:06:04.939] Cog0    Sub-Test Results: count=20, Pass: 20, Fail: 0
+[2026-11-25T17:06:04.939] Cog0     -> pass
+[2026-11-25T17:06:04.939] Cog0   
+[2026-11-25T17:06:04.940] Cog0  * Test #66: ensure no errors on read STRINGs
+[2026-11-25T17:06:04.940] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.940] Cog0     -> pass
+[2026-11-25T17:06:04.940] Cog0   
+[2026-11-25T17:06:04.940] Cog0  * Test #67: BAD: read one more STRING than written
+[2026-11-25T17:06:04.940] Cog0     ECode: E_END_OF_FILE: no more data available, at end of file
+[2026-11-25T17:06:04.940] Cog0     -> pass
+[2026-11-25T17:06:04.941] Cog0   
+[2026-11-25T17:06:04.941] Cog0  * Test #68: Close read file
+[2026-11-25T17:06:04.941] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.941] Cog0     -> pass
+[2026-11-25T17:06:04.941] Cog0   
+[2026-11-25T17:06:04.941] Cog0    All Files:
+[2026-11-25T17:06:04.942] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.942] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.943] Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.952] Cog0  ap1010strings.zstr, byteCount = 424, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:04.952] Cog0   
+[2026-11-25T17:06:04.952] Cog0   
+[2026-11-25T17:06:04.952] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:04.953] Cog0  * Test Group: Head block + body block - filled with LONGs full HEAD, 2 in BODY, append 8 more
+[2026-11-25T17:06:04.953] Cog0  - testWriteLongs(apLongsHeadBody.bin, 991)
+[2026-11-25T17:06:04.953] Cog0   
+[2026-11-25T17:06:04.959] Cog0  * Test #69: Open File for write
+[2026-11-25T17:06:04.959] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:04.960] Cog0     -> pass
+[2026-11-25T17:06:04.960] Cog0   
+[2026-11-25T17:06:04.960] Cog0  * Test #70: validate handle
+[2026-11-25T17:06:04.960] Cog0    open(,'w'): 0
+[2026-11-25T17:06:04.960] Cog0     -> pass
+[2026-11-25T17:06:04.960] Cog0   
+[2026-11-25T17:06:04.976] Cog0  * Test #71: Write N LONGs
+[2026-11-25T17:06:04.997] Cog0  * wr_block() block_address = $07D8, block_id = 4, NextID_EndPtr = $0005
+[2026-11-25T17:06:05.013] Cog0  - program_block() block_address = $07D8
+[2026-11-25T17:06:05.048] Cog0    Sub-Test Results: count=991, Pass: 991, Fail: 0
+[2026-11-25T17:06:05.048] Cog0     -> pass
+[2026-11-25T17:06:05.048] Cog0   
+[2026-11-25T17:06:05.049] Cog0  * Test #72: ensure all longs written
+[2026-11-25T17:06:05.049] Cog0    wr_long(): 991
+[2026-11-25T17:06:05.049] Cog0     -> pass
+[2026-11-25T17:06:05.049] Cog0   
+[2026-11-25T17:06:05.049] Cog0  * Test #73: ensure no errors on writes
+[2026-11-25T17:06:05.049] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.049] Cog0     -> pass
+[2026-11-25T17:06:05.049] Cog0   
+[2026-11-25T17:06:05.050] Cog0    File: [apLongsHeadBody.bin] pending commit
+[2026-11-25T17:06:05.050] Cog0    # 2 Blocks in chain:
+[2026-11-25T17:06:05.050] Cog0      1: [$07D8] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [erased], sig=[$0050_04FD]  
+[2026-11-25T17:06:05.051] Cog0      2: [$0000] BODY/last, thisID=5, endPtr=$000C, lifeCycle [erased], sig=[$00C0_05F6]  MODIFIED
+[2026-11-25T17:06:05.051] Cog0   
+[2026-11-25T17:06:05.051] Cog0  * Test #74: Close written file
+[2026-11-25T17:06:05.052] Cog0  * wr_block() block_address = $03FB, block_id = 5, NextID_EndPtr = $000C
+[2026-11-25T17:06:05.068] Cog0  - program_block() block_address = $03FB
+[2026-11-25T17:06:05.099] Cog0  - activate_block() block_address = $03FB
+[2026-11-25T17:06:05.099] Cog0  - activate_block() block_address = $07D8
+[2026-11-25T17:06:05.103] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.103] Cog0     -> pass
+[2026-11-25T17:06:05.103] Cog0   
+[2026-11-25T17:06:05.103] Cog0    File: [apLongsHeadBody.bin], bytesUsed = 3_964, bytes_free = 4_080, block_count = 2
+[2026-11-25T17:06:05.103] Cog0   
+[2026-11-25T17:06:05.111] Cog0  * Test #75: Ensure expected file system changes
+[2026-11-25T17:06:05.111] Cog0  * post file write
+[2026-11-25T17:06:05.111] Cog0    # FileSystem: 6, 3_962, 5
+[2026-11-25T17:06:05.111] Cog0    # files: 5
+[2026-11-25T17:06:05.111] Cog0    # blocks used: 6
+[2026-11-25T17:06:05.111] Cog0     -> pass
+[2026-11-25T17:06:05.111] Cog0   
+[2026-11-25T17:06:05.111] Cog0  * Test #76: Ensure expected file stats
+[2026-11-25T17:06:05.115] Cog0    File: [apLongsHeadBody.bin]
+[2026-11-25T17:06:05.115] Cog0    # 2 Blocks in file:
+[2026-11-25T17:06:05.115] Cog0      1: [$07D8] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]  
+[2026-11-25T17:06:05.119] Cog0      2: [$03FB] BODY/last, thisID=5, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_057E]  
+[2026-11-25T17:06:05.119] Cog0    # blocks: 2
+[2026-11-25T17:06:05.119] Cog0    # bytes used: 3_964
+[2026-11-25T17:06:05.119] Cog0     -> pass
+[2026-11-25T17:06:05.119] Cog0   
+[2026-11-25T17:06:05.123] Cog0  * Test #77: Get starting length before append of LONGs
+[2026-11-25T17:06:05.123] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:05.123] Cog0     -> pass
+[2026-11-25T17:06:05.123] Cog0   
+[2026-11-25T17:06:05.128] Cog0  * Test #78: Open File for append
+[2026-11-25T17:06:05.128] Cog0    open(,'a'): 0
+[2026-11-25T17:06:05.128] Cog0     -> pass
+[2026-11-25T17:06:05.128] Cog0   
+[2026-11-25T17:06:05.128] Cog0  * Test #79: Append count LONGs
+[2026-11-25T17:06:05.129] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:06:05.129] Cog0     -> pass
+[2026-11-25T17:06:05.129] Cog0   
+[2026-11-25T17:06:05.129] Cog0  * Test #80: ensure no errors on writes
+[2026-11-25T17:06:05.129] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.129] Cog0     -> pass
+[2026-11-25T17:06:05.129] Cog0   
+[2026-11-25T17:06:05.130] Cog0    File: [apLongsHeadBody.bin] pending commit
+[2026-11-25T17:06:05.130] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:05.130] Cog0      1: [$0000] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-3], sig=[$02C0_0576]  MODIFIED
+[2026-11-25T17:06:05.130] Cog0   
+[2026-11-25T17:06:05.130] Cog0  * Test #81: Close append file
+[2026-11-25T17:06:05.131] Cog0  * wr_block() block_address = $0A7D, block_id = 5, NextID_EndPtr = $002C
+[2026-11-25T17:06:05.147] Cog0  - program_block() block_address = $0A7D
+[2026-11-25T17:06:05.181] Cog0  - activate_block() block_address = $0A7D
+[2026-11-25T17:06:05.182] Cog0  * delChnFmID() [$03FB] block_id = 5, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:05.182] Cog0  - cancel_block() block_address = $03FB
+[2026-11-25T17:06:05.182] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.182] Cog0     -> pass
+[2026-11-25T17:06:05.186] Cog0   
+[2026-11-25T17:06:05.186] Cog0    File: [apLongsHeadBody.bin], bytesUsed = 3_996, bytes_free = 4_048, block_count = 2
+[2026-11-25T17:06:05.186] Cog0   
+[2026-11-25T17:06:05.186] Cog0  * Test #82: Ensure expected file stats post LONGs append
+[2026-11-25T17:06:05.190] Cog0    File: [apLongsHeadBody.bin]
+[2026-11-25T17:06:05.190] Cog0    # 2 Blocks in file:
+[2026-11-25T17:06:05.190] Cog0      1: [$07D8] HEAD/more, thisID=4, dataOfs=0, nextId=5, lifeCycle [ACTIVE-3], sig=[$0050_047D]  
+[2026-11-25T17:06:05.194] Cog0      2: [$0A7D] BODY/last, thisID=5, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_05BE]  
+[2026-11-25T17:06:05.194] Cog0    # blocks: 2
+[2026-11-25T17:06:05.194] Cog0    # bytes used: 3_996
+[2026-11-25T17:06:05.194] Cog0     -> pass
+[2026-11-25T17:06:05.195] Cog0  - test blocksUsed = 2, blocksAdded = 0, startingBlockCount = 6
+[2026-11-25T17:06:05.195] Cog0   
+[2026-11-25T17:06:05.195] Cog0  * Test #83: Ensure expected file system changes post LONGs append write
+[2026-11-25T17:06:05.202] Cog0  * post file append
+[2026-11-25T17:06:05.202] Cog0    # FileSystem: 6, 3_962, 5
+[2026-11-25T17:06:05.202] Cog0    # files: 5
+[2026-11-25T17:06:05.203] Cog0    # blocks used: 6
+[2026-11-25T17:06:05.203] Cog0     -> pass
+[2026-11-25T17:06:05.203] Cog0   
+[2026-11-25T17:06:05.203] Cog0   
+[2026-11-25T17:06:05.203] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:05.203] Cog0  * Test Group: Head block + 2 x body block - filled with LONGs full HEAD & BODY, 2 in 2nd BODY, append 8 more
+[2026-11-25T17:06:05.204] Cog0  - testWriteLongs(apLongsHead2xBody.bin, 2_013)
+[2026-11-25T17:06:05.204] Cog0   
+[2026-11-25T17:06:05.210] Cog0  * Test #84: Open File for write
+[2026-11-25T17:06:05.210] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.210] Cog0     -> pass
+[2026-11-25T17:06:05.210] Cog0   
+[2026-11-25T17:06:05.211] Cog0  * Test #85: validate handle
+[2026-11-25T17:06:05.211] Cog0    open(,'w'): 0
+[2026-11-25T17:06:05.211] Cog0     -> pass
+[2026-11-25T17:06:05.211] Cog0   
+[2026-11-25T17:06:05.227] Cog0  * Test #86: Write N LONGs
+[2026-11-25T17:06:05.248] Cog0  * wr_block() block_address = $070B, block_id = 6, NextID_EndPtr = $0007
+[2026-11-25T17:06:05.264] Cog0  - program_block() block_address = $070B
+[2026-11-25T17:06:05.341] Cog0  * wr_block() block_address = $06C5, block_id = 7, NextID_EndPtr = $0008
+[2026-11-25T17:06:05.356] Cog0  - program_block() block_address = $06C5
+[2026-11-25T17:06:05.396] Cog0  - activate_block() block_address = $06C5
+[2026-11-25T17:06:05.397] Cog0    Sub-Test Results: count=2_013, Pass: 2_013, Fail: 0
+[2026-11-25T17:06:05.397] Cog0     -> pass
+[2026-11-25T17:06:05.397] Cog0   
+[2026-11-25T17:06:05.397] Cog0  * Test #87: ensure all longs written
+[2026-11-25T17:06:05.397] Cog0    wr_long(): 2_013
+[2026-11-25T17:06:05.397] Cog0     -> pass
+[2026-11-25T17:06:05.397] Cog0   
+[2026-11-25T17:06:05.397] Cog0  * Test #88: ensure no errors on writes
+[2026-11-25T17:06:05.398] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.398] Cog0     -> pass
+[2026-11-25T17:06:05.398] Cog0   
+[2026-11-25T17:06:05.398] Cog0    File: [apLongsHead2xBody.bin] pending commit
+[2026-11-25T17:06:05.398] Cog0    # 3 Blocks in chain:
+[2026-11-25T17:06:05.399] Cog0      1: [$070B] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [erased], sig=[$0070_06FD]  
+[2026-11-25T17:06:05.400] Cog0      2: [$06C5] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:06:05.400] Cog0      3: [$0000] BODY/last, thisID=8, endPtr=$000C, lifeCycle [erased], sig=[$00C0_08F6]  MODIFIED
+[2026-11-25T17:06:05.400] Cog0   
+[2026-11-25T17:06:05.400] Cog0  * Test #89: Close written file
+[2026-11-25T17:06:05.400] Cog0  * wr_block() block_address = $0657, block_id = 8, NextID_EndPtr = $000C
+[2026-11-25T17:06:05.416] Cog0  - program_block() block_address = $0657
+[2026-11-25T17:06:05.449] Cog0  - activate_block() block_address = $0657
+[2026-11-25T17:06:05.449] Cog0  - activate_block() block_address = $070B
+[2026-11-25T17:06:05.452] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.452] Cog0     -> pass
+[2026-11-25T17:06:05.452] Cog0   
+[2026-11-25T17:06:05.453] Cog0    File: [apLongsHead2xBody.bin], bytesUsed = 8_052, bytes_free = 4_080, block_count = 3
+[2026-11-25T17:06:05.453] Cog0   
+[2026-11-25T17:06:05.460] Cog0  * Test #90: Ensure expected file system changes
+[2026-11-25T17:06:05.460] Cog0  * post file write
+[2026-11-25T17:06:05.460] Cog0    # FileSystem: 9, 3_959, 6
+[2026-11-25T17:06:05.460] Cog0    # files: 6
+[2026-11-25T17:06:05.460] Cog0    # blocks used: 9
+[2026-11-25T17:06:05.461] Cog0     -> pass
+[2026-11-25T17:06:05.461] Cog0   
+[2026-11-25T17:06:05.461] Cog0  * Test #91: Ensure expected file stats
+[2026-11-25T17:06:05.464] Cog0    File: [apLongsHead2xBody.bin]
+[2026-11-25T17:06:05.464] Cog0    # 3 Blocks in file:
+[2026-11-25T17:06:05.464] Cog0      1: [$070B] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]  
+[2026-11-25T17:06:05.465] Cog0      2: [$06C5] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:06:05.468] Cog0      3: [$0657] BODY/last, thisID=8, endPtr=$000C, lifeCycle [ACTIVE-3], sig=[$00C0_087E]  
+[2026-11-25T17:06:05.468] Cog0    # blocks: 3
+[2026-11-25T17:06:05.468] Cog0    # bytes used: 8_052
+[2026-11-25T17:06:05.468] Cog0     -> pass
+[2026-11-25T17:06:05.469] Cog0   
+[2026-11-25T17:06:05.472] Cog0  * Test #92: Get starting length before append of LONGs
+[2026-11-25T17:06:05.472] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:05.473] Cog0     -> pass
+[2026-11-25T17:06:05.473] Cog0   
+[2026-11-25T17:06:05.477] Cog0  * Test #93: Open File for append
+[2026-11-25T17:06:05.477] Cog0    open(,'a'): 0
+[2026-11-25T17:06:05.477] Cog0     -> pass
+[2026-11-25T17:06:05.477] Cog0   
+[2026-11-25T17:06:05.477] Cog0  * Test #94: Append count LONGs
+[2026-11-25T17:06:05.477] Cog0    Sub-Test Results: count=8, Pass: 8, Fail: 0
+[2026-11-25T17:06:05.477] Cog0     -> pass
+[2026-11-25T17:06:05.477] Cog0   
+[2026-11-25T17:06:05.478] Cog0  * Test #95: ensure no errors on writes
+[2026-11-25T17:06:05.478] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.478] Cog0     -> pass
+[2026-11-25T17:06:05.478] Cog0   
+[2026-11-25T17:06:05.478] Cog0    File: [apLongsHead2xBody.bin] pending commit
+[2026-11-25T17:06:05.478] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:05.480] Cog0      1: [$0000] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-3], sig=[$02C0_0876]  MODIFIED
+[2026-11-25T17:06:05.480] Cog0   
+[2026-11-25T17:06:05.480] Cog0  * Test #96: Close append file
+[2026-11-25T17:06:05.480] Cog0  * wr_block() block_address = $088D, block_id = 8, NextID_EndPtr = $002C
+[2026-11-25T17:06:05.495] Cog0  - program_block() block_address = $088D
+[2026-11-25T17:06:05.530] Cog0  - activate_block() block_address = $088D
+[2026-11-25T17:06:05.530] Cog0  * delChnFmID() [$0657] block_id = 8, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:05.531] Cog0  - cancel_block() block_address = $0657
+[2026-11-25T17:06:05.531] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.531] Cog0     -> pass
+[2026-11-25T17:06:05.534] Cog0   
+[2026-11-25T17:06:05.534] Cog0    File: [apLongsHead2xBody.bin], bytesUsed = 8_084, bytes_free = 4_048, block_count = 3
+[2026-11-25T17:06:05.534] Cog0   
+[2026-11-25T17:06:05.534] Cog0  * Test #97: Ensure expected file stats post LONGs append
+[2026-11-25T17:06:05.537] Cog0    File: [apLongsHead2xBody.bin]
+[2026-11-25T17:06:05.537] Cog0    # 3 Blocks in file:
+[2026-11-25T17:06:05.538] Cog0      1: [$070B] HEAD/more, thisID=6, dataOfs=0, nextId=7, lifeCycle [ACTIVE-3], sig=[$0070_067D]  
+[2026-11-25T17:06:05.539] Cog0      2: [$06C5] BODY/more, thisID=7, nextId=8, lifeCycle [ACTIVE-3], sig=[$0080_077F]  
+[2026-11-25T17:06:05.542] Cog0      3: [$088D] BODY/last, thisID=8, endPtr=$002C, lifeCycle [ACTIVE-5], sig=[$02C0_08BE]  
+[2026-11-25T17:06:05.542] Cog0    # blocks: 3
+[2026-11-25T17:06:05.542] Cog0    # bytes used: 8_084
+[2026-11-25T17:06:05.542] Cog0     -> pass
+[2026-11-25T17:06:05.542] Cog0  - test blocksUsed = 3, blocksAdded = 0, startingBlockCount = 9
+[2026-11-25T17:06:05.542] Cog0   
+[2026-11-25T17:06:05.550] Cog0  * Test #98: Ensure expected file system changes post LONGs append write
+[2026-11-25T17:06:05.550] Cog0  * post file append
+[2026-11-25T17:06:05.550] Cog0    # FileSystem: 9, 3_959, 6
+[2026-11-25T17:06:05.550] Cog0    # files: 6
+[2026-11-25T17:06:05.550] Cog0    # blocks used: 9
+[2026-11-25T17:06:05.551] Cog0     -> pass
+[2026-11-25T17:06:05.551] Cog0   
+[2026-11-25T17:06:05.551] Cog0   
+[2026-11-25T17:06:05.551] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:05.552] Cog0  * Test Group: Head block + 2 x body block - filled with LONGsfull HEAD & 2 BODY (-3), append 9 more append causes add of new body
+[2026-11-25T17:06:05.552] Cog0  - testWriteLongs(apLongsHead3xBody.bin, 3_030)
+[2026-11-25T17:06:05.552] Cog0   
+[2026-11-25T17:06:05.558] Cog0  * Test #99: Open File for write
+[2026-11-25T17:06:05.558] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.559] Cog0     -> pass
+[2026-11-25T17:06:05.559] Cog0   
+[2026-11-25T17:06:05.559] Cog0  * Test #100: validate handle
+[2026-11-25T17:06:05.559] Cog0    open(,'w'): 0
+[2026-11-25T17:06:05.559] Cog0     -> pass
+[2026-11-25T17:06:05.559] Cog0   
+[2026-11-25T17:06:05.574] Cog0  * Test #101: Write N LONGs
+[2026-11-25T17:06:05.596] Cog0  * wr_block() block_address = $09F8, block_id = 9, NextID_EndPtr = $000A
+[2026-11-25T17:06:05.611] Cog0  - program_block() block_address = $09F8
+[2026-11-25T17:06:05.683] Cog0  * wr_block() block_address = $0659, block_id = 10, NextID_EndPtr = $000B
+[2026-11-25T17:06:05.699] Cog0  - program_block() block_address = $0659
+[2026-11-25T17:06:05.748] Cog0  - activate_block() block_address = $0659
+[2026-11-25T17:06:05.773] Cog0    Sub-Test Results: count=3_030, Pass: 3_030, Fail: 0
+[2026-11-25T17:06:05.773] Cog0     -> pass
+[2026-11-25T17:06:05.773] Cog0   
+[2026-11-25T17:06:05.774] Cog0  * Test #102: ensure all longs written
+[2026-11-25T17:06:05.774] Cog0    wr_long(): 3_030
+[2026-11-25T17:06:05.774] Cog0     -> pass
+[2026-11-25T17:06:05.774] Cog0   
+[2026-11-25T17:06:05.774] Cog0  * Test #103: ensure no errors on writes
+[2026-11-25T17:06:05.774] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.774] Cog0     -> pass
+[2026-11-25T17:06:05.774] Cog0   
+[2026-11-25T17:06:05.775] Cog0    File: [apLongsHead3xBody.bin] pending commit
+[2026-11-25T17:06:05.775] Cog0    # 3 Blocks in chain:
+[2026-11-25T17:06:05.775] Cog0      1: [$09F8] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [erased], sig=[$00A0_09FD]  
+[2026-11-25T17:06:05.776] Cog0      2: [$0659] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:06:05.777] Cog0      3: [$0000] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [erased], sig=[$FF00_0BF6]  MODIFIED
+[2026-11-25T17:06:05.777] Cog0   
+[2026-11-25T17:06:05.777] Cog0  * Test #104: Close written file
+[2026-11-25T17:06:05.792] Cog0  * wr_block() block_address = $031F, block_id = 11, NextID_EndPtr = $0FF0
+[2026-11-25T17:06:05.792] Cog0  - program_block() block_address = $031F
+[2026-11-25T17:06:05.831] Cog0  - activate_block() block_address = $031F
+[2026-11-25T17:06:05.831] Cog0  - activate_block() block_address = $09F8
+[2026-11-25T17:06:05.835] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.835] Cog0     -> pass
+[2026-11-25T17:06:05.835] Cog0   
+[2026-11-25T17:06:05.836] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_120, bytes_free = 12, block_count = 3
+[2026-11-25T17:06:05.836] Cog0   
+[2026-11-25T17:06:05.843] Cog0  * Test #105: Ensure expected file system changes
+[2026-11-25T17:06:05.843] Cog0  * post file write
+[2026-11-25T17:06:05.844] Cog0    # FileSystem: 12, 3_956, 7
+[2026-11-25T17:06:05.844] Cog0    # files: 7
+[2026-11-25T17:06:05.844] Cog0    # blocks used: 12
+[2026-11-25T17:06:05.844] Cog0     -> pass
+[2026-11-25T17:06:05.844] Cog0   
+[2026-11-25T17:06:05.848] Cog0  * Test #106: Ensure expected file stats
+[2026-11-25T17:06:05.848] Cog0    File: [apLongsHead3xBody.bin]
+[2026-11-25T17:06:05.848] Cog0    # 3 Blocks in file:
+[2026-11-25T17:06:05.848] Cog0      1: [$09F8] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
+[2026-11-25T17:06:05.849] Cog0      2: [$0659] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:06:05.853] Cog0      3: [$031F] BODY/last, thisID=11, endPtr=$0FF0, lifeCycle [ACTIVE-3], sig=[$FF00_0B7E]  
+[2026-11-25T17:06:05.854] Cog0    # blocks: 3
+[2026-11-25T17:06:05.854] Cog0    # bytes used: 12_120
+[2026-11-25T17:06:05.854] Cog0     -> pass
+[2026-11-25T17:06:05.854] Cog0   
+[2026-11-25T17:06:05.858] Cog0  * Test #107: Get starting length before append of LONGs
+[2026-11-25T17:06:05.858] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:05.858] Cog0     -> pass
+[2026-11-25T17:06:05.859] Cog0   
+[2026-11-25T17:06:05.864] Cog0  * Test #108: Open File for append
+[2026-11-25T17:06:05.864] Cog0    open(,'a'): 0
+[2026-11-25T17:06:05.864] Cog0     -> pass
+[2026-11-25T17:06:05.865] Cog0   
+[2026-11-25T17:06:05.865] Cog0  * Test #109: Append count LONGs
+[2026-11-25T17:06:05.865] Cog0  * wr_block() block_address = $0200, block_id = 11, NextID_EndPtr = $000C
+[2026-11-25T17:06:05.880] Cog0  - program_block() block_address = $0200
+[2026-11-25T17:06:05.916] Cog0    Sub-Test Results: count=9, Pass: 9, Fail: 0
+[2026-11-25T17:06:05.917] Cog0     -> pass
+[2026-11-25T17:06:05.917] Cog0   
+[2026-11-25T17:06:05.917] Cog0  * Test #110: ensure no errors on writes
+[2026-11-25T17:06:05.917] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.917] Cog0     -> pass
+[2026-11-25T17:06:05.917] Cog0   
+[2026-11-25T17:06:05.917] Cog0    File: [apLongsHead3xBody.bin] pending commit
+[2026-11-25T17:06:05.918] Cog0    # 2 Blocks in chain:
+[2026-11-25T17:06:05.918] Cog0      1: [$0200] BODY/more, thisID=11, nextId=12, lifeCycle [erased], sig=[$00C0_0BFF]  
+[2026-11-25T17:06:05.918] Cog0      2: [$0000] BODY/last, thisID=12, endPtr=$001C, lifeCycle [erased], sig=[$01C0_0CF6]  MODIFIED
+[2026-11-25T17:06:05.919] Cog0   
+[2026-11-25T17:06:05.919] Cog0  * Test #111: Close append file
+[2026-11-25T17:06:05.919] Cog0  * wr_block() block_address = $0772, block_id = 12, NextID_EndPtr = $001C
+[2026-11-25T17:06:05.935] Cog0  - program_block() block_address = $0772
+[2026-11-25T17:06:05.967] Cog0  - activate_block() block_address = $0772
+[2026-11-25T17:06:05.967] Cog0  - activate_block() block_address = $0200
+[2026-11-25T17:06:05.968] Cog0  * delChnFmID() [$031F] block_id = 11, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:05.968] Cog0  - cancel_block() block_address = $031F
+[2026-11-25T17:06:05.968] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:05.968] Cog0     -> pass
+[2026-11-25T17:06:05.972] Cog0   
+[2026-11-25T17:06:05.973] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_156, bytes_free = 4_064, block_count = 4
+[2026-11-25T17:06:05.973] Cog0   
+[2026-11-25T17:06:05.973] Cog0  * Test #112: Ensure expected file stats post LONGs append
+[2026-11-25T17:06:05.977] Cog0    File: [apLongsHead3xBody.bin]
+[2026-11-25T17:06:05.977] Cog0    # 4 Blocks in file:
+[2026-11-25T17:06:05.978] Cog0      1: [$09F8] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
+[2026-11-25T17:06:05.978] Cog0      2: [$0659] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:06:05.979] Cog0      3: [$0200] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
+[2026-11-25T17:06:05.983] Cog0      4: [$0772] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]  
+[2026-11-25T17:06:05.983] Cog0    # blocks: 4
+[2026-11-25T17:06:05.983] Cog0    # bytes used: 12_156
+[2026-11-25T17:06:05.983] Cog0     -> pass
+[2026-11-25T17:06:05.984] Cog0  - test blocksUsed = 4, blocksAdded = 1, startingBlockCount = 12
+[2026-11-25T17:06:05.984] Cog0   
+[2026-11-25T17:06:05.984] Cog0  * Test #113: Ensure expected file system changes post LONGs append write
+[2026-11-25T17:06:05.992] Cog0  * post file append
+[2026-11-25T17:06:05.992] Cog0    # FileSystem: 13, 3_955, 7
+[2026-11-25T17:06:05.992] Cog0    # files: 7
+[2026-11-25T17:06:05.992] Cog0    # blocks used: 13
+[2026-11-25T17:06:05.992] Cog0     -> pass
+[2026-11-25T17:06:05.992] Cog0   
+[2026-11-25T17:06:05.992] Cog0   
+[2026-11-25T17:06:05.992] Cog0   ------------------------------------------------------------
+[2026-11-25T17:06:05.993] Cog0  * Test Group: Certifying Flush - appends to existing file with flush() for each
+[2026-11-25T17:06:05.993] Cog0   
+[2026-11-25T17:06:05.993] Cog0  * Test #114: Check F/S status before append of BYTEs
+[2026-11-25T17:06:05.997] Cog0    File: [apLongsHead3xBody.bin]
+[2026-11-25T17:06:05.998] Cog0    # 4 Blocks in file:
+[2026-11-25T17:06:05.998] Cog0      1: [$09F8] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
+[2026-11-25T17:06:05.998] Cog0      2: [$0659] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:06:05.999] Cog0      3: [$0200] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
+[2026-11-25T17:06:06.003] Cog0      4: [$0772] BODY/last, thisID=12, endPtr=$001C, lifeCycle [ACTIVE-3], sig=[$01C0_0C7E]  
+[2026-11-25T17:06:06.004] Cog0    # blocks: 4
+[2026-11-25T17:06:06.004] Cog0    # bytes used: 12_156
+[2026-11-25T17:06:06.004] Cog0     -> pass
+[2026-11-25T17:06:06.004] Cog0   
+[2026-11-25T17:06:06.008] Cog0  * Test #115: Get starting length before append of BYTEs
+[2026-11-25T17:06:06.008] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:06.008] Cog0     -> pass
+[2026-11-25T17:06:06.014] Cog0   
+[2026-11-25T17:06:06.014] Cog0  * Test #116: Open File for append
+[2026-11-25T17:06:06.018] Cog0    open(,'a'): 0
+[2026-11-25T17:06:06.018] Cog0     -> pass
+[2026-11-25T17:06:06.018] Cog0   
+[2026-11-25T17:06:06.019] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_156, bytes_free = 4_064, block_count = 4
+[2026-11-25T17:06:06.019] Cog0   
+[2026-11-25T17:06:06.023] Cog0  * Test #117: Get starting length before append of LONGs
+[2026-11-25T17:06:06.023] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:06.023] Cog0     -> pass
+[2026-11-25T17:06:06.023] Cog0   
+[2026-11-25T17:06:06.024] Cog0  * Test #118: Append count LONGs
+[2026-11-25T17:06:06.024] Cog0    Sub-Test Results: count=6, Pass: 6, Fail: 0
+[2026-11-25T17:06:06.024] Cog0     -> pass
+[2026-11-25T17:06:06.024] Cog0   
+[2026-11-25T17:06:06.024] Cog0  * Test #119: ensure no errors on writes
+[2026-11-25T17:06:06.024] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:06.025] Cog0     -> pass
+[2026-11-25T17:06:06.025] Cog0   
+[2026-11-25T17:06:06.025] Cog0    File: [apLongsHead3xBody.bin] pending commit
+[2026-11-25T17:06:06.025] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:06.026] Cog0      1: [$0000] BODY/last, thisID=12, endPtr=$0034, lifeCycle [ACTIVE-3], sig=[$0340_0C76]  MODIFIED
+[2026-11-25T17:06:06.026] Cog0   
+[2026-11-25T17:06:06.026] Cog0  * Test #120: Flush append file
+[2026-11-25T17:06:06.027] Cog0  * wr_block() block_address = $0BB3, block_id = 12, NextID_EndPtr = $0034
+[2026-11-25T17:06:06.043] Cog0  - program_block() block_address = $0BB3
+[2026-11-25T17:06:06.073] Cog0  - activate_block() block_address = $0BB3
+[2026-11-25T17:06:06.074] Cog0  * delChnFmID() [$0772] block_id = 12, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:06.075] Cog0  - cancel_block() block_address = $0772
+[2026-11-25T17:06:06.075] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:06.075] Cog0     -> pass
+[2026-11-25T17:06:06.079] Cog0   
+[2026-11-25T17:06:06.080] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_180, bytes_free = 4_040, block_count = 4
+[2026-11-25T17:06:06.080] Cog0   
+[2026-11-25T17:06:06.080] Cog0  * Test #121: Ensure expected file stats post append flush
+[2026-11-25T17:06:06.085] Cog0    File: [apLongsHead3xBody.bin]
+[2026-11-25T17:06:06.085] Cog0    # 4 Blocks in file:
+[2026-11-25T17:06:06.085] Cog0      1: [$09F8] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
+[2026-11-25T17:06:06.086] Cog0      2: [$0659] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:06:06.086] Cog0      3: [$0200] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
+[2026-11-25T17:06:06.091] Cog0      4: [$0BB3] BODY/last, thisID=12, endPtr=$0034, lifeCycle [ACTIVE-5], sig=[$0340_0CBE]  
+[2026-11-25T17:06:06.091] Cog0    # blocks: 4
+[2026-11-25T17:06:06.095] Cog0    # bytes used: 12_180
+[2026-11-25T17:06:06.095] Cog0     -> pass
+[2026-11-25T17:06:06.095] Cog0   
+[2026-11-25T17:06:06.096] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_180, bytes_free = 4_040, block_count = 4
+[2026-11-25T17:06:06.096] Cog0   
+[2026-11-25T17:06:06.100] Cog0  * Test #122: Get starting length before append of LONGs
+[2026-11-25T17:06:06.100] Cog0    Sub-Test Results: count=1, Pass: 1, Fail: 0
+[2026-11-25T17:06:06.100] Cog0     -> pass
+[2026-11-25T17:06:06.100] Cog0   
+[2026-11-25T17:06:06.101] Cog0  * Test #123: Append count LONGs
+[2026-11-25T17:06:06.101] Cog0    Sub-Test Results: count=22, Pass: 22, Fail: 0
+[2026-11-25T17:06:06.101] Cog0     -> pass
+[2026-11-25T17:06:06.101] Cog0   
+[2026-11-25T17:06:06.102] Cog0  * Test #124: ensure no errors on writes
+[2026-11-25T17:06:06.102] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:06.102] Cog0     -> pass
+[2026-11-25T17:06:06.102] Cog0   
+[2026-11-25T17:06:06.103] Cog0    File: [apLongsHead3xBody.bin] pending commit
+[2026-11-25T17:06:06.103] Cog0    # 1 Blocks in chain:
+[2026-11-25T17:06:06.103] Cog0      1: [$0000] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-5], sig=[$08C0_0CB6]  MODIFIED
+[2026-11-25T17:06:06.103] Cog0   
+[2026-11-25T17:06:06.103] Cog0  * Test #125: Flush append file
+[2026-11-25T17:06:06.104] Cog0  * wr_block() block_address = $08E4, block_id = 12, NextID_EndPtr = $008C
+[2026-11-25T17:06:06.120] Cog0  - program_block() block_address = $08E4
+[2026-11-25T17:06:06.154] Cog0  - activate_block() block_address = $08E4
+[2026-11-25T17:06:06.154] Cog0  * delChnFmID() [$0BB3] block_id = 12, EndID = 0, delete_mode = 0, KeepFirstIDValid = -1
+[2026-11-25T17:06:06.156] Cog0  - cancel_block() block_address = $0BB3
+[2026-11-25T17:06:06.156] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:06.156] Cog0     -> pass
+[2026-11-25T17:06:06.160] Cog0   
+[2026-11-25T17:06:06.160] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_268, bytes_free = 3_952, block_count = 4
+[2026-11-25T17:06:06.160] Cog0   
+[2026-11-25T17:06:06.161] Cog0  * Test #126: Ensure expected file stats post append flush
+[2026-11-25T17:06:06.165] Cog0    File: [apLongsHead3xBody.bin]
+[2026-11-25T17:06:06.165] Cog0    # 4 Blocks in file:
+[2026-11-25T17:06:06.165] Cog0      1: [$09F8] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
+[2026-11-25T17:06:06.166] Cog0      2: [$0659] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:06:06.166] Cog0      3: [$0200] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
+[2026-11-25T17:06:06.171] Cog0      4: [$08E4] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-6], sig=[$08C0_0CDE]  
+[2026-11-25T17:06:06.171] Cog0    # blocks: 4
+[2026-11-25T17:06:06.171] Cog0    # bytes used: 12_268
+[2026-11-25T17:06:06.171] Cog0     -> pass
+[2026-11-25T17:06:06.171] Cog0   
+[2026-11-25T17:06:06.172] Cog0  * Test #127: Close append file
+[2026-11-25T17:06:06.172] Cog0     ECode: SUCCESS: No error
+[2026-11-25T17:06:06.176] Cog0     -> pass
+[2026-11-25T17:06:06.176] Cog0   
+[2026-11-25T17:06:06.176] Cog0    File: [apLongsHead3xBody.bin], bytesUsed = 12_268, bytes_free = 3_952, block_count = 4
+[2026-11-25T17:06:06.176] Cog0   
+[2026-11-25T17:06:06.176] Cog0  * Test #128: Ensure expected file stats
+[2026-11-25T17:06:06.181] Cog0    File: [apLongsHead3xBody.bin]
+[2026-11-25T17:06:06.181] Cog0    # 4 Blocks in file:
+[2026-11-25T17:06:06.181] Cog0      1: [$09F8] HEAD/more, thisID=9, dataOfs=0, nextId=10, lifeCycle [ACTIVE-3], sig=[$00A0_097D]  
+[2026-11-25T17:06:06.182] Cog0      2: [$0659] BODY/more, thisID=10, nextId=11, lifeCycle [ACTIVE-3], sig=[$00B0_0A7F]  
+[2026-11-25T17:06:06.183] Cog0      3: [$0200] BODY/more, thisID=11, nextId=12, lifeCycle [ACTIVE-5], sig=[$00C0_0BBF]  
+[2026-11-25T17:06:06.187] Cog0      4: [$08E4] BODY/last, thisID=12, endPtr=$008C, lifeCycle [ACTIVE-6], sig=[$08C0_0CDE]  
+[2026-11-25T17:06:06.187] Cog0    # blocks: 4
+[2026-11-25T17:06:06.187] Cog0    # bytes used: 12_268
+[2026-11-25T17:06:06.187] Cog0     -> pass
+[2026-11-25T17:06:06.187] Cog0  - test blocksUsed = 4, blocksAdded = 0, startingBlockCount = 13
+[2026-11-25T17:06:06.187] Cog0   
+[2026-11-25T17:06:06.188] Cog0  * Test #129: Ensure expected file system changes post dual append write
+[2026-11-25T17:06:06.195] Cog0  * post file write
+[2026-11-25T17:06:06.195] Cog0    # FileSystem: 13, 3_955, 7
+[2026-11-25T17:06:06.195] Cog0    # files: 7
+[2026-11-25T17:06:06.195] Cog0    # blocks used: 13
+[2026-11-25T17:06:06.195] Cog0     -> pass
+[2026-11-25T17:06:06.196] Cog0   
+[2026-11-25T17:06:06.196] Cog0    All Files:
+[2026-11-25T17:06:06.196] Cog0  ap1010bytes.bin, byteCount = 20, blockID = 1, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:06.197] Cog0  ap99words.bin, byteCount = 36, blockID = 2, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:06.197] Cog0  ap1212longs.bin, byteCount = 96, blockID = 3, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:06.198] Cog0  ap1010strings.zstr, byteCount = 424, blockID = 4, BlocksUsed = 1, @Buff={binary data}
+[2026-11-25T17:06:06.199] Cog0  apLongsHeadBody.bin, byteCount = 3_996, blockID = 5, BlocksUsed = 2, @Buff={binary data}
+[2026-11-25T17:06:06.200] Cog0  apLongsHead2xBody.bin, byteCount = 8_084, blockID = 7, BlocksUsed = 3, @Buff={binary data}
+[2026-11-25T17:06:06.209] Cog0  apLongsHead3xBody.bin, byteCount = 12_268, blockID = 10, BlocksUsed = 4, @Buff={binary data}
+[2026-11-25T17:06:06.209] Cog0  * Test Complete
+[2026-11-25T17:06:06.209] Cog0   
+[2026-11-25T17:06:06.209] Cog0  * 129 Tests - Pass: 129, Fail: 0
+[2026-11-25T17:06:06.225] Cog0  RESULT: PASS RT_write_append_tests 129/129
+[2026-11-25T17:06:06.225] Cog0  <END_SESSION>
+[2026-11-25T17:06:06.225] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-25T17:06:06.226] [SYSTEM] Shutdown initiated: End marker detected
 
-=== Headless Mode Session Ended at 2026-11-25T16:04:12.803 ===
+=== Headless Mode Session Ended at 2026-11-25T17:06:06.255 ===
