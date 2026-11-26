@@ -13,7 +13,8 @@
 #      same line in flash_fs.txt, which is generated from it, README.md, CHANGELOG.md (absent is reported,
 #      not an error) and DOCs/*.md "flash_fs vX.Y.Z" lines, all against LIB_VERSION
 #   4. the `PASS P/T` (or `FAIL P/T`) count each RegresssionTests/README.md table row gives,
-#      read with the first `(<name>.log)` link after it, against
+#      read with every `(<name>.log)` link after it in the row (a companion log, such as
+#      the same run sorted by cog, carries the row's count), against
 #      the last `RESULT: PASS|FAIL <program> P/T` line of each RegresssionTests/*.log;
 #      a log with no RESULT line is reported
 #   5. the flash_fs.spin2 inside cgsm_flash_file_demo.zip (and cgsm_flash_file_demo/
@@ -264,7 +265,15 @@ c4=$drifts
 declare -A RPASS=() RFAIL=()
 while IFS=$'\t' read -r name p t; do
     RPASS[$name]="$p"; RFAIL[$name]=$((t - p))
-done < <(sed -nE 's/^\|.*[[:space:]](PASS|FAIL) ([0-9]+)\/([0-9]+)[^(]*\(([^)]*\.log)\).*/\4\t\2\t\3/p' "$TESTREADME" | sed 's/\\//g')
+done < <(sed 's/\\//g' "$TESTREADME" | awk '
+    /^\|/ && match($0, /[[:space:]](PASS|FAIL) [0-9]+\/[0-9]+/) {
+        split(substr($0, RSTART + 6, RLENGTH - 6), count, "/")
+        rest = substr($0, RSTART + RLENGTH)
+        while (match(rest, /\([^)]*\.log\)/)) {
+            printf "%s\t%s\t%s\n", substr(rest, RSTART + 1, RLENGTH - 2), count[1], count[2]
+            rest = substr(rest, RSTART + RLENGTH)
+        }
+    }')
 shopt -s nullglob
 logs=(RegresssionTests/*.log)
 shopt -u nullglob

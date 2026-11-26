@@ -140,7 +140,7 @@ In their present form (commented out) the debug output just goes to the debug wi
 
 ## The Test files
 
-Each program prints a `RESULT:` line with its pass and fail counts when it ends, and the runner reads that line. The counts come from the final run of the release: v2.1.0 on a P2 Edge at a 320 MHz system clock, built with pnut-ts v1.55.12, 2026-11-25. Every program passed: 2,107 tests in 20 programs, plus the 19 checks of the timing program. The log beside each program is the log of that run.
+Each program prints a `RESULT:` line with its pass and fail counts when it ends, and the runner reads that line. The counts come from the final run of the release: v2.1.0 on a P2 Edge at a 320 MHz system clock, built with pnut-ts v1.55.12, 2026-11-26. Every program passed: 2,126 tests in 21 programs, plus the 19 checks of the timing program. The log beside each program is the log of that run.
 
 | File | Purpose | Result |
 | --- | --- | --- |
@@ -151,19 +151,19 @@ Each program prints a `RESULT:` line with its pass and fail counts when it ends,
 | [RT\_read\_seek\_tests.spin2](RT_read_seek_tests.spin2) | The open for read seek test suite, with `SK_CURRENT_POSN` | PASS 88/88 - [log](RT_read_seek_tests.log) |
 | [RT\_write\_append\_tests.spin2](RT_write_append_tests.spin2) | The open for append test suite, with `flush()` | PASS 129/129 - [log](RT_write_append_tests.log) |
 | [RT\_read\_write\_circular\_tests.spin2](RT_read_write_circular_tests.spin2) | `open_circular()` for read and append: blocks are added and removed as they should be, and a read starts at the byte it should | PASS 279/279 - [log](RT_read_write_circular_tests.log) |
-| [RT\_read\_write\_8cog\_tests.spin2](RT_read_write_8cog_tests.spin2) | The multi-cog test suite | PASS 270/270; the total varies from run to run, with the random lengths the cogs draw - [log](RT_read_write_8cog_tests.log), [sorted by cog](RT_read_write_8cog_tests_byCog.log) |
+| [RT\_read\_write\_8cog\_tests.spin2](RT_read_write_8cog_tests.spin2) | The multi-cog test suite | PASS 271/271; the total varies from run to run, with the random lengths the cogs draw - [log](RT_read_write_8cog_tests.log), [sorted by cog](RT_read_write_8cog_tests_byCog.log) |
 | [RT\_read\_modify\_write\_tests.spin2](RT_read_modify_write_tests.spin2) | Read/modify/write with "r+" and "w+" | PASS 103/103 - [log](RT_read_modify_write_tests.log) |
 | [RT\_read\_circular\_compat\_tests.spin2](RT_read_circular_compat_tests.spin2) | Reading circular files written by v1.4 (an old-format head block) through `open_circular()`, with `seek()` and `file_size_for_handle()` | PASS 94/94 - [log](RT_read_circular_compat_tests.log) |
 | [RT\_rmw\_extended\_tests.spin2](RT_rmw_extended_tests.spin2) | Every open mode on a new and on an existing file; "r+" and "w+" reads, seeks, flushes, remounts and writes at and past the end; delete on empty close | PASS 132/132 - [log](RT_rmw_extended_tests.log) |
 | [RT\_seek\_edge\_tests.spin2](RT_seek_edge_tests.spin2) | The edges of `seek()`: before the first byte, the end of a file and of an empty file, relative seeks, bad `whence`, append handles, circular limits, seeks after an edit, a trimmed circular file | PASS 87/87 - [log](RT_seek_edge_tests.log) |
 | [RT\_boundary\_size\_tests.spin2](RT_boundary_size_tests.spin2) | File sizes at the block edges, 64 KB and 1 MB files by CRC, reads and writes across block boundaries from every offset | PASS 28/28 - [log](RT_boundary_size_tests.log) |
 | [RT\_rd\_str\_boundary\_tests.spin2](RT_rd_str_boundary_tests.spin2) | The buffer size edges of `rd_str()` | PASS 39/39 - [log](RT_rd_str_boundary_tests.log) |
-| [RT\_typed\_boundary\_tests.spin2](RT_typed_boundary_tests.spin2) | Byte, WORD and LONG writes and reads whose bytes cross the end of a block, in "w", "r", "r+" and "a" | **[not yet run: bench]** |
+| [RT\_typed\_boundary\_tests.spin2](RT_typed_boundary_tests.spin2) | Byte, WORD and LONG writes and reads whose bytes cross the end of a block, in "w", "r", "r+" and "a" | PASS 14/14 - [log](RT_typed_boundary_tests.log) |
 | [RT\_filename\_tests.spin2](RT_filename_tests.spin2) | The names the driver accepts and refuses, and `directory()` with a 127-character name | PASS 53/53 - [log](RT_filename_tests.log) |
 | [RT\_rename\_delete\_tests.spin2](RT_rename_delete_tests.spin2) | `rename()` and `delete()` on a mounted filesystem, and their effect on `stats()` | PASS 79/79 - [log](RT_rename_delete_tests.log) |
 | [RT\_error\_paths\_tests.spin2](RT_error_paths_tests.spin2) | The `error()` contract, handle misuse, and the refusal of a bad `HANDLE_BASE` | PASS 241/241 - [log](RT_error_paths_tests.log) |
 | [RT\_mount\_state\_tests.spin2](RT_mount_state_tests.spin2) | The mount state: the first mount with no free lock, `mounted()`, `can_mount()`, the handle pool, `unmount()` with writers open, and mount, unmount and format across cogs | PASS 33/33 - [log](RT_mount_state_tests.log) |
-| [RT\_full\_flash\_tests.spin2](RT_full_flash_tests.spin2) | Fills the flash and checks every route to E\_DRIVE\_FULL, in a guard-only mode and a fixed mode | PASS 38/38 - [log](RT_full_flash_tests.log) |
+| [RT\_full\_flash\_tests.spin2](RT_full_flash_tests.spin2) | Fills the flash and checks every route to E\_DRIVE\_FULL, in a guard-only mode and a fixed mode | PASS 42/42 - [log](RT_full_flash_tests.log) |
 | [RT\_power\_loss\_tests.spin2](RT_power_loss_tests.spin2) | The block states a power cut can leave, built straight on the flash, and an injected flash timeout at each step of a commit | PASS 163/163 - [log](RT_power_loss_tests.log) |
 | [RT\_single\_handle\_smoke\_tests.spin2](RT_single_handle_smoke_tests.spin2) | A driver built with whatever `MAX_FILES_OPEN` it was given: a build with none refuses to mount, one with one or more works and holds every handle at once | PASS 12/12 - [log](RT_single_handle_smoke_tests.log) |
 | [RT\_performance\_baseline.spin2](RT_performance_baseline.spin2) | Times the driver (not a pass/fail suite): 4 KB, 64 KB and 690 KB writes and reads, `open()` with 1, 50 and 100 files, a block-programming write, a far seek, `mount()`, `can_mount()` and `format()`, as a table in system clock ticks and µs with clkfreq stated | PASS 19/19, and the table - [log](RT_performance_baseline.log) |

@@ -37,7 +37,31 @@ Every call reports its error, the file modes follow ANSI C except where the flas
 
 - `read()`, `write()`, `rd_str()` and `wr_str()` move runs of bytes in place of one byte per call. `rd_byte()`, `wr_byte()` and the WORD and LONG calls move a value that lies inside the buffered block directly, and pass a value that reaches the end of the block to the same code as `read()` and `write()`. Figures against v2.0.0, in system clock ticks and µs with the clkfreq stated:
 
-  **[measured at bench visit 7: SPEEDUP_TABLE]**
+  Measured on a P2 Edge at 320 MHz (1 µs = 320 ticks), built with pnut-ts v1.55.12. Each figure is the median of three runs of each driver.
+
+  | Measurement | v2.0.0 ticks | v2.0.0 µs | v2.1.0 ticks | v2.1.0 µs | Change |
+  | --- | ---: | ---: | ---: | ---: | --- |
+  | write 4 KB: `write()` calls and `close()` | 47,229,808 | 147,593 | 32,227,072 | 100,709 | 1.5x faster |
+  | write 64 KB: `write()` calls and `close()` | 499,277,992 | 1,560,243 | 311,058,872 | 972,058 | 1.6x faster |
+  | write 690 KB: `write()` calls and `close()` | 5,367,389,336 | 16,773,091 | 3,092,863,608 | 9,665,198 | 1.7x faster |
+  | one whole body block of the 690 KB file, mean `write()` | 30,984,142 | 96,825 | 17,889,506 | 55,904 | 1.7x faster |
+  | read 4 KB: `read()` calls | 11,706,848 | 36,583 | 389,696 | 1,217 | 30.0x faster |
+  | read 64 KB: `read()` calls | 187,088,024 | 584,650 | 6,115,392 | 19,110 | 30.6x faster |
+  | read 690 KB: `read()` calls | 2,016,909,488 | 6,302,842 | 65,665,464 | 205,204 | 30.7x faster |
+  | `seek()` from the start to the last byte of the 690 KB file | 1,942,088 | 6,069 | 1,260,464 | 3,938 | 1.5x faster |
+
+  | Call, mean per call | v2.0.0 ticks | v2.0.0 µs | v2.1.0 ticks | v2.1.0 µs | Change |
+  | --- | ---: | ---: | ---: | ---: | --- |
+  | `wr_byte()`, each byte of a 4 KB file | 9,819 | 30.7 | 10,344 | 32.3 | 5 % slower |
+  | `rd_byte()`, each byte of a 4 KB file | 4,349 | 13.6 | 4,882 | 15.3 | 12 % slower |
+  | `wr_word()`, each word of a 4 KB file | 17,166 | 53.6 | 14,012 | 43.8 | 1.2x faster |
+  | `rd_word()`, each word of a 4 KB file | 8,338 | 26.1 | 5,749 | 18.0 | 1.5x faster |
+  | `wr_long()`, each long of a 4 KB file | 32,085 | 100.3 | 22,058 | 68.9 | 1.5x faster |
+  | `rd_long()`, each long of a 4 KB file | 13,868 | 43.3 | 5,966 | 18.6 | 2.3x faster |
+  | `wr_str()`, 256 strings of 31 characters | 235,609 | 736.3 | 144,304 | 450.9 | 1.6x faster |
+  | `rd_str()`, 256 strings of 31 characters, 32-byte buffer | 163,144 | 509.8 | 23,592 | 73.7 | 6.9x faster |
+
+  `rd_byte()` and `wr_byte()` are about 1.5 µs per call slower than in v2.0.0. Each call now re-tests the mount after it takes the lock and releases the lock through the method that unmounts on a device fault; v2.0.0 did neither. `mount()`, `can_mount()` and `format()` take the same time as in v2.0.0, within 2 %.
 
   After this change, 96.7 % of the time a block read takes is the SPI transfer from the flash, measured at 320 MHz.
 - Every call sets `error()` for the calling cog, on every path: SUCCESS, or the reason it failed.

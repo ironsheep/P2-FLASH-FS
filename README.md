@@ -53,7 +53,7 @@ Key features of this Flash Filesystem for the P2 Edge Flash chip:
 - Read-Modify-Write supported
 - Circular file writes supported
 - Supports multi-cog use (the first cog to call mount() mounts the filesystem for all cogs to use; each call holds one lock from start to finish, see [Multi-cog use](#multi-cog-use))
-- `read()`, `write()`, `rd_str()` and `wr_str()` move runs of bytes, not one byte per call, and the byte, WORD and LONG calls move a value inside the buffered block directly: **[measured at bench visit 7: SPEEDUP_TABLE]**
+- `read()`, `write()`, `rd_str()` and `wr_str()` move runs of bytes, not one byte per call, and the byte, WORD and LONG calls move a value inside the buffered block directly. Against the previous release at 320 MHz, `read()` is about 30x faster, `write()` 1.5-1.7x, `rd_str()` 6.9x, `wr_str()` 1.6x and the WORD and LONG calls 1.2-2.3x. `rd_byte()` and `wr_byte()` are about 1.5 µs per call slower, from the per-call checks v2.1.0 adds. The tables are in [CHANGELOG.md](CHANGELOG.md)
 - Handle numbers count from 0 (the default) or from 1 (`HANDLE_BASE`), see [Configuring the driver](#configuring-the-driver)
 - `error()` is kept per cog and holds the reason for the last failed call
 - **Coming soon** *Directory Support*

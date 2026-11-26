@@ -1,89 +1,89 @@
-=== Headless Mode Session Started at 2026-11-25T17:48:39.027 ===
+=== Headless Mode Session Started at 2026-11-26T01:39:17.480 ===
 PNut-Term-TS: v1.1.2
 Mode: Headless (no GUI)
 End Markers: "END_SESSION", "DEBUG_END_SESSION"
 Timeout: 180 seconds
 =====================================
 
-[2026-11-25T17:48:39.025] [SYSTEM] Headless mode started
-[2026-11-25T17:48:39.025] [SYSTEM] Timeout configured: 180 seconds
-[2026-11-25T17:48:39.026] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
-[2026-11-25T17:48:39.066] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
-[2026-11-25T17:48:39.067] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_single_handle_smoke_tests.bin to RAM
-[2026-11-25T17:48:39.441] 
-[2026-11-25T17:48:39.442] Prop_Ver G
-[2026-11-25T17:48:40.512] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_single_handle_smoke_tests.bin
-[2026-11-25T17:48:40.526] .Cog0  INIT $0000_0000 $0000_0000 load
-[2026-11-25T17:48:40.527] Cog0  INIT $0000_0FA8 $0000_FED0 jump
-[2026-11-25T17:48:40.527] Cog0  * init VAR
-[2026-11-25T17:48:40.527] Cog0  * Random seed (cog 0): $FE9E_3A8B
-[2026-11-25T17:48:40.527] Cog0   
-[2026-11-25T17:48:40.527] Cog0   
-[2026-11-25T17:48:40.527] Cog0   ------------------------------------------------------------
-[2026-11-25T17:48:40.527] Cog0  * Test Group: a file written and read back through one handle
-[2026-11-25T17:48:40.527] Cog0   
-[2026-11-25T17:48:40.543] Cog0  * Test #1: format() leaves a mounted, empty filesystem
-[2026-11-25T17:48:40.575] Cog0  - cancel_block() block_address = $0B61
-[2026-11-25T17:48:40.591] Cog0  - cancel_block() block_address = $0EB8
-[2026-11-25T17:48:40.637] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
-[2026-11-25T17:48:40.643] Cog0     -> pass
-[2026-11-25T17:48:40.643] Cog0   
-[2026-11-25T17:48:40.643] Cog0  * Test #2: open(,w) of a new file
-[2026-11-25T17:48:40.644] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.644] Cog0     -> pass
-[2026-11-25T17:48:40.644] Cog0   
-[2026-11-25T17:48:40.644] Cog0  * Test #3: write() of the pattern
-[2026-11-25T17:48:40.644] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.644] Cog0     -> pass
-[2026-11-25T17:48:40.644] Cog0   
-[2026-11-25T17:48:40.644] Cog0  * Test #4: close() of the written file
-[2026-11-25T17:48:40.660] Cog0  * wr_block() block_address = $04C6, block_id = 0, NextID_EndPtr = $00EC
-[2026-11-25T17:48:40.660] Cog0  - program_block() block_address = $04C6
-[2026-11-25T17:48:40.691] Cog0  - activate_block() block_address = $04C6
-[2026-11-25T17:48:40.691] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.691] Cog0     -> pass
-[2026-11-25T17:48:40.695] Cog0   
-[2026-11-25T17:48:40.695] Cog0  * Test #5: open(,r) of the file
-[2026-11-25T17:48:40.695] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.695] Cog0     -> pass
-[2026-11-25T17:48:40.695] Cog0   
-[2026-11-25T17:48:40.695] Cog0  * Test #6: read() of the pattern
-[2026-11-25T17:48:40.695] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
-[2026-11-25T17:48:40.695] Cog0     -> pass
-[2026-11-25T17:48:40.695] Cog0   
-[2026-11-25T17:48:40.696] Cog0  * Test #7: close() of the file that was read
-[2026-11-25T17:48:40.696] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.696] Cog0     -> pass
-[2026-11-25T17:48:40.696] Cog0   
-[2026-11-25T17:48:40.696] Cog0   
-[2026-11-25T17:48:40.697] Cog0   ------------------------------------------------------------
-[2026-11-25T17:48:40.697] Cog0  * Test Group: every handle held at once
-[2026-11-25T17:48:40.697] Cog0   
-[2026-11-25T17:48:40.704] Cog0  * Test #8: open(,w) takes a handle while one is free
-[2026-11-25T17:48:40.704] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
-[2026-11-25T17:48:40.704] Cog0     -> pass
-[2026-11-25T17:48:40.704] Cog0   
-[2026-11-25T17:48:40.710] Cog0  * Test #9: open(,w) takes a handle while one is free
-[2026-11-25T17:48:40.710] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
-[2026-11-25T17:48:40.710] Cog0     -> pass
-[2026-11-25T17:48:40.710] Cog0   
-[2026-11-25T17:48:40.711] Cog0  * Test #10: open() with every handle in use
-[2026-11-25T17:48:40.711] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.711] Cog0     -> pass
-[2026-11-25T17:48:40.711] Cog0   
-[2026-11-25T17:48:40.711] Cog0  * Test #11: close() gives a handle back
-[2026-11-25T17:48:40.711] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.711] Cog0     -> pass
-[2026-11-25T17:48:40.711] Cog0   
-[2026-11-25T17:48:40.712] Cog0  * Test #12: close() gives a handle back
-[2026-11-25T17:48:40.712] Cog0  * Test Complete
-[2026-11-25T17:48:40.712] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
-[2026-11-25T17:48:40.712] Cog0     -> pass
-[2026-11-25T17:48:40.712] Cog0   
-[2026-11-25T17:48:40.712] Cog0  * 12 Tests - Pass: 12, Fail: 0
-[2026-11-25T17:48:40.728] Cog0  RESULT: PASS RT_single_handle_smoke_tests 12/12
-[2026-11-25T17:48:40.729] Cog0  <END_SESSION>
-[2026-11-25T17:48:40.729] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
-[2026-11-25T17:48:40.729] [SYSTEM] Shutdown initiated: End marker detected
+[2026-11-26T01:39:17.478] [SYSTEM] Headless mode started
+[2026-11-26T01:39:17.478] [SYSTEM] Timeout configured: 180 seconds
+[2026-11-26T01:39:17.479] [SYSTEM] Opening serial port: /dev/tty.usbserial-P9whu7bn
+[2026-11-26T01:39:17.522] [SYSTEM] Serial port opened: /dev/tty.usbserial-P9whu7bn at 2000000 baud
+[2026-11-26T01:39:17.522] [SYSTEM] Starting download: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_single_handle_smoke_tests.bin to RAM
+[2026-11-26T01:39:17.882] 
+[2026-11-26T01:39:17.882] Prop_Ver G
+[2026-11-26T01:39:18.955] [SYSTEM] Download completed successfully: /Users/stephen/Projects/Projects-ExtGit/IronSheepProductionsLLC/Propeller2/P2-FLASH-FileSystem/P2-FLASH-FS/RegresssionTests/build/bin/RT_single_handle_smoke_tests.bin
+[2026-11-26T01:39:18.968] .Cog0  INIT $0000_0000 $0000_0000 load
+[2026-11-26T01:39:18.969] Cog0  INIT $0000_0FA8 $0001_0134 jump
+[2026-11-26T01:39:18.969] Cog0  * init VAR
+[2026-11-26T01:39:18.969] Cog0  * Random seed (cog 0): $54A0_6593
+[2026-11-26T01:39:18.969] Cog0   
+[2026-11-26T01:39:18.969] Cog0   
+[2026-11-26T01:39:18.969] Cog0   ------------------------------------------------------------
+[2026-11-26T01:39:18.969] Cog0  * Test Group: a file written and read back through one handle
+[2026-11-26T01:39:18.969] Cog0   
+[2026-11-26T01:39:18.985] Cog0  * Test #1: format() leaves a mounted, empty filesystem
+[2026-11-26T01:39:19.001] Cog0  - cancel_block() block_address = $05EA
+[2026-11-26T01:39:19.033] Cog0  - cancel_block() block_address = $0EDB
+[2026-11-26T01:39:19.079] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-26T01:39:19.085] Cog0     -> pass
+[2026-11-26T01:39:19.085] Cog0   
+[2026-11-26T01:39:19.085] Cog0  * Test #2: open(,w) of a new file
+[2026-11-26T01:39:19.085] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.086] Cog0     -> pass
+[2026-11-26T01:39:19.086] Cog0   
+[2026-11-26T01:39:19.086] Cog0  * Test #3: write() of the pattern
+[2026-11-26T01:39:19.086] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.086] Cog0     -> pass
+[2026-11-26T01:39:19.086] Cog0   
+[2026-11-26T01:39:19.086] Cog0  * Test #4: close() of the written file
+[2026-11-26T01:39:19.102] Cog0  * wr_block() block_address = $054D, block_id = 0, NextID_EndPtr = $00EC
+[2026-11-26T01:39:19.102] Cog0  - program_block() block_address = $054D
+[2026-11-26T01:39:19.136] Cog0  - activate_block() block_address = $054D
+[2026-11-26T01:39:19.136] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.136] Cog0     -> pass
+[2026-11-26T01:39:19.140] Cog0   
+[2026-11-26T01:39:19.140] Cog0  * Test #5: open(,r) of the file
+[2026-11-26T01:39:19.140] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.140] Cog0     -> pass
+[2026-11-26T01:39:19.140] Cog0   
+[2026-11-26T01:39:19.141] Cog0  * Test #6: read() of the pattern
+[2026-11-26T01:39:19.141] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-26T01:39:19.141] Cog0     -> pass
+[2026-11-26T01:39:19.141] Cog0   
+[2026-11-26T01:39:19.141] Cog0  * Test #7: close() of the file that was read
+[2026-11-26T01:39:19.142] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.142] Cog0     -> pass
+[2026-11-26T01:39:19.142] Cog0   
+[2026-11-26T01:39:19.142] Cog0   
+[2026-11-26T01:39:19.142] Cog0   ------------------------------------------------------------
+[2026-11-26T01:39:19.143] Cog0  * Test Group: every handle held at once
+[2026-11-26T01:39:19.143] Cog0   
+[2026-11-26T01:39:19.149] Cog0  * Test #8: open(,w) takes a handle while one is free
+[2026-11-26T01:39:19.149] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-26T01:39:19.149] Cog0     -> pass
+[2026-11-26T01:39:19.149] Cog0   
+[2026-11-26T01:39:19.156] Cog0  * Test #9: open(,w) takes a handle while one is free
+[2026-11-26T01:39:19.156] Cog0    Sub-Test Results: count=3, Pass: 3, Fail: 0
+[2026-11-26T01:39:19.156] Cog0     -> pass
+[2026-11-26T01:39:19.156] Cog0   
+[2026-11-26T01:39:19.156] Cog0  * Test #10: open() with every handle in use
+[2026-11-26T01:39:19.156] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.156] Cog0     -> pass
+[2026-11-26T01:39:19.156] Cog0   
+[2026-11-26T01:39:19.157] Cog0  * Test #11: close() gives a handle back
+[2026-11-26T01:39:19.157] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.157] Cog0     -> pass
+[2026-11-26T01:39:19.157] Cog0   
+[2026-11-26T01:39:19.157] Cog0  * Test #12: close() gives a handle back
+[2026-11-26T01:39:19.158] Cog0  * Test Complete
+[2026-11-26T01:39:19.158] Cog0    Sub-Test Results: count=2, Pass: 2, Fail: 0
+[2026-11-26T01:39:19.158] Cog0     -> pass
+[2026-11-26T01:39:19.158] Cog0   
+[2026-11-26T01:39:19.158] Cog0  * 12 Tests - Pass: 12, Fail: 0
+[2026-11-26T01:39:19.174] Cog0  RESULT: PASS RT_single_handle_smoke_tests 12/12
+[2026-11-26T01:39:19.174] Cog0  <END_SESSION>
+[2026-11-26T01:39:19.174] [SYSTEM] DEBUG_END_SESSION received - initiating shutdown
+[2026-11-26T01:39:19.175] [SYSTEM] Shutdown initiated: End marker detected
 
-=== Headless Mode Session Ended at 2026-11-25T17:48:40.755 ===
+=== Headless Mode Session Ended at 2026-11-26T01:39:19.201 ===

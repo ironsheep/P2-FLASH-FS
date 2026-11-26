@@ -127,7 +127,16 @@ Ceiling:  4096 B / 51.4 ms  =  79.7 KB/s
 
 On top of that, each block pays for the SPI transfers (command bytes, 16 pages of 256 bytes, status polls) and for the Spin2 that moves the caller's bytes into the block buffer. v2.0.0 moved them one byte per call: the reporting user measured about 12 µs per `rd_byte_no_locks` call, and at 4,088 bytes per block the write loop costs about 49 ms of Spin2 per block, serialized with the 51.4 ms of flash time. So v2.0.0 wrote at about half the flash-bound ceiling. v2.1.0 copies runs of bytes with `bytemove` instead.
 
-**[measured at bench visit 7: SPEEDUP_TABLE]** - the write rows (4 KB, 64 KB and 690 KB), before and after, in clock ticks and µs with clkfreq stated.
+Measured on a P2 Edge at 320 MHz (1 µs = 320 ticks), built with pnut-ts v1.55.12; each figure is the median of three runs of each driver:
+
+| Write | v2.0.0 ticks | v2.0.0 µs | v2.1.0 ticks | v2.1.0 µs | Change |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 4 KB: `write()` calls and `close()` | 47,229,808 | 147,593 | 32,227,072 | 100,709 | 1.5x faster |
+| 64 KB: `write()` calls and `close()` | 499,277,992 | 1,560,243 | 311,058,872 | 972,058 | 1.6x faster |
+| 690 KB: `write()` calls and `close()` | 5,367,389,336 | 16,773,091 | 3,092,863,608 | 9,665,198 | 1.7x faster |
+| one whole body block of the 690 KB file, mean `write()` | 30,984,142 | 96,825 | 17,889,506 | 55,904 | 1.7x faster |
+
+v2.1.0 writes the 690 KB file at 73.1 KB/s, 92 % of the 79.7 KB/s flash-bound ceiling; v2.0.0 wrote it at 42.1 KB/s.
 
 The flash erase and program times are the datasheet's typical values, and they stay the floor: no SPI or Spin2 change takes a block write below 51.4 ms.
 
@@ -137,7 +146,15 @@ The flash erase and program times are the datasheet's typical values, and they s
 
 `can_mount()` makes the same reads.
 
-**[measured at bench visit 7: SPEEDUP_TABLE]** - the `mount()` and `can_mount()` rows, with the number of files and blocks present stated.
+Measured as above, on a flash holding 104 files in 294 blocks (100 files of 16 bytes, and files of 3,957 bytes, 4 KB, 64 KB and 690 KB):
+
+| Call | v2.0.0 ticks | v2.0.0 µs | v2.1.0 ticks | v2.1.0 µs | Change |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `can_mount()` of the unmounted flash | 149,764,288 | 468,013 | 147,620,424 | 461,313 | within 2 % |
+| `mount()` | 147,141,832 | 459,818 | 146,211,792 | 456,911 | within 2 % |
+| `format()`, including its mount | 36,534,024 | 114,168 | 36,044,888 | 112,640 | within 2 % |
+
+At 1,139 µs per block, the full reads of the 294 blocks are about 335 ms of the 457 ms `mount()` takes.
 
 ---
 
@@ -283,7 +300,7 @@ Dual SPI doubles the data rate per clock by using both IO0 and IO1 for data. The
 
 For a block write the chip's own 51.4 ms of typical erase and program time (see [Section 2](#write-throughput-4-kb-block)) is the floor. The SPI transfers are about 16 pages of 256 bytes plus commands: a small share of that floor. A streamer cannot take a block write below the floor, and the share it can remove is the SPI part of the gap between the measured write time and the floor.
 
-**[measured at bench visit 7: SPEEDUP_TABLE]** - the write rows give that gap.
+The write rows in [Section 2](#write-throughput-4-kb-block) give that gap. A whole body block of the 690 KB file takes 55,904 µs in v2.1.0 against the 51,400 µs floor, a gap of about 4.5 ms (v2.0.0: 96,825 µs, a gap of about 45 ms). The streamer can remove at most the SPI share of those 4.5 ms.
 
 ### Mount: the SPI reads are large
 
@@ -362,7 +379,7 @@ This is an architectural benefit, not a raw throughput improvement.
 | 4 KB block read (SPI only) | 364,544 clocks, 1,139 µs at 320 MHz (counted from the source) | SPI loop: 89 clocks per byte |
 | 4 KB block write (flash only) | 51.4 ms at the datasheet's typical times | Flash erase (45 ms) + 16 page programs (6.4 ms) |
 | `mount()` | N active blocks x the block-read time, plus 3,968 first-byte reads | Active blocks read whole and CRC'd |
-| Driver-level read, write and mount rates | **[measured at bench visit 7: SPEEDUP_TABLE]** | Spin2, SPI and flash together |
+| Driver-level read, write and mount rates | read 690 KB in 205,204 µs (3,443 KB/s); write 690 KB in 9,665,198 µs (73.1 KB/s); `mount()` of 104 files in 294 blocks in 456,911 µs; at 320 MHz | Spin2, SPI and flash together |
 
 ### Could the Streamer Help?
 
