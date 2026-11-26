@@ -66,9 +66,18 @@
     to wear-level the flash.
  -- Every call that reaches the flash takes over pins 58 to 61, the flash chip's pins, and does
     not check whether another user of those pins (such as an SD card) holds them.
- -- The driver is certified at a 320 MHz system clock, the clock every regression run uses. The
-    SPI timing has been verified up to 350 MHz.
- Version history: see CHANGELOG.md
+ -- The driver is tested at a 320 MHz system clock. Its SPI timing holds up to 350 MHz.
+ Version history:
+ v1.2.0 - initial release of flash_fs with full API
+ v1.2.1 - revised seek() method parameters - can now seek relative to current position in file
+ v1.3.0 - update for flexspin compatibility, seek() returns file position, write() returns bytes
+  written
+ v1.3.1 - more update for flexspin compatibility, adjusted seek(), read() and write() add
+  file_size_for_handle()
+ v1.4.0 - Adjustments allowing multi-cog support
+ v2.0.0 - Add read/modify/write, non-destructive mount check can_mount(), and create_file()
+ v2.1.0 - Every call reports its error, open modes behave as documented, faster read() and write(),
+          HANDLE_BASE, E_BAD_FILENAME and E_FLASH_TIMEOUT
  -------------------------------------------------------------------------------------------------
 
 Object "flash_fs" Interface:
@@ -236,8 +245,7 @@ PUB open(p_filename, mode) : handle
  would leave a zero-length file. An existing file that a "w" or "w+" open replaces is left
  untouched until the handle is closed. Closed with no write, a "w" or "w+" open of an existing
  file DELETES it: close() still returns SUCCESS and error() is SUCCESS, so use exists() to
- confirm. This and the other differences from C are in the "Differences from ANSI C" table of
- README.md.
+ confirm.
  @param p_filename - address of a zstring containing the filename
  @param mode - the mode in which to open the file, what each does with a file that exists or not:
  -- mode "r", "R" reads. The file must exist (E_FILE_NOT_FOUND). Closing changes nothing.
@@ -269,7 +277,7 @@ PUB open_circular(p_filename, mode, max_file_length) : handle
  -- a circular file keeps its newest max_file_length bytes: when it is committed by close() or
     flush(), the oldest bytes beyond the limit are removed from its start
  -- as with open(), a file with no contents does not exist, so a new file closed with nothing
-    written is not left; see the "Differences from ANSI C" table of README.md
+    written is not left
  @param p_filename - address of a zstring containing the filename
  @param mode - the mode in which to open the file (no other mode is valid, and "w" is
  .. E_FILE_MODE):
