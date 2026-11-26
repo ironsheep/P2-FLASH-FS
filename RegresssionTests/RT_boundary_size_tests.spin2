@@ -50,7 +50,7 @@
 
 CON
 
-  _CLKFREQ  = 320_000_000
+    _CLKFREQ  = 320_000_000
 
 {
     ' debug via serial to RPi (using RPi gateway pins)
@@ -62,114 +62,114 @@ CON
 '}
 
 OBJ
-  flash   : "flash_fs"
-  utils   : "RT_utilities"
+    flash       : "flash_fs"
+    utils       : "RT_utilities"
 
 CON ' ---- Block Edge Sizes ----
 
-  ' the sizes at the edges of the block layout, in bytes:
-  '  HEAD_FULL_BYTES  - what a head block holds
-  '  TWO_FULL_BYTES   - what a head block and one body block hold
-  HEAD_FULL_BYTES     = flash.BYTES_IN_HEAD_BLOCK
-  TWO_FULL_BYTES      = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK
-  ONE_BYTE	      = 1			     ' bytes a size differs from a full block by, and bytes read past the end
-  NO_BYTES	      = 0			     ' bytes a read at the end of a file returns, and bytes a full block leaves unused
-  LARGEST_EDGE_BYTES  = TWO_FULL_BYTES + ONE_BYTE    ' the largest size of the edge cases
+    ' the sizes at the edges of the block layout, in bytes:
+    '  HEAD_FULL_BYTES  - what a head block holds
+    '  TWO_FULL_BYTES   - what a head block and one body block hold
+    HEAD_FULL_BYTES     = flash.BYTES_IN_HEAD_BLOCK
+    TWO_FULL_BYTES      = flash.BYTES_IN_HEAD_BLOCK + flash.BYTES_IN_BODY_BLOCK
+    ONE_BYTE            = 1                                         ' bytes a size differs from a full block by, and bytes read past the end
+    NO_BYTES            = 0                                         ' bytes a read at the end of a file returns, and bytes a full block leaves unused
+    LARGEST_EDGE_BYTES  = TWO_FULL_BYTES + ONE_BYTE                 ' the largest size of the edge cases
 
-  ' the cases, one for each size:
-  '  CASE_HEAD_BELOW - one byte short of a full head block
-  '  CASE_HEAD_FULL  - exactly a full head block
-  '  CASE_HEAD_ABOVE - one byte over a full head block
-  '  CASE_TWO_BELOW  - one byte short of a full head block and body block
-  '  CASE_TWO_FULL   - exactly a full head block and body block
-  '  CASE_TWO_ABOVE  - one byte over a full head block and body block
-  '  CASE_COUNT      - the number of cases
-  #0, CASE_HEAD_BELOW, CASE_HEAD_FULL, CASE_HEAD_ABOVE, CASE_TWO_BELOW, CASE_TWO_FULL, CASE_TWO_ABOVE, CASE_COUNT
+    ' the cases, one for each size:
+    '  CASE_HEAD_BELOW - one byte short of a full head block
+    '  CASE_HEAD_FULL  - exactly a full head block
+    '  CASE_HEAD_ABOVE - one byte over a full head block
+    '  CASE_TWO_BELOW  - one byte short of a full head block and body block
+    '  CASE_TWO_FULL   - exactly a full head block and body block
+    '  CASE_TWO_ABOVE  - one byte over a full head block and body block
+    '  CASE_COUNT      - the number of cases
+    #0, CASE_HEAD_BELOW, CASE_HEAD_FULL, CASE_HEAD_ABOVE, CASE_TWO_BELOW, CASE_TWO_FULL, CASE_TWO_ABOVE, CASE_COUNT
 
 CON ' ---- Large Files ----
 
-  KILOBYTE	  = 1024					    ' bytes in a KB
-  MEDIUM_BYTES	  = 64 * KILOBYTE				    ' size of the first round trip
-  LARGE_BYTES	  = 1024 * KILOBYTE				    ' size of the second round trip, 1 MB
-  CHUNK_BYTES	  = 4096					    ' bytes moved by one write or read of a round trip
-  MAX_DIGESTS	  = (LARGE_BYTES / CHUNK_BYTES) + 1		    ' chunks of the largest round trip
-  BYTES_PER_LONG  = 4						    ' bytes of one chunk CRC
-  SPARE_BLOCKS	  = 8						    ' free blocks a file needs beyond the blocks it occupies
-  CRC_POLYNOMIAL  = $EDB8_8320					    ' polynomial of every CRC the program computes
+    KILOBYTE        = 1024                                          ' bytes in a KB
+    MEDIUM_BYTES    = 64 * KILOBYTE                                 ' size of the first round trip
+    LARGE_BYTES     = 1024 * KILOBYTE                               ' size of the second round trip, 1 MB
+    CHUNK_BYTES     = 4096                                          ' bytes moved by one write or read of a round trip
+    MAX_DIGESTS     = (LARGE_BYTES / CHUNK_BYTES) + 1               ' chunks of the largest round trip
+    BYTES_PER_LONG  = 4                                             ' bytes of one chunk CRC
+    SPARE_BLOCKS    = 8                                             ' free blocks a file needs beyond the blocks it occupies
+    CRC_POLYNOMIAL  = $EDB8_8320                                    ' polynomial of every CRC the program computes
 
 CON ' ---- Boundary Sweep ----
 
-  SWEEP_BYTES	    = TWO_FULL_BYTES + flash.BYTES_IN_BODY_BLOCK    ' bytes of the sweep file: a full head block and two full body blocks
-  SWEEP_START	    = HEAD_FULL_BYTES				    ' file offset of the first byte of the first body block
-  SWEEP_OFFSETS     = flash.BYTES_IN_BODY_BLOCK			    ' offsets in a body block a read starts at: every one of them
-  SWEEP_READ_BYTES  = flash.BYTES_IN_BODY_BLOCK + ONE_BYTE	    ' bytes of each read, which crosses into the second body block from any offset
-  NO_FAILURES	    = 0						    ' offsets or calls of a sweep that went wrong, when every one was right
-  NO_FIRST_FAIL     = -1					    ' the first offset or call that went wrong, when none did
+    SWEEP_BYTES       = TWO_FULL_BYTES + flash.BYTES_IN_BODY_BLOCK  ' bytes of the sweep file: a full head block and two full body blocks
+    SWEEP_START       = HEAD_FULL_BYTES                             ' file offset of the first byte of the first body block
+    SWEEP_OFFSETS     = flash.BYTES_IN_BODY_BLOCK                   ' offsets in a body block a read starts at: every one of them
+    SWEEP_READ_BYTES  = flash.BYTES_IN_BODY_BLOCK + ONE_BYTE        ' bytes of each read, which crosses into the second body block from any offset
+    NO_FAILURES       = 0                                           ' offsets or calls of a sweep that went wrong, when every one was right
+    NO_FIRST_FAIL     = -1                                          ' the first offset or call that went wrong, when none did
 
 CON ' ---- Write Sweeps ----
 
-  ' The write stream sample set: the offsets 0-31 and 4056-4087 of a body block, every one, and the middle
-  ' offsets from 32 at a stride of 23, which shares no factor with 4088: 32 + 175 + 32 = 239 offsets.
-  W_EDGE_OFFSETS     = 32												     ' offsets at each edge of a body block, every one
-  W_MID_STRIDE	     = 23												     ' step between two middle offsets
-  W_MID_SAMPLES      = (flash.BYTES_IN_BODY_BLOCK - W_EDGE_OFFSETS - W_EDGE_OFFSETS - ONE_BYTE) / W_MID_STRIDE + ONE_BYTE    ' middle offsets that fit before the last edge
-  W_SAMPLES	     = W_EDGE_OFFSETS + W_MID_SAMPLES + W_EDGE_OFFSETS							     ' offsets of the write stream
-  W_TAIL_BYTES	     = ONE_BYTE												     ' bytes the last call writes past the last boundary, so that it crosses it
-  W_STREAM_BYTES     = HEAD_FULL_BYTES + (W_SAMPLES * flash.BYTES_IN_BODY_BLOCK) + W_TAIL_BYTES				     ' bytes of the write stream file
-  SPAN_MAX_BYTES     = flash.BYTES_IN_BODY_BLOCK + flash.BYTES_IN_BODY_BLOCK						     ' bytes of the longest call: it never reaches past the block after the one it starts in
+    ' The write stream sample set: the offsets 0-31 and 4056-4087 of a body block, every one, and the middle
+    ' offsets from 32 at a stride of 23, which shares no factor with 4088: 32 + 175 + 32 = 239 offsets.
+    W_EDGE_OFFSETS     = 32                                                                                                  ' offsets at each edge of a body block, every one
+    W_MID_STRIDE       = 23                                                                                                  ' step between two middle offsets
+    W_MID_SAMPLES      = (flash.BYTES_IN_BODY_BLOCK - W_EDGE_OFFSETS - W_EDGE_OFFSETS - ONE_BYTE) / W_MID_STRIDE + ONE_BYTE  ' middle offsets that fit before the last edge
+    W_SAMPLES          = W_EDGE_OFFSETS + W_MID_SAMPLES + W_EDGE_OFFSETS                                                     ' offsets of the write stream
+    W_TAIL_BYTES       = ONE_BYTE                                                                                            ' bytes the last call writes past the last boundary, so that it crosses it
+    W_STREAM_BYTES     = HEAD_FULL_BYTES + (W_SAMPLES * flash.BYTES_IN_BODY_BLOCK) + W_TAIL_BYTES                            ' bytes of the write stream file
+    SPAN_MAX_BYTES     = flash.BYTES_IN_BODY_BLOCK + flash.BYTES_IN_BODY_BLOCK                                               ' bytes of the longest call: it never reaches past the block after the one it starts in
 
-  ' The read/write sample set: the offsets 0-15 and 4072-4087 of a body block, every one, and 32 middle
-  ' offsets from 16 at a stride of 125, which shares no factor with 4088: 16 + 32 + 16 = 64 offsets.
-  RMW_EDGE_OFFSETS   = 16												     ' offsets at each edge of a body block, every one
-  RMW_MID_STRIDE     = 125												     ' step between two middle offsets
-  RMW_MID_SAMPLES    = 32												     ' middle offsets
-  RMW_SAMPLES	     = RMW_EDGE_OFFSETS + RMW_MID_SAMPLES + RMW_EDGE_OFFSETS						     ' offsets of the read/write pass
-  GROW_LEAD_BYTES    = 16												     ' bytes the growing write rewrites before the end of the full last block
-  GROW_TAIL_BYTES    = 32												     ' bytes the growing write adds in the new last block
-  GROWN_SWEEP_BYTES  = SWEEP_BYTES + GROW_TAIL_BYTES									     ' bytes of the boundary sweep file once it has grown
+    ' The read/write sample set: the offsets 0-15 and 4072-4087 of a body block, every one, and 32 middle
+    ' offsets from 16 at a stride of 125, which shares no factor with 4088: 16 + 32 + 16 = 64 offsets.
+    RMW_EDGE_OFFSETS   = 16                                                                                                  ' offsets at each edge of a body block, every one
+    RMW_MID_STRIDE     = 125                                                                                                 ' step between two middle offsets
+    RMW_MID_SAMPLES    = 32                                                                                                  ' middle offsets
+    RMW_SAMPLES        = RMW_EDGE_OFFSETS + RMW_MID_SAMPLES + RMW_EDGE_OFFSETS                                               ' offsets of the read/write pass
+    GROW_LEAD_BYTES    = 16                                                                                                  ' bytes the growing write rewrites before the end of the full last block
+    GROW_TAIL_BYTES    = 32                                                                                                  ' bytes the growing write adds in the new last block
+    GROWN_SWEEP_BYTES  = SWEEP_BYTES + GROW_TAIL_BYTES                                                                       ' bytes of the boundary sweep file once it has grown
 
 CON ' ---- Test Data ----
 
-  ' the byte of a pattern is its offset, its 256-byte page number and the seed, so a block
-  ' that lands in the wrong place or a stale page shows as a differing byte
-  PATTERN_PAGE_SHIFT  = 8				' 256-byte pages
-  BYTE_MASK	      = $FF				' keeps a pattern value to one byte
-  SEED_EDGE	      = 3				' pattern of the files written at the edges
-  SEED_MEDIUM	      = 5				' pattern of the 64 KB file
-  SEED_LARGE	      = 7				' pattern of the 1 MB file
-  SEED_SWEEP	      = 9				' pattern of the boundary sweep file
-  SEED_W_SWEEP	      = 11				' pattern of the write stream file
-  SEED_RMW_SWEEP      = 13				' pattern of the first read/write sample; each sample after it adds one
-  SEED_GROW	      = SEED_RMW_SWEEP + RMW_SAMPLES	' pattern of the write that grows the boundary sweep file
-  CREATE_FILL	      = $5A				' fill value of the files made with create_file()
-  POISON_BYTE	      = $A5				' value read buffers are filled with before a read
-  NO_MISMATCH	      = -1				' firstMismatch() result when the buffers agree
-  NAME_DIGIT_OFFSET   = 5				' offset of the case digit in the name of an edge file
-  TITLE_BYTES	      = 96				' bytes the test title buffer holds
+    ' the byte of a pattern is its offset, its 256-byte page number and the seed, so a block
+    ' that lands in the wrong place or a stale page shows as a differing byte
+    PATTERN_PAGE_SHIFT  = 8                                         ' 256-byte pages
+    BYTE_MASK           = $FF                                       ' keeps a pattern value to one byte
+    SEED_EDGE           = 3                                         ' pattern of the files written at the edges
+    SEED_MEDIUM         = 5                                         ' pattern of the 64 KB file
+    SEED_LARGE          = 7                                         ' pattern of the 1 MB file
+    SEED_SWEEP          = 9                                         ' pattern of the boundary sweep file
+    SEED_W_SWEEP        = 11                                        ' pattern of the write stream file
+    SEED_RMW_SWEEP      = 13                                        ' pattern of the first read/write sample; each sample after it adds one
+    SEED_GROW           = SEED_RMW_SWEEP + RMW_SAMPLES              ' pattern of the write that grows the boundary sweep file
+    CREATE_FILL         = $5A                                       ' fill value of the files made with create_file()
+    POISON_BYTE         = $A5                                       ' value read buffers are filled with before a read
+    NO_MISMATCH         = -1                                        ' firstMismatch() result when the buffers agree
+    NAME_DIGIT_OFFSET   = 5                                         ' offset of the case digit in the name of an edge file
+    TITLE_BYTES         = 96                                        ' bytes the test title buffer holds
 
 DAT  ' ---- Files and Buffers ----
 
-  edgeWriteFile   BYTE	"bsz_w0.bin", 0		 ' template of the names of the files the edge cases write
-  edgeCreateFile  BYTE	"bsz_c0.bin", 0		 ' template of the names of the files the edge cases make with create_file()
-  mediumFile	  BYTE	"bsz_64k.bin", 0	 ' the 64 KB file
-  largeFile	  BYTE	"bsz_1m.bin", 0		 ' the 1 MB file
-  sweepFile	  BYTE	"bsz_sweep.bin", 0	 ' the boundary sweep file
-  streamFile	  BYTE	"bsz_wsweep.bin", 0	 ' the write stream file
+    edgeWriteFile   BYTE    "bsz_w0.bin", 0                         ' template of the names of the files the edge cases write
+    edgeCreateFile  BYTE    "bsz_c0.bin", 0                         ' template of the names of the files the edge cases make with create_file()
+    mediumFile      BYTE    "bsz_64k.bin", 0                        ' the 64 KB file
+    largeFile       BYTE    "bsz_1m.bin", 0                         ' the 1 MB file
+    sweepFile       BYTE    "bsz_sweep.bin", 0                      ' the boundary sweep file
+    streamFile      BYTE    "bsz_wsweep.bin", 0                     ' the write stream file
 
-  oneByte	  BYTE	0			 ' receives a single byte read
-  titleBuf	  BYTE	0[TITLE_BYTES]		 ' the title of the test being started
-  modelBuf	  BYTE	0[LARGEST_EDGE_BYTES]	 ' what an edge file should hold
-  readBuf	  BYTE	0[LARGEST_EDGE_BYTES]	 ' what was read back from an edge file
-  chunkBuf	  BYTE	0[CHUNK_BYTES]		 ' one chunk of a round trip
-  sweepModel	  BYTE	0[GROWN_SWEEP_BYTES]	 ' what the boundary sweep file holds, with room for the bytes it grows by
-  sweepRead	  BYTE	0[SWEEP_READ_BYTES]	 ' what one read of the boundary sweep returned
-  spanBuf	  BYTE	0[SPAN_MAX_BYTES]	 ' what one call of the write stream writes
+    oneByte         BYTE    0                                       ' receives a single byte read
+    titleBuf        BYTE    0[TITLE_BYTES]                          ' the title of the test being started
+    modelBuf        BYTE    0[LARGEST_EDGE_BYTES]                   ' what an edge file should hold
+    readBuf         BYTE    0[LARGEST_EDGE_BYTES]                   ' what was read back from an edge file
+    chunkBuf        BYTE    0[CHUNK_BYTES]                          ' one chunk of a round trip
+    sweepModel      BYTE    0[GROWN_SWEEP_BYTES]                    ' what the boundary sweep file holds, with room for the bytes it grows by
+    sweepRead       BYTE    0[SWEEP_READ_BYTES]                     ' what one read of the boundary sweep returned
+    spanBuf         BYTE    0[SPAN_MAX_BYTES]                       ' what one call of the write stream writes
 
-		ALIGNL
-  writeBlocks	  LONG	0[CASE_COUNT]		 ' blocks stats() showed each edge file written with write() to occupy
-  createBlocks	  LONG	0[CASE_COUNT]		 ' blocks stats() showed each edge file made with create_file() to occupy
-  writeDigests	  LONG	0[MAX_DIGESTS]		 ' CRC of each chunk written
-  readDigests	  LONG	0[MAX_DIGESTS]		 ' CRC of each chunk read back
+                ALIGNL
+    writeBlocks     LONG    0[CASE_COUNT]                           ' blocks stats() showed each edge file written with write() to occupy
+    createBlocks    LONG    0[CASE_COUNT]                           ' blocks stats() showed each edge file made with create_file() to occupy
+    writeDigests    LONG    0[MAX_DIGESTS]                          ' CRC of each chunk written
+    readDigests     LONG    0[MAX_DIGESTS]                          ' CRC of each chunk read back
 
 PUB go() | status, pFailedCall
 '' Run every boundary size test, then show the result.
@@ -179,29 +179,29 @@ PUB go() | status, pFailedCall
 ' @local status - status of the format and mount that start the run
 ' @local pFailedCall - address of the name of the call that failed
 
-  pFailedCall := @"format()"
-  status := flash.format()			' Comment out this line to not erase all files
-  if status == flash.SUCCESS
-    pFailedCall := @"mount()"
-    status := flash.mount()
+    pFailedCall := @"format()"
+    status := flash.format()                            ' Comment out this line to not erase all files
+    if status == flash.SUCCESS
+        pFailedCall := @"mount()"
+        status := flash.mount()
 
-  if status == flash.SUCCESS
-    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+    if status == flash.SUCCESS
+        utils.checkDriverInstance(flash.MAX_FILES_OPEN)
 
-    utils.showChipAndDriverVersion()
-    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
+        utils.showChipAndDriverVersion()
+        utils.setCheckCountPerTest(1)                   ' each check of a case is shown on its own
 
-    testEdgeSizes()
-    testNewBlockStarts()
-    testRoundTrips()
-    testBoundarySweep()
-  else
-    utils.showError(pFailedCall, status)
-    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
-    utils.evaluateResultNegError(status, flash.SUCCESS)
+        testEdgeSizes()
+        testNewBlockStarts()
+        testRoundTrips()
+        testBoundarySweep()
+    else
+        utils.showError(pFailedCall, status)
+        utils.startTest(@"format() and mount()")        ' a filesystem that did not mount is a failed run
+        utils.evaluateResultNegError(status, flash.SUCCESS)
 
-  DEBUG("* Test Complete")
-  utils.ShowTestResult(@"RT_boundary_size_tests")
+    DEBUG("* Test Complete")
+    utils.ShowTestResult(@"RT_boundary_size_tests")
 
 PRI testEdgeSizes() | caseIdx
 ' Write, create and measure a file of each edge size.
@@ -209,11 +209,11 @@ PRI testEdgeSizes() | caseIdx
 ' Local Variables:
 ' @local caseIdx - number of the size case being run
 
-  utils.startTestGroup(@"files at the edges of the block layout")
-  repeat CASE_COUNT with caseIdx
-    writeReadCase(caseIdx)
-    createFileCase(caseIdx)
-    unusedCase(caseIdx)
+    utils.startTestGroup(@"files at the edges of the block layout")
+    repeat CASE_COUNT with caseIdx
+        writeReadCase(caseIdx)
+        createFileCase(caseIdx)
+        unusedCase(caseIdx)
 
 PRI writeReadCase(caseIdx) | byteCount, blocksBefore, handle, status, writeCount
 ' Write a file of one edge size with write() in one call and read it back, as one test.
@@ -227,24 +227,24 @@ PRI writeReadCase(caseIdx) | byteCount, blocksBefore, handle, status, writeCount
 ' @local status - status of the open
 ' @local writeCount - what write() returned
 
-  byteCount := caseBytes(caseIdx)
-  setCaseName(@edgeWriteFile, caseIdx)
-  utils.startTest(caseTitle(@"write() and read() of a file ", caseIdx))
-  DEBUG("  bytes: ", udec_(byteCount))
+    byteCount := caseBytes(caseIdx)
+    setCaseName(@edgeWriteFile, caseIdx)
+    utils.startTest(caseTitle(@"write() and read() of a file ", caseIdx))
+    DEBUG("  bytes: ", udec_(byteCount))
 
-  fillPattern(@modelBuf, 0, byteCount, SEED_EDGE)
-  blocksBefore := usedBlocks()
-  handle, status := utils.openWaitOnHandle(@edgeWriteFile, flash.FILEMODE_WRITE)
-  utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
-  if status == flash.SUCCESS
-    writeCount := flash.write(handle, @modelBuf, byteCount)
-    utils.evaluateSubValue(writeCount, @"write()", byteCount)
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+    fillPattern(@modelBuf, 0, byteCount, SEED_EDGE)
+    blocksBefore := usedBlocks()
+    handle, status := utils.openWaitOnHandle(@edgeWriteFile, flash.FILEMODE_WRITE)
+    utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
+    if status == flash.SUCCESS
+        writeCount := flash.write(handle, @modelBuf, byteCount)
+        utils.evaluateSubValue(writeCount, @"write()", byteCount)
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
 
-  LONG[@writeBlocks][caseIdx] := usedBlocks() - blocksBefore
-  checkLayout(@edgeWriteFile, byteCount, LONG[@writeBlocks][caseIdx])
-  checkReadBack(@edgeWriteFile, byteCount)
+    LONG[@writeBlocks][caseIdx] := usedBlocks() - blocksBefore
+    checkLayout(@edgeWriteFile, byteCount, LONG[@writeBlocks][caseIdx])
+    checkReadBack(@edgeWriteFile, byteCount)
 
 PRI createFileCase(caseIdx) | byteCount, blocksBefore, status
 ' Make a file of one edge size with create_file(), then read it back, as one test.
@@ -256,19 +256,19 @@ PRI createFileCase(caseIdx) | byteCount, blocksBefore, status
 ' @local blocksBefore - blocks in use before the file was made
 ' @local status - what create_file() returned
 
-  byteCount := caseBytes(caseIdx)
-  setCaseName(@edgeCreateFile, caseIdx)
-  utils.startTest(caseTitle(@"create_file() of a file ", caseIdx))
-  DEBUG("  bytes: ", udec_(byteCount))
+    byteCount := caseBytes(caseIdx)
+    setCaseName(@edgeCreateFile, caseIdx)
+    utils.startTest(caseTitle(@"create_file() of a file ", caseIdx))
+    DEBUG("  bytes: ", udec_(byteCount))
 
-  bytefill(@modelBuf, CREATE_FILL, byteCount)
-  blocksBefore := usedBlocks()
-  status := flash.create_file(@edgeCreateFile, CREATE_FILL, byteCount)
-  utils.evaluateSubStatus(status, @"create_file()", flash.SUCCESS)
+    bytefill(@modelBuf, CREATE_FILL, byteCount)
+    blocksBefore := usedBlocks()
+    status := flash.create_file(@edgeCreateFile, CREATE_FILL, byteCount)
+    utils.evaluateSubStatus(status, @"create_file()", flash.SUCCESS)
 
-  LONG[@createBlocks][caseIdx] := usedBlocks() - blocksBefore
-  checkLayout(@edgeCreateFile, byteCount, LONG[@createBlocks][caseIdx])
-  checkReadBack(@edgeCreateFile, byteCount)
+    LONG[@createBlocks][caseIdx] := usedBlocks() - blocksBefore
+    checkLayout(@edgeCreateFile, byteCount, LONG[@createBlocks][caseIdx])
+    checkReadBack(@edgeCreateFile, byteCount)
 
 PRI unusedCase(caseIdx) | byteCount, expectedUnused, bFillsBlock
 ' Check file_size_unused() of the two files of one edge size against the unused bytes the layout leaves, as one test.
@@ -280,24 +280,24 @@ PRI unusedCase(caseIdx) | byteCount, expectedUnused, bFillsBlock
 ' @local expectedUnused - bytes the last block of the size leaves unused
 ' @local bFillsBlock - TRUE when the size is exactly the capacity of a head block or of a head block and a body block
 
-  byteCount := caseBytes(caseIdx)
-  setCaseName(@edgeWriteFile, caseIdx)
-  setCaseName(@edgeCreateFile, caseIdx)
-  utils.startTest(caseTitle(@"file_size_unused() of a file ", caseIdx))
-  DEBUG("  bytes: ", udec_(byteCount))
+    byteCount := caseBytes(caseIdx)
+    setCaseName(@edgeWriteFile, caseIdx)
+    setCaseName(@edgeCreateFile, caseIdx)
+    utils.startTest(caseTitle(@"file_size_unused() of a file ", caseIdx))
+    DEBUG("  bytes: ", udec_(byteCount))
 
-  _, expectedUnused := layoutOf(byteCount)
-  bFillsBlock := byteCount == HEAD_FULL_BYTES OR byteCount == TWO_FULL_BYTES
-  utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeWriteFile), @"file_size_unused() of the written file", expectedUnused)
-  utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeCreateFile), @"file_size_unused() of the created file", expectedUnused)
-  utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeWriteFile) == NO_BYTES, @"no unused byte exactly when the size fills a block", bFillsBlock)
+    _, expectedUnused := layoutOf(byteCount)
+    bFillsBlock := byteCount == HEAD_FULL_BYTES OR byteCount == TWO_FULL_BYTES
+    utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeWriteFile), @"file_size_unused() of the written file", expectedUnused)
+    utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeCreateFile), @"file_size_unused() of the created file", expectedUnused)
+    utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeWriteFile) == NO_BYTES, @"no unused byte exactly when the size fills a block", bFillsBlock)
 
 PRI testNewBlockStarts()
 ' The byte after a full block goes into a new block, for the head block and for the head block with one body block.
 
-  utils.startTestGroup(@"the byte after a full block")
-  newBlockCase(@"one byte over a full head block starts a body block", CASE_HEAD_FULL, CASE_HEAD_ABOVE)
-  newBlockCase(@"one byte over a full head block and body block starts a second body block", CASE_TWO_FULL, CASE_TWO_ABOVE)
+    utils.startTestGroup(@"the byte after a full block")
+    newBlockCase(@"one byte over a full head block starts a body block", CASE_HEAD_FULL, CASE_HEAD_ABOVE)
+    newBlockCase(@"one byte over a full head block and body block starts a second body block", CASE_TWO_FULL, CASE_TWO_ABOVE)
 
 PRI newBlockCase(pTitle, fullCase, aboveCase)
 ' Check a file one byte over a full block occupies one more block than the full file, and that its last block holds that one byte, as one test.
@@ -306,20 +306,20 @@ PRI newBlockCase(pTitle, fullCase, aboveCase)
 ' @param fullCase - the case whose size exactly fills the last block
 ' @param aboveCase - the case whose size is one byte more
 
-  utils.startTest(pTitle)
-  utils.evaluateSubValue(LONG[@writeBlocks][aboveCase], @"blocks of the written file one byte over", LONG[@writeBlocks][fullCase] + 1)
-  utils.evaluateSubValue(LONG[@createBlocks][aboveCase], @"blocks of the created file one byte over", LONG[@createBlocks][fullCase] + 1)
-  setCaseName(@edgeWriteFile, aboveCase)
-  setCaseName(@edgeCreateFile, aboveCase)
-  utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeWriteFile), @"unused bytes of the written file one byte over", flash.BYTES_IN_BODY_BLOCK - ONE_BYTE)
-  utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeCreateFile), @"unused bytes of the created file one byte over", flash.BYTES_IN_BODY_BLOCK - ONE_BYTE)
+    utils.startTest(pTitle)
+    utils.evaluateSubValue(LONG[@writeBlocks][aboveCase], @"blocks of the written file one byte over", LONG[@writeBlocks][fullCase] + 1)
+    utils.evaluateSubValue(LONG[@createBlocks][aboveCase], @"blocks of the created file one byte over", LONG[@createBlocks][fullCase] + 1)
+    setCaseName(@edgeWriteFile, aboveCase)
+    setCaseName(@edgeCreateFile, aboveCase)
+    utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeWriteFile), @"unused bytes of the written file one byte over", flash.BYTES_IN_BODY_BLOCK - ONE_BYTE)
+    utils.evaluateSubValue(flash.FILE_SIZE_UNUSED(@edgeCreateFile), @"unused bytes of the created file one byte over", flash.BYTES_IN_BODY_BLOCK - ONE_BYTE)
 
 PRI testRoundTrips()
 ' A 64 KB file and a 1 MB file, each written and read back through one chunk buffer and compared by CRC.
 
-  utils.startTestGroup(@"round trips compared by CRC")
-  roundTripCase(@"64 KB written and read back, CRC of the data read equals CRC of the data written", @mediumFile, MEDIUM_BYTES, SEED_MEDIUM)
-  roundTripCase(@"1 MB written and read back, CRC of the data read equals CRC of the data written", @largeFile, LARGE_BYTES, SEED_LARGE)
+    utils.startTestGroup(@"round trips compared by CRC")
+    roundTripCase(@"64 KB written and read back, CRC of the data read equals CRC of the data written", @mediumFile, MEDIUM_BYTES, SEED_MEDIUM)
+    roundTripCase(@"1 MB written and read back, CRC of the data read equals CRC of the data written", @largeFile, LARGE_BYTES, SEED_LARGE)
 
 PRI roundTripCase(pTitle, pFilename, byteCount, seed) | neededBlocks, freeBlocks, handle, status, writtenCount, writeCrc, readCount, readCrc
 ' Check the flash has room for a file, write it in chunks, read it back in chunks and compare the two CRCs, as one test.
@@ -339,40 +339,40 @@ PRI roundTripCase(pTitle, pFilename, byteCount, seed) | neededBlocks, freeBlocks
 ' @local readCount - bytes the driver returned
 ' @local readCrc - CRC of the data read back
 
-  utils.startTest(pTitle)
-  DEBUG("  bytes: ", udec_(byteCount))
+    utils.startTest(pTitle)
+    DEBUG("  bytes: ", udec_(byteCount))
 
-  neededBlocks, _ := layoutOf(byteCount)
-  freeBlocks := freeBlockCount()
-  utils.evaluateSubValue(freeBlocks >= neededBlocks + SPARE_BLOCKS, @"free blocks hold the file and the spare blocks", TRUE)
+    neededBlocks, _ := layoutOf(byteCount)
+    freeBlocks := freeBlockCount()
+    utils.evaluateSubValue(freeBlocks >= neededBlocks + SPARE_BLOCKS, @"free blocks hold the file and the spare blocks", TRUE)
 
-  handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_WRITE)
-  utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
-  if status == flash.SUCCESS
-    writtenCount, writeCrc := writeStream(handle, byteCount, seed)
-    utils.evaluateSubValue(writtenCount, @"bytes written", byteCount)
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close() of the written file", flash.SUCCESS)
-    utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", byteCount)
-
-    handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_READ)
-    utils.evaluateSubStatus(status, @"open(,r)", flash.SUCCESS)
+    handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_WRITE)
+    utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
     if status == flash.SUCCESS
-      readCount, readCrc := readStream(handle, byteCount)
-      utils.evaluateSubValue(readCount, @"bytes read", byteCount)
-      utils.evaluateSubValue(readCrc, @"CRC of the data read back", writeCrc)
-      status := utils.closeHandle(handle)
-      utils.evaluateSubStatus(status, @"close() of the read file", flash.SUCCESS)
+        writtenCount, writeCrc := writeStream(handle, byteCount, seed)
+        utils.evaluateSubValue(writtenCount, @"bytes written", byteCount)
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close() of the written file", flash.SUCCESS)
+        utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", byteCount)
+
+        handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_READ)
+        utils.evaluateSubStatus(status, @"open(,r)", flash.SUCCESS)
+        if status == flash.SUCCESS
+            readCount, readCrc := readStream(handle, byteCount)
+            utils.evaluateSubValue(readCount, @"bytes read", byteCount)
+            utils.evaluateSubValue(readCrc, @"CRC of the data read back", writeCrc)
+            status := utils.closeHandle(handle)
+            utils.evaluateSubStatus(status, @"close() of the read file", flash.SUCCESS)
 
 PRI testBoundarySweep()
 ' Write the sweep file, then read across the boundary between its two body blocks from every offset in a body block, through each kind of read handle.
 
-  utils.startTestGroup(@"reads across a block boundary from every offset in a block")
-  writeSweepFile()
-  sweepCase(@"read() through an r handle from every offset of a body block across the boundary returns the bytes written", flash.FILEMODE_READ)
-  sweepCase(@"read() through an r+ handle from every offset of a body block across the boundary returns the bytes written", flash.FILEMODE_READ_EXTENDED)
-  writeStreamCase()
-  rmwSweepCase()
+    utils.startTestGroup(@"reads across a block boundary from every offset in a block")
+    writeSweepFile()
+    sweepCase(@"read() through an r handle from every offset of a body block across the boundary returns the bytes written", flash.FILEMODE_READ)
+    sweepCase(@"read() through an r+ handle from every offset of a body block across the boundary returns the bytes written", flash.FILEMODE_READ_EXTENDED)
+    writeStreamCase()
+    rmwSweepCase()
 
 PRI sampleOffset(sampleIdx, edgeOffsets, midSamples, midStride) : blockOffset
 ' Give the offset in a body block of one sample of a sampled sweep: the first edgeOffsets offsets of the block, then midSamples offsets from there at a stride of midStride, then the last edgeOffsets offsets.
@@ -383,12 +383,12 @@ PRI sampleOffset(sampleIdx, edgeOffsets, midSamples, midStride) : blockOffset
 ' @param midStride - step between two middle offsets
 ' @returns blockOffset - offset in a body block of the sample
 
-  if sampleIdx < edgeOffsets
-    blockOffset := sampleIdx
-  elseif sampleIdx < edgeOffsets + midSamples
-    blockOffset := edgeOffsets + ((sampleIdx - edgeOffsets) * midStride)
-  else
-    blockOffset := flash.BYTES_IN_BODY_BLOCK - edgeOffsets + (sampleIdx - edgeOffsets - midSamples)
+    if sampleIdx < edgeOffsets
+        blockOffset := sampleIdx
+    elseif sampleIdx < edgeOffsets + midSamples
+        blockOffset := edgeOffsets + ((sampleIdx - edgeOffsets) * midStride)
+    else
+        blockOffset := flash.BYTES_IN_BODY_BLOCK - edgeOffsets + (sampleIdx - edgeOffsets - midSamples)
 
 PRI streamCallEnd(callIdx) : fileOffset
 ' Give the file offset at which one call of the write stream ends: where the next sample starts, one block on, or the end of the stream after the last sample.
@@ -396,10 +396,10 @@ PRI streamCallEnd(callIdx) : fileOffset
 ' @param callIdx - number of the call: 0 writes up to the first sample, call n writes from sample n - 1 to sample n
 ' @returns fileOffset - file offset of the byte after the last byte the call writes
 
-  if callIdx < W_SAMPLES
-    fileOffset := HEAD_FULL_BYTES + (callIdx * flash.BYTES_IN_BODY_BLOCK) + sampleOffset(callIdx, W_EDGE_OFFSETS, W_MID_SAMPLES, W_MID_STRIDE)
-  else
-    fileOffset := W_STREAM_BYTES
+    if callIdx < W_SAMPLES
+        fileOffset := HEAD_FULL_BYTES + (callIdx * flash.BYTES_IN_BODY_BLOCK) + sampleOffset(callIdx, W_EDGE_OFFSETS, W_MID_SAMPLES, W_MID_STRIDE)
+    else
+        fileOffset := W_STREAM_BYTES
 
 PRI writeStreamCase() | neededBlocks, handle, status, callIdx, startOffset, endOffset, spanLen, writeCount, writeError, failCount, firstFailIdx
 ' Write a new file in calls that each start at the next sampled offset of a body block and cross into the block after it, then read it back whole, as one test.
@@ -417,34 +417,34 @@ PRI writeStreamCase() | neededBlocks, handle, status, callIdx, startOffset, endO
 ' @local failCount - calls that went wrong
 ' @local firstFailIdx - the first call that went wrong, or NO_FIRST_FAIL when none did
 
-  utils.startTest(@"write() through a w handle from sampled offsets of a body block across each boundary, then read back whole")
-  DEBUG("  offsets: ", udec_(W_SAMPLES), ", calls: ", udec_(W_SAMPLES + 1), ", bytes: ", udec_(W_STREAM_BYTES))
-  neededBlocks, _ := layoutOf(W_STREAM_BYTES)
-  utils.evaluateSubValue(freeBlockCount() >= neededBlocks + SPARE_BLOCKS, @"free blocks hold the stream and the spare blocks", TRUE)
-  failCount := NO_FAILURES
-  firstFailIdx := NO_FIRST_FAIL
-  handle, status := utils.openWaitOnHandle(@streamFile, flash.FILEMODE_WRITE)
-  utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
-  if status == flash.SUCCESS
-    startOffset := 0
-    repeat W_SAMPLES + 1 with callIdx
-      endOffset := streamCallEnd(callIdx)
-      spanLen := endOffset - startOffset
-      fillPattern(@spanBuf, startOffset, spanLen, SEED_W_SWEEP)
-      writeCount := flash.write(handle, @spanBuf, spanLen)
-      writeError := flash.error()
-      if writeCount <> spanLen OR writeError <> flash.SUCCESS
-	failCount++
-	if firstFailIdx == NO_FIRST_FAIL
-	  firstFailIdx := callIdx
-	  DEBUG("  first failing call ", udec_(callIdx), ": wrote ", sdec_(writeCount), " of ", udec_(spanLen), ", error ", sdec_(writeError))
-      startOffset := endOffset
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-  utils.evaluateSubValue(failCount, @"calls that did not write every byte", NO_FAILURES)
-  utils.evaluateSubValue(firstFailIdx, @"first call that went wrong", NO_FIRST_FAIL)
-  utils.evaluateSubValue(flash.file_size(@streamFile), @"file_size()", W_STREAM_BYTES)
-  utils.evaluateSubValue(streamFailures(), @"chunks of the stream that did not read back as written", NO_FAILURES)
+    utils.startTest(@"write() through a w handle from sampled offsets of a body block across each boundary, then read back whole")
+    DEBUG("  offsets: ", udec_(W_SAMPLES), ", calls: ", udec_(W_SAMPLES + 1), ", bytes: ", udec_(W_STREAM_BYTES))
+    neededBlocks, _ := layoutOf(W_STREAM_BYTES)
+    utils.evaluateSubValue(freeBlockCount() >= neededBlocks + SPARE_BLOCKS, @"free blocks hold the stream and the spare blocks", TRUE)
+    failCount := NO_FAILURES
+    firstFailIdx := NO_FIRST_FAIL
+    handle, status := utils.openWaitOnHandle(@streamFile, flash.FILEMODE_WRITE)
+    utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
+    if status == flash.SUCCESS
+        startOffset := 0
+        repeat W_SAMPLES + 1 with callIdx
+            endOffset := streamCallEnd(callIdx)
+            spanLen := endOffset - startOffset
+            fillPattern(@spanBuf, startOffset, spanLen, SEED_W_SWEEP)
+            writeCount := flash.write(handle, @spanBuf, spanLen)
+            writeError := flash.error()
+            if writeCount <> spanLen OR writeError <> flash.SUCCESS
+                failCount++
+                if firstFailIdx == NO_FIRST_FAIL
+                    firstFailIdx := callIdx
+                    DEBUG("  first failing call ", udec_(callIdx), ": wrote ", sdec_(writeCount), " of ", udec_(spanLen), ", error ", sdec_(writeError))
+            startOffset := endOffset
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+    utils.evaluateSubValue(failCount, @"calls that did not write every byte", NO_FAILURES)
+    utils.evaluateSubValue(firstFailIdx, @"first call that went wrong", NO_FIRST_FAIL)
+    utils.evaluateSubValue(flash.file_size(@streamFile), @"file_size()", W_STREAM_BYTES)
+    utils.evaluateSubValue(streamFailures(), @"chunks of the stream that did not read back as written", NO_FAILURES)
 
 PRI streamFailures() : failCount | handle, status, fileOffset, chunkLen, readCount
 ' Read the write stream file back in chunks and count the chunks that differ from its pattern.
@@ -458,24 +458,24 @@ PRI streamFailures() : failCount | handle, status, fileOffset, chunkLen, readCou
 ' @local chunkLen - bytes of the chunk
 ' @local readCount - what read() returned
 
-  failCount := NO_FAILURES
-  handle, status := utils.openWaitOnHandle(@streamFile, flash.FILEMODE_READ)
-  if status <> flash.SUCCESS
-    failCount++
-  else
-    fileOffset := 0
-    repeat while fileOffset < W_STREAM_BYTES
-      chunkLen := (W_STREAM_BYTES - fileOffset) <# CHUNK_BYTES
-      fillPattern(@chunkBuf, fileOffset, chunkLen, SEED_W_SWEEP)
-      bytefill(@readBuf, POISON_BYTE, chunkLen)
-      readCount := flash.READ(handle, @readBuf, chunkLen)
-      if readCount <> chunkLen
-	failCount++
-	quit
-      if firstMismatch(@chunkBuf, @readBuf, chunkLen) <> NO_MISMATCH
-	failCount++
-      fileOffset += chunkLen
-    utils.closeHandle(handle)
+    failCount := NO_FAILURES
+    handle, status := utils.openWaitOnHandle(@streamFile, flash.FILEMODE_READ)
+    if status <> flash.SUCCESS
+        failCount++
+    else
+        fileOffset := 0
+        repeat while fileOffset < W_STREAM_BYTES
+            chunkLen := (W_STREAM_BYTES - fileOffset) <# CHUNK_BYTES
+            fillPattern(@chunkBuf, fileOffset, chunkLen, SEED_W_SWEEP)
+            bytefill(@readBuf, POISON_BYTE, chunkLen)
+            readCount := flash.READ(handle, @readBuf, chunkLen)
+            if readCount <> chunkLen
+                failCount++
+                quit
+            if firstMismatch(@chunkBuf, @readBuf, chunkLen) <> NO_MISMATCH
+                failCount++
+            fileOffset += chunkLen
+        utils.closeHandle(handle)
 
 PRI rmwSweepCase() | handle, status, sampleIdx, fileOffset, failCount, firstFailIdx
 ' Through an r+ handle, rewrite a body block and one byte more of the boundary sweep file from each sampled offset and read it back, then grow the file, as one test.
@@ -488,33 +488,33 @@ PRI rmwSweepCase() | handle, status, sampleIdx, fileOffset, failCount, firstFail
 ' @local failCount - writes whose bytes did not read back as written
 ' @local firstFailIdx - the first sample that went wrong, or NO_FIRST_FAIL when none did
 
-  utils.startTest(@"write() through an r+ handle from sampled offsets of a body block across the boundary, then a write that grows the file")
-  DEBUG("  offsets: ", udec_(RMW_SAMPLES), ", bytes per write: ", udec_(SWEEP_READ_BYTES), ", then one write of ", udec_(GROW_LEAD_BYTES + GROW_TAIL_BYTES), " bytes that grows the file")
-  failCount := NO_FAILURES
-  firstFailIdx := NO_FIRST_FAIL
-  handle, status := utils.openWaitOnHandle(@sweepFile, flash.FILEMODE_READ_EXTENDED)
-  utils.evaluateSubStatus(status, @"open(,r+)", flash.SUCCESS)
-  if status == flash.SUCCESS
-    repeat RMW_SAMPLES + 1 with sampleIdx
-      if sampleIdx < RMW_SAMPLES    ' a write from a sampled offset of the first body block into the second
-	fileOffset := SWEEP_START + sampleOffset(sampleIdx, RMW_EDGE_OFFSETS, RMW_MID_SAMPLES, RMW_MID_STRIDE)
-	fillPattern(@sweepModel + fileOffset, fileOffset, SWEEP_READ_BYTES, SEED_RMW_SWEEP + sampleIdx)
-	status := rmwSpan(handle, fileOffset, SWEEP_READ_BYTES)
-      else			    ' a write from just before the end of the full last block past it, which grows the file
-	fileOffset := SWEEP_BYTES - GROW_LEAD_BYTES
-	fillPattern(@sweepModel + fileOffset, fileOffset, GROW_LEAD_BYTES + GROW_TAIL_BYTES, SEED_GROW)
-	status := rmwSpan(handle, fileOffset, GROW_LEAD_BYTES + GROW_TAIL_BYTES)
-      if status <> flash.SUCCESS
-	failCount++
-	if firstFailIdx == NO_FIRST_FAIL
-	  firstFailIdx := sampleIdx
-	  DEBUG("  first failing sample ", udec_(sampleIdx), " at file offset ", udec_(fileOffset), ": ", sdec_(status))
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-  utils.evaluateSubValue(failCount, @"writes that did not read back as written", NO_FAILURES)
-  utils.evaluateSubValue(firstFailIdx, @"first sample that went wrong", NO_FIRST_FAIL)
-  utils.evaluateSubValue(flash.file_size(@sweepFile), @"file_size() once grown", GROWN_SWEEP_BYTES)
-  utils.evaluateSubValue(sweepFileFailures(GROWN_SWEEP_BYTES), @"pieces of the file that did not read back as the model", NO_FAILURES)
+    utils.startTest(@"write() through an r+ handle from sampled offsets of a body block across the boundary, then a write that grows the file")
+    DEBUG("  offsets: ", udec_(RMW_SAMPLES), ", bytes per write: ", udec_(SWEEP_READ_BYTES), ", then one write of ", udec_(GROW_LEAD_BYTES + GROW_TAIL_BYTES), " bytes that grows the file")
+    failCount := NO_FAILURES
+    firstFailIdx := NO_FIRST_FAIL
+    handle, status := utils.openWaitOnHandle(@sweepFile, flash.FILEMODE_READ_EXTENDED)
+    utils.evaluateSubStatus(status, @"open(,r+)", flash.SUCCESS)
+    if status == flash.SUCCESS
+        repeat RMW_SAMPLES + 1 with sampleIdx
+            if sampleIdx < RMW_SAMPLES                  ' a write from a sampled offset of the first body block into the second
+                fileOffset := SWEEP_START + sampleOffset(sampleIdx, RMW_EDGE_OFFSETS, RMW_MID_SAMPLES, RMW_MID_STRIDE)
+                fillPattern(@sweepModel + fileOffset, fileOffset, SWEEP_READ_BYTES, SEED_RMW_SWEEP + sampleIdx)
+                status := rmwSpan(handle, fileOffset, SWEEP_READ_BYTES)
+            else                                        ' a write from just before the end of the full last block past it, which grows the file
+                fileOffset := SWEEP_BYTES - GROW_LEAD_BYTES
+                fillPattern(@sweepModel + fileOffset, fileOffset, GROW_LEAD_BYTES + GROW_TAIL_BYTES, SEED_GROW)
+                status := rmwSpan(handle, fileOffset, GROW_LEAD_BYTES + GROW_TAIL_BYTES)
+            if status <> flash.SUCCESS
+                failCount++
+                if firstFailIdx == NO_FIRST_FAIL
+                    firstFailIdx := sampleIdx
+                    DEBUG("  first failing sample ", udec_(sampleIdx), " at file offset ", udec_(fileOffset), ": ", sdec_(status))
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+    utils.evaluateSubValue(failCount, @"writes that did not read back as written", NO_FAILURES)
+    utils.evaluateSubValue(firstFailIdx, @"first sample that went wrong", NO_FIRST_FAIL)
+    utils.evaluateSubValue(flash.file_size(@sweepFile), @"file_size() once grown", GROWN_SWEEP_BYTES)
+    utils.evaluateSubValue(sweepFileFailures(GROWN_SWEEP_BYTES), @"pieces of the file that did not read back as the model", NO_FAILURES)
 
 PRI rmwSpan(handle, fileOffset, byteCount) : status | writeCount, readCount
 ' Write bytes of the sweep model at a file offset through an r+ handle, then seek back and read them through the same handle.
@@ -528,24 +528,24 @@ PRI rmwSpan(handle, fileOffset, byteCount) : status | writeCount, readCount
 ' @local writeCount - what write() returned
 ' @local readCount - what read() returned
 
-  flash.seek(handle, fileOffset, flash.SK_FILE_START)
-  status := flash.error()
-  if status == flash.SUCCESS
-    writeCount := flash.write(handle, @sweepModel + fileOffset, byteCount)
-    status := flash.error()
-    if status == flash.SUCCESS AND writeCount <> byteCount
-      status := flash.E_SHORT_TRANSER
-  if status == flash.SUCCESS
     flash.seek(handle, fileOffset, flash.SK_FILE_START)
     status := flash.error()
-  if status == flash.SUCCESS
-    bytefill(@sweepRead, POISON_BYTE, byteCount)
-    readCount := flash.READ(handle, @sweepRead, byteCount)
-    status := flash.error()
-    if status == flash.SUCCESS AND readCount <> byteCount
-      status := flash.E_SHORT_TRANSER
-    elseif status == flash.SUCCESS AND firstMismatch(@sweepModel + fileOffset, @sweepRead, byteCount) <> NO_MISMATCH
-      status := flash.E_SHORT_TRANSER
+    if status == flash.SUCCESS
+        writeCount := flash.write(handle, @sweepModel + fileOffset, byteCount)
+        status := flash.error()
+        if status == flash.SUCCESS AND writeCount <> byteCount
+            status := flash.E_SHORT_TRANSER
+    if status == flash.SUCCESS
+        flash.seek(handle, fileOffset, flash.SK_FILE_START)
+        status := flash.error()
+    if status == flash.SUCCESS
+        bytefill(@sweepRead, POISON_BYTE, byteCount)
+        readCount := flash.READ(handle, @sweepRead, byteCount)
+        status := flash.error()
+        if status == flash.SUCCESS AND readCount <> byteCount
+            status := flash.E_SHORT_TRANSER
+        elseif status == flash.SUCCESS AND firstMismatch(@sweepModel + fileOffset, @sweepRead, byteCount) <> NO_MISMATCH
+            status := flash.E_SHORT_TRANSER
 
 PRI sweepFileFailures(byteCount) : failCount | handle, status, fileOffset, pieceLen, readCount
 ' Read the boundary sweep file back through a new read handle and count the pieces that differ from the sweep model.
@@ -560,23 +560,23 @@ PRI sweepFileFailures(byteCount) : failCount | handle, status, fileOffset, piece
 ' @local pieceLen - bytes of the piece
 ' @local readCount - what read() returned
 
-  failCount := NO_FAILURES
-  handle, status := utils.openWaitOnHandle(@sweepFile, flash.FILEMODE_READ)
-  if status <> flash.SUCCESS
-    failCount++
-  else
-    fileOffset := 0
-    repeat while fileOffset < byteCount
-      pieceLen := (byteCount - fileOffset) <# SWEEP_READ_BYTES
-      bytefill(@sweepRead, POISON_BYTE, pieceLen)
-      readCount := flash.READ(handle, @sweepRead, pieceLen)
-      if readCount <> pieceLen
-	failCount++
-	quit
-      if firstMismatch(@sweepModel + fileOffset, @sweepRead, pieceLen) <> NO_MISMATCH
-	failCount++
-      fileOffset += pieceLen
-    utils.closeHandle(handle)
+    failCount := NO_FAILURES
+    handle, status := utils.openWaitOnHandle(@sweepFile, flash.FILEMODE_READ)
+    if status <> flash.SUCCESS
+        failCount++
+    else
+        fileOffset := 0
+        repeat while fileOffset < byteCount
+            pieceLen := (byteCount - fileOffset) <# SWEEP_READ_BYTES
+            bytefill(@sweepRead, POISON_BYTE, pieceLen)
+            readCount := flash.READ(handle, @sweepRead, pieceLen)
+            if readCount <> pieceLen
+                failCount++
+                quit
+            if firstMismatch(@sweepModel + fileOffset, @sweepRead, pieceLen) <> NO_MISMATCH
+                failCount++
+            fileOffset += pieceLen
+        utils.closeHandle(handle)
 
 PRI writeSweepFile() | handle, status, writeCount
 ' Write the sweep file in one call from its model buffer, as one test.
@@ -586,17 +586,17 @@ PRI writeSweepFile() | handle, status, writeCount
 ' @local status - status of the open and the close
 ' @local writeCount - what write() returned
 
-  utils.startTest(@"write() of the sweep file, a full head block and two full body blocks")
-  DEBUG("  bytes: ", udec_(SWEEP_BYTES))
-  fillPattern(@sweepModel, 0, SWEEP_BYTES, SEED_SWEEP)
-  handle, status := utils.openWaitOnHandle(@sweepFile, flash.FILEMODE_WRITE)
-  utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
-  if status == flash.SUCCESS
-    writeCount := flash.write(handle, @sweepModel, SWEEP_BYTES)
-    utils.evaluateSubValue(writeCount, @"write()", SWEEP_BYTES)
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-  utils.evaluateSubValue(flash.file_size(@sweepFile), @"file_size()", SWEEP_BYTES)
+    utils.startTest(@"write() of the sweep file, a full head block and two full body blocks")
+    DEBUG("  bytes: ", udec_(SWEEP_BYTES))
+    fillPattern(@sweepModel, 0, SWEEP_BYTES, SEED_SWEEP)
+    handle, status := utils.openWaitOnHandle(@sweepFile, flash.FILEMODE_WRITE)
+    utils.evaluateSubStatus(status, @"open(,w)", flash.SUCCESS)
+    if status == flash.SUCCESS
+        writeCount := flash.write(handle, @sweepModel, SWEEP_BYTES)
+        utils.evaluateSubValue(writeCount, @"write()", SWEEP_BYTES)
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+    utils.evaluateSubValue(flash.file_size(@sweepFile), @"file_size()", SWEEP_BYTES)
 
 PRI sweepCase(pTitle, mode) | handle, status, offsetIdx, seekError, readCount, readError, failCount, firstFailIdx
 ' Open the sweep file in a read mode and, for every offset of the first body block, seek there and read across into the second body block, as one test.
@@ -614,30 +614,30 @@ PRI sweepCase(pTitle, mode) | handle, status, offsetIdx, seekError, readCount, r
 ' @local failCount - offsets whose seek or read went wrong
 ' @local firstFailIdx - the first offset that went wrong, or NO_FIRST_FAIL when none did
 
-  utils.startTest(pTitle)
-  DEBUG("  offsets: ", udec_(SWEEP_OFFSETS), ", bytes per read: ", udec_(SWEEP_READ_BYTES))
-  failCount := NO_FAILURES
-  firstFailIdx := NO_FIRST_FAIL
-  handle, status := utils.openWaitOnHandle(@sweepFile, mode)
-  utils.evaluateSubStatus(status, @"open()", flash.SUCCESS)
-  if status == flash.SUCCESS
-    repeat SWEEP_OFFSETS with offsetIdx
-      flash.seek(handle, SWEEP_START + offsetIdx, flash.SK_FILE_START)
-      seekError := flash.error()
-      bytefill(@sweepRead, POISON_BYTE, SWEEP_READ_BYTES)
-      readCount := flash.READ(handle, @sweepRead, SWEEP_READ_BYTES)
-      readError := flash.error()
-      if seekError <> flash.SUCCESS OR readError <> flash.SUCCESS OR readCount <> SWEEP_READ_BYTES
-	failCount++
-      elseif firstMismatch(@sweepModel + SWEEP_START + offsetIdx, @sweepRead, SWEEP_READ_BYTES) <> NO_MISMATCH
-	failCount++
-      if failCount <> NO_FAILURES AND firstFailIdx == NO_FIRST_FAIL
-	firstFailIdx := offsetIdx
-	DEBUG("  first failing offset ", udec_(offsetIdx), ": seek error ", sdec_(seekError), ", read ", sdec_(readCount), ", read error ", sdec_(readError))
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
-  utils.evaluateSubValue(failCount, @"offsets whose read did not return the bytes written", NO_FAILURES)
-  utils.evaluateSubValue(firstFailIdx, @"first offset that went wrong", NO_FIRST_FAIL)
+    utils.startTest(pTitle)
+    DEBUG("  offsets: ", udec_(SWEEP_OFFSETS), ", bytes per read: ", udec_(SWEEP_READ_BYTES))
+    failCount := NO_FAILURES
+    firstFailIdx := NO_FIRST_FAIL
+    handle, status := utils.openWaitOnHandle(@sweepFile, mode)
+    utils.evaluateSubStatus(status, @"open()", flash.SUCCESS)
+    if status == flash.SUCCESS
+        repeat SWEEP_OFFSETS with offsetIdx
+            flash.seek(handle, SWEEP_START + offsetIdx, flash.SK_FILE_START)
+            seekError := flash.error()
+            bytefill(@sweepRead, POISON_BYTE, SWEEP_READ_BYTES)
+            readCount := flash.READ(handle, @sweepRead, SWEEP_READ_BYTES)
+            readError := flash.error()
+            if seekError <> flash.SUCCESS OR readError <> flash.SUCCESS OR readCount <> SWEEP_READ_BYTES
+                failCount++
+            elseif firstMismatch(@sweepModel + SWEEP_START + offsetIdx, @sweepRead, SWEEP_READ_BYTES) <> NO_MISMATCH
+                failCount++
+            if failCount <> NO_FAILURES AND firstFailIdx == NO_FIRST_FAIL
+                firstFailIdx := offsetIdx
+                DEBUG("  first failing offset ", udec_(offsetIdx), ": seek error ", sdec_(seekError), ", read ", sdec_(readCount), ", read error ", sdec_(readError))
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+    utils.evaluateSubValue(failCount, @"offsets whose read did not return the bytes written", NO_FAILURES)
+    utils.evaluateSubValue(firstFailIdx, @"first offset that went wrong", NO_FIRST_FAIL)
 
 PRI writeStream(handle, byteCount, seed) : writtenCount, streamCrc | chunkLen, chunkCount, writeCount
 ' Write the pattern bytes of offsets 0 up to byteCount through a handle, one chunk at a time, and reduce the CRC of each chunk to one CRC.
@@ -653,19 +653,19 @@ PRI writeStream(handle, byteCount, seed) : writtenCount, streamCrc | chunkLen, c
 ' @local chunkCount - chunks written
 ' @local writeCount - bytes the driver took from the chunk
 
-  writtenCount := 0
-  chunkCount := 0
-  repeat while writtenCount < byteCount
-    chunkLen := (byteCount - writtenCount) <# CHUNK_BYTES
-    fillPattern(@chunkBuf, writtenCount, chunkLen, seed)
-    LONG[@writeDigests][chunkCount] := getcrc(@chunkBuf, CRC_POLYNOMIAL, chunkLen)
-    writeCount := flash.write(handle, @chunkBuf, chunkLen)
-    chunkCount++
-    if writeCount > 0
-      writtenCount += writeCount
-    if writeCount <> chunkLen
-      quit
-  streamCrc := getcrc(@writeDigests, CRC_POLYNOMIAL, chunkCount * BYTES_PER_LONG)
+    writtenCount := 0
+    chunkCount := 0
+    repeat while writtenCount < byteCount
+        chunkLen := (byteCount - writtenCount) <# CHUNK_BYTES
+        fillPattern(@chunkBuf, writtenCount, chunkLen, seed)
+        LONG[@writeDigests][chunkCount] := getcrc(@chunkBuf, CRC_POLYNOMIAL, chunkLen)
+        writeCount := flash.write(handle, @chunkBuf, chunkLen)
+        chunkCount++
+        if writeCount > 0
+            writtenCount += writeCount
+        if writeCount <> chunkLen
+            quit
+    streamCrc := getcrc(@writeDigests, CRC_POLYNOMIAL, chunkCount * BYTES_PER_LONG)
 
 PRI readStream(handle, byteCount) : readTotal, streamCrc | chunkLen, chunkCount, readCount
 ' Read a file through a handle, one chunk at a time, and reduce the CRC of each chunk to one CRC.
@@ -680,18 +680,18 @@ PRI readStream(handle, byteCount) : readTotal, streamCrc | chunkLen, chunkCount,
 ' @local chunkCount - chunks read
 ' @local readCount - bytes the driver returned for the chunk
 
-  readTotal := 0
-  chunkCount := 0
-  repeat while readTotal < byteCount
-    chunkLen := (byteCount - readTotal) <# CHUNK_BYTES
-    bytefill(@chunkBuf, POISON_BYTE, chunkLen)
-    readCount := flash.READ(handle, @chunkBuf, chunkLen)
-    LONG[@readDigests][chunkCount] := getcrc(@chunkBuf, CRC_POLYNOMIAL, readCount)
-    chunkCount++
-    readTotal += readCount
-    if readCount <> chunkLen
-      quit
-  streamCrc := getcrc(@readDigests, CRC_POLYNOMIAL, chunkCount * BYTES_PER_LONG)
+    readTotal := 0
+    chunkCount := 0
+    repeat while readTotal < byteCount
+        chunkLen := (byteCount - readTotal) <# CHUNK_BYTES
+        bytefill(@chunkBuf, POISON_BYTE, chunkLen)
+        readCount := flash.READ(handle, @chunkBuf, chunkLen)
+        LONG[@readDigests][chunkCount] := getcrc(@chunkBuf, CRC_POLYNOMIAL, readCount)
+        chunkCount++
+        readTotal += readCount
+        if readCount <> chunkLen
+            quit
+    streamCrc := getcrc(@readDigests, CRC_POLYNOMIAL, chunkCount * BYTES_PER_LONG)
 
 PRI checkLayout(pFilename, byteCount, usedByFile)
 ' Check a file's size and the blocks it occupies against the layout computed for its size.
@@ -700,8 +700,8 @@ PRI checkLayout(pFilename, byteCount, usedByFile)
 ' @param byteCount - bytes the file holds
 ' @param usedByFile - blocks stats() showed the file to occupy
 
-  utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", byteCount)
-  utils.evaluateSubValue(usedByFile, @"blocks the file occupies", layoutBlocks(byteCount))
+    utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", byteCount)
+    utils.evaluateSubValue(usedByFile, @"blocks the file occupies", layoutBlocks(byteCount))
 
 PRI checkReadBack(pFilename, byteCount) | handle, status, readCount, pastCount
 ' Read a file whole into the read buffer, compare it with the model buffer, and check a further read finds the end of the file.
@@ -715,18 +715,18 @@ PRI checkReadBack(pFilename, byteCount) | handle, status, readCount, pastCount
 ' @local readCount - bytes the whole read returned
 ' @local pastCount - bytes the read past the last byte returned
 
-  bytefill(@readBuf, POISON_BYTE, byteCount)
-  handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_READ)
-  utils.evaluateSubStatus(status, @"open(,r)", flash.SUCCESS)
-  if status == flash.SUCCESS
-    readCount := flash.READ(handle, @readBuf, byteCount)
-    utils.evaluateSubValue(readCount, @"read()", byteCount)
-    utils.evaluateSubValue(firstMismatch(@modelBuf, @readBuf, byteCount), @"first byte that differs", NO_MISMATCH)
-    pastCount := flash.READ(handle, @oneByte, ONE_BYTE)
-    utils.evaluateSubValue(pastCount, @"read() past the last byte", NO_BYTES)
-    utils.evaluateSubStatus(flash.error(), @"error() after the read past the last byte", flash.E_END_OF_FILE)
-    status := utils.closeHandle(handle)
-    utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
+    bytefill(@readBuf, POISON_BYTE, byteCount)
+    handle, status := utils.openWaitOnHandle(pFilename, flash.FILEMODE_READ)
+    utils.evaluateSubStatus(status, @"open(,r)", flash.SUCCESS)
+    if status == flash.SUCCESS
+        readCount := flash.READ(handle, @readBuf, byteCount)
+        utils.evaluateSubValue(readCount, @"read()", byteCount)
+        utils.evaluateSubValue(firstMismatch(@modelBuf, @readBuf, byteCount), @"first byte that differs", NO_MISMATCH)
+        pastCount := flash.READ(handle, @oneByte, ONE_BYTE)
+        utils.evaluateSubValue(pastCount, @"read() past the last byte", NO_BYTES)
+        utils.evaluateSubStatus(flash.error(), @"error() after the read past the last byte", flash.E_END_OF_FILE)
+        status := utils.closeHandle(handle)
+        utils.evaluateSubStatus(status, @"close()", flash.SUCCESS)
 
 PRI caseBytes(caseIdx) : byteCount
 ' Give the size of a case.
@@ -734,13 +734,13 @@ PRI caseBytes(caseIdx) : byteCount
 ' @param caseIdx - the size case, one of the CASE_ values
 ' @returns byteCount - bytes of the case
 
-  case caseIdx
-    CASE_HEAD_BELOW: byteCount := HEAD_FULL_BYTES - ONE_BYTE
-    CASE_HEAD_FULL: byteCount := HEAD_FULL_BYTES
-    CASE_HEAD_ABOVE: byteCount := HEAD_FULL_BYTES + ONE_BYTE
-    CASE_TWO_BELOW: byteCount := TWO_FULL_BYTES - ONE_BYTE
-    CASE_TWO_FULL: byteCount := TWO_FULL_BYTES
-    other: byteCount := TWO_FULL_BYTES + ONE_BYTE
+    case caseIdx
+        CASE_HEAD_BELOW: byteCount := HEAD_FULL_BYTES - ONE_BYTE
+        CASE_HEAD_FULL: byteCount := HEAD_FULL_BYTES
+        CASE_HEAD_ABOVE: byteCount := HEAD_FULL_BYTES + ONE_BYTE
+        CASE_TWO_BELOW: byteCount := TWO_FULL_BYTES - ONE_BYTE
+        CASE_TWO_FULL: byteCount := TWO_FULL_BYTES
+        other: byteCount := TWO_FULL_BYTES + ONE_BYTE
 
 PRI caseEdge(caseIdx) : pEdge
 ' Give the words that finish the title of a test of a case.
@@ -748,13 +748,13 @@ PRI caseEdge(caseIdx) : pEdge
 ' @param caseIdx - the size case, one of the CASE_ values
 ' @returns pEdge - address of zstring describing the size
 
-  case caseIdx
-    CASE_HEAD_BELOW: pEdge := @"one byte short of a full head block"
-    CASE_HEAD_FULL: pEdge := @"exactly a full head block"
-    CASE_HEAD_ABOVE: pEdge := @"one byte over a full head block"
-    CASE_TWO_BELOW: pEdge := @"one byte short of a full head block and body block"
-    CASE_TWO_FULL: pEdge := @"exactly a full head block and body block"
-    other: pEdge := @"one byte over a full head block and body block"
+    case caseIdx
+        CASE_HEAD_BELOW: pEdge := @"one byte short of a full head block"
+        CASE_HEAD_FULL: pEdge := @"exactly a full head block"
+        CASE_HEAD_ABOVE: pEdge := @"one byte over a full head block"
+        CASE_TWO_BELOW: pEdge := @"one byte short of a full head block and body block"
+        CASE_TWO_FULL: pEdge := @"exactly a full head block and body block"
+        other: pEdge := @"one byte over a full head block and body block"
 
 PRI caseTitle(pPrefix, caseIdx) : pTitle | prefixLen
 ' Build the title of a test from the words of what is called and the words of the size.
@@ -766,10 +766,10 @@ PRI caseTitle(pPrefix, caseIdx) : pTitle | prefixLen
 ' Local Variables:
 ' @local prefixLen - characters of the start of the title
 
-  strcopy(@titleBuf, pPrefix, TITLE_BYTES - 1)
-  prefixLen := strsize(@titleBuf)
-  strcopy(@titleBuf + prefixLen, caseEdge(caseIdx), TITLE_BYTES - 1 - prefixLen)
-  pTitle := @titleBuf
+    strcopy(@titleBuf, pPrefix, TITLE_BYTES - 1)
+    prefixLen := strsize(@titleBuf)
+    strcopy(@titleBuf + prefixLen, caseEdge(caseIdx), TITLE_BYTES - 1 - prefixLen)
+    pTitle := @titleBuf
 
 PRI setCaseName(pTemplate, caseIdx)
 ' Put the number of a case in the name of the edge file of that case.
@@ -777,7 +777,7 @@ PRI setCaseName(pTemplate, caseIdx)
 ' @param pTemplate - address of the name template of the edge files
 ' @param caseIdx - the size case, one of the CASE_ values
 
-  BYTE[pTemplate][NAME_DIGIT_OFFSET] := "0" + caseIdx
+    BYTE[pTemplate][NAME_DIGIT_OFFSET] := "0" + caseIdx
 
 PRI layoutOf(byteCount) : blockCount, unusedBytes | capacityBytes
 ' Find how many blocks hold a size and how many bytes the last block leaves unused, by filling blocks until their capacity covers the size.
@@ -789,12 +789,12 @@ PRI layoutOf(byteCount) : blockCount, unusedBytes | capacityBytes
 ' Local Variables:
 ' @local capacityBytes - bytes the blocks counted so far hold
 
-  blockCount := 1
-  capacityBytes := flash.BYTES_IN_HEAD_BLOCK
-  repeat while capacityBytes < byteCount
-    blockCount++
-    capacityBytes += flash.BYTES_IN_BODY_BLOCK
-  unusedBytes := capacityBytes - byteCount
+    blockCount := 1
+    capacityBytes := flash.BYTES_IN_HEAD_BLOCK
+    repeat while capacityBytes < byteCount
+        blockCount++
+        capacityBytes += flash.BYTES_IN_BODY_BLOCK
+    unusedBytes := capacityBytes - byteCount
 
 PRI layoutBlocks(byteCount) : blockCount
 ' Find how many blocks hold a size.
@@ -802,21 +802,21 @@ PRI layoutBlocks(byteCount) : blockCount
 ' @param byteCount - bytes of the file
 ' @returns blockCount - blocks the file occupies
 
-  blockCount, _ := layoutOf(byteCount)
+    blockCount, _ := layoutOf(byteCount)
 
 PRI usedBlocks() : blockCount
 ' Count the blocks in use in the filesystem.
 
 ' @returns blockCount - blocks in use
 
-  blockCount, _, _ := flash.stats()
+    blockCount, _, _ := flash.stats()
 
 PRI freeBlockCount() : blockCount
 ' Count the free blocks of the filesystem.
 
 ' @returns blockCount - free blocks
 
-  _, blockCount, _ := flash.stats()
+    _, blockCount, _ := flash.stats()
 
 PRI patternByte(fileOffset, seed) : patternValue
 ' Compute the byte a pattern holds at a file offset.
@@ -825,7 +825,7 @@ PRI patternByte(fileOffset, seed) : patternValue
 ' @param seed - number that makes this pattern differ from patterns of other seeds
 ' @returns patternValue - the byte at the offset
 
-  patternValue := (fileOffset + (fileOffset >> PATTERN_PAGE_SHIFT) + seed) & BYTE_MASK
+    patternValue := (fileOffset + (fileOffset >> PATTERN_PAGE_SHIFT) + seed) & BYTE_MASK
 
 PRI fillPattern(pBuffer, startOffset, byteCount, seed) | byteIdx
 ' Fill a buffer with a repeatable pattern that differs by seed and by 256-byte page, starting at a pattern offset.
@@ -838,8 +838,8 @@ PRI fillPattern(pBuffer, startOffset, byteCount, seed) | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being filled
 
-  repeat byteCount with byteIdx
-    BYTE[pBuffer][byteIdx] := patternByte(startOffset + byteIdx, seed)
+    repeat byteCount with byteIdx
+        BYTE[pBuffer][byteIdx] := patternByte(startOffset + byteIdx, seed)
 
 PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Find the first byte at which two buffers differ.
@@ -852,11 +852,11 @@ PRI firstMismatch(pFirst, pSecond, byteCount) : mismatchIdx | byteIdx
 ' Local Variables:
 ' @local byteIdx - number of the byte being compared
 
-  mismatchIdx := NO_MISMATCH
-  repeat byteCount with byteIdx
-    if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
-      mismatchIdx := byteIdx
-      quit
+    mismatchIdx := NO_MISMATCH
+    repeat byteCount with byteIdx
+        if BYTE[pFirst][byteIdx] <> BYTE[pSecond][byteIdx]
+            mismatchIdx := byteIdx
+            quit
 
 CON { license }
 

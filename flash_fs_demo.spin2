@@ -12,96 +12,96 @@
 ''
 '' =================================================================================================
 
-CON	_CLKFREQ	= 320_000_000
+CON     _CLKFREQ        = 320_000_000
 
 OBJ
-  Flash   : "flash_fs"
+    Flash       : "flash_fs"
 
 PUB go() : status
 
-  status := Flash.format()    ' Comment out this line to not erase all files
-  if status < 0
-    showError(@"format()", status)
-  else
-    status := Flash.mount()
+    status := Flash.format()                            ' Comment out this line to not erase all files
     if status < 0
-      showError(@"mount()", status)
+        showError(@"format()", status)
     else
-      ShowStats()	      ' Do a bunch of file stuff while reporting status, along the way
-      ShowFiles()
+        status := Flash.mount()
+        if status < 0
+            showError(@"mount()", status)
+        else
+            ShowStats()                                 ' Do a bunch of file stuff while reporting status, along the way
+            ShowFiles()
 
-      WriteZStringToFile(@"file1", @file1)
-      WriteZStringToFile(@"file2", @file2)
-      WriteZStringToFile(@"file3", @file3)
+            WriteZStringToFile(@"file1", @file1)
+            WriteZStringToFile(@"file2", @file2)
+            WriteZStringToFile(@"file3", @file3)
 
-      ShowStats()
-      ShowFiles()
+            ShowStats()
+            ShowFiles()
 
-      if Flash.exists(@"file3") AND NOT Flash.exists(@"Apples")
-	status := Flash.rename(@"file3",@"Apples")
-	if status < 0
-	  showError(@"rename()", status)
+            if Flash.exists(@"file3") AND NOT Flash.exists(@"Apples")
+                status := Flash.rename(@"file3",@"Apples")
+                if status < 0
+                    showError(@"rename()", status)
 
-      status := Flash.delete(@"file1")
-      if status < 0
-	showError(@"delete()", status)
+            status := Flash.delete(@"file1")
+            if status < 0
+                showError(@"delete()", status)
 
-      ShowStats()
-      ShowFiles()
+            ShowStats()
+            ShowFiles()
 
-      Flash.unmount()
-      DEBUG("Done")
-      repeat
+            Flash.unmount()
+            DEBUG("Done")
+            repeat
 
 PRI showError(pCaller, errorCode)
-  DEBUG("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
+    DEBUG("EEEE ", zstr_(pCaller), " error: ", zstr_(Flash.string_for_error(errorCode)))
 
 PRI ShowStats() | BlocksUsed, BlocksFree, Files
 
-  BlocksUsed, BlocksFree, Files := Flash.stats()
-  DEBUG(udec(BlocksUsed, BlocksFree, Files))
+    BlocksUsed, BlocksFree, Files := Flash.stats()
+    DEBUG(udec(BlocksUsed, BlocksFree, Files))
 
 PRI ShowFiles() | ID, ByteCount, BYTE Filename[127+1], BYTE Buff[30]
-  repeat
-    Flash.Directory(@ID, @Filename, @ByteCount)			  ' get next file
-    if Filename[0]						  ' is there a filename?
-      ReadFile(@Filename, @Buff, 30)				  ' read file
-      DEBUG(zstr(@Filename), udec(ByteCount, ID), zstr(@Buff))	  ' show filename, bytes, ID, and file contents
-    else
-      quit							  ' no more files, quit
+    repeat
+        Flash.Directory(@ID, @Filename, @ByteCount)                             ' get next file
+        if Filename[0]                                                          ' is there a filename?
+            ReadFile(@Filename, @Buff, 30)                                      ' read file
+            DEBUG(zstr(@Filename), udec(ByteCount, ID), zstr(@Buff))            ' show filename, bytes, ID, and file contents
+        else
+            quit                                                                ' no more files, quit
 
 PRI ReadFile(pFilename, pStr, maxlen) | handle, byteCount
 
-  handle := Flash.open(pFilename,"R")		       ' open file for reading
-  if handle >= 0
-    byteCount := Flash.rd_str(handle, pStr, maxlen)    ' read bytes of zstring
-    if byteCount < 0
-      showError(@"rd_str()", byteCount)
-    ' debug("- read str(", udec_(byteCount), ")=[", zstr_(pStr), "]")      'show filename, bytes, ID, and file contents
+    handle := Flash.open(pFilename,"R")                                         ' open file for reading
+    if handle >= 0
+        byteCount := Flash.rd_str(handle, pStr, maxlen)                         ' read bytes of zstring
+        if byteCount < 0
+            showError(@"rd_str()", byteCount)
+        ' debug("- read str(", udec_(byteCount), ")=[", zstr_(pStr), "]")      'show filename, bytes, ID, and file contents
 
-    Flash.Close(handle)				       ' close file
+        Flash.Close(handle)                                                     ' close file
 
 PRI WriteZStringToFile(pFilename, pStr) | handle, status
 
-  DEBUG("Writing: ", zstr_(pFilename))
+    DEBUG("Writing: ", zstr_(pFilename))
 
-  handle := Flash.open(pFilename, "W")	  ' open file for writing
-  if handle >= 0
-    status := Flash.wr_str(handle, pStr)
-    if status < 0
-      showError(@"wr_str()", status)
+    handle := Flash.open(pFilename, "W")                ' open file for writing
+    if handle >= 0
+        status := Flash.wr_str(handle, pStr)
+        if status < 0
+            showError(@"wr_str()", status)
 
-    status := Flash.close(handle)	  ' close file
-    if status < 0
-      showError(@"close()", status)
-  else
-    showError(@"open_write()", handle)
+        status := Flash.close(handle)                   ' close file
+        if status < 0
+            showError(@"close()", status)
+    else
+        showError(@"open_write()", handle)
 
 DAT
 
-  file1  BYTE  "The car goes.",0
-  file2  BYTE  "His cat meows.",0
-  file3  BYTE  "My boat floats.",0
+    file1       BYTE    "The car goes.",0
+    file2       BYTE    "His cat meows.",0
+    file3       BYTE    "My boat floats.",0
 
 CON { license }
 
