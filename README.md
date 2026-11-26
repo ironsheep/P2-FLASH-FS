@@ -28,18 +28,32 @@ On this Page:
 
 Additional pages:
 
+**Getting started**
+
 - [Adding to Your Project](DEVELOP.md) - download, include, configure, mount, and a complete first program
-- [Using the API](USING.md) - the open modes, how we differ from C, circular files, read-modify-write and multi-cog use
 - [Migrating](MIGRATING.md) - what a v2.0 or v1.4 program may notice in v2.1
-- [The flash_fs Object I/F Documentation](flash_fs.txt) - the object interface with documentation for each public method
+
+**Using the driver**
+
+- [Using the API](USING.md) - the open modes, how we differ from C, circular files, read-modify-write and multi-cog use
+- [API Reference](flash_fs.txt) - every public method, with its parameters and error codes
+
+**Sizing and speed**
+
+- [Memory Sizing Guide](./DOCs/MEMORY-SIZING-GUIDE.md) - what the driver costs in hub RAM
+- [SPI Performance Analysis](./DOCs/SPI-PERFORMANCE-ANALYSIS.md) - where the time goes in a read, a write and a mount
+
+**How it works**
+
+- [Theory of Operations](THEOPSv2.md) - block formats, life cycles, mount and wear-leveling
+- [v1.x Theory of Operations](THEOPS.md) - the v1 archive, kept for earlier versions
+- [SPI FLASH Datasheet](./DOCs/W25Q128JV-210823.pdf) - the W25Q128JV flash chip
+
+**The project**
+
 - [CHANGELOG](CHANGELOG.md) - the release history
-- [SPI FLASH Datasheet](DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
-- [FS Theory of Operations](THEOPSv2.md) - a detailed description of key concepts of this filesystem
-- [v1.x FS Theory of Operations](THEOPS.md) - the v1 archive, kept for earlier versions
-- [Memory Sizing Guide](DOCs/MEMORY-SIZING-GUIDE.md) - what the driver costs in hub RAM, measured with pnut-ts
-- [SPI Performance Analysis](DOCs/SPI-PERFORMANCE-ANALYSIS.md) - where the time goes in a read, a write and a mount
-- [Regression Testing Status](RegresssionTests/README.md) - regression test programs and their output logs
-- [Test Coverage](RegresssionTests/COVERAGE.md) - which program checks which method and behavior
+- [Regression Tests](./RegresssionTests/README.md) - the test programs and their results
+- [Test Coverage](./RegresssionTests/COVERAGE.md) - which program checks which method and behavior
 - [Contributing](CONTRIBUTING.md) - how to send a clean pull request
 
 ## The Project

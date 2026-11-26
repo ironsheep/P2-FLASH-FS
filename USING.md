@@ -18,19 +18,9 @@ On this Page:
 
 Additional pages:
 
-- [README](README.md) - the top page of this project
-- [Adding to Your Project](DEVELOP.md) - download, include, configure, mount, and a complete first program
-- [Migrating](MIGRATING.md) - what a v2.0 or v1.4 program may notice in v2.1
-- [The flash_fs Object I/F Documentation](flash_fs.txt) - the object interface with documentation for each public method
-- [CHANGELOG](CHANGELOG.md) - the release history
-- [SPI FLASH Datasheet](DOCs/W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
-- [FS Theory of Operations](THEOPSv2.md) - a detailed description of key concepts of this filesystem
-- [v1.x FS Theory of Operations](THEOPS.md) - the v1 archive, kept for earlier versions
-- [Memory Sizing Guide](DOCs/MEMORY-SIZING-GUIDE.md) - what the driver costs in hub RAM, measured with pnut-ts
-- [SPI Performance Analysis](DOCs/SPI-PERFORMANCE-ANALYSIS.md) - where the time goes in a read, a write and a mount
-- [Regression Testing Status](RegresssionTests/README.md) - regression test programs and their output logs
-- [Test Coverage](RegresssionTests/COVERAGE.md) - which program checks which method and behavior
-- [Contributing](CONTRIBUTING.md) - how to send a clean pull request
+- [README](README.md) - the top page, with every page by topic
+- [API Reference](flash_fs.txt) - every public method, with its parameters and error codes
+- [Theory of Operations](THEOPSv2.md) - next: block formats, life cycles, mount and wear-leveling
 
 ## Differences from ANSI C
 
