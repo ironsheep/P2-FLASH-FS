@@ -53,7 +53,7 @@ Key features of this Flash Filesystem for the P2 Edge Flash chip:
 - Read-Modify-Write supported
 - Circular file writes supported
 - Supports multi-cog use (the first cog to call mount() mounts the filesystem for all cogs to use; each call holds one lock from start to finish, see [Multi-cog use](#multi-cog-use))
-- `read()`, `write()`, `rd_str()` and the typed `rd_`/`wr_` calls move runs of bytes, not one byte per call: **[measured at bench visit 7: SPEEDUP_TABLE]**
+- `read()`, `write()`, `rd_str()` and `wr_str()` move runs of bytes, not one byte per call, and the byte, WORD and LONG calls move a value inside the buffered block directly: **[measured at bench visit 7: SPEEDUP_TABLE]**
 - Handle numbers count from 0 (the default) or from 1 (`HANDLE_BASE`), see [Configuring the driver](#configuring-the-driver)
 - `error()` is kept per cog and holds the reason for the last failed call
 - **Coming soon** *Directory Support*
@@ -175,7 +175,7 @@ OBJ { Objects Used by this Object }
 | `MAX_FILES_OPEN` | 2 | 1 or more | The number of files that can be open at one time, which is the number of handles. Each handle takes **4,264 bytes** of hub RAM, so the default build holds 8,528 bytes of handle state. Below 1, `mount()`, `format()` and `can_mount()` return E_NO_HANDLE |
 | `HANDLE_BASE` | 0 | 0 or 1 | The value of the first handle `open()` returns. The handles are `HANDLE_BASE` to `HANDLE_BASE + MAX_FILES_OPEN - 1`, and every method that takes a handle takes one of these. Any other value makes `mount()`, `format()` and `can_mount()` return E_BAD_HANDLE |
 | `FIRST_BLOCK` | `$080` | | The first 4 KB block of the flash the filesystem uses. The default leaves the first 512 KB for the boot image |
-| `LAST_BLOCK` | `$FFF` | | The last block it uses. `LAST_BLOCK - FIRST_BLOCK + 1` can be no more than 4,096 blocks: a block ID is a 12-bit field |
+| `LAST_BLOCK` | `$FFF` | | The last block it uses. `LAST_BLOCK - FIRST_BLOCK + 1` can be no more than 4,095 blocks: a block ID is a 12-bit field, and the driver keeps one more value for its own use |
 
 These are not constants to override:
 

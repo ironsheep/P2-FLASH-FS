@@ -8,7 +8,9 @@
 ''               probes every route to E_DRIVE_FULL: open(), a write that runs out of blocks (from this
 ''               cog and from another cog), open_circular(), create_file() and rename(), then the edge
 ''               cases of append, r+ rewrite, circular close, the close of a file whose last block finds
-''               no block left for it, a flush that finds no block and a later close that commits the file, an
+''               no block left for it, the close of a "w" or "a" file over an existing file that has
+''               written blocks when create_file() or another handle's close took the last free block,
+''               a flush that finds no block and a later close that commits the file, an
 ''               r+ read that must rewrite a modified block to go on, the flush of an r+ handle whose
 ''               rewrite finds no block, the flush of a circular file whose trim finds no block and the
 ''               later close that trims it, an
@@ -19,7 +21,7 @@
 ''               -- see below for terms of use
 ''   E-mail.....stephen@ironsheep.biz
 ''   Started.... NOV 2026
-''   Updated.... 24 NOV 2026
+''   Updated.... 26 NOV 2026
 ''
 '' =================================================================================================
 
@@ -120,6 +122,7 @@ CON ' ---- Fixed Mode Steps ----
     '  STEP_RMW          - r+ rewrite with one free block
     '  STEP_CIRCULAR     - circular close with the trim out of blocks
     '  STEP_NEW_CLOSE    - the close of a "w" or "a" file over an existing file and of a new "w+" file with no block left for its last block
+    '  STEP_CHAIN_CLOSE  - the close of a "w" or "a" file over an existing file that has written blocks, after create_file() or another handle's close takes the last free block
     '  STEP_FLUSH        - the flush of a "w" file over an existing file and of a new "w+" file with no block left for it, then its close once a block is free
     '  STEP_RMW_READ     - an r+ read that must rewrite a modified block with no block free, then the read once one is
     '  STEP_FLUSH_RMW    - the flush of an r+ handle with no block for the rewrite, then its close once a block is free
@@ -129,7 +132,7 @@ CON ' ---- Fixed Mode Steps ----
     '  STEP_CREATE       - create_file with one block too many and with exactly enough
     '  STEP_CREATE_LOOP  - create_file with its space checks skipped, running out inside its block loop
     '  STEP_COUNT        - the number of steps
-  #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_NEW_CLOSE, STEP_FLUSH, STEP_RMW_READ, STEP_FLUSH_RMW, STEP_FLUSH_CIRC, STEP_UNMOUNT, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
+  #0, STEP_SURVIVORS, STEP_MAIN_FILL, STEP_EXACT_FILL, STEP_MID_BLOCK, STEP_ROUTES, STEP_RECOVERY, STEP_SHORT_WRITES, STEP_APPEND, STEP_RMW, STEP_CIRCULAR, STEP_NEW_CLOSE, STEP_CHAIN_CLOSE, STEP_FLUSH, STEP_RMW_READ, STEP_FLUSH_RMW, STEP_FLUSH_CIRC, STEP_UNMOUNT, STEP_RENAME, STEP_CREATE, STEP_CREATE_LOOP, STEP_COUNT
 
 CON ' ---- Case Sizes ----
 
@@ -163,6 +166,10 @@ CON ' ---- Case Sizes ----
   NEW_SPAN_BYTES	= HEAD_BYTES + NEW_CLOSE_BYTES				     ' bytes of the new "w+" file, a full head block and the start of a second block
   NEW_SPAN_BLOCKS	= 2							     ' blocks the new "w+" file has written when its last block is still to be rewritten
   ONE_BLOCK_ID		= 1							     ' block IDs the open of a new file takes, for its head block
+  CHAIN_SPAN_BYTES	= BODY_BYTES + NEW_CLOSE_BYTES				     ' bytes written after the first block is full: a full body block and the start of the next, which stays in the buffer
+  CHAIN_FREE_BLOCKS	= 3							     ' blocks free when a chain-close case starts: one for each block the handle writes, and the last one, which another call takes
+  CHAIN_WRITTEN_BLOCKS	= 2							     ' blocks the handle writes: the inactive copy of its first block, and one body block
+  CHAIN_TAKEN_IDS	= 2							     ' block IDs the handle takes: the body block's and the buffered block's
   CREATE_BLOCKS		= 3							     ' blocks create_file() has free in its case
   CREATE_BYTES		= HEAD_BYTES + ((CREATE_BLOCKS - ONE_BLOCK) * BODY_BYTES)    ' bytes that fill those blocks
   WORD_VALUE		= $BEEF							     ' value of the short wr_word()
@@ -354,6 +361,7 @@ PRI runFixed() | stepIdx
       STEP_RMW: testRewrite()
       STEP_CIRCULAR: testCircular()
       STEP_NEW_CLOSE: testLastBlockClose()
+      STEP_CHAIN_CLOSE: testChainClose()
       STEP_FLUSH: testFlushFull()
       STEP_RMW_READ: testReadRewriteFull()
       STEP_FLUSH_RMW: testFlushRewriteFull()
@@ -847,6 +855,82 @@ PRI lastBlockCloseCase(pTitle, mode) | bNewFile, writeBytes, idsTaken, handle, s
   else
     expectValue(@"free blocks after close()", freeBlockCount(), NO_BLOCKS)
     checkFileHolds(@caseFile, @modelBuf, RENAME_BYTES)
+  checkWitness()
+
+PRI testChainClose()
+' Close a "w" or "a" file over an existing file that has written blocks to the flash, after another call takes the last free block: create_file(), or the close of a second handle.
+
+  utils.startTestGroup(@"close of a file over an existing file whose written blocks find no block for the last one")
+  chainCloseCase(@"open(,a) of an existing file writes two blocks, create_file() takes the last free block, then close() gives back every block and ID", flash.FILEMODE_APPEND, FALSE)
+  chainCloseCase(@"open(,w) over an existing file writes two blocks, create_file() takes the last free block, then close() gives back every block and ID", flash.FILEMODE_WRITE, FALSE)
+  chainCloseCase(@"open(,a) of an existing file writes two blocks, a second handle's close() takes the last free block, then close() gives back every block and ID", flash.FILEMODE_APPEND, TRUE)
+  chainCloseCase(@"open(,w) over an existing file writes two blocks, a second handle's close() takes the last free block, then close() gives back every block and ID", flash.FILEMODE_WRITE, TRUE)
+
+PRI chainCloseCase(pTitle, mode, bOtherHandle) | firstBytes, handle, otherHandle, status, writeCount, freeIdsAtClose, closeStatus, closeError
+' Write an existing file, leave CHAIN_FREE_BLOCKS free, open it "w" or "a" and write past two blocks, let another call take the last free block, then close the file, as one test.
+' -- the handle writes the inactive copy of its first block and one body block, and its last block stays in the buffer
+' -- the other call is create_file() of a one-block file, or the close of a new "w" file that a second handle holds
+' -- the close finds no block, so it gives back the two blocks and two block IDs it took and leaves the existing file as it was
+
+' @param pTitle - address of zstring naming the test
+' @param mode - open mode: "w" or "a" over the existing file
+' @param bOtherHandle - TRUE when a second handle's close takes the last block, FALSE when create_file() does
+
+' Local Variables:
+' @local firstBytes - bytes the handle writes to fill its first block
+' @local handle - handle of the existing file
+' @local otherHandle - handle of the new file the second handle writes
+' @local status - status of each open
+' @local writeCount - what write() returned
+' @local freeIdsAtClose - free block IDs just before the close that fails
+' @local closeStatus - what close() returned
+' @local closeError - error() after close()
+
+  utils.startTest(pTitle)
+  clearWorkspace()
+  fillPattern(@modelBuf, FIRST_OFFSET, RENAME_BYTES, SEED_RENAME)
+  expectStatus(@"write of the existing file", writeBufferFile(@caseFile, @modelBuf, RENAME_BYTES), flash.SUCCESS)
+  expectStatus(@"pad of the workspace", padTo(CHAIN_FREE_BLOCKS, @padFile), flash.SUCCESS)
+  expectValue(@"free blocks before the open", freeBlockCount(), CHAIN_FREE_BLOCKS)
+  if mode == flash.FILEMODE_APPEND
+    firstBytes := HEAD_BYTES - RENAME_BYTES					 ' the existing head block holds RENAME_BYTES already
+  else
+    firstBytes := HEAD_BYTES
+  fillPattern(@writeBuf, FIRST_OFFSET, firstBytes + CHAIN_SPAN_BYTES, SEED_NEW_CLOSE)
+  handle, status := utils.openWaitOnHandle(@caseFile, mode)
+  expectStatus(@"open()", status, flash.SUCCESS)
+  if status == flash.SUCCESS
+    writeCount := flash.write(handle, @writeBuf, firstBytes + CHAIN_SPAN_BYTES)
+    expectValue(@"bytes write() returned", writeCount, firstBytes + CHAIN_SPAN_BYTES)
+    expectValue(@"free blocks once the handle wrote two blocks", freeBlockCount(), CHAIN_FREE_BLOCKS - CHAIN_WRITTEN_BLOCKS)
+    if bOtherHandle
+      ' a new "w" file holds its one block in its buffer; its close takes the last free block
+      fillPattern(@readBuf, FIRST_OFFSET, NEW_CLOSE_BYTES, SEED_SHORT)
+      otherHandle, status := utils.openWaitOnHandle(@otherFile, flash.FILEMODE_WRITE)
+      expectStatus(@"open(,w) of a new file on the second handle", status, flash.SUCCESS)
+      if status == flash.SUCCESS
+	expectValue(@"bytes write() of the second handle returned", flash.write(otherHandle, @readBuf, NEW_CLOSE_BYTES), NEW_CLOSE_BYTES)
+	expectStatus(@"close() of the second handle", utils.closeHandle(otherHandle), flash.SUCCESS)
+      bytemove(@padBuf, @readBuf, NEW_CLOSE_BYTES)				 ' keep what the second file holds, for the check after the remount
+    else
+      expectStatus(@"create_file() of a one-block file", flash.create_file(@otherFile, CREATE_FILL, NEW_CLOSE_BYTES), flash.SUCCESS)
+      bytefill(@padBuf, CREATE_FILL, NEW_CLOSE_BYTES)
+    expectValue(@"free blocks before close()", freeBlockCount(), NO_BLOCKS)
+    freeIdsAtClose := flash.TEST_freeBlockIdCount()
+    closeStatus := utils.closeHandle(handle)
+    closeError := flash.error()
+    expectStatus(@"close()", closeStatus, flash.E_DRIVE_FULL)
+    expectStatus(@"error() after close()", closeError, flash.E_DRIVE_FULL)
+    ' the close gives back the inactive copy and the body block it wrote, the body block's ID and the buffered block's ID
+    expectValue(@"free blocks after close()", freeBlockCount(), CHAIN_WRITTEN_BLOCKS)
+    expectValue(@"free block IDs after close()", flash.TEST_freeBlockIdCount(), freeIdsAtClose + CHAIN_TAKEN_IDS)
+  checkFileHolds(@caseFile, @modelBuf, RENAME_BYTES)
+  checkFileHolds(@otherFile, @padBuf, NEW_CLOSE_BYTES)
+  ' nothing the failed close wrote is left on the flash, so the remount finds no block to cancel
+  remountChecks()
+  expectValue(@"free blocks after mount()", freeBlockCount(), CHAIN_WRITTEN_BLOCKS)
+  checkFileHolds(@caseFile, @modelBuf, RENAME_BYTES)
+  checkFileHolds(@otherFile, @padBuf, NEW_CLOSE_BYTES)
   checkWitness()
 
 PRI otherCogWrite(handle) | pending, workerCog, waitLimit

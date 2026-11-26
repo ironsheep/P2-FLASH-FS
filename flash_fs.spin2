@@ -8,8 +8,9 @@
 ''   Contributions...... Jon McPhalen, Stephen M Moraco
 ''               -- see below for terms of use
 ''   E-mail..... stephen@ironsheep.biz
+''   Version.... 2.1.0
 ''   Started.... AUG 2023
-''   Updated.... 25 NOV 2026
+''   Updated.... 26 NOV 2026
 ''
 '' ================================================================================================
 ''
@@ -66,7 +67,7 @@
 ''    method that takes a handle takes one of these.
 '' -- FIRST_BLOCK and LAST_BLOCK: the first and last 4KB block of the flash the file system uses.
 ''    The defaults, $080 and $FFF, leave the first 512KB for the boot image. LAST_BLOCK -
-''    FIRST_BLOCK + 1 can be no more than 4096 blocks.
+''    FIRST_BLOCK + 1 can be no more than 4095 blocks.
 '' -- Not constants to override: a file name is at most 127 characters, and the driver serves at
 ''    most 8 cogs at once.
 ''
@@ -178,7 +179,8 @@ CON { PRIVATE driver constants }
   '
   ' FIRST_BLOCK and LAST_BLOCK - the first and last block of the flash this file system uses
   '   a block ID is a 12-bit field in the block header (ThisID, bits 19..8, and NextID, bits 31..20), and the ID-to-block
-  '   table holds 12-bit entries, so BLOCKS (LAST_BLOCK - FIRST_BLOCK + 1) can be no more than 4096
+  '   table holds 12-bit entries that must also hold the value BLOCKS, which marks a head with no copy on the flash
+  '   yet, so BLOCKS (LAST_BLOCK - FIRST_BLOCK + 1) can be no more than 4095
   '
   ' Limits that are not constants to override:
   '   a file name is at most 127 characters, and FILENAME_SIZE holds it with its zero terminator
@@ -299,7 +301,7 @@ DAT { pre-initialized: driver state tracking tables }
   IDValid	      LONG  0					 ' (field pointer to 1-bit variables)
 
 ' physically: 1 byte for every 4 valid block IDs, 2 bits per block ID
-' logically: a "BLOCKS"-sized array of 2-bit variables, 1 for ea. block ID - indexed by block ID
+' logically: a "BLOCKS"-sized array of 2-bit variables, 1 for ea. block - indexed by block address
 ' contains a Block-State value in ea. 2 bit field [B_FREE, B_TEMP, B_HEAD, B_BODY]
   BlockStates	      BYTE  0[STATES_SIZE]			 ' block states
   BlockState	      LONG  0					 ' (field pointer to 2-bit variables)
@@ -1590,7 +1592,7 @@ PUB write(handle, p_buffer, count) : bytes_written | status
     bytes_written := status
   LONG[@errorCode][COGID()] := status					       ' every path leaves its status in error() for this cog
 
-PUB wr_byte(handle, byte_value) : status
+PUB wr_byte(handle, byte_value) : status | pBuff, bSeeking, endPtr
 '' Write a byte to the file (open for write/append) associated with the handle
 ''
 '' @param handle - handle to a file that is open for write or rewrite
@@ -1602,7 +1604,15 @@ PUB wr_byte(handle, byte_value) : status
 '' .. E_DRIVE_FULL if the flash has no room for the block the byte needs (the byte is not written),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
-  handle := handle_index(handle)				  ' from here on handle is the index in the handle tables
+' A byte that fits in the block in the buffer is written here; at the end of the block's data wr_bytes_no_locks()
+' writes it, starting the next block or rewriting a modified one.
+
+' Local Variables:
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
+' @local bSeeking - TRUE when the seek pointer is in use in place of the end pointer
+' @local endPtr - offset in the buffered block of the next byte to write
+
+  handle -= HANDLE_BASE						  ' from here on handle is the index in the handle tables (handle_index(), inline)
   ifnot fsMounted
     status := E_NOT_MOUNTED
   else
@@ -1614,14 +1624,28 @@ PUB wr_byte(handle, byte_value) : status
     else
       status := ensure_handle_mode(handle, H_WRITE)		  ' E_BAD_HANDLE or E_FILE_MODE unless the handle is open for writing
       if status == SUCCESS
-	_, status := wr_bytes_no_locks(handle, @byte_value, 1)	  ' the low byte of byte_value, the first in hub memory
+	pBuff := @hBlockBuff + handle << BLOCK_SIZE_EXP		  ' buffer_pointer(), inline
+	bSeeking := hSeekPtr[handle] <> NOT_ENABLED		  ' is the seek pointer in use?
+	endPtr := bSeeking ? hSeekPtr[handle] : hEndPtr[handle]
+	if endPtr < ADDR_DATA_END AND (hStatus[handle] == H_WRITE OR hStatus[handle] == H_APPEND OR hStatus[handle] == H_READWRITE)
+	  hModified[handle]~~					  ' the byte fits in the buffered block
+	  BYTE[pBuff][endPtr++] := byte_value
+	  if hStatus[handle] == H_READWRITE AND LONG[pBuff].[0] == 0 AND endPtr > LONG[pBuff].[31..20]
+	    LONG[pBuff].[31..20] := endPtr			  ' ..a write past the end of the last block moves its EndPtr: the file grows
+	  if bSeeking
+	    hSeekPtr[handle] := endPtr
+	    hSeekFileOffset[handle]++				  ' ..and the seek offset counts it
+	  else
+	    hEndPtr[handle] := endPtr
+	else
+	  _, status := wr_bytes_no_locks(handle, @byte_value, 1)  ' the end of the block's data: the low byte of byte_value, the first in hub memory
 
     status := release_lock(status)				  ' release the lock, we're done with it
   ' debug("wr_byte(", udec_(handle), ") EXIT freed sem #", udec_(fsLock))
 
   LONG[@errorCode][COGID()] := status				  ' every path leaves its status in error() for this cog
 
-PUB wr_word(handle, word_value) : status | writeLength
+PUB wr_word(handle, word_value) : status
 '' Write WORD (16-bits) to the file (open for write/append) associated with the handle
 '' -- order is Little Endian
 '' -- a write that stops part-way returns the reason it stopped; the bytes already written stay in
@@ -1637,19 +1661,10 @@ PUB wr_word(handle, word_value) : status | writeLength
 ''    written),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
-' Local Variables:
-' @local writeLength - what write() returned: the bytes written, or its code
+  status := write_value(handle, @word_value, 2)    ' SUCCESS, or the reason the write stopped
+  LONG[@errorCode][COGID()] := status		   ' every path leaves its status in error() for this cog
 
-  writeLength := write(handle, @word_value, 2)
-  if writeLength < 0
-    status := writeLength
-  elseif writeLength <> 2		 ' a short write: error() holds the reason write() stopped
-    status := LONG[@errorCode][COGID()]
-  else
-    status := SUCCESS
-  LONG[@errorCode][COGID()] := status	 ' every path leaves its status in error() for this cog
-
-PUB wr_long(handle, long_value) : status | writeLength
+PUB wr_long(handle, long_value) : status
 '' Write LONG (32-bits) to the file (open for write/append) associated with the handle
 '' -- order is Little Endian
 '' -- a write that stops part-way returns the reason it stopped; the bytes already written stay in
@@ -1665,17 +1680,8 @@ PUB wr_long(handle, long_value) : status | writeLength
 ''    written),
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish a write in time (the filesystem is unmounted)
 
-' Local Variables:
-' @local writeLength - what write() returned: the bytes written, or its code
-
-  writeLength := write(handle, @long_value, 4)
-  if writeLength < 0
-    status := writeLength
-  elseif writeLength <> 4		 ' a short write: error() holds the reason write() stopped
-    status := LONG[@errorCode][COGID()]
-  else
-    status := SUCCESS
-  LONG[@errorCode][COGID()] := status	 ' every path leaves its status in error() for this cog
+  status := write_value(handle, @long_value, 4)    ' SUCCESS, or the reason the write stopped
+  LONG[@errorCode][COGID()] := status		   ' every path leaves its status in error() for this cog
 
 PUB wr_str(handle, p_str) : status | writeLength, strBytes
 '' Write string (including the terminator) from p_str to the file (open for write/append) associated
@@ -1757,7 +1763,7 @@ PUB read(handle, p_buffer, count) : bytes_read | status
 
   LONG[@errorCode][COGID()] := status						   ' every path leaves its status in error() for this cog
 
-PUB rd_byte(handle) : byte_value | status
+PUB rd_byte(handle) : byte_value | status, pBuff, bSeeking, endPtr
 '' Read next byte from file associated with handle
 '' -- negative value indicates error or end of file
 ''
@@ -1771,10 +1777,16 @@ PUB rd_byte(handle) : byte_value | status
 '' .. E_FLASH_TIMEOUT if the flash chip did not finish the rewrite of a modified "r+"/"w+" block in
 ''    time (the filesystem is unmounted)
 
+' A byte inside the block in the buffer is read here; at the end of the block's data rd_bytes_no_locks() reads it,
+' loading the next block, rewriting a modified one, or reporting the end of the file.
+
 ' Local Variables:
 ' @local status - SUCCESS, or the reason no byte was read
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
+' @local bSeeking - TRUE when the seek pointer is in use in place of the end pointer
+' @local endPtr - offset in the buffered block of the next byte to read
 
-  handle := handle_index(handle)					 ' from here on handle is the index in the handle tables
+  handle -= HANDLE_BASE							 ' from here on handle is the index in the handle tables (handle_index(), inline)
   byte_value := 0							 ' the byte read lands in the low byte, so the value is 0..255
   ifnot fsMounted
     status := E_NOT_MOUNTED
@@ -1786,7 +1798,18 @@ PUB rd_byte(handle) : byte_value | status
     else
       status := ensure_handle_mode(handle, H_READ | H_MODIFY)		 ' E_BAD_HANDLE or E_FILE_MODE unless the handle is open for reading
       if status == SUCCESS
-	_, status := rd_bytes_no_locks(handle, @byte_value, 1, FALSE)	 ' read a byte from the file (or seek location), or the reason none was read
+	pBuff := @hBlockBuff + handle << BLOCK_SIZE_EXP			 ' buffer_pointer(), inline
+	bSeeking := hSeekPtr[handle] <> NOT_ENABLED			 ' is the seek pointer in use?
+	endPtr := bSeeking ? hSeekPtr[handle] : hEndPtr[handle]
+	if (hStatus[handle] == H_READ OR hStatus[handle] == H_READWRITE) AND endPtr < (LONG[pBuff].[0] ? ADDR_DATA_END : LONG[pBuff].[31..20])
+	  byte_value := BYTE[pBuff][endPtr++]				 ' the byte is in the buffered block
+	  if bSeeking
+	    hSeekPtr[handle] := endPtr
+	    hSeekFileOffset[handle]++					 ' ..and the seek offset counts it
+	  else
+	    hEndPtr[handle] := endPtr
+	else
+	  _, status := rd_bytes_no_locks(handle, @byte_value, 1, FALSE)	 ' the end of the block's data: the next block, or the reason no byte was read
 
     status := release_lock(status)					 ' release the lock, we're done with it
 
@@ -1794,7 +1817,7 @@ PUB rd_byte(handle) : byte_value | status
     byte_value := status						 ' a failed read returns its code in place of a byte
   LONG[@errorCode][COGID()] := status					 ' every path leaves its status in error() for this cog
 
-PUB rd_word(handle) : word_value | status, readLength
+PUB rd_word(handle) : word_value | status
 '' Read next WORD from file associated with the handle
 '' -- negative value indicates error or end of file
 ''
@@ -1810,17 +1833,15 @@ PUB rd_word(handle) : word_value | status, readLength
 ''    time (the filesystem is unmounted)
 
 ' Local Variables:
-' @local status - SUCCESS, or the reason read() stopped
-' @local readLength - the bytes read() placed in word_value
+' @local status - SUCCESS when both bytes were read, or the reason the read stopped
 
   word_value := 0
-  readLength := read(handle, @word_value, 2)
-  status := LONG[@errorCode][COGID()]	 ' read() left its reason, SUCCESS when both bytes were read
-  if readLength <> 2
+  status := read_value(handle, @word_value, 2)
+  if status <> SUCCESS
     word_value := status		 ' a short read returns its code in place of a WORD
   LONG[@errorCode][COGID()] := status	 ' every path leaves its status in error() for this cog
 
-PUB rd_long(handle) : long_value | status, readCount
+PUB rd_long(handle) : long_value | status
 '' Read next LONG from file associated with the handle
 '' -- NOTE: negative values can be legitimate values, so
 '' -- check for error() == SUCCESS before using value
@@ -1838,13 +1859,11 @@ PUB rd_long(handle) : long_value | status, readCount
 ''    time (the filesystem is unmounted)
 
 ' Local Variables:
-' @local status - SUCCESS, or the reason read() stopped
-' @local readCount - the bytes read() placed in long_value
+' @local status - SUCCESS when all four bytes were read, or the reason the read stopped
 
   long_value := 0
-  readCount := read(handle, @long_value, 4)
-  status := LONG[@errorCode][COGID()]	 ' read() left its reason, SUCCESS when all four bytes were read
-  if readCount <> 4
+  status := read_value(handle, @long_value, 4)
+  if status <> SUCCESS
     long_value := 0			 ' fewer than four bytes are no LONG: the bytes read are not returned
   LONG[@errorCode][COGID()] := status	 ' every path leaves its status in error() for this cog
 
@@ -2409,6 +2428,97 @@ PRI start_modify(handle, open_mode, head_block_id, file_position, bFileExists) |
   hChainLifeCycle[handle] := next_active_cycle(LONG[pBuff].[7..5])					    ' set fork cycle to next cycle of located block
     ' debug(" -- ", uhex_word(hChainBlockAddr[handle]), udec(block_id), uhex_word(hEndPtr[handle]), udec(hSeekFileOffset[handle]))
 
+PRI read_value(handle, p_value, count) : status | pBuff, bSeeking, endPtr
+' Read the count bytes of a typed value (rd_word(), rd_long()) into p_value, taking and releasing the lock
+'
+' Bytes that are all inside the block in the buffer are copied here. Otherwise rd_bytes_no_locks() reads them,
+' loading the next block, rewriting a modified one, or reporting the end of the file.
+'
+' @param handle - the handle to the file, as the caller was given it
+' @param p_value - the address the bytes are placed at
+' @param count - the bytes the value holds, 1 to 4
+' @returns status - SUCCESS when count bytes were read, or the reason the read stopped (the codes read() leaves
+' .. in error())
+
+' Local Variables:
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
+' @local bSeeking - TRUE when the seek pointer is in use in place of the end pointer
+' @local endPtr - offset in the buffered block of the next byte to read
+
+  handle -= HANDLE_BASE										     ' from here on handle is the index in the handle tables (handle_index(), inline)
+  ifnot fsMounted
+    status := E_NOT_MOUNTED
+  else
+    repeat while LOCKTRY(fsLock) == 0								     ' lock for exlusive use
+
+    ifnot fsMounted										     ' unmount() may have run while this cog waited for the lock
+      status := E_NOT_MOUNTED
+    else
+      status := ensure_handle_mode(handle, H_READ | H_MODIFY)					     ' E_BAD_HANDLE or E_FILE_MODE unless the handle is open for reading
+      if status == SUCCESS
+	pBuff := @hBlockBuff + handle << BLOCK_SIZE_EXP						     ' buffer_pointer(), inline
+	bSeeking := hSeekPtr[handle] <> NOT_ENABLED						     ' is the seek pointer in use?
+	endPtr := bSeeking ? hSeekPtr[handle] : hEndPtr[handle]
+	if (hStatus[handle] == H_READ OR hStatus[handle] == H_READWRITE) AND endPtr + count <= (LONG[pBuff].[0] ? ADDR_DATA_END : LONG[pBuff].[31..20])
+	  bytemove(p_value, pBuff + endPtr, count)						     ' the bytes are in the buffered block
+	  endPtr += count
+	  if bSeeking
+	    hSeekPtr[handle] := endPtr
+	    hSeekFileOffset[handle] += count							     ' ..and the seek offset counts them
+	  else
+	    hEndPtr[handle] := endPtr
+	else
+	  _, status := rd_bytes_no_locks(handle, p_value, count, FALSE)			     ' across the end of the block's data, or the reason the read stopped
+
+    status := release_lock(status)								     ' release the lock, we're done with it
+
+PRI write_value(handle, p_value, count) : status | pBuff, bSeeking, endPtr
+' Write the count bytes of a typed value (wr_word(), wr_long()) from p_value, taking and releasing the lock
+'
+' Bytes that all fit in the block in the buffer are copied here. Otherwise wr_bytes_no_locks() writes them, starting
+' the next block or rewriting a modified one; a write that stops part-way keeps the bytes already written.
+'
+' @param handle - the handle to the file, as the caller was given it
+' @param p_value - the address of the bytes to write
+' @param count - the bytes the value holds, 1 to 4
+' @returns status - SUCCESS when count bytes were written, or the reason the write stopped (the codes write()
+' .. leaves in error())
+
+' Local Variables:
+' @local pBuff - the address of the 4KB buffer for the file associated with this handle
+' @local bSeeking - TRUE when the seek pointer is in use in place of the end pointer
+' @local endPtr - offset in the buffered block of the next byte to write
+
+  handle -= HANDLE_BASE										     ' from here on handle is the index in the handle tables (handle_index(), inline)
+  ifnot fsMounted
+    status := E_NOT_MOUNTED
+  else
+    repeat while LOCKTRY(fsLock) == 0								     ' lock for exlusive use
+
+    ifnot fsMounted										     ' unmount() may have run while this cog waited for the lock
+      status := E_NOT_MOUNTED
+    else
+      status := ensure_handle_mode(handle, H_WRITE)						     ' E_BAD_HANDLE or E_FILE_MODE unless the handle is open for writing
+      if status == SUCCESS
+	pBuff := @hBlockBuff + handle << BLOCK_SIZE_EXP						     ' buffer_pointer(), inline
+	bSeeking := hSeekPtr[handle] <> NOT_ENABLED						     ' is the seek pointer in use?
+	endPtr := bSeeking ? hSeekPtr[handle] : hEndPtr[handle]
+	if endPtr + count <= ADDR_DATA_END AND (hStatus[handle] == H_WRITE OR hStatus[handle] == H_APPEND OR hStatus[handle] == H_READWRITE)
+	  hModified[handle]~~									     ' the bytes fit in the buffered block
+	  bytemove(pBuff + endPtr, p_value, count)
+	  endPtr += count
+	  if hStatus[handle] == H_READWRITE AND LONG[pBuff].[0] == 0 AND endPtr > LONG[pBuff].[31..20]
+	    LONG[pBuff].[31..20] := endPtr							     ' ..a write past the end of the last block moves its EndPtr: the file grows
+	  if bSeeking
+	    hSeekPtr[handle] := endPtr
+	    hSeekFileOffset[handle] += count							     ' ..and the seek offset counts them
+	  else
+	    hEndPtr[handle] := endPtr
+	else
+	  _, status := wr_bytes_no_locks(handle, p_value, count)				     ' across the end of the block's data, or the reason the write stopped
+
+    status := release_lock(status)								     ' release the lock, we're done with it
+
 PRI rd_bytes_no_locks(handle, p_buffer, count, bToTerminator) : bytes_read, status | pBuff, signature, bSeeking, endPtr, runLength, bTerminated, scanIdx
 ' Read up to count bytes from the file associated with handle into p_buffer, moving one run of bytes per block
 '
@@ -2791,7 +2901,7 @@ PRI handle_file_length(handle) : byteCount
     _, _, byteCount := seek_locate(handle, POSX)
     byteCount -= hWindowStart[handle]
 
-PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address, head_block_id, chain_block_id, chainState, bKeepHandle
+PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address, head_block_id, chain_block_id, chainState, bKeepHandle, buffered_id, signature
 ' Close an open file, completes the file write, rewrite, or read-modify-write then frees handle
 ' . (do all the close operations, caller has locked and will release)
 '
@@ -2813,6 +2923,13 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
 ' committed block uses that ID. An ID that a committed block uses (the head of an existing file being replaced or
 ' appended to, the last block of an appended file) is kept. A flush() keeps the handle, and with it the ID.
 '
+' A "w"/"a" file whose close() finds no free block for its last block also gives back every block it wrote since
+' its open or its last commit: the inactive copy of the first of them and the body blocks after it are cancelled
+' and freed, and their IDs and the ID of the block in the buffer are released. The flash and the tables are then
+' as they were before the open, or at the last commit, and the next mount() finds nothing to remove. Another
+' handle's commit or a create_file() can take the free block a write keeps for its file's next block, so this is
+' reachable with more than one file open for writing.
+'
 ' A flush() of a "w"/"a" file whose last block cannot be written leaves the handle as it was: its mode, IDs,
 ' buffer, pointers and commit-chain fields are kept and it stays modified, so a later flush() or close() commits it.
 '
@@ -2832,6 +2949,8 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
 ' @local chain_block_id - the block id of the first block the handle wrote
 ' @local chainState - the block state the first block the handle wrote takes once active
 ' @local bKeepHandle - TRUE when a flush() commits nothing and the handle keeps its state
+' @local buffered_id - the block ID of the block in the buffer, never written, of a close() that finds no free block
+' @local signature - the first long of the inactive copy of the first block written since the open or last commit
 
   status := LONG[@errorCode][COGID()] := SUCCESS				  ' new operation clear any prior error code
   bKeepHandle := FALSE
@@ -2877,8 +2996,18 @@ PRI close_no_lock(handle, bFreeHandle) : status | open_mode, chain_block_address
 	  elseifnot bFreeHandle							  ' flush(): nothing was committed, so the handle keeps its state..
 	    bKeepHandle := TRUE							  ' ..and its unwritten bytes, for a later commit
 
-	  elseif open_mode == H_WRITE						  ' a new file not created: no committed block uses the head ID its open took
-	    field[IDValid][head_block_id]~					  ' ..release it
+	  elseif fsDeviceFault == FALSE						  ' close() with no free block: the file is not committed (after a flash failure nothing is undone)
+	    buffered_id := LONG[buffer_pointer(handle)].[19..8]			  ' ..the block in the buffer, which was never written
+	    if buffered_id <> hChainBlockID[handle]				  ' ..blocks were written since the open or the last commit:
+	      chain_block_address := hChainBlockAddr[handle]			  ' ....the inactive copy of the first of them links to the rest
+	      flash_read_block_addr(chain_block_address, @signature, $000, $003)
+	      field[BlockState][chain_block_address] := B_FREE			  ' ....cancel and free that copy, which no file uses
+	      flash_cancel_block(chain_block_address)
+	      if fsDeviceFault == FALSE AND signature.[31..20] <> buffered_id	  ' ....cancel and free the body blocks after it, up to the block in the buffer
+		delete_chain_from_id(signature.[31..20], buffered_id, 2, FALSE)
+	      field[IDValid][buffered_id]~					  ' ....release the ID the block in the buffer took, which has no block
+	    if open_mode == H_WRITE						  ' ..a new file: no committed block uses the head ID its open took
+	      field[IDValid][head_block_id]~					  ' ....release it
 
 	if status == SUCCESS AND hCircularLength[handle]			  ' a committed file with a size limit: committed now, or by a flush whose trim found no free block..
 	  status := froncate_file(head_block_id, hCircularLength[handle])	  ' ..froncate file to size limit

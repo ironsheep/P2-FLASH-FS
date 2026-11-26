@@ -1,0 +1,403 @@
+'' =================================================================================================
+''
+''   File....... RT_typed_boundary_tests.spin2
+''   Purpose.... This object exercises the typed calls of the flash filesystem where their bytes meet
+''               the end of a block's data: wr_byte(), wr_word() and wr_long() writes and rd_byte(),
+''               rd_word() and rd_long() reads whose bytes run from a head block into a body block and
+''               from one body block into the next, reads after a seek into such a value, a read that
+''               the end of the file cuts short, "r+" writes over such a value, an "r+" write that grows
+''               the file past the end of its last block, and an "a" write past a full head block
+''   Author..... Stephen M Moraco
+''               -- see below for terms of use
+''   E-mail.....stephen@ironsheep.biz
+''   Started.... NOV 2026
+''   Updated.... 26 NOV 2026
+''
+'' =================================================================================================
+
+{ A head block holds HEAD_BYTES of data and a body block BODY_BYTES, both multiples of four, so a file
+  written with aligned words and longs never has a value that runs past the end of a block.  This
+  program starts its values at an odd file offset, so that a LONG runs from the head block into the
+  first body block and a WORD from the first body block into the second.
+
+  Every file is built in a model buffer first.  What a typed call writes is read back with read(), and
+  what a typed call reads is compared with the model, so neither side checks itself.
+}
+
+CON
+
+  _CLKFREQ  = 320_000_000
+
+{
+    ' debug via serial to RPi (using RPi gateway pins)
+    '  USES LED1 (56) and LED2 (57) pins
+    DEBUG_PIN_TX = 57           ' GRY GPIO 10
+    DEBUG_PIN_RX = 56           ' WHT GPIO 8 (gnd is BLK GPIO 6)
+    DEBUG_WINDOWS_OFF = -1      ' no debug windows showing
+    DEBUG_BAUD = 2_000_000      ' comms at 2Mbit
+'}
+
+OBJ
+  flash   : "flash_fs"
+  utils   : "RT_utilities"
+
+CON ' ---- Block Geometry ----
+
+  HEAD_BYTES	     = flash.BYTES_IN_HEAD_BLOCK		     ' bytes a head block holds
+  BODY_BYTES	     = flash.BYTES_IN_BODY_BLOCK		     ' bytes a body block holds
+  HEAD_END	     = HEAD_BYTES				     ' file offset of the first byte of the first body block
+  BODY_END	     = HEAD_BYTES + BODY_BYTES			     ' file offset of the first byte of the second body block
+  TAIL_BYTES	     = 200					     ' bytes of the stream file in its second body block
+  STREAM_BYTES	     = BODY_END + TAIL_BYTES			     ' bytes of the stream file, three blocks
+
+CON ' ---- Value Sizes and Offsets ----
+
+  BYTE_SIZE	     = 1					     ' bytes of a BYTE
+  WORD_SIZE	     = 2					     ' bytes of a WORD
+  LONG_SIZE	     = 4					     ' bytes of a LONG
+  LONG_START	     = BYTE_SIZE				     ' file offset of the first LONG, after one byte
+  LONG_ACROSS_HEAD   = HEAD_END - 3				     ' file offset of the LONG whose bytes run from the head block into the first body block
+  WORD_START	     = HEAD_END + 201				     ' file offset where the LONGs end and the WORDs start (odd)
+  WORD_ACROSS_BODY   = BODY_END - 1				     ' file offset of the WORD whose bytes run from the first body block into the second
+  WORD_END	     = BODY_END + 101				     ' file offset where the WORDs end and the closing bytes start
+  NEW_LONG	     = $C0DE_F00D				     ' value an "r+" handle writes over the LONG at LONG_ACROSS_HEAD
+  NEW_WORD	     = $5AA5					     ' value an "r+" handle writes over the WORD at WORD_ACROSS_BODY
+  GROW_BYTES	     = BODY_END - 2				     ' bytes of the file an "r+" handle grows: its last block has room for 2 bytes
+  APPEND_BASE_BYTES  = HEAD_BYTES - 2				     ' bytes of the file an "a" handle appends to: its head block has room for 2 bytes
+  GROW_LONG	     = $1234_5678				     ' value written past the end of the last block
+
+CON ' ---- Test Data ----
+
+  PATTERN_SEED	     = 29					     ' makes the stream pattern differ from other programs' patterns
+  PATTERN_SHIFT      = 8					     ' 256-byte pages in the pattern
+  BYTE_MASK	     = $FF					     ' keeps a pattern value to one byte
+  POISON_BYTE	     = $A5					     ' value a read buffer is filled with before a read
+  NO_MISMATCH	     = -1					     ' firstMismatch() result when the buffers agree
+  NO_COUNT	     = 0					     ' count of values that differ, when none do
+
+DAT  ' ---- Files and Buffers ----
+
+  streamFile  BYTE  "typed_bound.bin", 0
+  growFile    BYTE  "typed_grow.bin", 0
+  appendFile  BYTE  "typed_append.bin", 0
+
+  modelBuf    BYTE  0[STREAM_BYTES + LONG_SIZE]    ' what the file under test should hold
+  readBuf     BYTE  0[STREAM_BYTES + LONG_SIZE]    ' what the file reads back with read()
+
+PUB go() | status, pFailedCall
+'' Run every typed-call boundary test, then show the result.
+''
+
+' Local Variables:
+' @local status - status of the format and mount that start the run
+' @local pFailedCall - address of the name of the call that failed
+
+  pFailedCall := @"format()"
+  status := flash.format()			' Comment out this line to not erase all files
+  if status == flash.SUCCESS
+    pFailedCall := @"mount()"
+    status := flash.mount()
+
+  if status == flash.SUCCESS
+    utils.checkDriverInstance(flash.MAX_FILES_OPEN)
+
+    utils.showChipAndDriverVersion()
+    utils.setCheckCountPerTest(1)		' each check of a case is shown on its own
+
+    testTypedWrites()
+    testTypedReads()
+    testSeekIntoValues()
+    testEndOfFileInValue()
+    testModifyAcrossBlocks()
+    testGrowAcrossLastBlock()
+    testAppendAcrossHead()
+  else
+    utils.showError(pFailedCall, status)
+    utils.startTest(@"format() and mount()")	' a filesystem that did not mount is a failed run
+    utils.evaluateResultNegError(status, flash.SUCCESS)
+
+  DEBUG("* Test Complete")
+  utils.ShowTestResult(@"RT_typed_boundary_tests")
+
+PRI testTypedWrites() | handle, offset, failCount
+' Write the stream file with typed calls whose values run across two block ends, then read it back with read().
+
+' Local Variables:
+' @local handle - handle of the stream file
+' @local offset - file offset of the next value
+' @local failCount - typed writes that did not return SUCCESS
+
+  utils.startTestGroup(@"typed writes across the end of a block")
+  fillModel(STREAM_BYTES)
+  utils.startTest(@"wr_byte(), wr_long(), wr_word() and wr_byte() write a LONG across the head block's end and a WORD across a body block's end")
+  handle := openForTest(@streamFile, flash.FILEMODE_WRITE, @"open(,w)")
+  if handle >= utils.FIRST_HANDLE
+    failCount := NO_COUNT
+    offset := 0
+    if flash.wr_byte(handle, BYTE[@modelBuf][offset]) <> flash.SUCCESS
+      failCount++
+    offset += BYTE_SIZE
+    repeat while offset < WORD_START
+      if flash.wr_long(handle, LONG[@modelBuf + offset]) <> flash.SUCCESS
+	failCount++
+      offset += LONG_SIZE
+    repeat while offset < WORD_END
+      if flash.wr_word(handle, WORD[@modelBuf + offset]) <> flash.SUCCESS
+	failCount++
+      offset += WORD_SIZE
+    repeat while offset < STREAM_BYTES
+      if flash.wr_byte(handle, BYTE[@modelBuf][offset]) <> flash.SUCCESS
+	failCount++
+      offset += BYTE_SIZE
+    utils.evaluateSubValue(failCount, @"typed writes that did not return SUCCESS", NO_COUNT)
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+  checkFileHolds(@streamFile, STREAM_BYTES)
+
+PRI testTypedReads() | handle, offset, failCount, value
+' Read the stream file back with typed calls at the same offsets, each value compared with the model.
+
+' Local Variables:
+' @local handle - handle of the stream file
+' @local offset - file offset of the next value
+' @local failCount - typed reads that returned the wrong value or left an error
+' @local value - what the typed read returned
+
+  utils.startTestGroup(@"typed reads across the end of a block")
+  utils.startTest(@"rd_byte(), rd_long(), rd_word() and rd_byte() read a LONG across the head block's end and a WORD across a body block's end")
+  handle := openForTest(@streamFile, flash.FILEMODE_READ, @"open(,r)")
+  if handle >= utils.FIRST_HANDLE
+    failCount := NO_COUNT
+    offset := 0
+    value := flash.rd_byte(handle)
+    if value <> BYTE[@modelBuf][offset] OR flash.error() <> flash.SUCCESS
+      failCount++
+    offset += BYTE_SIZE
+    repeat while offset < WORD_START
+      value := flash.rd_long(handle)
+      if value <> LONG[@modelBuf + offset] OR flash.error() <> flash.SUCCESS
+	failCount++
+      offset += LONG_SIZE
+    repeat while offset < WORD_END
+      value := flash.rd_word(handle)
+      if value <> WORD[@modelBuf + offset] OR flash.error() <> flash.SUCCESS
+	failCount++
+      offset += WORD_SIZE
+    repeat while offset < STREAM_BYTES
+      value := flash.rd_byte(handle)
+      if value <> BYTE[@modelBuf][offset] OR flash.error() <> flash.SUCCESS
+	failCount++
+      offset += BYTE_SIZE
+    utils.evaluateSubValue(failCount, @"typed reads that differ from the model", NO_COUNT)
+    utils.evaluateSubStatus(flash.rd_byte(handle), @"rd_byte() at the end of the file", flash.E_END_OF_FILE)
+    utils.evaluateSubStatus(flash.error(), @"error() after it", flash.E_END_OF_FILE)
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+
+PRI testSeekIntoValues() | handle
+' Seek to values whose bytes run across a block end and read them, and read byte by byte across both block ends.
+
+' Local Variables:
+' @local handle - handle of the stream file
+
+  utils.startTestGroup(@"typed reads after a seek")
+  utils.startTest(@"rd_long() and rd_word() after a seek to a value across a block end, and rd_byte() across each block end")
+  handle := openForTest(@streamFile, flash.FILEMODE_READ, @"open(,r)")
+  if handle >= utils.FIRST_HANDLE
+    seekAndCheck(handle, LONG_ACROSS_HEAD)
+    utils.evaluateSubValue(flash.rd_long(handle), @"rd_long() across the head block's end", LONG[@modelBuf + LONG_ACROSS_HEAD])
+    utils.evaluateSubStatus(flash.error(), @"error() after it", flash.SUCCESS)
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() after it", BYTE[@modelBuf][LONG_ACROSS_HEAD + LONG_SIZE])
+    seekAndCheck(handle, WORD_ACROSS_BODY)
+    utils.evaluateSubValue(flash.rd_word(handle), @"rd_word() across the body block's end", WORD[@modelBuf + WORD_ACROSS_BODY])
+    utils.evaluateSubStatus(flash.error(), @"error() after it", flash.SUCCESS)
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() after it", BYTE[@modelBuf][WORD_ACROSS_BODY + WORD_SIZE])
+    seekAndCheck(handle, HEAD_END - 1)
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() of the head block's last byte", BYTE[@modelBuf][HEAD_END - 1])
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() of the first body block's first byte", BYTE[@modelBuf][HEAD_END])
+    seekAndCheck(handle, BODY_END - 1)
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() of the first body block's last byte", BYTE[@modelBuf][BODY_END - 1])
+    utils.evaluateSubValue(flash.rd_byte(handle), @"rd_byte() of the second body block's first byte", BYTE[@modelBuf][BODY_END])
+    utils.evaluateSubValue(flash.seek(handle, 0, flash.SK_CURRENT_POSN), @"position after it", BODY_END + BYTE_SIZE)
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+
+PRI testEndOfFileInValue() | handle
+' Read a LONG and a WORD that the end of the file cuts short.
+
+' Local Variables:
+' @local handle - handle of the stream file
+
+  utils.startTestGroup(@"typed reads cut short by the end of the file")
+  utils.startTest(@"rd_long() with 3 bytes left and rd_word() with 1 byte left return the end of the file")
+  handle := openForTest(@streamFile, flash.FILEMODE_READ, @"open(,r)")
+  if handle >= utils.FIRST_HANDLE
+    seekAndCheck(handle, STREAM_BYTES - 3)
+    utils.evaluateSubValue(flash.rd_long(handle), @"rd_long() with 3 bytes left", 0)
+    utils.evaluateSubStatus(flash.error(), @"error() after it", flash.E_END_OF_FILE)
+    seekAndCheck(handle, STREAM_BYTES - 1)
+    utils.evaluateSubStatus(flash.rd_word(handle), @"rd_word() with 1 byte left", flash.E_END_OF_FILE)
+    utils.evaluateSubStatus(flash.error(), @"error() after it", flash.E_END_OF_FILE)
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+
+PRI testModifyAcrossBlocks() | handle
+' With "r+", write a LONG over the value across the head block's end and a WORD over the value across the body block's end.
+
+' Local Variables:
+' @local handle - handle of the stream file
+
+  utils.startTestGroup(@"r+ typed writes across the end of a block")
+  utils.startTest(@"wr_long() and wr_word() with r+ over values across a block end change only those bytes")
+  handle := openForTest(@streamFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+)")
+  if handle >= utils.FIRST_HANDLE
+    seekAndCheck(handle, LONG_ACROSS_HEAD)
+    utils.evaluateSubStatus(flash.wr_long(handle, NEW_LONG), @"wr_long() across the head block's end", flash.SUCCESS)
+    LONG[@modelBuf + LONG_ACROSS_HEAD] := NEW_LONG
+    seekAndCheck(handle, WORD_ACROSS_BODY)
+    utils.evaluateSubStatus(flash.wr_word(handle, NEW_WORD), @"wr_word() across the body block's end", flash.SUCCESS)
+    WORD[@modelBuf + WORD_ACROSS_BODY] := NEW_WORD
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+  checkFileHolds(@streamFile, STREAM_BYTES)
+
+PRI testGrowAcrossLastBlock() | handle
+' With "r+", write a LONG at the end of a file whose last block has room for 2 bytes, so the file grows into a new block.
+
+' Local Variables:
+' @local handle - handle of the grown file
+
+  utils.startTestGroup(@"r+ typed write that grows the file past its last block")
+  fillModel(GROW_BYTES)
+  writeModel(@"write of the file to grow", @growFile, GROW_BYTES)
+  utils.startTest(@"wr_long() with r+ at the end of the file grows it by 4 bytes, 2 into a new block")
+  handle := openForTest(@growFile, flash.FILEMODE_READ_EXTENDED, @"open(,r+)")
+  if handle >= utils.FIRST_HANDLE
+    utils.evaluateSubValue(flash.seek(handle, POSX, flash.SK_FILE_START), @"seek() to the end of the file", GROW_BYTES)
+    utils.evaluateSubStatus(flash.wr_long(handle, GROW_LONG), @"wr_long() past the end of the last block", flash.SUCCESS)
+    LONG[@modelBuf + GROW_BYTES] := GROW_LONG
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+  checkFileHolds(@growFile, GROW_BYTES + LONG_SIZE)
+
+PRI testAppendAcrossHead() | handle
+' With "a", write a LONG to a file whose head block has room for 2 bytes, so the LONG runs into a new body block.
+
+' Local Variables:
+' @local handle - handle of the appended file
+
+  utils.startTestGroup(@"a typed write past a full head block")
+  fillModel(APPEND_BASE_BYTES)
+  writeModel(@"write of the file to append to", @appendFile, APPEND_BASE_BYTES)
+  utils.startTest(@"wr_long() with a appends 4 bytes, 2 in the head block and 2 in a new body block")
+  handle := openForTest(@appendFile, flash.FILEMODE_APPEND, @"open(,a)")
+  if handle >= utils.FIRST_HANDLE
+    utils.evaluateSubStatus(flash.wr_long(handle, GROW_LONG), @"wr_long() past the end of the head block", flash.SUCCESS)
+    LONG[@modelBuf + APPEND_BASE_BYTES] := GROW_LONG
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+  checkFileHolds(@appendFile, APPEND_BASE_BYTES + LONG_SIZE)
+
+PRI fillModel(byteCount) | byteIdx
+' Fill the model buffer with a repeatable pattern that differs by 256-byte page.
+
+' @param byteCount - bytes of the model to fill
+
+' Local Variables:
+' @local byteIdx - number of the byte being filled
+
+  repeat byteCount with byteIdx
+    BYTE[@modelBuf][byteIdx] := (byteIdx + (byteIdx >> PATTERN_SHIFT) + PATTERN_SEED) & BYTE_MASK
+
+PRI writeModel(pDescription, pFilename, byteCount) | handle
+' Write the first byteCount bytes of the model to a new file with one write(), as one test.
+
+' @param pDescription - address of zstring naming the test
+' @param pFilename - address of zstring with the file name
+' @param byteCount - bytes to write
+
+' Local Variables:
+' @local handle - handle of the file being written
+
+  utils.startTest(pDescription)
+  handle := openForTest(pFilename, flash.FILEMODE_WRITE, @"open(,w)")
+  if handle >= utils.FIRST_HANDLE
+    utils.evaluateSubValue(flash.write(handle, @modelBuf, byteCount), @"write()", byteCount)
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+
+PRI checkFileHolds(pFilename, byteCount) | handle
+' Read a file back with one read() and check its size and that it holds the bytes of the model, as one test.
+
+' @param pFilename - address of zstring with the file name
+' @param byteCount - bytes the file should hold
+
+' Local Variables:
+' @local handle - handle of the file being read
+
+  utils.startTest(@"read() of the file gives the bytes of the model")
+  utils.evaluateSubValue(flash.file_size(pFilename), @"file_size()", byteCount)
+  bytefill(@readBuf, POISON_BYTE, byteCount)
+  handle := openForTest(pFilename, flash.FILEMODE_READ, @"open(,r)")
+  if handle >= utils.FIRST_HANDLE
+    utils.evaluateSubValue(flash.read(handle, @readBuf, byteCount), @"read()", byteCount)
+    utils.evaluateSubValue(firstMismatch(byteCount), @"first byte that differs", NO_MISMATCH)
+    utils.evaluateSubStatus(utils.closeHandle(handle), @"close()", flash.SUCCESS)
+
+PRI openForTest(pFilename, mode, pMessage) : handle | status
+' Open a file and check the open as a sub-check of the running test.
+
+' @param pFilename - address of zstring with the file name
+' @param mode - open mode
+' @param pMessage - address of zstring naming the open
+' @returns handle - handle from open(), or a negative error code
+
+' Local Variables:
+' @local status - the error open() reported, SUCCESS when it opened
+
+  handle, status := utils.openWaitOnHandle(pFilename, mode)
+  utils.evaluateSubStatus(status, pMessage, flash.SUCCESS)
+
+PRI seekAndCheck(handle, fileOffset)
+' Seek from the start of the file and check the position seek() returned.
+
+' @param handle - handle of the open file
+' @param fileOffset - file offset to seek to
+
+  utils.evaluateSubValue(flash.seek(handle, fileOffset, flash.SK_FILE_START), @"seek()", fileOffset)
+
+PRI firstMismatch(byteCount) : mismatchIdx | byteIdx
+' Find the first byte at which the read buffer differs from the model.
+
+' @param byteCount - bytes to compare
+' @returns mismatchIdx - offset of the first differing byte, or NO_MISMATCH when they agree
+
+' Local Variables:
+' @local byteIdx - number of the byte being compared
+
+  mismatchIdx := NO_MISMATCH
+  repeat byteCount with byteIdx
+    if BYTE[@modelBuf][byteIdx] <> BYTE[@readBuf][byteIdx]
+      mismatchIdx := byteIdx
+      quit
+
+CON { license }
+
+{{
+  =================================================================================================
+
+  Terms of Use: MIT License
+
+  Copyright (c) 2026 Iron Sheep Productions, LLC
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to the following
+  conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies
+  or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+  OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  =================================================================================================
+}}

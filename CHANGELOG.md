@@ -10,6 +10,7 @@ Every call reports its error, the file modes follow ANSI C except where the flas
 - `"w+"` on an existing file starts a new empty file and replaces the old one at `close()` or `flush()`. It no longer edits the old file in place, which kept its stale tail records. `exists()` and `file_size()` report the old file until then.
 - `"r+"` grows the file when written at or past its end, and `rd_byte()` and `rd_str()` work on `"r+"` handles.
 - A full flash returns E_DRIVE_FULL where it could write over the boot area. `close()` and `flush()` report it, and a `flush()` that finds no free block keeps the unwritten data for a later `flush()` or `close()`.
+- A `"w"` file over an existing file, or an `"a"` file on an existing file, whose `close()` finds no free block for its last block gives back every block it wrote and leaves the existing file as it was. Before, the blocks it wrote stayed in use until the next `mount()`, which then removed them and returned E_BAD_BLOCKS_REMOVED. Another file's `close()` or a `create_file()` could take the last free block while the file was open.
 - `wr_word()`, `wr_long()` and `wr_str()` report a short write.
 - `rd_long()` returns 0 when fewer than four bytes are read. Code that checks `error()` before using the value is unaffected; code that used the partial value now sees 0.
 - `create_file()` with a count of 0 or less returns E_BAD_FILE_LENGTH and creates nothing, where it wrote an empty file.
@@ -34,7 +35,7 @@ Every call reports its error, the file modes follow ANSI C except where the flas
 
 ### Improvements
 
-- `read()`, `write()`, `rd_str()` and the typed `rd_` and `wr_` calls move runs of bytes in place of one byte per call. Figures, in system clock ticks and µs with the clkfreq stated:
+- `read()`, `write()`, `rd_str()` and `wr_str()` move runs of bytes in place of one byte per call. `rd_byte()`, `wr_byte()` and the WORD and LONG calls move a value that lies inside the buffered block directly, and pass a value that reaches the end of the block to the same code as `read()` and `write()`. Figures against v2.0.0, in system clock ticks and µs with the clkfreq stated:
 
   **[measured at bench visit 7: SPEEDUP_TABLE]**
 
