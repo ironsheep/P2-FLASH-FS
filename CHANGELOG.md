@@ -37,7 +37,7 @@ Every call reports its error, the open modes behave as documented, and `read()` 
 ### Bug Fixes
 
 - Writing until the flash is full returns E_DRIVE_FULL, and no longer risks overwriting the boot image below the filesystem
-- When `create_file()` or another `close()` takes the last free block, a `"w"` or `"a"` file over an existing file closes with E_DRIVE_FULL, frees its blocks and keeps the old file
+- A `"w"` or `"a"` `close()` that finds no free block (another `close()` or `create_file()` took it) returns E_DRIVE_FULL, discards the new data, and leaves the existing file unchanged
 - A `flush()` that finds no free block keeps its data for a later `flush()` or `close()`
 - A flash chip that does not finish an erase or program returns E_FLASH_TIMEOUT and unmounts the filesystem; the call no longer hangs
 - `"w+"` on an existing file starts an empty file that replaces the old one at `close()` or `flush()`, as documented, instead of editing the old file in place

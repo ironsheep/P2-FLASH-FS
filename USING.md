@@ -59,10 +59,11 @@ For every open mode this table says what happens at open, at a write, at `flush(
 | `"w+"` | does not exist | handle to a new, empty file; you can read and seek only over bytes you have written (a read before any write returns 0 bytes with `error()` E_END_OF_FILE) | the file appears and holds what was written; after `flush()` the handle stays open at the same position and later writes extend the file | **no file is created** |
 | `"w+"` | exists | handle to a new, empty file; the old file is untouched and `exists()` and `file_size()` still report it | the old file is replaced by the new file in one step; after `flush()` the handle stays open at the same position and later writes extend the file | **the old file is deleted** |
 
-Four consequences:
+Five consequences:
 
 - To keep an existing file, do not open it with `"w"` or `"w+"`. Use `exists()` first. To add to it, use `"a"`; to change it in place, use `"r+"`.
 - A `"w"` or `"w+"` file you close without writing is gone. `close()` does not warn you, because it did what you asked. Check with `exists()` when you need to know.
+- A commit that finds no free block changes nothing on the flash, and returns E_DRIVE_FULL. A `close()` discards the new data and frees its blocks, so an existing file stays as it was before the open. A `flush()` keeps the data in the handle for a later `flush()` or `close()`.
 - `file_size()` and `exists()` see the file as it is on the flash. `file_size_for_handle()` also counts the bytes the handle holds and has not yet committed.
 - The modes are `"r"`, `"w"`, `"a"`, `"r+"` and `"w+"`, in upper or lower case. Anything else, including `"a+"`, returns E_FILE_MODE. `open_circular()` takes `"r"` and `"a"` only.
 
