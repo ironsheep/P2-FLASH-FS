@@ -10,7 +10,7 @@
 #   2. the E_* codes in the driver's CON against the string_for_error cases (and that
 #      each message begins with its code name), against the E_* names flash_fs.txt uses
 #   3. version strings: LIB_VERSION (and its comment), the driver header's "Version...." line and the
-#      same line in flash_fs.txt, which is generated from it, README.md, CHANGELOG.md (absent is reported,
+#      same line in flash_fs.txt, which is generated from it, README.md (lines naming a compiler excluded), CHANGELOG.md (absent is reported,
 #      not an error) and DOCs/*.md "flash_fs vX.Y.Z" lines, all against LIB_VERSION
 #   4. the `PASS P/T` (or `FAIL P/T`) count each RegresssionTests/README.md table row gives,
 #      read with every `(<name>.log)` link after it in the row (a companion log, such as
@@ -228,7 +228,8 @@ else
         "$DRIVER: the header has no 'Version.... X.Y.Z' line" "$DRIVER: header Version line says"
     version_agrees "$(grep -E 'Version\.+[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' "$APITXT" | head -n 1 | sed -nE 's/.*Version\.+[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')" \
         "$APITXT: no 'Version.... X.Y.Z' line (regenerate it from the driver)" "$APITXT: Version line says"
-    mapfile -t rv < <(grep -o -E '\bv?[0-9]+\.[0-9]+\.[0-9]+\b' "$README" | sort -u)
+    # a line naming a compiler states that tool's version, not the driver's
+    mapfile -t rv < <(grep -v -i -E 'pnut|flexspin|propeller tool' "$README" | grep -o -E '\bv?[0-9]+\.[0-9]+\.[0-9]+\b' | sort -u)
     if [[ ${#rv[@]} -eq 0 ]]; then
         info "$README: no full X.Y.Z version string"
     else

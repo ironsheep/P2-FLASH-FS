@@ -1,24 +1,47 @@
-# flash\_fs SPI Performance Analysis
+# P2-FLASH-FS - SPI Performance Analysis
+Flash FS - a filesystem for the FLASH chip on the P2 Edge Module.
 
-An analysis of the SPI implementation in `flash_fs.spin2`, the W25Q128JV flash chip capabilities, and whether the P2 streamer could improve throughput.
+![Project Maintenance][maintenance-shield]
+
+[![License][license-shield]](../LICENSE)
+
+On this page you'll learn how the SPI implementation in `flash_fs.spin2` works, what the W25Q128JV flash chip can do, where the time goes in a read, a write and a mount, and whether the streamer of the Parallax Propeller 2 [P2 or P2X8C4M64P] could improve throughput.
 
 - **Driver**: flash\_fs v2.1.0
 - **Flash chip**: Winbond W25Q128JV (128 Mbit / 16 MB)
-- **Hardware**: P2 Edge Module (Rev D) - pins P58-P61
-- **Author**: Stephen M. Moraco, Iron Sheep Productions, LLC
+- **Hardware**: Parallax P2 Edge Module (Rev D) - pins P58-P61
 
 ---
 
 ## Table of Contents
 
-1. [Current SPI Implementation](#1-current-spi-implementation)
-2. [Current Throughput](#2-current-throughput)
-3. [Flash Chip Capabilities](#3-flash-chip-capabilities)
-4. [P2 Edge Hardware Constraints](#4-p2-edge-hardware-constraints)
-5. [P2 Streamer Overview](#5-p2-streamer-overview)
-6. [Could the Streamer Help?](#6-could-the-streamer-help)
-7. [Improvement Options](#7-improvement-options)
-8. [Summary](#8-summary)
+On this Page:
+
+- [1. Current SPI Implementation](#1-current-spi-implementation) - pins, clock, data transfer and the flash commands used
+- [2. Current Throughput](#2-current-throughput) - SPI clock rate, and measured read, write, mount and typed-call times
+- [3. Flash Chip Capabilities](#3-flash-chip-capabilities) - read, write and erase timing of the chip
+- [4. P2 Edge Hardware Constraints](#4-p2-edge-hardware-constraints) - only four pins reach the flash
+- [5. P2 Streamer Overview](#5-p2-streamer-overview) - what the streamer does and which modes suit SPI
+- [6. Could the Streamer Help?](#6-could-the-streamer-help) - reads, writes and mount
+- [7. Improvement Options](#7-improvement-options) - ranked by impact and effort
+- [8. Summary](#8-summary) - the figures and the recommended path
+- [How to Contribute](#how-to-contribute) - you can contribute to this project
+
+Additional pages:
+
+- [README](../README.md) - the top page of this project
+- [Adding to Your Project](../DEVELOP.md) - download, include, configure, mount, and a complete first program
+- [Using the API](../USING.md) - the open modes, how we differ from C, circular files, read-modify-write and multi-cog use
+- [Migrating](../MIGRATING.md) - what a v2.0 or v1.4 program may notice in v2.1
+- [The flash_fs Object I/F Documentation](../flash_fs.txt) - the object interface with documentation for each public method
+- [CHANGELOG](../CHANGELOG.md) - the release history
+- [SPI FLASH Datasheet](./W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
+- [FS Theory of Operations](../THEOPSv2.md) - a detailed description of key concepts of this filesystem
+- [v1.x FS Theory of Operations](../THEOPS.md) - the v1 archive, kept for earlier versions
+- [Memory Sizing Guide](./MEMORY-SIZING-GUIDE.md) - what the driver costs in hub RAM, measured with pnut-ts
+- [Regression Testing Status](../RegresssionTests/README.md) - regression test programs and their output logs
+- [Test Coverage](../RegresssionTests/COVERAGE.md) - which program checks which method and behavior
+- [Contributing](../CONTRIBUTING.md) - how to send a clean pull request
 
 ---
 
@@ -48,11 +71,11 @@ This gives **8 system clocks per SPI bit** (4 clocks per half-cycle x 2 half-cyc
 
 ### Data Transfer
 
-**MOSI (send)**: The COG bit-bangs data out MSB-first using `shl`/`drvc` in a tight `rep` loop (8 sysclk per bit). Hub data is streamed in via `rdfast`/`rfbyte` (the P2 hub FIFO, not the streamer).
+**MOSI (send)**: The cog bit-bangs data out MSB-first using `shl`/`drvc` in a tight `rep` loop (8 sysclk per bit). Hub data is streamed in via `rdfast`/`rfbyte` (the P2 hub FIFO, not the streamer).
 
-**MISO (receive)**: The COG samples data with `testp`/`rcl` in a `rep` loop (8 sysclk per bit), writing bytes to hub via `wrfast`/`wfbyte`.
+**MISO (receive)**: The cog samples data with `testp`/`rcl` in a `rep` loop (8 sysclk per bit), writing bytes to hub via `wrfast`/`wfbyte`.
 
-Each byte requires the COG to **reset and restart the smart pin clock** (`fltl`/`drvl`/`wypin #16`), generating exactly 16 transitions (8 SPI clocks) per byte. A `rep @.r, #1` block around this protects the clock start sequence from interrupts. The restart is part of the per-byte cost counted in [Section 2](#read-throughput-4-kb-block).
+Each byte requires the cog to **reset and restart the smart pin clock** (`fltl`/`drvl`/`wypin #16`), generating exactly 16 transitions (8 SPI clocks) per byte. A `rep @.r, #1` block around this protects the clock start sequence from interrupts. The restart is part of the per-byte cost counted in [Section 2](#read-throughput-4-kb-block).
 
 ### Flash Commands Used
 
@@ -75,8 +98,8 @@ Each byte requires the COG to **reset and restart the smart pin clock** (`fltl`/
 |---|---|---|
 | 200 MHz | 25.0 MHz | 200 / 8 |
 | 300 MHz | 37.5 MHz | 300 / 8 |
-| 320 MHz | 40.0 MHz | 320 / 8 (the certified clock: every regression run uses it) |
-| 350 MHz | 43.75 MHz | 350 / 8 (verified, not certified) |
+| 320 MHz | 40.0 MHz | 320 / 8 (tested at 320 MHz: every regression run uses it) |
+| 350 MHz | 43.75 MHz | 350 / 8 (the SPI timing holds up to 350 MHz) |
 
 All of these are under the 50 MHz limit of the Read Data (`$03`) command, so the implementation works correctly. This is the rate **within** a byte. Between bytes the loop adds the restart cost below, so the rate a block read achieves is lower.
 
@@ -169,7 +192,7 @@ Measured as above:
 | `wr_str()`, 256 strings of 31 characters | 235,609 | 736.3 | 144,304 | 450.9 | 1.6x faster |
 | `rd_str()`, 256 strings of 31 characters, 32-byte buffer | 163,144 | 509.8 | 23,592 | 73.7 | 6.9x faster |
 
-`rd_byte()` and `wr_byte()` are about 1.6 µs per call slower than in v2.0.0. Each call now re-tests the mount after it takes the lock, and releases the lock through the method that unmounts on a device fault; v2.0.0 did neither.
+`rd_byte()` and `wr_byte()` are about 1.6 to 1.7 µs per call slower than in v2.0.0. Each call now re-tests the mount after it takes the lock, and releases the lock through the method that unmounts on a device fault; v2.0.0 did neither.
 
 ---
 
@@ -238,7 +261,7 @@ The P2 Edge Module connects **only 4 pins** to the SPI flash chip:
 
 ## 5. P2 Streamer Overview
 
-The P2 streamer is a hardware DMA engine built into each COG. Once started, it moves data between hub memory and pins **at the system clock rate** with **zero COG involvement** - the COG can do other work or wait with `WAITXFI`.
+The P2 streamer is a hardware DMA engine built into each cog. Once started, it moves data between hub memory and pins **at the system clock rate** with **zero cog involvement** - the cog can do other work or wait with `WAITXFI`.
 
 ### How It Works
 
@@ -262,7 +285,7 @@ The mode word encodes: direction, pin number, bit width (1/2/4/8/16/32), byte or
 
 | Aspect | Current (Bit-Bang) | Streamer |
 |---|---|---|
-| COG busy during transfer? | Yes - `rep` loop for every bit | No - set-and-forget |
+| Cog busy during transfer? | Yes - `rep` loop for every bit | No - set-and-forget |
 | Max data rate | sysclk/8 within a byte, 89 clocks per byte overall | sysclk/2 (hardware) |
 | Hub memory access | `rfbyte`/`wfbyte` (manual) | Automatic via FIFO |
 | Setup complexity | Simple inline PASM | Mode word configuration |
@@ -280,7 +303,7 @@ The streamer would help reads in two ways:
 
 1. **Higher SPI clock rate**: Remove the per-byte restart and the 8-sysclk-per-bit software loop. With the streamer, the SPI clock can go as fast as the flash chip allows.
 
-2. **Free the COG**: During a 4 KB block read, the COG currently spends about 364,544 clocks in the `rep` loops. With the streamer, the COG issues `XINIT` + `WAITXFI` and is free to do other work (for example CRC computation on previously read data).
+2. **Free the cog**: During a 4 KB block read, the cog currently spends about 364,544 clocks in the `rep` loops. With the streamer, the cog issues `XINIT` + `WAITXFI` and is free to do other work (for example CRC computation on previously read data).
 
 **However**, there are two limits:
 
@@ -355,7 +378,7 @@ Ranked by impact and implementation effort. Each applies to the SPI share only; 
 
 **Complexity**: Moderate - the streamer mode word configuration and clock alignment require careful timing. The P2 boot ROM's `flash_loader` is a proven reference implementation of streamer-based SPI flash access.
 
-**Trade-off**: The current implementation is certified at a 320 MHz sysclk, and its SPI timing has been verified up to 350 MHz. A streamer-based approach would need the NCO frequency set correctly for the system clock, and timing alignment verified at the target speed.
+**Trade-off**: The current implementation is tested at a 320 MHz sysclk, and its SPI timing holds up to 350 MHz. A streamer-based approach would need the NCO frequency set correctly for the system clock, and timing alignment verified at the target speed.
 
 ### Option 3: Dual SPI Reads - Higher Effort
 
@@ -373,9 +396,9 @@ Ranked by impact and implementation effort. Each applies to the SPI share only; 
 
 **Hardware constraint**: The P2 Edge module connects only P58-P61 to the flash chip. IO2/IO3 are not available, so **Quad SPI is not possible** on this hardware.
 
-### Option 4: Free the COG During Reads - Streamer Bonus
+### Option 4: Free the Cog During Reads - Streamer Bonus
 
-Even without increasing the SPI clock, using the streamer lets the COG **do other work** during block reads instead of being held in the bit-bang loop. Potential uses:
+Even without increasing the SPI clock, using the streamer lets the cog **do other work** during block reads instead of being held in the bit-bang loop. Potential uses:
 
 - Compute CRC on the previous block while reading the next
 - Service other cog tasks or respond to lock requests
@@ -413,3 +436,40 @@ This is an architectural benefit, not a raw throughput improvement.
 4. **Add the streamer for block reads** - moderate effort, gain bounded by the SPI share.
 5. **Consider Dual SPI** - higher effort, verify signal integrity.
 6. **Do not expect writes to pass the flash floor** - the chip's internal timing is the hard limit.
+
+---
+
+## How to Contribute
+
+This is a project supporting our P2 Development Community. Please feel free to contribute to this project. You can contribute in the following ways:
+
+- File **Feature Requests** or **Issues** (describing things you are seeing while using our code) at the [Project Issue Tracking Page](https://github.com/ironsheep/P2-FLASH-FS/issues)
+- Fork this repo and then add your code to it. Finally, create a Pull Request to contribute your code back to this repository for inclusion with the projects code. See [CONTRIBUTING](../CONTRIBUTING.md)
+
+---
+
+> If you find this kind of written explanation useful, helpful I would be honored by your helping me out for a couple of :coffee:'s or :pizza: slices -or- you can support my efforts by contributing at my Patreon site!
+>
+> [![coffee](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ironsheep) &nbsp;&nbsp; -OR- &nbsp;&nbsp; [![Patreon](./images/patreon.png)](https://www.patreon.com/IronSheep?fan_landing=true)[Patreon.com/IronSheep](https://www.patreon.com/IronSheep?fan_landing=true)
+
+---
+
+## Disclaimer and Legal
+
+> *Parallax, Propeller Spin, and the Parallax and Propeller Hat logos* are trademarks of Parallax Inc., dba Parallax Semiconductor
+>
+> This project is in no way affiliated with, authorized, maintained, sponsored or endorsed by *Parallax Inc., dba Parallax Semiconductor* or any of its affiliates or subsidiaries.
+
+---
+
+## License
+
+Licensed under the MIT License.
+
+Follow these links for more information:
+
+### [Copyright](../copyright) | [License](../LICENSE)
+
+[maintenance-shield]: https://img.shields.io/badge/maintainer-stephen%40ironsheep%2ebiz-blue.svg?style=for-the-badge
+
+[license-shield]: https://img.shields.io/badge/License-MIT-yellow.svg

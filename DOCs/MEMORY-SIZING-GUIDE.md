@@ -1,30 +1,53 @@
-# Measuring flash\_fs Memory Consumption with pnut-ts
+# P2-FLASH-FS - Measuring Memory Consumption with pnut-ts
+Flash FS - a filesystem for the FLASH chip on the P2 Edge Module.
 
-A practical guide to determining how much hub RAM the `flash_fs` driver consumes - the method table, the DAT buffers, the bytecodes and the total runtime footprint - using the pnut-ts compiler's `-m` (map) and `-l` (listing) output files.
+![Project Maintenance][maintenance-shield]
+
+[![License][license-shield]](../LICENSE)
+
+On this page you'll learn how to work out how much hub RAM the `flash_fs` driver consumes - the method table, the DAT buffers, the bytecodes and the total runtime footprint - using the pnut-ts compiler's `-m` (map) and `-l` (listing) output files.
 
 - **Compiler**: pnut-ts v1.55.12 (every figure below was measured with it)
 - **Driver**: flash\_fs v2.1.0
-- **Author**: Stephen M. Moraco, Iron Sheep Productions, LLC
 
 ---
 
 ## Table of Contents
 
-1. [Background: flash\_fs and Hub RAM](#1-background-flash_fs-and-hub-ram)
-2. [Generating Map and Listing Files](#2-generating-map-and-listing-files)
-3. [Driver Standalone: Reading the Map File](#3-driver-standalone-reading-the-map-file)
-4. [DAT Section Breakdown](#4-dat-section-breakdown)
-5. [Impact of MAX\_FILES\_OPEN](#5-impact-of-max_files_open)
-6. [Analyzing a Program That Uses flash\_fs](#6-analyzing-a-program-that-uses-flash_fs)
-7. [Calculating Total Runtime Hub RAM](#7-calculating-total-runtime-hub-ram)
-8. [Sizing Audit Methodology](#8-sizing-audit-methodology)
-9. [Quick Reference](#9-quick-reference)
+On this Page:
+
+- [1. Background: flash\_fs and Hub RAM](#1-background-flash_fs-and-hub-ram) - why the driver is DAT-heavy
+- [2. Generating Map and Listing Files](#2-generating-map-and-listing-files) - the pnut-ts flags
+- [3. Driver Standalone: Reading the Map File](#3-driver-standalone-reading-the-map-file) - the driver's own footprint
+- [4. DAT Section Breakdown](#4-dat-section-breakdown) - every DAT variable, by category
+- [5. Impact of MAX\_FILES\_OPEN](#5-impact-of-max_files_open) - what each handle costs
+- [6. Analyzing a Program That Uses flash\_fs](#6-analyzing-a-program-that-uses-flash_fs) - the demo program as an example
+- [7. Calculating Total Runtime Hub RAM](#7-calculating-total-runtime-hub-ram) - code, VAR and stacks
+- [8. Sizing Audit Methodology](#8-sizing-audit-methodology) - a repeatable process for your own project
+- [9. Quick Reference](#9-quick-reference) - commands, formulas and the key figures
+- [How to Contribute](#how-to-contribute) - you can contribute to this project
+
+Additional pages:
+
+- [README](../README.md) - the top page of this project
+- [Adding to Your Project](../DEVELOP.md) - download, include, configure, mount, and a complete first program
+- [Using the API](../USING.md) - the open modes, how we differ from C, circular files, read-modify-write and multi-cog use
+- [Migrating](../MIGRATING.md) - what a v2.0 or v1.4 program may notice in v2.1
+- [The flash_fs Object I/F Documentation](../flash_fs.txt) - the object interface with documentation for each public method
+- [CHANGELOG](../CHANGELOG.md) - the release history
+- [SPI FLASH Datasheet](./W25Q128JV-210823.pdf) - our FLASH Chip Datasheet
+- [FS Theory of Operations](../THEOPSv2.md) - a detailed description of key concepts of this filesystem
+- [v1.x FS Theory of Operations](../THEOPS.md) - the v1 archive, kept for earlier versions
+- [SPI Performance Analysis](./SPI-PERFORMANCE-ANALYSIS.md) - where the time goes in a read, a write and a mount
+- [Regression Testing Status](../RegresssionTests/README.md) - regression test programs and their output logs
+- [Test Coverage](../RegresssionTests/COVERAGE.md) - which program checks which method and behavior
+- [Contributing](../CONTRIBUTING.md) - how to send a clean pull request
 
 ---
 
 ## 1. Background: flash\_fs and Hub RAM
 
-The Propeller 2 has **512 KB of hub RAM**. Every Spin2 program must fit within this space along with its runtime data. The `flash_fs` driver is a single monolithic object that manages the onboard 16 MB SPI flash chip as a block-based filesystem. Because all driver state - translation tables, per-handle buffers and a temporary block buffer - lives in DAT (static data), the driver has a significant and predictable memory footprint.
+The Parallax Propeller 2 [P2 or P2X8C4M64P] has **512 KB of hub RAM**. Every Spin2 program must fit within this space along with its runtime data. The `flash_fs` driver is a single monolithic object that manages the onboard 16 MB SPI flash chip as a block-based filesystem. Because all driver state - translation tables, per-handle buffers and a temporary block buffer - lives in DAT (static data), the driver has a significant and predictable memory footprint.
 
 A compiled Spin2 program consists of three memory regions loaded into hub RAM:
 
@@ -32,13 +55,13 @@ A compiled Spin2 program consists of three memory regions loaded into hub RAM:
 |---|---|---|
 | **Code/Data** | Method table + DAT sections + Spin2 bytecodes, for all objects | At load time (fixed) |
 | **VAR** | Instance variables declared in `VAR` blocks, for all object instances | At load time (fixed) |
-| **Stack** | Call stack for each running COG (not in the binary) | At runtime |
+| **Stack** | Call stack for each running cog (not in the binary) | At runtime |
 
 The **binary file** (.bin) includes the code/data region plus a ~6 KB P2 loader stub. The VAR region is not stored in the binary - it is allocated in hub RAM at load time immediately following code/data.
 
 ### Why flash\_fs is DAT-Heavy
 
-Unlike many Spin2 objects that store per-instance state in VAR, `flash_fs` stores nearly all state in DAT. This is a deliberate design choice: DAT variables are shared across all COGs and accessible via absolute addresses, which is required for the driver's LOCK-based multi-cog synchronization. The consequence is that the driver's VAR footprint is minimal (8 bytes) while its DAT footprint dominates (about 20 KB at default settings).
+Unlike many Spin2 objects that store per-instance state in VAR, `flash_fs` stores nearly all state in DAT. This is a deliberate design choice: DAT variables are shared across all cogs and accessible via absolute addresses, which is required for the driver's LOCK-based multi-cog synchronization. The consequence is that the driver's VAR footprint is minimal (8 bytes) while its DAT footprint dominates (about 20 KB at default settings).
 
 ---
 
@@ -83,7 +106,7 @@ Compiling `flash_fs.spin2` standalone with `-m` produces a map file showing the 
 
 ### Summary
 
-```
+```text
 === SUMMARY ===
 
   The top object became 1 instance, built from 1 image; no image is shared.
@@ -98,7 +121,7 @@ The driver consumes **32,412 bytes** of hub RAM in total: 32,404 bytes of code/d
 
 ### Memory Layout
 
-```
+```text
 === MEMORY LAYOUT ===
 
   Images
@@ -116,7 +139,7 @@ The driver consumes **32,412 bytes** of hub RAM in total: 32,404 bytes of code/d
 
 The map lists all 101 methods with their offsets:
 
-```
+```text
   Methods
   Name                          Offset   Address
   ----------------------------  -------  -------
@@ -135,7 +158,7 @@ The first 34 methods (`NULL` to `STRING_FOR_ERROR`) are the public API. The rema
 
 Each DAT variable shows its type, name and offset within the object:
 
-```
+```text
   DAT
   Type  Name                Offset   Address
   ----  ------------------  -------  -------
@@ -148,7 +171,7 @@ Each DAT variable shows its type, name and offset within the object:
 
 To calculate the size of a DAT variable, subtract its offset from the next variable's offset:
 
-```
+```text
 HBLOCKBUFF      at +$02064
 TMPBLOCKBUFFER  at +$04064
   => HBLOCKBUFF size = $04064 - $02064 = $2000 = 8,192 bytes (2 handles x 4,096 bytes)
@@ -173,12 +196,12 @@ The 32,403-byte image breaks down into three regions:
 
 ### DAT Variables by Category
 
-#### Driver State - Per-COG (64 bytes)
+#### Driver State - Per-Cog (64 bytes)
 
 | Variable | Type | Size | Purpose |
 |---|---|---|---|
-| `errorCode` | LONG[8] | 32 B | Last error code, one per COG |
-| `fsCogCts` | LONG[8] | 32 B | Lock-election counts, one per COG |
+| `errorCode` | LONG[8] | 32 B | Last error code, one per cog |
+| `fsCogCts` | LONG[8] | 32 B | Lock-election counts, one per cog |
 
 #### Driver State - Global (40 bytes)
 
@@ -251,7 +274,7 @@ The per-handle block buffers are the largest scaling component. Each open file h
 
 | Category | Size | % of DAT |
 |---|---|---|
-| Driver state (per-COG + global) | 104 B | 0.5% |
+| Driver state (per-cog + global) | 104 B | 0.5% |
 | Block translation tables | 7,452 B | 36.9% |
 | Per-handle state (2 handles) | 80 B | 0.4% |
 | Per-handle buffers (2 handles) | 8,448 B | 41.9% |
@@ -288,7 +311,7 @@ When `flash_fs` is included as a child object in a program, the map file shows e
 
 ### Object Tree
 
-```
+```text
 === OBJECT TREE ===
 
   Instance  Image  Source               Overrides
@@ -299,7 +322,7 @@ When `flash_fs` is included as a child object in a program, the map file shows e
 
 ### Memory Layout
 
-```
+```text
 === MEMORY LAYOUT ===
 
   Images
@@ -333,7 +356,7 @@ The binary file is 39,176 bytes (32,896 code/data plus the ~6 KB P2 loader stub)
 
 The binary file size is NOT your runtime memory footprint. Runtime hub RAM usage is:
 
-```
+```text
 Runtime Hub RAM = Code/Data + VAR + Stacks
 ```
 
@@ -341,22 +364,22 @@ The map file gives you the first two directly from the SUMMARY block. Stacks mus
 
 ### Stack Estimation
 
-Every COG running Spin2 code needs a stack. The top-level COG uses the remainder of hub RAM above the program as its stack. Additional COGs launched with `cogspin()` use explicitly allocated stack buffers (typically declared in DAT or VAR).
+Every cog running Spin2 code needs a stack. The top-level cog uses the remainder of hub RAM above the program as its stack. Additional cogs launched with `cogspin()` use explicitly allocated stack buffers (typically declared in DAT or VAR).
 
-The `flash_fs` driver itself does not launch any additional COGs - it runs entirely within the calling COG's context using LOCK-based synchronization. So there are no hidden stack allocations within the driver.
+The `flash_fs` driver itself does not launch any additional cogs - it runs entirely within the calling cog's context using LOCK-based synchronization. So there are no hidden stack allocations within the driver.
 
 ### Complete Accounting Example
 
 For the `flash_fs_demo` program:
 
-```
+```text
 Code/Data:           32,896 bytes   (from map: Code/DAT bytes)
 VAR:                     12 bytes   (from map: VAR bytes)
                     ---------
 Program Total:       32,908 bytes
 
 P2 Hub RAM:         524,288 bytes   (512 KB)
-Available:          491,380 bytes   (for main COG stack + other uses)
+Available:          491,380 bytes   (for main cog stack + other uses)
 ```
 
 The driver leaves ample room for application code and data. Even with `MAX_FILES_OPEN` set to 6 (about 49,460 bytes for the driver alone), the total program would consume under 10% of hub RAM.
@@ -392,7 +415,7 @@ Open the map file and identify the three regions:
 
 Walk the DAT variables in the map file. For each variable, compute its size by subtracting its offset from the next variable's offset:
 
-```
+```text
 IDTOBLOCKS      +$001F8
 IDTOBLOCK       +$01938
   => IDTOBLOCKS is $01938 - $001F8 = $1740 = 5,952 bytes
@@ -451,7 +474,7 @@ pnut-ts -m -d flash_fs.spin2           # Map with debug enabled
 
 ### Size Formulas
 
-```
+```text
 Binary File Size    = Code/Data + P2 Loader Stub (~6 KB)
 Runtime Hub RAM     = Code/Data + VAR + Stack allocations
 Object Code/Data    = Method Table + DAT Section + Bytecodes
@@ -484,6 +507,43 @@ Available RAM       = 524,288 - Runtime Hub RAM
 
 ### Per-Handle Cost
 
-```
+```text
 Additional handle = 4,096 B (block buffer) + 128 B (filename) + 40 B (state) = 4,264 B
 ```
+
+---
+
+## How to Contribute
+
+This is a project supporting our P2 Development Community. Please feel free to contribute to this project. You can contribute in the following ways:
+
+- File **Feature Requests** or **Issues** (describing things you are seeing while using our code) at the [Project Issue Tracking Page](https://github.com/ironsheep/P2-FLASH-FS/issues)
+- Fork this repo and then add your code to it. Finally, create a Pull Request to contribute your code back to this repository for inclusion with the projects code. See [CONTRIBUTING](../CONTRIBUTING.md)
+
+---
+
+> If you find this kind of written explanation useful, helpful I would be honored by your helping me out for a couple of :coffee:'s or :pizza: slices -or- you can support my efforts by contributing at my Patreon site!
+>
+> [![coffee](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ironsheep) &nbsp;&nbsp; -OR- &nbsp;&nbsp; [![Patreon](./images/patreon.png)](https://www.patreon.com/IronSheep?fan_landing=true)[Patreon.com/IronSheep](https://www.patreon.com/IronSheep?fan_landing=true)
+
+---
+
+## Disclaimer and Legal
+
+> *Parallax, Propeller Spin, and the Parallax and Propeller Hat logos* are trademarks of Parallax Inc., dba Parallax Semiconductor
+>
+> This project is in no way affiliated with, authorized, maintained, sponsored or endorsed by *Parallax Inc., dba Parallax Semiconductor* or any of its affiliates or subsidiaries.
+
+---
+
+## License
+
+Licensed under the MIT License.
+
+Follow these links for more information:
+
+### [Copyright](../copyright) | [License](../LICENSE)
+
+[maintenance-shield]: https://img.shields.io/badge/maintainer-stephen%40ironsheep%2ebiz-blue.svg?style=for-the-badge
+
+[license-shield]: https://img.shields.io/badge/License-MIT-yellow.svg

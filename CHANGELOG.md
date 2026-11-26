@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.1.0 (YYYY-MM-DD)
+## v2.1.0 (2026-11-26)
 
 Every call reports its error, the open modes behave as documented, and `read()` and `write()` are faster.
 

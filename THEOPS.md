@@ -18,8 +18,8 @@ On this Page:
 - [File System Block types/format](#file-system-block-types-and-formats-of-these-blocks)
   - [Writing to a file](#writing-to-a-file)
   - [Appending to an existing File](#appending-to-an-existing-file)
-  - [Seeking within an existing File](#seeking-within-an-existing-file)
-  - [Treating a file as a circular buffer](#treating-a-file-as-a-circular-buffer)
+  - [Seeking within an existing File](#behavior-seeking-within-an-existing-file-opened-for-read)
+  - [Treating a file as a circular buffer](#behavior-treating-a-file-as-a-circular-buffer)
 - [Tracking Data](#tracking-data-state-of-filesystem) - State of Filesystem
 - [Tracking Data](#tracking-data-open-files) - Open Files
 - [The Format Process [F]](#the-format-process-f)
@@ -408,4 +408,4 @@ Follow these links for more information:
 
 [maintenance-shield]: https://img.shields.io/badge/maintainer-stephen%40ironsheep%2ebiz-blue.svg?style=for-the-badge
 
-[license-shield]: https://camo.githubusercontent.com/bc04f96d911ea5f6e3b00e44fc0731ea74c8e1e9/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f6c6963656e73652f69616e74726963682f746578742d646976696465722d726f772e7376673f7374796c653d666f722d7468652d6261646765
+[license-shield]: https://img.shields.io/badge/License-MIT-yellow.svg
